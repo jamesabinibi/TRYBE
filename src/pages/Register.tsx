@@ -28,11 +28,17 @@ export default function Register() {
         alert('Registration successful! Please sign in.');
         navigate('/login');
       } else {
-        const data = await response.json();
-        setError(data.error || 'Registration failed');
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const data = await response.json();
+          setError(data.error || 'Registration failed');
+        } else {
+          setError('Server error. Please try again later.');
+        }
       }
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      console.error('Registration error:', err);
+      setError('Network error. Please check your connection.');
     } finally {
       setIsLoading(false);
     }

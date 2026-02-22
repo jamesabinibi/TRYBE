@@ -84,6 +84,19 @@ db.exec(`
   INSERT OR IGNORE INTO categories (name) VALUES ('Electronics'), ('Fashion'), ('Food'), ('General');
 `);
 
+// Migration: Add email column to users if it doesn't exist
+try {
+  const tableInfo = db.prepare("PRAGMA table_info(users)").all();
+  const hasEmail = tableInfo.some((col: any) => col.name === 'email');
+  if (!hasEmail) {
+    db.prepare("ALTER TABLE users ADD COLUMN email TEXT").run();
+    db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)").run();
+    console.log("Added email column and unique index to users table");
+  }
+} catch (e) {
+  console.error("Migration error:", e);
+}
+
 // Seed default admin if not exists
 const adminExists = db.prepare("SELECT * FROM users WHERE username = ?").get("admin");
 if (!adminExists) {
@@ -94,6 +107,9 @@ if (!adminExists) {
     "admin",
     "System Admin"
   );
+} else if (!(adminExists as any).email) {
+  // Update existing admin with default email if missing
+  db.prepare("UPDATE users SET email = ? WHERE username = ?").run("admin@example.com", "admin");
 }
 
 const app = express();
@@ -107,16 +123,25 @@ const PORT = 3000;
 // Auth (Simple for demo)
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
-  const user = db.prepare("SELECT id, username, role, name FROM users WHERE username = ? AND password = ?").get(username, password);
-  if (user) {
-    res.json(user);
-  } else {
-    res.status(401).json({ error: "Invalid credentials" });
+  console.log(`Login attempt for username: ${username}`);
+  try {
+    const user = db.prepare("SELECT id, username, role, name FROM users WHERE username = ? AND password = ?").get(username, password);
+    if (user) {
+      console.log(`Login successful for user: ${username}`);
+      res.json(user);
+    } else {
+      console.log(`Login failed for user: ${username} - Invalid credentials`);
+      res.status(401).json({ error: "Invalid credentials" });
+    }
+  } catch (error) {
+    console.error(`Login error for user: ${username}`, error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
 app.post("/api/register", (req, res) => {
   const { username, email, password, name, role = 'staff' } = req.body;
+  console.log(`Registration attempt for username: ${username}, email: ${email}`);
   try {
     const info = db.prepare("INSERT INTO users (username, email, password, role, name) VALUES (?, ?, ?, ?, ?)").run(
       username,
@@ -125,8 +150,10 @@ app.post("/api/register", (req, res) => {
       role,
       name
     );
+    console.log(`Registration successful for user: ${username}`);
     res.json({ id: info.lastInsertRowid, username, email, role, name });
   } catch (e: any) {
+    console.error(`Registration failed for user: ${username}`, e);
     res.status(400).json({ error: "Username or email already exists" });
   }
 });

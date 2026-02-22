@@ -27,10 +27,17 @@ export default function Login() {
         const user = await response.json();
         login(user);
       } else {
-        setError('Invalid username or password');
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const data = await response.json();
+          setError(data.error || 'Invalid username or password');
+        } else {
+          setError('Server error. Please try again later.');
+        }
       }
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      console.error('Login error:', err);
+      setError('Network error. Please check your connection.');
     } finally {
       setIsLoading(false);
     }
