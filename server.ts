@@ -6,84 +6,96 @@ import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import fs from 'fs';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const db = new Database("inventory.db");
+dotenv.config();
+
+console.log(`[INIT] Starting server at ${new Date().toISOString()}`);
+console.log(`[INIT] NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`[INIT] __dirname: ${__dirname}`);
+console.log(`[INIT] CWD: ${process.cwd()}`);
+
+let db: any;
+try {
+  const dbPath = path.resolve(__dirname, "inventory.db");
+  console.log(`[INIT] Opening database at: ${dbPath}`);
+  db = new Database(dbPath);
+  console.log(`[INIT] Database opened successfully`);
+} catch (err) {
+  console.error(`[INIT] CRITICAL: Failed to open database:`, err);
+  // Don't exit immediately, try to continue to see if we can at least serve static files or health check
+}
 
 // Initialize Database Schema
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    email TEXT UNIQUE,
-    password TEXT,
-    role TEXT CHECK(role IN ('admin', 'manager', 'staff')),
-    name TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE
-  );
-
-  CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    category_id INTEGER,
-    description TEXT,
-    cost_price REAL,
-    selling_price REAL,
-    supplier_name TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(category_id) REFERENCES categories(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS product_variants (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER,
-    size TEXT,
-    color TEXT,
-    quantity INTEGER DEFAULT 0,
-    low_stock_threshold INTEGER DEFAULT 5,
-    price_override REAL,
-    FOREIGN KEY(product_id) REFERENCES products(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS sales (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    invoice_number TEXT UNIQUE,
-    total_amount REAL,
-    total_profit REAL,
-    payment_method TEXT,
-    staff_id INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(staff_id) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS sale_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sale_id INTEGER,
-    variant_id INTEGER,
-    quantity INTEGER,
-    selling_price REAL,
-    cost_price REAL,
-    profit REAL,
-    FOREIGN KEY(sale_id) REFERENCES sales(id),
-    FOREIGN KEY(variant_id) REFERENCES product_variants(id)
-  );
-  CREATE TABLE IF NOT EXISTS product_images (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER,
-    image_data TEXT,
-    FOREIGN KEY(product_id) REFERENCES products(id)
-  );
-
-  -- Seed default categories
-  INSERT OR IGNORE INTO categories (name) VALUES ('Electronics'), ('Fashion'), ('Food'), ('General');
-`);
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE,
+      email TEXT UNIQUE,
+      password TEXT,
+      role TEXT CHECK(role IN ('admin', 'manager', 'staff')),
+      name TEXT
+    );
+    CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE
+    );
+    CREATE TABLE IF NOT EXISTS products (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      category_id INTEGER,
+      description TEXT,
+      cost_price REAL,
+      selling_price REAL,
+      supplier_name TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(category_id) REFERENCES categories(id)
+    );
+    CREATE TABLE IF NOT EXISTS product_variants (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER,
+      size TEXT,
+      color TEXT,
+      quantity INTEGER DEFAULT 0,
+      low_stock_threshold INTEGER DEFAULT 5,
+      price_override REAL,
+      FOREIGN KEY(product_id) REFERENCES products(id)
+    );
+    CREATE TABLE IF NOT EXISTS sales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_number TEXT UNIQUE,
+      total_amount REAL,
+      total_profit REAL,
+      payment_method TEXT,
+      staff_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(staff_id) REFERENCES users(id)
+    );
+    CREATE TABLE IF NOT EXISTS sale_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_id INTEGER,
+      variant_id INTEGER,
+      quantity INTEGER,
+      selling_price REAL,
+      cost_price REAL,
+      profit REAL,
+      FOREIGN KEY(sale_id) REFERENCES sales(id),
+      FOREIGN KEY(variant_id) REFERENCES product_variants(id)
+    );
+    CREATE TABLE IF NOT EXISTS product_images (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER,
+      image_data TEXT,
+      FOREIGN KEY(product_id) REFERENCES products(id)
+    );
+    INSERT OR IGNORE INTO categories (name) VALUES ('Electronics'), ('Fashion'), ('Food'), ('General');
+  `);
+  console.log(`[INIT] Schema initialized successfully`);
+} catch (err) {
+  console.error(`[INIT] Failed to initialize schema:`, err);
+}
 
 // Migration: Add email column to users if it doesn't exist
 try {
@@ -352,44 +364,66 @@ async function startServer() {
   });
 
   // API 404 handler
-  app.use("/api/*", (req, res) => {
-    console.log(`API 404 Catch-all: ${req.method} ${req.url} (original: ${req.originalUrl})`);
-    res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
+  app.all("/api/*", (req, res) => {
+    console.log(`[API 404] ${req.method} ${req.url} - No route matched`);
+    res.status(404).json({ 
+      error: "API route not found",
+      method: req.method,
+      path: req.url 
+    });
   });
 
   // Vite / Static Files
+  const distPath = path.resolve(__dirname, "dist");
+  
   if (process.env.NODE_ENV !== "production") {
+    console.log(`[VITE] Starting in DEVELOPMENT mode`);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
     
-    // Manual SPA fallback for dev mode to ensure routes like /login work
-    // Only handle GET requests that are not API calls
     app.get('*', async (req, res, next) => {
       if (req.url.startsWith('/api/')) return next();
-      
-      const url = req.originalUrl;
       try {
         let template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
-        template = await vite.transformIndexHtml(url, template);
+        template = await vite.transformIndexHtml(req.originalUrl, template);
         res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
       } catch (e) {
         next(e);
       }
     });
   } else {
-    const distPath = path.join(__dirname, "dist");
+    console.log(`[STATIC] Starting in PRODUCTION mode serving from: ${distPath}`);
+    if (!fs.existsSync(distPath)) {
+      console.error(`[STATIC] CRITICAL: dist directory not found at ${distPath}`);
+      // List root directory to help debug
+      try {
+        const files = fs.readdirSync(__dirname);
+        console.log(`[STATIC] Root directory contents: ${files.join(', ')}`);
+      } catch (e) {}
+    }
+    
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      if (req.url.startsWith('/api/')) return res.status(404).json({ error: "API route not found" });
-      res.sendFile(path.join(distPath, "index.html"));
+      if (req.url.startsWith('/api/')) {
+        return res.status(404).json({ error: "API route not found (SPA fallback)" });
+      }
+      
+      const indexPath = path.join(distPath, "index.html");
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        console.error(`[STATIC] CRITICAL: index.html not found at ${indexPath}`);
+        res.status(500).send("Application build missing. Please check server logs.");
+      }
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+    console.log(`Server is listening on http://0.0.0.0:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 
   // Global error handler
