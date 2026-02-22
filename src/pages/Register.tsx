@@ -33,7 +33,7 @@ export default function Register() {
           const data = await response.json();
           setError(data.error || 'Registration failed');
         } else {
-          setError('Server error. Please try again later.');
+          setError(`Server error (${response.status}). Please try again later.`);
         }
       }
     } catch (err) {

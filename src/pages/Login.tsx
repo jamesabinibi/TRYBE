@@ -32,7 +32,7 @@ export default function Login() {
           const data = await response.json();
           setError(data.error || 'Invalid username or password');
         } else {
-          setError('Server error. Please try again later.');
+          setError(`Server error (${response.status}). Please try again later.`);
         }
       }
     } catch (err) {

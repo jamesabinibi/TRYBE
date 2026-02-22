@@ -123,6 +123,10 @@ async function startServer() {
   // Logging middleware
   app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    if (req.method === 'POST') {
+      console.log('Request Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('Request Body Keys:', Object.keys(req.body));
+    }
     next();
   });
 
@@ -131,8 +135,12 @@ async function startServer() {
     res.json({ status: "ok", time: new Date().toISOString() });
   });
 
+  app.get("/api/test", (req, res) => {
+    res.json({ message: "API is working", env: process.env.NODE_ENV });
+  });
+
   // Auth
-  app.post("/api/login", (req, res) => {
+  app.post(["/api/login", "/api/login/"], (req, res) => {
     const { username, password } = req.body;
     const trimmedUsername = username?.trim();
     console.log(`Login attempt for: ${trimmedUsername}`);
@@ -151,7 +159,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/register", (req, res) => {
+  app.post(["/api/register", "/api/register/"], (req, res) => {
     const { username, email, password, name, role = 'staff' } = req.body;
     const trimmedUsername = username?.trim();
     const trimmedEmail = email?.trim()?.toLowerCase();
@@ -347,7 +355,10 @@ async function startServer() {
     app.use(vite.middlewares);
     
     // Manual SPA fallback for dev mode to ensure routes like /login work
-    app.use('*', async (req, res, next) => {
+    // Only handle GET requests that are not API calls
+    app.get('*', async (req, res, next) => {
+      if (req.url.startsWith('/api/')) return next();
+      
       const url = req.originalUrl;
       try {
         let template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
@@ -361,12 +372,23 @@ async function startServer() {
     const distPath = path.join(__dirname, "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
+      if (req.url.startsWith('/api/')) return res.status(404).json({ error: "API route not found" });
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
+  });
+
+  // Global error handler
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error("Global error:", err);
+    if (req.url.startsWith('/api/')) {
+      res.status(500).json({ error: "Internal server error" });
+    } else {
+      next(err);
+    }
   });
 }
 
