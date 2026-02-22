@@ -17,6 +17,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE,
+    email TEXT UNIQUE,
     password TEXT,
     role TEXT CHECK(role IN ('admin', 'manager', 'staff')),
     name TEXT
@@ -86,8 +87,9 @@ db.exec(`
 // Seed default admin if not exists
 const adminExists = db.prepare("SELECT * FROM users WHERE username = ?").get("admin");
 if (!adminExists) {
-  db.prepare("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)").run(
+  db.prepare("INSERT INTO users (username, email, password, role, name) VALUES (?, ?, ?, ?, ?)").run(
     "admin",
+    "admin@example.com",
     "admin123", // In a real app, hash this!
     "admin",
     "System Admin"
@@ -110,6 +112,42 @@ app.post("/api/login", (req, res) => {
     res.json(user);
   } else {
     res.status(401).json({ error: "Invalid credentials" });
+  }
+});
+
+app.post("/api/register", (req, res) => {
+  const { username, email, password, name, role = 'staff' } = req.body;
+  try {
+    const info = db.prepare("INSERT INTO users (username, email, password, role, name) VALUES (?, ?, ?, ?, ?)").run(
+      username,
+      email,
+      password,
+      role,
+      name
+    );
+    res.json({ id: info.lastInsertRowid, username, email, role, name });
+  } catch (e: any) {
+    res.status(400).json({ error: "Username or email already exists" });
+  }
+});
+
+app.post("/api/forgot-password", (req, res) => {
+  const { email } = req.body;
+  // In a real app, send an email. Here we just simulate it.
+  res.json({ message: "Confirmation code sent to " + email, code: "123456" });
+});
+
+app.post("/api/reset-password", (req, res) => {
+  const { username, newPassword, code } = req.body;
+  if (code !== "123456") {
+    return res.status(400).json({ error: "Invalid confirmation code" });
+  }
+  
+  const result = db.prepare("UPDATE users SET password = ? WHERE username = ?").run(newPassword, username);
+  if (result.changes > 0) {
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: "User not found" });
   }
 });
 

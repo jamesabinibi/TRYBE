@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../App';
-import { Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Lock, User, ArrowRight, ShieldCheck, Mail, UserPlus } from 'lucide-react';
 import { motion } from 'motion/react';
 
-export default function Login() {
-  const { login } = useAuth();
+export default function Register() {
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -17,17 +18,18 @@ export default function Login() {
     setError('');
     
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, email, password, name })
       });
       
       if (response.ok) {
-        const user = await response.json();
-        login(user);
+        alert('Registration successful! Please sign in.');
+        navigate('/login');
       } else {
-        setError('Invalid username or password');
+        const data = await response.json();
+        setError(data.error || 'Registration failed');
       }
     } catch (err) {
       setError('Something went wrong. Please try again.');
@@ -46,10 +48,10 @@ export default function Login() {
         <div className="bg-white rounded-[32px] shadow-2xl shadow-zinc-200/50 border border-zinc-200 overflow-hidden">
           <div className="p-8 pt-12 text-center">
             <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-emerald-200 rotate-3">
-              <ShieldCheck className="w-8 h-8" />
+              <UserPlus className="w-8 h-8" />
             </div>
-            <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">StockFlow Pro</h1>
-            <p className="text-zinc-500 font-medium">Sign in to manage your inventory</p>
+            <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Create Account</h1>
+            <p className="text-zinc-500 font-medium">Join StockFlow Pro to manage your inventory</p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -61,6 +63,36 @@ export default function Login() {
             
             <div className="space-y-4">
               <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+                  <input 
+                    type="text" 
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+                  <input 
+                    type="email" 
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Username</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
@@ -69,7 +101,7 @@ export default function Login() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter your username"
+                    placeholder="Choose a username"
                     className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                   />
                 </div>
@@ -96,34 +128,20 @@ export default function Login() {
               disabled={isLoading}
               className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-200 group"
             >
-              {isLoading ? "Signing in..." : (
+              {isLoading ? "Creating Account..." : (
                 <>
-                  Sign In
+                  Register
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>
 
             <div className="text-center">
-              <Link 
-                to="/forgot-password"
-                className="text-xs text-zinc-400 font-medium hover:text-emerald-600 hover:underline"
-              >
-                Forgot your password?
-              </Link>
-            </div>
-          </form>
-
-          <div className="p-6 bg-zinc-50 border-t border-zinc-100 text-center space-y-4">
-            <p className="text-sm text-zinc-500 font-medium">
-              Don't have an account? <Link to="/register" className="text-emerald-600 font-bold hover:underline">Sign Up</Link>
-            </p>
-            <div className="pt-4 border-t border-zinc-200">
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                Demo Credentials: admin / admin123
+              <p className="text-sm text-zinc-500 font-medium">
+                Already have an account? <Link to="/login" className="text-emerald-600 font-bold hover:underline">Sign In</Link>
               </p>
             </div>
-          </div>
+          </form>
         </div>
       </motion.div>
     </div>
