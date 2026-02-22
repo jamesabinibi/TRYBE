@@ -1,0 +1,5 @@
+{
+  "name": "StockFlow Pro",
+  "description": "A modern, responsive Inventory & Sales Management Web App for small to medium businesses featuring real-time tracking, profit analytics, and role-based access.",
+  "requestFramePermissions": ["camera"]
+}
