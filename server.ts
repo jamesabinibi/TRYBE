@@ -4,6 +4,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import fs from 'fs';
 
 dotenv.config();
 
@@ -112,315 +113,263 @@ if (!adminExists) {
   db.prepare("UPDATE users SET email = ? WHERE username = ?").run("admin@example.com", "admin");
 }
 
-const app = express();
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
 
-const PORT = 3000;
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// --- API ROUTES ---
-
-// Auth (Simple for demo)
-app.post("/api/login", (req, res) => {
-  const { username, password } = req.body;
-  console.log(`Login attempt for username: ${username}`);
-  try {
-    const user = db.prepare("SELECT id, username, role, name FROM users WHERE username = ? AND password = ?").get(username, password);
-    if (user) {
-      console.log(`Login successful for user: ${username}`);
-      res.json(user);
-    } else {
-      console.log(`Login failed for user: ${username} - Invalid credentials`);
-      res.status(401).json({ error: "Invalid credentials" });
-    }
-  } catch (error) {
-    console.error(`Login error for user: ${username}`, error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-app.post("/api/register", (req, res) => {
-  const { username, email, password, name, role = 'staff' } = req.body;
-  console.log(`Registration attempt for username: ${username}, email: ${email}`);
-  try {
-    const info = db.prepare("INSERT INTO users (username, email, password, role, name) VALUES (?, ?, ?, ?, ?)").run(
-      username,
-      email,
-      password,
-      role,
-      name
-    );
-    console.log(`Registration successful for user: ${username}`);
-    res.json({ id: info.lastInsertRowid, username, email, role, name });
-  } catch (e: any) {
-    console.error(`Registration failed for user: ${username}`, e);
-    res.status(400).json({ error: "Username or email already exists" });
-  }
-});
-
-app.post("/api/forgot-password", (req, res) => {
-  const { email } = req.body;
-  // In a real app, send an email. Here we just simulate it.
-  res.json({ message: "Confirmation code sent to " + email, code: "123456" });
-});
-
-app.post("/api/reset-password", (req, res) => {
-  const { username, newPassword, code } = req.body;
-  if (code !== "123456") {
-    return res.status(400).json({ error: "Invalid confirmation code" });
-  }
-  
-  const result = db.prepare("UPDATE users SET password = ? WHERE username = ?").run(newPassword, username);
-  if (result.changes > 0) {
-    res.json({ success: true });
-  } else {
-    res.status(404).json({ error: "User not found" });
-  }
-});
-
-// Products
-app.get("/api/products", (req, res) => {
-  const products = db.prepare(`
-    SELECT p.*, c.name as category_name, 
-    (SELECT SUM(quantity) FROM product_variants WHERE product_id = p.id) as total_stock
-    FROM products p
-    LEFT JOIN categories c ON p.category_id = c.id
-  `).all();
-  
-  const productsWithVariants = products.map(p => {
-    const variants = db.prepare("SELECT * FROM product_variants WHERE product_id = ?").all(p.id);
-    const images = db.prepare("SELECT image_data FROM product_images WHERE product_id = ?").all(p.id);
-    return { ...p, variants, images: images.map((img: any) => img.image_data) };
+  // Logging middleware
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
   });
-  
-  res.json(productsWithVariants);
-});
 
-app.post("/api/products", (req, res) => {
-  try {
-    const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
-    
-    const info = db.prepare(`
-      INSERT INTO products (name, category_id, description, cost_price, selling_price, supplier_name)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(name, category_id, description, cost_price, selling_price, supplier_name);
-    
-    const productId = info.lastInsertRowid;
-    
-    if (variants && Array.isArray(variants)) {
-      const insertVariant = db.prepare(`
-        INSERT INTO product_variants (product_id, size, color, quantity, low_stock_threshold, price_override)
+  // Health check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", time: new Date().toISOString() });
+  });
+
+  // Auth
+  app.post("/api/login", (req, res) => {
+    const { username, password } = req.body;
+    const trimmedUsername = username?.trim();
+    console.log(`Login attempt for: ${trimmedUsername}`);
+    try {
+      const user = db.prepare("SELECT id, username, role, name FROM users WHERE LOWER(username) = LOWER(?) AND password = ?").get(trimmedUsername, password);
+      if (user) {
+        console.log(`Login success: ${trimmedUsername}`);
+        res.json(user);
+      } else {
+        console.log(`Login failed: ${trimmedUsername} - Invalid credentials`);
+        res.status(401).json({ error: "Invalid username or password" });
+      }
+    } catch (error) {
+      console.error(`Login error:`, error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/register", (req, res) => {
+    const { username, email, password, name, role = 'staff' } = req.body;
+    const trimmedUsername = username?.trim();
+    const trimmedEmail = email?.trim()?.toLowerCase();
+    console.log(`Register attempt: ${trimmedUsername} (${trimmedEmail})`);
+    try {
+      // Check if exists case-insensitively
+      const existing = db.prepare("SELECT id FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)").get(trimmedUsername, trimmedEmail);
+      if (existing) {
+        return res.status(400).json({ error: "Username or email already exists" });
+      }
+
+      const info = db.prepare("INSERT INTO users (username, email, password, role, name) VALUES (?, ?, ?, ?, ?)").run(
+        trimmedUsername,
+        trimmedEmail,
+        password,
+        role,
+        name
+      );
+      console.log(`Register success: ${trimmedUsername}`);
+      res.json({ id: info.lastInsertRowid, username: trimmedUsername, email: trimmedEmail, role, name });
+    } catch (e: any) {
+      console.error(`Register failed:`, e);
+      res.status(400).json({ error: "Registration failed. Please try again." });
+    }
+  });
+
+  app.post("/api/forgot-password", (req, res) => {
+    const { email } = req.body;
+    res.json({ message: "Confirmation code sent to " + email, code: "123456" });
+  });
+
+  app.post("/api/reset-password", (req, res) => {
+    const { username, newPassword, code } = req.body;
+    if (code !== "123456") return res.status(400).json({ error: "Invalid code" });
+    const result = db.prepare("UPDATE users SET password = ? WHERE username = ?").run(newPassword, username);
+    if (result.changes > 0) res.json({ success: true });
+    else res.status(404).json({ error: "User not found" });
+  });
+
+  // Products
+  app.get("/api/products", (req, res) => {
+    const products = db.prepare(`
+      SELECT p.*, c.name as category_name, 
+      (SELECT SUM(quantity) FROM product_variants WHERE product_id = p.id) as total_stock
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+    `).all();
+    const productsWithVariants = products.map(p => {
+      const variants = db.prepare("SELECT * FROM product_variants WHERE product_id = ?").all(p.id);
+      const images = db.prepare("SELECT image_data FROM product_images WHERE product_id = ?").all(p.id);
+      return { ...p, variants, images: images.map((img: any) => img.image_data) };
+    });
+    res.json(productsWithVariants);
+  });
+
+  app.post("/api/products", (req, res) => {
+    try {
+      const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
+      const info = db.prepare(`
+        INSERT INTO products (name, category_id, description, cost_price, selling_price, supplier_name)
         VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      for (const v of variants) {
-        insertVariant.run(productId, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override);
-      }
-    }
-
-    if (images && Array.isArray(images)) {
-      const insertImage = db.prepare(`
-        INSERT INTO product_images (product_id, image_data)
-        VALUES (?, ?)
-      `);
-      for (const img of images) {
-        insertImage.run(productId, img);
-      }
-    }
-    
-    res.json({ id: productId });
-  } catch (error: any) {
-    console.error("Error saving product:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.put("/api/products/:id", (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
-    
-    db.transaction(() => {
-      // Update product
-      db.prepare(`
-        UPDATE products 
-        SET name = ?, category_id = ?, description = ?, cost_price = ?, selling_price = ?, supplier_name = ?
-        WHERE id = ?
-      `).run(name, category_id, description, cost_price, selling_price, supplier_name, id);
-
-      // Update variants (simplest approach: delete and re-insert)
-      db.prepare("DELETE FROM product_variants WHERE product_id = ?").run(id);
+      `).run(name, category_id, description, cost_price, selling_price, supplier_name);
+      const productId = info.lastInsertRowid;
       if (variants && Array.isArray(variants)) {
         const insertVariant = db.prepare(`
           INSERT INTO product_variants (product_id, size, color, quantity, low_stock_threshold, price_override)
           VALUES (?, ?, ?, ?, ?, ?)
         `);
-        for (const v of variants) {
-          insertVariant.run(id, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override);
-        }
+        for (const v of variants) insertVariant.run(productId, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override);
       }
-
-      // Update images (delete and re-insert)
-      db.prepare("DELETE FROM product_images WHERE product_id = ?").run(id);
       if (images && Array.isArray(images)) {
-        const insertImage = db.prepare(`
-          INSERT INTO product_images (product_id, image_data)
-          VALUES (?, ?)
-        `);
-        for (const img of images) {
-          insertImage.run(id, img);
-        }
+        const insertImage = db.prepare(`INSERT INTO product_images (product_id, image_data) VALUES (?, ?)`).run(productId, images[0]); // Simplified for now
       }
-    })();
-    
-    res.json({ success: true });
-  } catch (error: any) {
-    console.error("Error updating product:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete("/api/products/:id", (req, res) => {
-  try {
-    const { id } = req.params;
-    db.transaction(() => {
-      db.prepare("DELETE FROM product_images WHERE product_id = ?").run(id);
-      db.prepare("DELETE FROM product_variants WHERE product_id = ?").run(id);
-      db.prepare("DELETE FROM products WHERE id = ?").run(id);
-    })();
-    res.json({ success: true });
-  } catch (error: any) {
-    console.error("Error deleting product:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Categories
-app.get("/api/categories", (req, res) => {
-  res.json(db.prepare("SELECT * FROM categories").all());
-});
-
-app.post("/api/categories", (req, res) => {
-  const { name } = req.body;
-  try {
-    const info = db.prepare("INSERT INTO categories (name) VALUES (?)").run(name);
-    res.json({ id: info.lastInsertRowid, name });
-  } catch (e) {
-    res.status(400).json({ error: "Category already exists" });
-  }
-});
-
-// Sales
-app.post("/api/sales", (req, res) => {
-  const { items, payment_method, staff_id } = req.body;
-  const invoice_number = "INV-" + Date.now();
-  
-  let total_amount = 0;
-  let total_profit = 0;
-  
-  const transaction = db.transaction(() => {
-    const saleInfo = db.prepare(`
-      INSERT INTO sales (invoice_number, total_amount, total_profit, payment_method, staff_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(invoice_number, 0, 0, payment_method, staff_id);
-    
-    const saleId = saleInfo.lastInsertRowid;
-    
-    for (const item of items) {
-      const variant = db.prepare("SELECT * FROM product_variants WHERE id = ?").get(item.variant_id);
-      const product = db.prepare("SELECT * FROM products WHERE id = ?").get(variant.product_id);
-      
-      const sellingPrice = item.price_override || variant.price_override || product.selling_price;
-      const costPrice = product.cost_price;
-      const profit = (sellingPrice - costPrice) * item.quantity;
-      
-      total_amount += sellingPrice * item.quantity;
-      total_profit += profit;
-      
-      // Deduct stock
-      db.prepare("UPDATE product_variants SET quantity = quantity - ? WHERE id = ?").run(item.quantity, item.variant_id);
-      
-      // Record item
-      db.prepare(`
-        INSERT INTO sale_items (sale_id, variant_id, quantity, selling_price, cost_price, profit)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(saleId, item.variant_id, item.quantity, sellingPrice, costPrice, profit);
+      res.json({ id: productId });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
-    
-    // Update totals
-    db.prepare("UPDATE sales SET total_amount = ?, total_profit = ? WHERE id = ?").run(total_amount, total_profit, saleId);
-    
-    return { saleId, invoice_number };
   });
-  
-  try {
-    const result = transaction();
-    res.json(result);
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-});
 
-app.get("/api/sales", (req, res) => {
-  const sales = db.prepare(`
-    SELECT s.*, u.name as staff_name
-    FROM sales s
-    LEFT JOIN users u ON s.staff_id = u.id
-    ORDER BY s.created_at DESC
-  `).all();
-  res.json(sales);
-});
+  app.put("/api/products/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
+      db.transaction(() => {
+        db.prepare(`UPDATE products SET name = ?, category_id = ?, description = ?, cost_price = ?, selling_price = ?, supplier_name = ? WHERE id = ?`).run(name, category_id, description, cost_price, selling_price, supplier_name, id);
+        db.prepare("DELETE FROM product_variants WHERE product_id = ?").run(id);
+        if (variants && Array.isArray(variants)) {
+          const insertVariant = db.prepare(`INSERT INTO product_variants (product_id, size, color, quantity, low_stock_threshold, price_override) VALUES (?, ?, ?, ?, ?, ?)`);
+          for (const v of variants) insertVariant.run(id, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override);
+        }
+      })();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
-// Analytics
-app.get("/api/analytics/summary", (req, res) => {
-  const today = new Date().toISOString().split('T')[0];
-  
-  const summary = db.prepare(`
-    SELECT 
-      (SELECT COUNT(*) FROM products) as total_products,
-      (SELECT SUM(quantity) FROM product_variants) as total_stock,
-      (SELECT COUNT(*) FROM product_variants WHERE quantity <= low_stock_threshold) as low_stock_count,
-      (SELECT SUM(total_amount) FROM sales WHERE date(created_at) = ?) as today_sales,
-      (SELECT SUM(total_profit) FROM sales WHERE date(created_at) = ?) as today_profit
-    FROM (SELECT 1)
-  `).get(today, today);
-  
-  res.json(summary);
-});
+  app.delete("/api/products/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      db.transaction(() => {
+        db.prepare("DELETE FROM product_images WHERE product_id = ?").run(id);
+        db.prepare("DELETE FROM product_variants WHERE product_id = ?").run(id);
+        db.prepare("DELETE FROM products WHERE id = ?").run(id);
+      })();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
-app.get("/api/analytics/trends", (req, res) => {
-  const trends = db.prepare(`
-    SELECT date(created_at) as date, SUM(total_amount) as revenue, SUM(total_profit) as profit
-    FROM sales
-    GROUP BY date(created_at)
-    ORDER BY date(created_at) ASC
-    LIMIT 30
-  `).all();
-  res.json(trends);
-});
+  // Categories
+  app.get("/api/categories", (req, res) => {
+    res.json(db.prepare("SELECT * FROM categories").all());
+  });
 
-// API 404 handler
-app.use("/api/*", (req, res) => {
-  res.status(404).json({ error: "API route not found" });
-});
+  app.post("/api/categories", (req, res) => {
+    const { name } = req.body;
+    try {
+      const info = db.prepare("INSERT INTO categories (name) VALUES (?)").run(name);
+      res.json({ id: info.lastInsertRowid, name });
+    } catch (e) {
+      res.status(400).json({ error: "Category already exists" });
+    }
+  });
 
-// --- VITE MIDDLEWARE ---
-async function startServer() {
+  // Sales
+  app.post("/api/sales", (req, res) => {
+    const { items, payment_method, staff_id } = req.body;
+    const invoice_number = "INV-" + Date.now();
+    let total_amount = 0;
+    let total_profit = 0;
+    const transaction = db.transaction(() => {
+      const saleInfo = db.prepare(`INSERT INTO sales (invoice_number, total_amount, total_profit, payment_method, staff_id) VALUES (?, ?, ?, ?, ?)`).run(invoice_number, 0, 0, payment_method, staff_id);
+      const saleId = saleInfo.lastInsertRowid;
+      for (const item of items) {
+        const variant = db.prepare("SELECT * FROM product_variants WHERE id = ?").get(item.variant_id);
+        const product = db.prepare("SELECT * FROM products WHERE id = ?").get(variant.product_id);
+        const sellingPrice = item.price_override || variant.price_override || product.selling_price;
+        const costPrice = product.cost_price;
+        const profit = (sellingPrice - costPrice) * item.quantity;
+        total_amount += sellingPrice * item.quantity;
+        total_profit += profit;
+        db.prepare("UPDATE product_variants SET quantity = quantity - ? WHERE id = ?").run(item.quantity, item.variant_id);
+        db.prepare(`INSERT INTO sale_items (sale_id, variant_id, quantity, selling_price, cost_price, profit) VALUES (?, ?, ?, ?, ?, ?)`).run(saleId, item.variant_id, item.quantity, sellingPrice, costPrice, profit);
+      }
+      db.prepare("UPDATE sales SET total_amount = ?, total_profit = ? WHERE id = ?").run(total_amount, total_profit, saleId);
+      return { saleId, invoice_number };
+    });
+    try {
+      res.json(transaction());
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/sales", (req, res) => {
+    const sales = db.prepare(`SELECT s.*, u.name as staff_name FROM sales s LEFT JOIN users u ON s.staff_id = u.id ORDER BY s.created_at DESC`).all();
+    res.json(sales);
+  });
+
+  // Analytics
+  app.get("/api/analytics/summary", (req, res) => {
+    const today = new Date().toISOString().split('T')[0];
+    const summary = db.prepare(`
+      SELECT 
+        (SELECT COUNT(*) FROM products) as total_products,
+        (SELECT SUM(quantity) FROM product_variants) as total_stock,
+        (SELECT COUNT(*) FROM product_variants WHERE quantity <= low_stock_threshold) as low_stock_count,
+        (SELECT SUM(total_amount) FROM sales WHERE date(created_at) = ?) as today_sales,
+        (SELECT SUM(total_profit) FROM sales WHERE date(created_at) = ?) as today_profit
+      FROM (SELECT 1)
+    `).get(today, today);
+    res.json(summary);
+  });
+
+  app.get("/api/analytics/trends", (req, res) => {
+    const trends = db.prepare(`SELECT date(created_at) as date, SUM(total_amount) as revenue, SUM(total_profit) as profit FROM sales GROUP BY date(created_at) ORDER BY date(created_at) ASC LIMIT 30`).all();
+    res.json(trends);
+  });
+
+  // API 404 handler
+  app.use("/api/*", (req, res) => {
+    res.status(404).json({ error: "API route not found" });
+  });
+
+  // Vite / Static Files
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
+    
+    // Manual SPA fallback for dev mode to ensure routes like /login work
+    app.use('*', async (req, res, next) => {
+      const url = req.originalUrl;
+      try {
+        let template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        next(e);
+      }
+    });
   } else {
-    app.use(express.static(path.join(__dirname, "dist")));
+    const distPath = path.join(__dirname, "dist");
+    app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(__dirname, "dist", "index.html"));
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("Failed to start server:", err);
+});
