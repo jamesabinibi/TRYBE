@@ -101,6 +101,7 @@ try {
 // Seed default admin if not exists
 const adminExists = db.prepare("SELECT * FROM users WHERE username = ?").get("admin");
 if (!adminExists) {
+  console.log("Seeding default admin user...");
   db.prepare("INSERT INTO users (username, email, password, role, name) VALUES (?, ?, ?, ?, ?)").run(
     "admin",
     "admin@example.com",
@@ -109,8 +110,11 @@ if (!adminExists) {
     "System Admin"
   );
 } else if (!(adminExists as any).email) {
+  console.log("Updating existing admin with default email...");
   // Update existing admin with default email if missing
   db.prepare("UPDATE users SET email = ? WHERE username = ?").run("admin@example.com", "admin");
+} else {
+  console.log("Admin user already exists and is up to date.");
 }
 
 async function startServer() {
@@ -140,7 +144,7 @@ async function startServer() {
   });
 
   // Auth
-  app.post(["/api/login", "/api/login/"], (req, res) => {
+  const loginHandler = (req: any, res: any) => {
     const { username, password } = req.body;
     const trimmedUsername = username?.trim();
     console.log(`Login attempt for: ${trimmedUsername}`);
@@ -157,9 +161,12 @@ async function startServer() {
       console.error(`Login error:`, error);
       res.status(500).json({ error: "Internal server error" });
     }
-  });
+  };
 
-  app.post(["/api/register", "/api/register/"], (req, res) => {
+  app.post("/api/login", loginHandler);
+  app.post("/api/login/", loginHandler);
+
+  const registerHandler = (req: any, res: any) => {
     const { username, email, password, name, role = 'staff' } = req.body;
     const trimmedUsername = username?.trim();
     const trimmedEmail = email?.trim()?.toLowerCase();
@@ -184,7 +191,10 @@ async function startServer() {
       console.error(`Register failed:`, e);
       res.status(400).json({ error: "Registration failed. Please try again." });
     }
-  });
+  };
+
+  app.post("/api/register", registerHandler);
+  app.post("/api/register/", registerHandler);
 
   app.post("/api/forgot-password", (req, res) => {
     const { email } = req.body;
@@ -343,7 +353,8 @@ async function startServer() {
 
   // API 404 handler
   app.use("/api/*", (req, res) => {
-    res.status(404).json({ error: "API route not found" });
+    console.log(`API 404 Catch-all: ${req.method} ${req.url} (original: ${req.originalUrl})`);
+    res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
   });
 
   // Vite / Static Files
