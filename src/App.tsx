@@ -16,6 +16,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Analytics } from '@vercel/analytics/react';
 import { User } from './types';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
@@ -232,6 +233,7 @@ export default function App() {
           />
         </Routes>
       </BrowserRouter>
+      <Analytics />
     </AuthContext.Provider>
   );
 }
