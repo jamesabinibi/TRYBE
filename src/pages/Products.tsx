@@ -68,6 +68,7 @@ export default function Products() {
   });
 
   const [showAttributeDropdown, setShowAttributeDropdown] = useState(false);
+  const [isBulkEditing, setIsBulkEditing] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const totalQuantity = newProduct.variants.reduce((acc, v) => acc + (v.quantity || 0), 0);
@@ -538,21 +539,111 @@ export default function Products() {
                               <h4 className="text-sm font-black text-zinc-900">Size</h4>
                             </div>
                             
-                            <div className="flex flex-wrap gap-3 items-center">
-                              {newProduct.variants.filter(v => v.size).map((v, i) => (
-                                <div key={i} className="px-4 py-2 bg-zinc-50 text-zinc-600 rounded-xl text-xs font-bold border border-zinc-100">
-                                  {v.size}
+                            {!isBulkEditing ? (
+                              <div className="flex flex-wrap gap-3 items-center">
+                                {newProduct.variants.map((v, i) => v.size && (
+                                  <div key={i} className="group relative px-4 py-2 bg-zinc-50 text-zinc-600 rounded-xl text-xs font-bold border border-zinc-100 flex items-center gap-2">
+                                    {v.size}
+                                    <button 
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = newProduct.variants.filter((_, idx) => idx !== i);
+                                        setNewProduct({...newProduct, variants: updated});
+                                      }}
+                                      className="hover:text-red-500 transition-colors"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                                <div className="flex items-center gap-2 ml-auto">
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setIsBulkEditing(true)}
+                                    className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </button>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setNewProduct({...newProduct, variants: []})}
+                                    className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
-                              ))}
-                              <div className="flex items-center gap-2 ml-auto">
-                                <button type="button" className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors">
-                                  <Edit3 className="w-4 h-4" />
-                                </button>
-                                <button type="button" className="p-2 text-zinc-400 hover:text-red-500 transition-colors">
-                                  <Trash2 className="w-4 h-4" />
+                              </div>
+                            ) : (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-4 gap-4 px-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                                  <div>Size</div>
+                                  <div>Color</div>
+                                  <div>Quantity</div>
+                                  <div>Alert</div>
+                                </div>
+                                {newProduct.variants.map((v, i) => (
+                                  <div key={i} className="grid grid-cols-4 gap-4 p-4 bg-zinc-50 rounded-xl border border-zinc-100 relative group">
+                                    <input 
+                                      value={v.size}
+                                      onChange={(e) => {
+                                        const updated = [...newProduct.variants];
+                                        updated[i].size = e.target.value;
+                                        setNewProduct({...newProduct, variants: updated});
+                                      }}
+                                      className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                      placeholder="Size"
+                                    />
+                                    <input 
+                                      value={v.color}
+                                      onChange={(e) => {
+                                        const updated = [...newProduct.variants];
+                                        updated[i].color = e.target.value;
+                                        setNewProduct({...newProduct, variants: updated});
+                                      }}
+                                      className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                      placeholder="Color"
+                                    />
+                                    <input 
+                                      type="number"
+                                      value={v.quantity}
+                                      onChange={(e) => {
+                                        const updated = [...newProduct.variants];
+                                        updated[i].quantity = parseInt(e.target.value) || 0;
+                                        setNewProduct({...newProduct, variants: updated});
+                                      }}
+                                      className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                    />
+                                    <input 
+                                      type="number"
+                                      value={v.low_stock_threshold}
+                                      onChange={(e) => {
+                                        const updated = [...newProduct.variants];
+                                        updated[i].low_stock_threshold = parseInt(e.target.value) || 5;
+                                        setNewProduct({...newProduct, variants: updated});
+                                      }}
+                                      className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                    />
+                                    <button 
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = newProduct.variants.filter((_, idx) => idx !== i);
+                                        setNewProduct({...newProduct, variants: updated});
+                                      }}
+                                      className="absolute -right-2 -top-2 w-6 h-6 bg-white border border-zinc-200 rounded-full flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                                <button 
+                                  type="button"
+                                  onClick={() => setIsBulkEditing(false)}
+                                  className="w-full py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors"
+                                >
+                                  Done Editing
                                 </button>
                               </div>
-                            </div>
+                            )}
 
                             <button 
                               type="button"
@@ -581,11 +672,17 @@ export default function Products() {
                             <div className="relative">
                               <button 
                                 type="button"
-                                className="px-6 py-2 border border-emerald-500 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-50 transition-all"
+                                onClick={() => setIsBulkEditing(!isBulkEditing)}
+                                className={cn(
+                                  "px-6 py-2 border rounded-xl text-xs font-bold transition-all",
+                                  isBulkEditing 
+                                    ? "bg-emerald-600 border-emerald-600 text-white" 
+                                    : "border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                                )}
                               >
-                                Bulk edit
+                                {isBulkEditing ? 'Close Bulk Edit' : 'Bulk edit'}
                               </button>
-                              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-200 rounded-full border-2 border-white"></span>
+                              {!isBulkEditing && <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-200 rounded-full border-2 border-white"></span>}
                             </div>
                           </div>
                         </div>
