@@ -11,20 +11,23 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
+// Vercel specific database path
+const isVercel = process.env.VERCEL === '1';
+const dbPath = isVercel 
+  ? path.join("/tmp", "inventory.db") 
+  : path.resolve(__dirname, "inventory.db");
+
 console.log(`[INIT] Starting server at ${new Date().toISOString()}`);
 console.log(`[INIT] NODE_ENV: ${process.env.NODE_ENV}`);
-console.log(`[INIT] __dirname: ${__dirname}`);
-console.log(`[INIT] CWD: ${process.cwd()}`);
+console.log(`[INIT] VERCEL: ${process.env.VERCEL}`);
+console.log(`[INIT] Database path: ${dbPath}`);
 
 let db: any;
 try {
-  const dbPath = path.resolve(__dirname, "inventory.db");
-  console.log(`[INIT] Opening database at: ${dbPath}`);
   db = new Database(dbPath);
   console.log(`[INIT] Database opened successfully`);
 } catch (err) {
   console.error(`[INIT] CRITICAL: Failed to open database:`, err);
-  // Don't exit immediately, try to continue to see if we can at least serve static files or health check
 }
 
 // Initialize Database Schema
@@ -129,7 +132,7 @@ if (!adminExists) {
   console.log("Admin user already exists and is up to date.");
 }
 
-async function startServer() {
+async function createServer() {
   const app = express();
   const PORT = 3000;
 
@@ -435,8 +438,13 @@ async function startServer() {
       next(err);
     }
   });
+
+  return app;
 }
 
-startServer().catch(err => {
-  console.error("Failed to start server:", err);
-});
+const appPromise = createServer();
+
+export default async (req: any, res: any) => {
+  const app = await appPromise;
+  return app(req, res);
+};
