@@ -445,342 +445,295 @@ export default function Products() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+              <div className="flex-1 overflow-hidden flex flex-col">
                 {/* Main Form Area */}
-                <form onSubmit={handleAddProduct} id="product-form" className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 custom-scrollbar">
-                  {/* Basic Info Card */}
-                  <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Product name</label>
-                        <input 
-                          required
-                          type="text" 
-                          value={newProduct.name}
-                          onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-300"
-                          placeholder="e.g. Vintage Denim Jacket"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select unit</label>
-                        <div className="relative">
+                <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar bg-zinc-50/50">
+                  <form onSubmit={handleAddProduct} id="product-form" className="max-w-3xl mx-auto space-y-8">
+                    {/* Basic Info */}
+                    <section className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Product name</label>
+                          <input 
+                            required
+                            type="text" 
+                            value={newProduct.name}
+                            onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                            className="w-full px-5 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                            placeholder="e.g. Vintage Denim Jacket"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select unit</label>
                           <select 
                             value={newProduct.unit}
                             onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
-                            className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all appearance-none"
+                            className="w-full px-5 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all appearance-none"
                           >
                             <option value="Pieces">Pieces</option>
                             <option value="Dozens">Dozens</option>
                             <option value="Boxes">Boxes</option>
                             <option value="Kilograms">Kilograms</option>
                           </select>
-                          <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none" />
                         </div>
                       </div>
-                    </div>
 
-                    <div className="space-y-2 max-w-xs">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">How many pieces in 1 unit?</label>
-                      <div className="relative">
-                        <input 
-                          type="number" 
-                          value={newProduct.pieces_per_unit}
-                          onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: parseInt(e.target.value) || 1})}
-                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all"
-                        />
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Product Type Card */}
-                  <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm space-y-8">
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select product type:</label>
-                      <div className="flex items-center gap-4">
-                        <button 
-                          type="button"
-                          onClick={() => setNewProduct({...newProduct, product_type: 'one'})}
-                          className={cn(
-                            "px-6 py-2 rounded-full text-sm font-bold transition-all border",
-                            newProduct.product_type === 'one' 
-                              ? "bg-emerald-50 border-emerald-200 text-emerald-600" 
-                              : "bg-white border-zinc-200 text-zinc-400"
-                          )}
-                        >
-                          One type
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={() => setNewProduct({...newProduct, product_type: 'multiple'})}
-                          className={cn(
-                            "px-6 py-2 rounded-full text-sm font-bold transition-all border flex items-center gap-2",
-                            newProduct.product_type === 'multiple' 
-                              ? "bg-emerald-50 border-emerald-200 text-emerald-600" 
-                              : "bg-white border-zinc-200 text-zinc-400"
-                          )}
-                        >
-                          {newProduct.product_type === 'multiple' && <ChevronRight className="w-4 h-4 rotate-90" />}
-                          Multiple
-                        </button>
-                      </div>
-                    </div>
-
-                    {newProduct.product_type === 'multiple' && (
-                      <div className="space-y-6">
-                        <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
-                              <Package className="w-4 h-4" />
-                            </div>
-                            <span className="text-sm font-bold text-zinc-600">Add different colours, sizes etc</span>
-                          </div>
-                          <div className="relative">
-                            <button 
-                              type="button"
-                              onClick={() => setShowAttributeDropdown(!showAttributeDropdown)}
-                              className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all"
-                            >
-                              <Plus className="w-3 h-3" />
-                              Add
-                            </button>
-                            <AnimatePresence>
-                              {showAttributeDropdown && (
-                                <motion.div 
-                                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                  className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-zinc-100 p-2 z-20"
-                                >
-                                  {['Color', 'Size', 'Material', 'Style'].map((attr) => (
-                                    <button
-                                      key={attr}
-                                      type="button"
-                                      onClick={() => {
-                                        if (attr === 'Size') {
-                                          // Add common fashion sizes if none exist
-                                          const sizes = ['S', 'M', 'L', 'XL'];
-                                          const newVariants = sizes.map(s => ({
-                                            size: s,
-                                            color: '',
-                                            quantity: 0,
-                                            low_stock_threshold: 5
-                                          }));
-                                          setNewProduct(prev => ({
-                                            ...prev,
-                                            variants: [...prev.variants, ...newVariants]
-                                          }));
-                                        } else {
-                                          addVariant();
-                                        }
-                                        setShowAttributeDropdown(false);
-                                      }}
-                                      className="w-full text-left px-4 py-3 text-sm font-bold text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors"
-                                    >
-                                      {attr}
-                                    </button>
-                                  ))}
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Pieces per unit</label>
+                          <input 
+                            type="number" 
+                            value={newProduct.pieces_per_unit}
+                            onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: parseInt(e.target.value) || 1})}
+                            className="w-full px-5 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                          />
                         </div>
-
-                        {/* Variants List */}
-                        <div className="space-y-4">
-                          {newProduct.variants.map((v, i) => (
-                            <div key={i} className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 bg-zinc-50 rounded-[1.5rem] border border-zinc-100 relative group/variant">
-                              <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest ml-1">Size</label>
-                                <select 
-                                  value={v.size}
-                                  onChange={(e) => {
-                                    const updated = [...newProduct.variants];
-                                    updated[i].size = e.target.value;
-                                    setNewProduct({...newProduct, variants: updated});
-                                  }}
-                                  className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold outline-none focus:border-emerald-500 transition-colors appearance-none"
-                                >
-                                  <option value="">Select Size</option>
-                                  {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map(s => (
-                                    <option key={s} value={s}>{s}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest ml-1">Color</label>
-                                <input 
-                                  placeholder="e.g. Black"
-                                  value={v.color}
-                                  onChange={(e) => {
-                                    const updated = [...newProduct.variants];
-                                    updated[i].color = e.target.value;
-                                    setNewProduct({...newProduct, variants: updated});
-                                  }}
-                                  className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold outline-none focus:border-emerald-500 transition-colors"
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest ml-1">Quantity</label>
-                                <input 
-                                  type="number"
-                                  placeholder="0"
-                                  value={v.quantity}
-                                  onChange={(e) => {
-                                    const updated = [...newProduct.variants];
-                                    updated[i].quantity = parseInt(e.target.value) || 0;
-                                    setNewProduct({...newProduct, variants: updated});
-                                  }}
-                                  className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold outline-none focus:border-emerald-500 transition-colors"
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest ml-1">Low Alert</label>
-                                <input 
-                                  type="number"
-                                  placeholder="5"
-                                  value={v.low_stock_threshold}
-                                  onChange={(e) => {
-                                    const updated = [...newProduct.variants];
-                                    updated[i].low_stock_threshold = parseInt(e.target.value) || 5;
-                                    setNewProduct({...newProduct, variants: updated});
-                                  }}
-                                  className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold outline-none focus:border-emerald-500 transition-colors"
-                                />
-                              </div>
-                              {newProduct.variants.length > 1 && (
-                                <button 
-                                  type="button"
-                                  onClick={() => {
-                                    const updated = newProduct.variants.filter((_, idx) => idx !== i);
-                                    setNewProduct({...newProduct, variants: updated});
-                                  }}
-                                  className="absolute -top-2 -right-2 w-6 h-6 bg-white border border-zinc-200 text-zinc-400 hover:text-red-500 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/variant:opacity-100 transition-opacity"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                          ))}
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Category</label>
+                          <select 
+                            required
+                            value={newProduct.category_id}
+                            onChange={(e) => setNewProduct({...newProduct, category_id: e.target.value})}
+                            className="w-full px-5 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all appearance-none"
+                          >
+                            <option value="">Select Category</option>
+                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </section>
 
-                  {/* Product Details Expansion */}
-                  <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm">
-                    <div className="flex items-center justify-between cursor-pointer group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-colors">
-                          <MoreVertical className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-zinc-900">Product details</h4>
-                          <p className="text-xs text-zinc-400 font-medium">Add barcode, expiry date, low stock alert...</p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-emerald-500 transition-colors" />
-                    </div>
-                  </div>
-
-                  {/* Images Section */}
-                  <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm space-y-6">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Product Images</label>
-                    <div className="flex flex-wrap gap-4">
-                      {imagePreviews.map((preview, index) => (
-                        <div key={index} className="relative w-24 h-24 rounded-[1.5rem] overflow-hidden border-2 border-zinc-100 group shadow-sm">
-                          <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                    {/* Product Type & Variants */}
+                    <section className="space-y-6 pt-6 border-t border-zinc-100">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Product Type</label>
+                        <div className="flex bg-zinc-100 p-1 rounded-xl">
                           <button 
                             type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute top-1.5 right-1.5 p-1.5 bg-red-500 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 shadow-lg"
+                            onClick={() => setNewProduct({...newProduct, product_type: 'one'})}
+                            className={cn(
+                              "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
+                              newProduct.product_type === 'one' ? "bg-white text-emerald-600 shadow-sm" : "text-zinc-400"
+                            )}
                           >
-                            <Trash2 className="w-3 h-3" />
+                            One type
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => setNewProduct({...newProduct, product_type: 'multiple'})}
+                            className={cn(
+                              "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
+                              newProduct.product_type === 'multiple' ? "bg-white text-emerald-600 shadow-sm" : "text-zinc-400"
+                            )}
+                          >
+                            Multiple
                           </button>
                         </div>
-                      ))}
-                      <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 rounded-[1.5rem] hover:border-emerald-500 hover:bg-emerald-50 transition-all cursor-pointer group">
-                        <Plus className="w-6 h-6 text-zinc-300 group-hover:text-emerald-500 transition-colors" />
-                        <span className="text-[10px] font-black text-zinc-300 group-hover:text-emerald-500 mt-1 uppercase tracking-widest">Upload</span>
+                      </div>
+
+                      {newProduct.product_type === 'multiple' && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-bold text-zinc-900">Attributes & Variants</h4>
+                            <div className="relative">
+                              <button 
+                                type="button"
+                                onClick={() => setShowAttributeDropdown(!showAttributeDropdown)}
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Add Attribute
+                              </button>
+                              <AnimatePresence>
+                                {showAttributeDropdown && (
+                                  <motion.div 
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-zinc-100 p-2 z-20"
+                                  >
+                                    {['Color', 'Size', 'Material', 'Style'].map((attr) => (
+                                      <button
+                                        key={attr}
+                                        type="button"
+                                        onClick={() => {
+                                          if (attr === 'Size') {
+                                            const sizes = ['S', 'M', 'L', 'XL'];
+                                            const newVariants = sizes.map(s => ({
+                                              size: s,
+                                              color: '',
+                                              quantity: 0,
+                                              low_stock_threshold: 5
+                                            }));
+                                            setNewProduct(prev => ({
+                                              ...prev,
+                                              variants: [...prev.variants, ...newVariants]
+                                            }));
+                                          } else {
+                                            addVariant();
+                                          }
+                                          setShowAttributeDropdown(false);
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm font-bold text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors"
+                                      >
+                                        {attr}
+                                      </button>
+                                    ))}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            {newProduct.variants.map((v, i) => (
+                              <div key={i} className="p-4 bg-white rounded-2xl border border-zinc-200 relative group shadow-sm">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Size</label>
+                                    <select 
+                                      value={v.size}
+                                      onChange={(e) => {
+                                        const updated = [...newProduct.variants];
+                                        updated[i].size = e.target.value;
+                                        setNewProduct({...newProduct, variants: updated});
+                                      }}
+                                      className="w-full px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-xs font-bold outline-none focus:border-emerald-500 transition-colors"
+                                    >
+                                      <option value="">Size</option>
+                                      {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Color</label>
+                                    <input 
+                                      placeholder="Color"
+                                      value={v.color}
+                                      onChange={(e) => {
+                                        const updated = [...newProduct.variants];
+                                        updated[i].color = e.target.value;
+                                        setNewProduct({...newProduct, variants: updated});
+                                      }}
+                                      className="w-full px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-xs font-bold outline-none focus:border-emerald-500 transition-colors"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Qty</label>
+                                    <input 
+                                      type="number"
+                                      placeholder="0"
+                                      value={v.quantity}
+                                      onChange={(e) => {
+                                        const updated = [...newProduct.variants];
+                                        updated[i].quantity = parseInt(e.target.value) || 0;
+                                        setNewProduct({...newProduct, variants: updated});
+                                      }}
+                                      className="w-full px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-xs font-bold outline-none focus:border-emerald-500 transition-colors"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Alert</label>
+                                    <input 
+                                      type="number"
+                                      placeholder="5"
+                                      value={v.low_stock_threshold}
+                                      onChange={(e) => {
+                                        const updated = [...newProduct.variants];
+                                        updated[i].low_stock_threshold = parseInt(e.target.value) || 5;
+                                        setNewProduct({...newProduct, variants: updated});
+                                      }}
+                                      className="w-full px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-xs font-bold outline-none focus:border-emerald-500 transition-colors"
+                                    />
+                                  </div>
+                                </div>
+                                {newProduct.variants.length > 1 && (
+                                  <button 
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = newProduct.variants.filter((_, idx) => idx !== i);
+                                      setNewProduct({...newProduct, variants: updated});
+                                    }}
+                                    className="absolute -top-2 -right-2 w-7 h-7 bg-white border border-zinc-200 text-red-500 rounded-full flex items-center justify-center shadow-md hover:bg-red-50 transition-all z-10"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </section>
+
+                    {/* Pricing */}
+                    <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-zinc-100">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Cost Price (₦)</label>
                         <input 
-                          type="file" 
-                          multiple 
-                          accept="image/*" 
-                          onChange={handleImageUpload} 
-                          className="hidden" 
+                          required
+                          type="number" 
+                          step="0.01"
+                          value={newProduct.cost_price}
+                          onChange={(e) => setNewProduct({...newProduct, cost_price: e.target.value})}
+                          className="w-full px-5 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                         />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Cost Price (₦)</label>
-                      <input 
-                        required
-                        type="number" 
-                        step="0.01"
-                        value={newProduct.cost_price}
-                        onChange={(e) => setNewProduct({...newProduct, cost_price: e.target.value})}
-                        className="w-full px-5 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Selling Price (₦)</label>
-                      <input 
-                        required
-                        type="number" 
-                        step="0.01"
-                        value={newProduct.selling_price}
-                        onChange={(e) => setNewProduct({...newProduct, selling_price: e.target.value})}
-                        className="w-full px-5 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
-                      />
-                    </div>
-                  </div>
-                </form>
-
-                {/* Summary Sidebar */}
-                <div className="w-full lg:w-80 bg-white border-l border-zinc-100 p-8 flex flex-col">
-                  <div className="flex-1 space-y-8">
-                    <h3 className="text-lg font-black text-zinc-900 tracking-tight">Summary</h3>
-                    
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-zinc-400">Product:</span>
-                        <span className="text-sm font-black text-zinc-900">{newProduct.name || '-'}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-zinc-400">Unit:</span>
-                        <span className="text-sm font-black text-zinc-900">{newProduct.unit}</span>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Selling Price (₦)</label>
+                        <input 
+                          required
+                          type="number" 
+                          step="0.01"
+                          value={newProduct.selling_price}
+                          onChange={(e) => setNewProduct({...newProduct, selling_price: e.target.value})}
+                          className="w-full px-5 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                        />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-zinc-400">Qty:</span>
-                        <span className="text-sm font-black text-zinc-900">{totalQuantity || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
+                    </section>
 
-                  <div className="pt-8 space-y-4">
-                    <button 
-                      type="submit"
-                      form="product-form"
-                      disabled={isSaving}
-                      className="w-full py-4 bg-emerald-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
-                    >
-                      {isSaving ? 'Saving...' : editingProduct ? 'Update Product' : 'Save Product'}
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        setIsAddModalOpen(false);
-                        setEditingProduct(null);
-                      }}
-                      className="w-full py-4 bg-zinc-50 text-zinc-600 rounded-2xl text-sm font-bold hover:bg-zinc-100 transition-all active:scale-95 border border-zinc-200"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                    {/* Summary Section */}
+                    <section className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 space-y-4">
+                      <h4 className="text-xs font-black text-emerald-600 uppercase tracking-widest">Quick Summary</h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest">Product</p>
+                          <p className="text-sm font-black text-emerald-900 truncate">{newProduct.name || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest">Unit</p>
+                          <p className="text-sm font-black text-emerald-900">{newProduct.unit}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest">Total Qty</p>
+                          <p className="text-sm font-black text-emerald-900">{totalQuantity}</p>
+                        </div>
+                      </div>
+                    </section>
+                  </form>
+                </div>
+
+                {/* Sticky Footer */}
+                <div className="p-6 sm:p-8 bg-white border-t border-zinc-100 flex flex-col sm:flex-row gap-4 sticky bottom-0 z-10">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIsAddModalOpen(false);
+                      setEditingProduct(null);
+                    }}
+                    className="flex-1 py-4 bg-zinc-50 text-zinc-600 rounded-2xl text-sm font-bold hover:bg-zinc-100 transition-all active:scale-95 border border-zinc-200 order-2 sm:order-1"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    form="product-form"
+                    disabled={isSaving}
+                    className="flex-[2] py-4 bg-emerald-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 order-1 sm:order-2"
+                  >
+                    {isSaving ? 'Saving...' : editingProduct ? 'Update Product' : 'Save Product'}
+                  </button>
                 </div>
               </div>
             </motion.div>
