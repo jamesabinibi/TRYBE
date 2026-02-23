@@ -73,10 +73,13 @@ export default function Dashboard() {
           <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">Home</h1>
           <p className="text-zinc-500 font-medium">Overview of your business performance</p>
         </div>
-        <button className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
+        <Link 
+          to="/products?action=add"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+        >
           <Plus className="w-4 h-4" />
-          New transaction
-        </button>
+          Add Product
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
