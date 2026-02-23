@@ -152,6 +152,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <div className="flex min-h-screen bg-zinc-50 font-sans selection:bg-emerald-100 selection:text-emerald-900">
@@ -184,13 +185,23 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
             </button>
             <div className="h-10 w-px bg-zinc-200 hidden sm:block"></div>
-            <Link 
-              to="/sales"
-              className="flex items-center gap-2 px-5 py-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-zinc-900/10 active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New Transaction</span>
-            </Link>
+            {location.pathname === '/products' ? (
+              <Link 
+                to="/products?action=add"
+                className="flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/10 active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Product</span>
+              </Link>
+            ) : (
+              <Link 
+                to="/sales"
+                className="flex items-center gap-2 px-5 py-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-zinc-900/10 active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">New Transaction</span>
+              </Link>
+            )}
           </div>
         </header>
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 lg:p-10 custom-scrollbar">
