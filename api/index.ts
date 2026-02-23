@@ -125,6 +125,10 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // API Routes
+app.get("/api", (req, res) => {
+  res.json({ message: "StockFlow API is alive", isVercel, dbStatus: db ? "connected" : "failed" });
+});
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", time: new Date().toISOString(), isVercel });
 });
@@ -135,6 +139,7 @@ app.get("/api/test", (req, res) => {
 
 // Auth
 app.post("/api/login", (req, res) => {
+  if (!db) return res.status(500).json({ error: "Database not initialized" });
   const { username, password } = req.body;
   const trimmedUsername = username?.trim();
   try {
@@ -147,6 +152,7 @@ app.post("/api/login", (req, res) => {
 });
 
 app.post("/api/register", (req, res) => {
+  if (!db) return res.status(500).json({ error: "Database not initialized" });
   const { username, email, password, name, role = 'staff' } = req.body;
   const trimmedUsername = username?.trim();
   const trimmedEmail = email?.trim()?.toLowerCase();
@@ -163,6 +169,7 @@ app.post("/api/register", (req, res) => {
 
 // Products
 app.get("/api/products", (req, res) => {
+  if (!db) return res.status(500).json({ error: "Database not initialized" });
   try {
     const products = db.prepare(`
       SELECT p.*, c.name as category_name, 
@@ -204,11 +211,24 @@ app.post("/api/products", (req, res) => {
 
 // Categories
 app.get("/api/categories", (req, res) => {
+  if (!db) return res.status(500).json({ error: "Database not initialized" });
   res.json(db.prepare("SELECT * FROM categories").all());
+});
+
+app.post("/api/categories", (req, res) => {
+  if (!db) return res.status(500).json({ error: "Database not initialized" });
+  const { name } = req.body;
+  try {
+    const info = db.prepare("INSERT INTO categories (name) VALUES (?)").run(name);
+    res.json({ id: info.lastInsertRowid, name });
+  } catch (e) {
+    res.status(400).json({ error: "Category already exists" });
+  }
 });
 
 // Sales
 app.post("/api/sales", (req, res) => {
+  if (!db) return res.status(500).json({ error: "Database not initialized" });
   const { items, payment_method, staff_id } = req.body;
   const invoice_number = "INV-" + Date.now();
   let total_amount = 0;
@@ -238,12 +258,14 @@ app.post("/api/sales", (req, res) => {
 });
 
 app.get("/api/sales", (req, res) => {
+  if (!db) return res.status(500).json({ error: "Database not initialized" });
   const sales = db.prepare(`SELECT s.*, u.name as staff_name FROM sales s LEFT JOIN users u ON s.staff_id = u.id ORDER BY s.created_at DESC`).all();
   res.json(sales);
 });
 
 // Analytics
 app.get("/api/analytics/summary", (req, res) => {
+  if (!db) return res.status(500).json({ error: "Database not initialized" });
   const today = new Date().toISOString().split('T')[0];
   const summary = db.prepare(`
     SELECT 
@@ -258,6 +280,7 @@ app.get("/api/analytics/summary", (req, res) => {
 });
 
 app.get("/api/analytics/trends", (req, res) => {
+  if (!db) return res.status(500).json({ error: "Database not initialized" });
   const trends = db.prepare(`SELECT date(created_at) as date, SUM(total_amount) as revenue, SUM(total_profit) as profit FROM sales GROUP BY date(created_at) ORDER BY date(created_at) ASC LIMIT 30`).all();
   res.json(trends);
 });
