@@ -6,26 +6,51 @@ dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+console.log(`[API] Supabase URL: ${supabaseUrl ? 'SET' : 'MISSING'}`);
+console.log(`[API] Supabase Key: ${supabaseAnonKey ? 'SET' : 'MISSING'}`);
+
+let supabase: any;
+try {
+  if (supabaseUrl && supabaseAnonKey) {
+    if (!supabaseUrl.startsWith('http')) {
+      console.error("[API] ERROR: SUPABASE_URL must start with http:// or https://");
+    } else {
+      supabase = createClient(supabaseUrl, supabaseAnonKey);
+      console.log(`[API] Supabase client initialized`);
+    }
+  } else {
+    console.warn(`[API] Supabase credentials missing`);
+  }
+} catch (e) {
+  console.error("[API] Failed to initialize Supabase client:", e);
+}
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`[API] ${req.method} ${req.url}`);
+  next();
+});
+
 // Auth
 app.post("/api/login", async (req, res) => {
+  console.log(`[API] Login attempt`);
   const { username, password } = req.body;
   const trimmedUsername = username?.trim();
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return res.status(500).json({ error: "Server configuration error: SUPABASE_URL or SUPABASE_ANON_KEY is missing." });
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
   }
 
   try {
     const { data: user, error: supabaseError } = await supabase
       .from('users')
       .select('id, username, email, role, name, password')
-      .or(`username.ilike.${trimmedUsername},email.ilike.${trimmedUsername}`)
+      .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
       .maybeSingle();
 
     if (supabaseError) {
@@ -45,6 +70,9 @@ app.post("/api/login", async (req, res) => {
 });
 
 app.post("/api/register", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
   const { username, email, password, name, role = 'staff' } = req.body;
   const trimmedUsername = username?.trim();
   const trimmedEmail = email?.trim()?.toLowerCase();
@@ -72,6 +100,9 @@ app.post("/api/register", async (req, res) => {
 
 // Products
 app.get("/api/products", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
   try {
     const { data: products, error } = await supabase
       .from('products')
@@ -99,6 +130,9 @@ app.get("/api/products", async (req, res) => {
 });
 
 app.post("/api/products", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
   try {
     const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
     const { data: product, error: productError } = await supabase
@@ -134,12 +168,18 @@ app.post("/api/products", async (req, res) => {
 
 // Categories
 app.get("/api/categories", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
   const { data, error } = await supabase.from('categories').select('*');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
 app.post("/api/categories", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
   const { name } = req.body;
   try {
     const { data, error } = await supabase.from('categories').insert([{ name }]).select().single();
@@ -152,6 +192,9 @@ app.post("/api/categories", async (req, res) => {
 
 // Sales
 app.post("/api/sales", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
   const { items, payment_method, staff_id } = req.body;
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "No items in sale" });
@@ -219,6 +262,9 @@ app.post("/api/sales", async (req, res) => {
 });
 
 app.get("/api/sales", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
   const { data, error } = await supabase
     .from('sales')
     .select('*, users(name)')
@@ -235,6 +281,9 @@ app.get("/api/sales", async (req, res) => {
 
 // Analytics
 app.get("/api/analytics/summary", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
   try {
     const today = new Date().toISOString().split('T')[0];
     const { count: totalProducts } = await supabase.from('products').select('*', { count: 'exact', head: true });
@@ -263,6 +312,9 @@ app.get("/api/analytics/summary", async (req, res) => {
 });
 
 app.get("/api/analytics/trends", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
   try {
     const { data, error } = await supabase
       .from('sales')
