@@ -29,6 +29,7 @@ export default function Sales() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -78,6 +79,7 @@ export default function Sales() {
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setIsProcessing(true);
+    setError(null);
     
     try {
       const response = await fetch('/api/sales', {
@@ -99,9 +101,13 @@ export default function Sales() {
         // Refresh products to update stock
         fetch('/api/products').then(res => res.json()).then(setProducts);
         alert("Sale recorded successfully!");
+      } else {
+        const data = await response.json();
+        setError(data.error || "Checkout failed. Please try again.");
       }
     } catch (e) {
       console.error(e);
+      setError("Network error. Please check your connection.");
     } finally {
       setIsProcessing(false);
     }
@@ -242,6 +248,11 @@ export default function Sales() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 custom-scrollbar min-h-[300px] lg:min-h-0">
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-xs font-bold text-center">
+              {error}
+            </div>
+          )}
           <AnimatePresence initial={false}>
             {cart.map((item) => (
               <motion.div 

@@ -404,29 +404,54 @@ async function createServer() {
   // Sales
   app.post("/api/sales", (req, res) => {
     const { items, payment_method, staff_id } = req.body;
+    console.log(`[SALES] New sale request:`, JSON.stringify({ itemsCount: items?.length, payment_method, staff_id }));
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      console.log(`[SALES] Error: No items in sale`);
+      return res.status(400).json({ error: "No items in sale" });
+    }
+
     const invoice_number = "INV-" + Date.now();
     let total_amount = 0;
     let total_profit = 0;
-    const transaction = db.transaction(() => {
-      const saleInfo = db.prepare(`INSERT INTO sales (invoice_number, total_amount, total_profit, payment_method, staff_id) VALUES (?, ?, ?, ?, ?)`).run(invoice_number, 0, 0, payment_method, staff_id);
-      const saleId = saleInfo.lastInsertRowid;
-      for (const item of items) {
-        const variant = db.prepare("SELECT * FROM product_variants WHERE id = ?").get(item.variant_id);
-        const product = db.prepare("SELECT * FROM products WHERE id = ?").get(variant.product_id);
-        const sellingPrice = item.price_override || variant.price_override || product.selling_price;
-        const costPrice = product.cost_price;
-        const profit = (sellingPrice - costPrice) * item.quantity;
-        total_amount += sellingPrice * item.quantity;
-        total_profit += profit;
-        db.prepare("UPDATE product_variants SET quantity = quantity - ? WHERE id = ?").run(item.quantity, item.variant_id);
-        db.prepare(`INSERT INTO sale_items (sale_id, variant_id, quantity, selling_price, cost_price, profit) VALUES (?, ?, ?, ?, ?, ?)`).run(saleId, item.variant_id, item.quantity, sellingPrice, costPrice, profit);
-      }
-      db.prepare("UPDATE sales SET total_amount = ?, total_profit = ? WHERE id = ?").run(total_amount, total_profit, saleId);
-      return { saleId, invoice_number };
-    });
+    
     try {
-      res.json(transaction());
+      const transaction = db.transaction(() => {
+        const saleInfo = db.prepare(`INSERT INTO sales (invoice_number, total_amount, total_profit, payment_method, staff_id) VALUES (?, ?, ?, ?, ?)`).run(invoice_number, 0, 0, payment_method, staff_id);
+        const saleId = saleInfo.lastInsertRowid;
+        
+        for (const item of items) {
+          console.log(`[SALES] Processing item: variant_id=${item.variant_id}, quantity=${item.quantity}`);
+          const variant = db.prepare("SELECT * FROM product_variants WHERE id = ?").get(item.variant_id);
+          if (!variant) {
+            throw new Error(`Variant not found: ${item.variant_id}`);
+          }
+          
+          const product = db.prepare("SELECT * FROM products WHERE id = ?").get(variant.product_id);
+          if (!product) {
+            throw new Error(`Product not found for variant: ${item.variant_id}`);
+          }
+
+          const sellingPrice = item.price_override || variant.price_override || product.selling_price;
+          const costPrice = product.cost_price;
+          const profit = (sellingPrice - costPrice) * item.quantity;
+          
+          total_amount += sellingPrice * item.quantity;
+          total_profit += profit;
+          
+          db.prepare("UPDATE product_variants SET quantity = quantity - ? WHERE id = ?").run(item.quantity, item.variant_id);
+          db.prepare(`INSERT INTO sale_items (sale_id, variant_id, quantity, selling_price, cost_price, profit) VALUES (?, ?, ?, ?, ?, ?)`).run(saleId, item.variant_id, item.quantity, sellingPrice, costPrice, profit);
+        }
+        
+        db.prepare("UPDATE sales SET total_amount = ?, total_profit = ? WHERE id = ?").run(total_amount, total_profit, saleId);
+        return { saleId, invoice_number };
+      });
+
+      const result = transaction();
+      console.log(`[SALES] Sale completed successfully: ${invoice_number}`);
+      res.json(result);
     } catch (e: any) {
+      console.error(`[SALES] Sale failed:`, e);
       res.status(400).json({ error: e.message });
     }
   });
