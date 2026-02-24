@@ -26,10 +26,11 @@ interface CartItem {
 export default function Sales() {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     fetch('/api/products')
@@ -52,6 +53,8 @@ export default function Sales() {
       }
       return [...prev, { product, variant, quantity: 1 }];
     });
+    // Optional: Reset selection after adding to cart
+    // setSelectedProduct(null);
   };
 
   const removeFromCart = (variantId: number) => {
@@ -104,66 +107,124 @@ export default function Sales() {
     }
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
     <div className="h-full flex flex-col lg:flex-row gap-6 sm:gap-8 overflow-hidden">
       {/* Product Selection */}
       <div className="flex-1 flex flex-col gap-6 min-h-0">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-            <input 
-              type="text" 
-              placeholder="Search products by name or SKU..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-zinc-200 rounded-2xl text-base focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all shadow-sm font-bold"
-            />
-          </div>
-          <button className="px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all shadow-lg shadow-zinc-200 active:scale-95">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M16 7v10"/></svg>
-            Scan
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 content-start custom-scrollbar">
-          {filteredProducts.map((product) => (
-            <div key={product.id} className="bg-white p-5 rounded-[2rem] border border-zinc-200 shadow-sm flex flex-col gap-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h4 className="font-black text-zinc-900 truncate tracking-tight">{product.name}</h4>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{product.category_name}</p>
-                </div>
-                <span className="text-sm font-black text-emerald-600 whitespace-nowrap">{formatCurrency(product.selling_price)}</span>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Available Variants</p>
-                <div className="flex flex-wrap gap-2">
-                  {product.variants.map((variant) => (
-                    <button
-                      key={variant.id}
-                      disabled={variant.quantity <= 0}
-                      onClick={() => addToCart(product, variant)}
-                      className={cn(
-                        "px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex flex-col items-center gap-0.5 min-w-[80px]",
-                        variant.quantity > 0 
-                          ? "border-zinc-200 hover:border-emerald-500 hover:bg-emerald-50 text-zinc-700 active:scale-95" 
-                          : "border-zinc-100 bg-zinc-50 text-zinc-300 cursor-not-allowed"
-                      )}
-                    >
-                      <span>{variant.size} {variant.color && `- ${variant.color}`}</span>
-                      <span className="text-[9px] opacity-60 font-bold">{variant.quantity} in stock</span>
-                    </button>
-                  ))}
-                </div>
+        <div className="bg-white p-6 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select Product</label>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+              <select 
+                className="w-full pl-12 pr-10 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-base focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all shadow-sm font-bold appearance-none cursor-pointer"
+                value={selectedProduct?.id || ''}
+                onChange={(e) => {
+                  const product = products.find(p => p.id === parseInt(e.target.value));
+                  setSelectedProduct(product || null);
+                }}
+              >
+                <option value="">Choose a product...</option>
+                {products.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} - {formatCurrency(p.selling_price)}</option>
+                ))}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400">
+                <ChevronRight className="w-5 h-5 rotate-90" />
               </div>
             </div>
-          ))}
+          </div>
+
+          <AnimatePresence mode="wait">
+            {selectedProduct ? (
+              <motion.div 
+                key={selectedProduct.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-6 pt-4 border-t border-zinc-100"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{selectedProduct.name}</h2>
+                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{selectedProduct.category_name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(selectedProduct.selling_price)}</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Base Price</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Pick Size & Color</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {selectedProduct.variants.map((variant) => (
+                      <button
+                        key={variant.id}
+                        disabled={variant.quantity <= 0}
+                        onClick={() => addToCart(selectedProduct, variant)}
+                        className={cn(
+                          "p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 text-center group relative overflow-hidden",
+                          variant.quantity > 0 
+                            ? "border-zinc-100 bg-zinc-50 hover:border-emerald-500 hover:bg-white text-zinc-900 active:scale-95" 
+                            : "border-zinc-50 bg-zinc-50/50 text-zinc-300 cursor-not-allowed"
+                        )}
+                      >
+                        <span className="text-xs font-black uppercase tracking-widest">{variant.size}</span>
+                        {variant.color && <span className="text-[10px] font-bold text-zinc-400">{variant.color}</span>}
+                        <span className={cn(
+                          "text-[9px] font-bold mt-1",
+                          variant.quantity > 0 ? "text-emerald-500" : "text-zinc-300"
+                        )}>
+                          {variant.quantity > 0 ? `${variant.quantity} in stock` : 'Out of stock'}
+                        </span>
+                        {variant.quantity > 0 && (
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Plus className="w-3 h-3 text-emerald-500" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="py-12 text-center space-y-4">
+                <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto">
+                  <Package className="w-8 h-8 text-zinc-200" />
+                </div>
+                <p className="text-sm font-bold text-zinc-400 tracking-tight">Select a product to see available sizes</p>
+              </div>
+            )}
+          </AnimatePresence>
         </div>
+
+        {/* Quick Search List (Optional, but user said "list or dropdown") */}
+        {!selectedProduct && (
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {products.map((product) => (
+                <button 
+                  key={product.id} 
+                  onClick={() => setSelectedProduct(product)}
+                  className="bg-white p-5 rounded-[2rem] border border-zinc-200 shadow-sm flex flex-col gap-4 hover:shadow-md hover:border-emerald-500/30 transition-all text-left group"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h4 className="font-black text-zinc-900 truncate tracking-tight group-hover:text-emerald-600 transition-colors">{product.name}</h4>
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{product.category_name}</p>
+                    </div>
+                    <span className="text-sm font-black text-emerald-600 whitespace-nowrap">{formatCurrency(product.selling_price)}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-auto">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{product.variants.length} variants</span>
+                    <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Cart & Checkout */}
