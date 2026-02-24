@@ -16,12 +16,22 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
   const trimmedUsername = username?.trim();
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return res.status(500).json({ error: "Server configuration error: SUPABASE_URL or SUPABASE_ANON_KEY is missing." });
+  }
+
   try {
-    const { data: user, error } = await supabase
+    const { data: user, error: supabaseError } = await supabase
       .from('users')
       .select('id, username, email, role, name, password')
-      .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
+      .or(`username.ilike.${trimmedUsername},email.ilike.${trimmedUsername}`)
       .maybeSingle();
+
+    if (supabaseError) {
+      console.error(`[AUTH] Supabase query error:`, supabaseError);
+      return res.status(500).json({ error: `Database error: ${supabaseError.message}` });
+    }
 
     if (user && user.password === password) {
       const { password: _, ...userWithoutPassword } = user;

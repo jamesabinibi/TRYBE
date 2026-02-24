@@ -103,13 +103,23 @@ async function createServer() {
     const trimmedUsername = username.trim();
     console.log(`[AUTH] Login attempt for: "${trimmedUsername}"`);
     
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('[AUTH] Supabase credentials missing from environment variables');
+      return res.status(500).json({ error: "Server configuration error: SUPABASE_URL or SUPABASE_ANON_KEY is missing." });
+    }
+
     try {
       // Support login via username or email
-      const { data: user, error } = await supabase
+      const { data: user, error: supabaseError } = await supabase
         .from('users')
         .select('id, username, email, role, name, password')
-        .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
+        .or(`username.ilike.${trimmedUsername},email.ilike.${trimmedUsername}`)
         .maybeSingle();
+
+      if (supabaseError) {
+        console.error(`[AUTH] Supabase query error:`, supabaseError);
+        return res.status(500).json({ error: `Database error: ${supabaseError.message}` });
+      }
 
       if (user) {
         console.log(`[AUTH] User found: "${user.username}" (ID: ${user.id}, Email: ${user.email})`);
