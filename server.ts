@@ -1,147 +1,30 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import Database from "better-sqlite3";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import fs from 'fs';
 import nodemailer from 'nodemailer';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
-// Vercel specific database path
-const isVercel = process.env.VERCEL === '1';
-const dbPath = isVercel 
-  ? path.join("/tmp", "inventory.db") 
-  : path.resolve(__dirname, "inventory.db");
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('[INIT] WARNING: Supabase credentials missing. App will fail on database operations.');
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 console.log(`[INIT] Starting server at ${new Date().toISOString()}`);
 console.log(`[INIT] NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`[INIT] VERCEL: ${process.env.VERCEL}`);
-console.log(`[INIT] Database path: ${dbPath}`);
-
-let db: any;
-try {
-  db = new Database(dbPath);
-  console.log(`[INIT] Database opened successfully`);
-} catch (err) {
-  console.error(`[INIT] CRITICAL: Failed to open database:`, err);
-}
-
-// Initialize Database Schema
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE,
-      email TEXT UNIQUE,
-      password TEXT,
-      role TEXT CHECK(role IN ('admin', 'manager', 'staff')),
-      name TEXT
-    );
-    CREATE TABLE IF NOT EXISTS categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE
-    );
-    CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
-      category_id INTEGER,
-      description TEXT,
-      cost_price REAL,
-      selling_price REAL,
-      supplier_name TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(category_id) REFERENCES categories(id)
-    );
-    CREATE TABLE IF NOT EXISTS product_variants (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      product_id INTEGER,
-      size TEXT,
-      color TEXT,
-      quantity INTEGER DEFAULT 0,
-      low_stock_threshold INTEGER DEFAULT 5,
-      price_override REAL,
-      FOREIGN KEY(product_id) REFERENCES products(id)
-    );
-    CREATE TABLE IF NOT EXISTS sales (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      invoice_number TEXT UNIQUE,
-      total_amount REAL,
-      total_profit REAL,
-      payment_method TEXT,
-      staff_id INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(staff_id) REFERENCES users(id)
-    );
-    CREATE TABLE IF NOT EXISTS sale_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      sale_id INTEGER,
-      variant_id INTEGER,
-      quantity INTEGER,
-      selling_price REAL,
-      cost_price REAL,
-      profit REAL,
-      FOREIGN KEY(sale_id) REFERENCES sales(id),
-      FOREIGN KEY(variant_id) REFERENCES product_variants(id)
-    );
-    CREATE TABLE IF NOT EXISTS product_images (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      product_id INTEGER,
-      image_data TEXT,
-      FOREIGN KEY(product_id) REFERENCES products(id)
-    );
-    CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      title TEXT,
-      message TEXT,
-      type TEXT,
-      is_read INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(user_id) REFERENCES users(id)
-    );
-    INSERT OR IGNORE INTO categories (name) VALUES ('Electronics'), ('Fashion'), ('Food'), ('General');
-  `);
-  console.log(`[INIT] Schema initialized successfully`);
-} catch (err) {
-  console.error(`[INIT] Failed to initialize schema:`, err);
-}
-
-// Migration: Add email column to users if it doesn't exist
-try {
-  const tableInfo = db.prepare("PRAGMA table_info(users)").all();
-  const hasEmail = tableInfo.some((col: any) => col.name === 'email');
-  if (!hasEmail) {
-    db.prepare("ALTER TABLE users ADD COLUMN email TEXT").run();
-    db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)").run();
-    console.log("Added email column and unique index to users table");
-  }
-} catch (e) {
-  console.error("Migration error:", e);
-}
-
-// Seed default admin if not exists
-const adminExists = db.prepare("SELECT * FROM users WHERE username = ?").get("admin");
-if (!adminExists) {
-  console.log("Seeding default admin user...");
-  db.prepare("INSERT INTO users (username, email, password, role, name) VALUES (?, ?, ?, ?, ?)").run(
-    "admin",
-    "admin@example.com",
-    "admin123", // In a real app, hash this!
-    "admin",
-    "System Admin"
-  );
-} else if (!(adminExists as any).email) {
-  console.log("Updating existing admin with default email...");
-  // Update existing admin with default email if missing
-  db.prepare("UPDATE users SET email = ? WHERE username = ?").run("admin@example.com", "admin");
-} else {
-  console.log("Admin user already exists and is up to date.");
-}
+console.log(`[INIT] Supabase URL: ${supabaseUrl}`);
 
 // Email transporter setup
 // Note: In a real app, use environment variables for credentials
@@ -210,7 +93,7 @@ async function createServer() {
   });
 
   // Auth
-  const loginHandler = (req: any, res: any) => {
+  const loginHandler = async (req: any, res: any) => {
     const { username, password } = req.body;
     
     if (!username || !password) {
@@ -222,11 +105,11 @@ async function createServer() {
     
     try {
       // Support login via username or email
-      const user = db.prepare(`
-        SELECT id, username, email, role, name, password 
-        FROM users 
-        WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?))
-      `).get(trimmedUsername, trimmedUsername);
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id, username, email, role, name, password')
+        .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
+        .maybeSingle();
 
       if (user) {
         console.log(`[AUTH] User found: "${user.username}" (ID: ${user.id}, Email: ${user.email})`);
@@ -237,7 +120,6 @@ async function createServer() {
           res.json(userWithoutPassword);
         } else {
           console.log(`[AUTH] Login failed: "${trimmedUsername}" - Password mismatch.`);
-          console.log(`[AUTH] Debug: Expected length ${user.password?.length}, Got length ${password?.length}`);
           res.status(401).json({ error: "Invalid username or password" });
         }
       } else {
@@ -253,27 +135,39 @@ async function createServer() {
   app.post("/api/login", loginHandler);
   app.post("/api/login/", loginHandler);
 
-  const registerHandler = (req: any, res: any) => {
+  const registerHandler = async (req: any, res: any) => {
     const { username, email, password, name, role = 'staff' } = req.body;
     const trimmedUsername = username?.trim();
     const trimmedEmail = email?.trim()?.toLowerCase();
     console.log(`Register attempt: ${trimmedUsername} (${trimmedEmail})`);
     try {
       // Check if exists case-insensitively
-      const existing = db.prepare("SELECT id FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)").get(trimmedUsername, trimmedEmail);
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedEmail}"`)
+        .maybeSingle();
+
       if (existing) {
         return res.status(400).json({ error: "Username or email already exists" });
       }
 
-      const info = db.prepare("INSERT INTO users (username, email, password, role, name) VALUES (?, ?, ?, ?, ?)").run(
-        trimmedUsername,
-        trimmedEmail,
-        password,
-        role,
-        name?.trim()
-      );
-      const userId = info.lastInsertRowid;
-      console.log(`[AUTH] Register success: "${trimmedUsername}" (ID: ${userId}). Password saved: "${password}"`);
+      const { data: newUser, error } = await supabase
+        .from('users')
+        .insert([{ 
+          username: trimmedUsername, 
+          email: trimmedEmail, 
+          password, 
+          role, 
+          name: name?.trim() 
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const userId = newUser.id;
+      console.log(`[AUTH] Register success: "${trimmedUsername}" (ID: ${userId}).`);
 
       // Send confirmation email
       sendEmail(
@@ -284,14 +178,16 @@ async function createServer() {
       ).catch(err => console.error('Failed to send registration email:', err));
 
       // Create notification
-      db.prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)").run(
-        userId,
-        'Welcome!',
-        'Your account has been successfully created. Welcome to StockFlow Pro!',
-        'info'
-      );
+      await supabase
+        .from('notifications')
+        .insert([{
+          user_id: userId,
+          title: 'Welcome!',
+          message: 'Your account has been successfully created. Welcome to StockFlow Pro!',
+          type: 'info'
+        }]);
 
-      res.json({ id: userId, username: trimmedUsername, email: trimmedEmail, role, name });
+      res.json(newUser);
     } catch (e: any) {
       console.error(`Register failed:`, e);
       res.status(400).json({ error: "Registration failed. Please try again." });
@@ -306,80 +202,121 @@ async function createServer() {
     res.json({ message: "Confirmation code sent to " + email, code: "123456" });
   });
 
-  app.post("/api/reset-password", (req, res) => {
+  app.post("/api/reset-password", async (req, res) => {
     const { username, newPassword, code } = req.body;
     if (code !== "123456") return res.status(400).json({ error: "Invalid code" });
-    const result = db.prepare("UPDATE users SET password = ? WHERE username = ?").run(newPassword, username);
-    if (result.changes > 0) res.json({ success: true });
+    const { data, error } = await supabase
+      .from('users')
+      .update({ password: newPassword })
+      .ilike('username', username)
+      .select();
+    if (error) return res.status(500).json({ error: error.message });
+    if (data && data.length > 0) res.json({ success: true });
     else res.status(404).json({ error: "User not found" });
   });
 
   // Products
-  app.get("/api/products", (req, res) => {
-    const products = db.prepare(`
-      SELECT p.*, c.name as category_name, 
-      (SELECT SUM(quantity) FROM product_variants WHERE product_id = p.id) as total_stock
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-    `).all();
-    const productsWithVariants = products.map(p => {
-      const variants = db.prepare("SELECT * FROM product_variants WHERE product_id = ?").all(p.id);
-      const images = db.prepare("SELECT image_data FROM product_images WHERE product_id = ?").all(p.id);
-      return { ...p, variants, images: images.map((img: any) => img.image_data) };
-    });
-    res.json(productsWithVariants);
+  app.get("/api/products", async (req, res) => {
+    try {
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name),
+          product_variants(*),
+          product_images(image_data)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const productsWithVariants = products.map(p => ({
+        ...p,
+        category_name: p.categories?.name,
+        variants: p.product_variants,
+        images: p.product_images?.map((img: any) => img.image_data) || []
+      }));
+
+      res.json(productsWithVariants);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
-  app.post("/api/products", (req, res) => {
+  app.post("/api/products", async (req, res) => {
     try {
       const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
-      const info = db.prepare(`
-        INSERT INTO products (name, category_id, description, cost_price, selling_price, supplier_name)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(name, category_id, description, cost_price, selling_price, supplier_name);
-      const productId = info.lastInsertRowid;
+      
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .insert([{ name, category_id, description, cost_price, selling_price, supplier_name }])
+        .select()
+        .single();
+
+      if (productError) throw productError;
+
+      const productId = product.id;
+
       if (variants && Array.isArray(variants)) {
-        const insertVariant = db.prepare(`
-          INSERT INTO product_variants (product_id, size, color, quantity, low_stock_threshold, price_override)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `);
-        for (const v of variants) insertVariant.run(productId, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override);
+        const variantsToInsert = variants.map(v => ({
+          product_id: productId,
+          size: v.size,
+          color: v.color,
+          quantity: v.quantity,
+          low_stock_threshold: v.low_stock_threshold,
+          price_override: v.price_override
+        }));
+        await supabase.from('product_variants').insert(variantsToInsert);
       }
-      if (images && Array.isArray(images)) {
-        const insertImage = db.prepare(`INSERT INTO product_images (product_id, image_data) VALUES (?, ?)`).run(productId, images[0]); // Simplified for now
+
+      if (images && Array.isArray(images) && images.length > 0) {
+        await supabase.from('product_images').insert([{ product_id: productId, image_data: images[0] }]);
       }
+
       res.json({ id: productId });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.put("/api/products/:id", (req, res) => {
+  app.put("/api/products/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
-      db.transaction(() => {
-        db.prepare(`UPDATE products SET name = ?, category_id = ?, description = ?, cost_price = ?, selling_price = ?, supplier_name = ? WHERE id = ?`).run(name, category_id, description, cost_price, selling_price, supplier_name, id);
-        db.prepare("DELETE FROM product_variants WHERE product_id = ?").run(id);
-        if (variants && Array.isArray(variants)) {
-          const insertVariant = db.prepare(`INSERT INTO product_variants (product_id, size, color, quantity, low_stock_threshold, price_override) VALUES (?, ?, ?, ?, ?, ?)`);
-          for (const v of variants) insertVariant.run(id, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override);
-        }
-      })();
+      const { name, category_id, description, cost_price, selling_price, supplier_name, variants } = req.body;
+      
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ name, category_id, description, cost_price, selling_price, supplier_name })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      // Delete old variants and insert new ones
+      await supabase.from('product_variants').delete().eq('product_id', id);
+      
+      if (variants && Array.isArray(variants)) {
+        const variantsToInsert = variants.map(v => ({
+          product_id: id,
+          size: v.size,
+          color: v.color,
+          quantity: v.quantity,
+          low_stock_threshold: v.low_stock_threshold,
+          price_override: v.price_override
+        }));
+        await supabase.from('product_variants').insert(variantsToInsert);
+      }
+
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.delete("/api/products/:id", (req, res) => {
+  app.delete("/api/products/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      db.transaction(() => {
-        db.prepare("DELETE FROM product_images WHERE product_id = ?").run(id);
-        db.prepare("DELETE FROM product_variants WHERE product_id = ?").run(id);
-        db.prepare("DELETE FROM products WHERE id = ?").run(id);
-      })();
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -387,27 +324,29 @@ async function createServer() {
   });
 
   // Categories
-  app.get("/api/categories", (req, res) => {
-    res.json(db.prepare("SELECT * FROM categories").all());
+  app.get("/api/categories", async (req, res) => {
+    const { data, error } = await supabase.from('categories').select('*');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
   });
 
-  app.post("/api/categories", (req, res) => {
+  app.post("/api/categories", async (req, res) => {
     const { name } = req.body;
     try {
-      const info = db.prepare("INSERT INTO categories (name) VALUES (?)").run(name);
-      res.json({ id: info.lastInsertRowid, name });
+      const { data, error } = await supabase.from('categories').insert([{ name }]).select().single();
+      if (error) throw error;
+      res.json(data);
     } catch (e) {
       res.status(400).json({ error: "Category already exists" });
     }
   });
 
   // Sales
-  app.post("/api/sales", (req, res) => {
+  app.post("/api/sales", async (req, res) => {
     const { items, payment_method, staff_id } = req.body;
     console.log(`[SALES] New sale request:`, JSON.stringify({ itemsCount: items?.length, payment_method, staff_id }));
     
     if (!items || !Array.isArray(items) || items.length === 0) {
-      console.log(`[SALES] Error: No items in sale`);
       return res.status(400).json({ error: "No items in sale" });
     }
 
@@ -416,66 +355,101 @@ async function createServer() {
     let total_profit = 0;
     
     try {
-      const transaction = db.transaction(() => {
-        const saleInfo = db.prepare(`INSERT INTO sales (invoice_number, total_amount, total_profit, payment_method, staff_id) VALUES (?, ?, ?, ?, ?)`).run(invoice_number, 0, 0, payment_method, staff_id);
-        const saleId = saleInfo.lastInsertRowid;
-        
-        for (const item of items) {
-          console.log(`[SALES] Processing item: variant_id=${item.variant_id}, quantity=${item.quantity}`);
-          const variant = db.prepare("SELECT * FROM product_variants WHERE id = ?").get(item.variant_id);
-          if (!variant) {
-            throw new Error(`Variant not found: ${item.variant_id}`);
-          }
-          
-          const product = db.prepare("SELECT * FROM products WHERE id = ?").get(variant.product_id);
-          if (!product) {
-            throw new Error(`Product not found for variant: ${item.variant_id}`);
-          }
+      // Create the sale record
+      const { data: sale, error: saleError } = await supabase
+        .from('sales')
+        .insert([{ invoice_number, total_amount: 0, total_profit: 0, payment_method, staff_id }])
+        .select()
+        .single();
 
-          const sellingPrice = item.price_override || variant.price_override || product.selling_price;
-          const costPrice = product.cost_price;
-          const profit = (sellingPrice - costPrice) * item.quantity;
-          
-          total_amount += sellingPrice * item.quantity;
-          total_profit += profit;
-          
-          db.prepare("UPDATE product_variants SET quantity = quantity - ? WHERE id = ?").run(item.quantity, item.variant_id);
-          db.prepare(`INSERT INTO sale_items (sale_id, variant_id, quantity, selling_price, cost_price, profit) VALUES (?, ?, ?, ?, ?, ?)`).run(saleId, item.variant_id, item.quantity, sellingPrice, costPrice, profit);
-        }
-        
-        db.prepare("UPDATE sales SET total_amount = ?, total_profit = ? WHERE id = ?").run(total_amount, total_profit, saleId);
-        return { saleId, invoice_number };
-      });
+      if (saleError) throw saleError;
+      const saleId = sale.id;
 
-      const result = transaction();
-      console.log(`[SALES] Sale completed successfully: ${invoice_number}`);
-      res.json(result);
+      for (const item of items) {
+        // Get variant and product info
+        const { data: variant, error: vError } = await supabase
+          .from('product_variants')
+          .select('*, products(*)')
+          .eq('id', item.variant_id)
+          .single();
+
+        if (vError || !variant) throw new Error(`Variant not found: ${item.variant_id}`);
+        
+        const product = variant.products;
+        const sellingPrice = item.price_override || variant.price_override || product.selling_price;
+        const costPrice = product.cost_price;
+        const profit = (sellingPrice - costPrice) * item.quantity;
+        
+        total_amount += sellingPrice * item.quantity;
+        total_profit += profit;
+        
+        // Update stock
+        await supabase
+          .from('product_variants')
+          .update({ quantity: variant.quantity - item.quantity })
+          .eq('id', item.variant_id);
+
+        // Record sale item
+        await supabase
+          .from('sale_items')
+          .insert([{
+            sale_id: saleId,
+            variant_id: item.variant_id,
+            quantity: item.quantity,
+            selling_price: sellingPrice,
+            cost_price: costPrice,
+            profit: profit
+          }]);
+      }
+      
+      // Update final sale totals
+      await supabase
+        .from('sales')
+        .update({ total_amount, total_profit })
+        .eq('id', saleId);
+
+      res.json({ saleId, invoice_number });
     } catch (e: any) {
       console.error(`[SALES] Sale failed:`, e);
       res.status(400).json({ error: e.message });
     }
   });
 
-  app.get("/api/sales", (req, res) => {
-    const sales = db.prepare(`SELECT s.*, u.name as staff_name FROM sales s LEFT JOIN users u ON s.staff_id = u.id ORDER BY s.created_at DESC`).all();
-    res.json(sales);
+  app.get("/api/sales", async (req, res) => {
+    const { data, error } = await supabase
+      .from('sales')
+      .select('*, users(name)')
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+    
+    const salesWithStaff = data.map(s => ({
+      ...s,
+      staff_name: s.users?.name
+    }));
+    res.json(salesWithStaff);
   });
 
   // Notifications
-  app.get("/api/notifications/:userId", (req, res) => {
+  app.get("/api/notifications/:userId", async (req, res) => {
     const { userId } = req.params;
     try {
-      const notifications = db.prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC").all(userId);
-      res.json(notifications);
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      res.json(data);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch notifications" });
     }
   });
 
-  app.post("/api/notifications/:id/read", (req, res) => {
+  app.post("/api/notifications/:id/read", async (req, res) => {
     const { id } = req.params;
     try {
-      db.prepare("UPDATE notifications SET is_read = 1 WHERE id = ?").run(id);
+      await supabase.from('notifications').update({ is_read: true }).eq('id', id);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to mark notification as read" });
@@ -483,23 +457,65 @@ async function createServer() {
   });
 
   // Analytics
-  app.get("/api/analytics/summary", (req, res) => {
-    const today = new Date().toISOString().split('T')[0];
-    const summary = db.prepare(`
-      SELECT 
-        (SELECT COUNT(*) FROM products) as total_products,
-        (SELECT SUM(quantity) FROM product_variants) as total_stock,
-        (SELECT COUNT(*) FROM product_variants WHERE quantity <= low_stock_threshold) as low_stock_count,
-        (SELECT SUM(total_amount) FROM sales WHERE date(created_at) = ?) as today_sales,
-        (SELECT SUM(total_profit) FROM sales WHERE date(created_at) = ?) as today_profit
-      FROM (SELECT 1)
-    `).get(today, today);
-    res.json(summary);
+  app.get("/api/analytics/summary", async (req, res) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { count: totalProducts } = await supabase.from('products').select('*', { count: 'exact', head: true });
+      
+      const { data: variants } = await supabase.from('product_variants').select('quantity, low_stock_threshold');
+      const totalStock = variants?.reduce((acc, v) => acc + (v.quantity || 0), 0) || 0;
+      const lowStockCount = variants?.filter(v => v.quantity <= v.low_stock_threshold).length || 0;
+
+      const { data: todaySalesData } = await supabase
+        .from('sales')
+        .select('total_amount, total_profit')
+        .gte('created_at', today);
+
+      const todaySales = todaySalesData?.reduce((acc, s) => acc + (s.total_amount || 0), 0) || 0;
+      const todayProfit = todaySalesData?.reduce((acc, s) => acc + (s.total_profit || 0), 0) || 0;
+
+      res.json({
+        total_products: totalProducts,
+        total_stock: totalStock,
+        low_stock_count: lowStockCount,
+        today_sales: todaySales,
+        today_profit: todayProfit
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
-  app.get("/api/analytics/trends", (req, res) => {
-    const trends = db.prepare(`SELECT date(created_at) as date, SUM(total_amount) as revenue, SUM(total_profit) as profit FROM sales GROUP BY date(created_at) ORDER BY date(created_at) ASC LIMIT 30`).all();
-    res.json(trends);
+  app.get("/api/analytics/trends", async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('created_at, total_amount, total_profit')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      // Group by date
+      const trendsMap = new Map();
+      data.forEach(s => {
+        const date = new Date(s.created_at).toISOString().split('T')[0];
+        const existing = trendsMap.get(date) || { revenue: 0, profit: 0 };
+        trendsMap.set(date, {
+          revenue: existing.revenue + s.total_amount,
+          profit: existing.profit + s.total_profit
+        });
+      });
+
+      const trends = Array.from(trendsMap.entries()).map(([date, values]) => ({
+        date,
+        ...values
+      }));
+
+      res.json(trends);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
   // API 404 handler
