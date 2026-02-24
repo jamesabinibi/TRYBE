@@ -454,46 +454,96 @@ export default function Products() {
                   <form onSubmit={handleAddProduct} id="product-form" className="max-w-4xl mx-auto space-y-10">
                     {/* Basic Info Section */}
                     <div className="bg-white p-8 rounded-xl border border-zinc-100 shadow-sm space-y-10">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Product name</label>
-                          <input 
-                            required
-                            type="text" 
-                            value={newProduct.name}
-                            onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                            className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-300"
-                            placeholder="e.g. Vintage Denim Jacket"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select unit</label>
-                          <div className="relative">
-                            <select 
-                              value={newProduct.unit}
-                              onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
-                              className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all appearance-none"
-                            >
-                              <option value="Pieces">Pieces</option>
-                              <option value="Dozens">Dozens</option>
-                              <option value="Boxes">Boxes</option>
-                              <option value="Kilograms">Kilograms</option>
-                            </select>
-                            <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none" />
+                      <div className="flex flex-col md:flex-row gap-10">
+                        {/* Image Upload Area */}
+                        <div className="w-full md:w-48 space-y-4">
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Product Image</label>
+                          <div className="flex flex-wrap gap-4">
+                            {imagePreviews.length > 0 ? (
+                              <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-zinc-200 group">
+                                <img src={imagePreviews[0]} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <button 
+                                  type="button"
+                                  onClick={() => removeImage(0)}
+                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-lg"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <label className="w-full aspect-square flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all cursor-pointer group">
+                                <ImageIcon className="w-8 h-8 text-zinc-300 group-hover:text-emerald-500 transition-colors" />
+                                <span className="text-[10px] font-black text-zinc-300 group-hover:text-emerald-500 mt-2 uppercase tracking-widest">Upload</span>
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  onChange={handleImageUpload} 
+                                  className="hidden" 
+                                />
+                              </label>
+                            )}
                           </div>
+                          {imagePreviews.length > 1 && (
+                            <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                              {imagePreviews.slice(1).map((preview, idx) => (
+                                <div key={idx} className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border border-zinc-100 group">
+                                  <img src={preview} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                  <button 
+                                    type="button"
+                                    onClick={() => removeImage(idx + 1)}
+                                    className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
 
-                      <div className="space-y-2 max-w-xs">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">How many pieces in 1 unit?</label>
-                        <div className="relative">
-                          <input 
-                            type="number" 
-                            value={newProduct.pieces_per_unit}
-                            onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: parseInt(e.target.value) || 1})}
-                            className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all"
-                          />
-                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
+                        <div className="flex-1 space-y-10">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Product name</label>
+                              <input 
+                                required
+                                type="text" 
+                                value={newProduct.name}
+                                onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-300"
+                                placeholder="e.g. Vintage Denim Jacket"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select unit</label>
+                              <div className="relative">
+                                <select 
+                                  value={newProduct.unit}
+                                  onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
+                                  className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all appearance-none"
+                                >
+                                  <option value="Pieces">Pieces</option>
+                                  <option value="Dozens">Dozens</option>
+                                  <option value="Boxes">Boxes</option>
+                                  <option value="Kilograms">Kilograms</option>
+                                </select>
+                                <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none" />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2 max-w-xs">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">How many pieces in 1 unit?</label>
+                            <div className="relative">
+                              <input 
+                                type="number" 
+                                value={newProduct.pieces_per_unit}
+                                onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: parseInt(e.target.value) || 1})}
+                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all"
+                              />
+                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -723,9 +773,14 @@ export default function Products() {
                     <h3 className="text-lg font-black text-zinc-900 tracking-tight">Summary</h3>
                     
                     <div className="space-y-6">
+                      {imagePreviews.length > 0 && (
+                        <div className="w-full aspect-video rounded-xl overflow-hidden border border-zinc-100 mb-6">
+                          <img src={imagePreviews[0]} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-bold text-zinc-400">Product:</span>
-                        <span className="text-sm font-black text-zinc-900">{newProduct.name || '-'}</span>
+                        <span className="text-sm font-black text-zinc-900 truncate max-w-[150px]">{newProduct.name || '-'}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-bold text-zinc-400">Unit:</span>
