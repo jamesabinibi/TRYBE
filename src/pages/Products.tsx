@@ -119,6 +119,9 @@ export default function Products() {
           cost_price: '',
           selling_price: '',
           supplier_name: '',
+          unit: 'Pieces',
+          pieces_per_unit: 1,
+          product_type: 'one',
           variants: [{ size: '', color: '', quantity: 0, low_stock_threshold: 5 }],
           images: []
         });
@@ -139,19 +142,19 @@ export default function Products() {
     setEditingProduct(product);
     setNewProduct({
       name: product.name,
-      category_id: product.category_id.toString(),
-      description: product.description,
-      cost_price: product.cost_price.toString(),
-      selling_price: product.selling_price.toString(),
-      supplier_name: product.supplier_name,
+      category_id: (product.category_id || '').toString(),
+      description: product.description || '',
+      cost_price: (product.cost_price || 0).toString(),
+      selling_price: (product.selling_price || 0).toString(),
+      supplier_name: product.supplier_name || '',
       unit: (product as any).unit || 'Pieces',
       pieces_per_unit: (product as any).pieces_per_unit || 1,
-      product_type: (product as any).product_type || (product.variants.length > 1 ? 'multiple' : 'one'),
-      variants: product.variants.map(v => ({
-        size: v.size,
-        color: v.color,
-        quantity: v.quantity,
-        low_stock_threshold: v.low_stock_threshold,
+      product_type: (product as any).product_type || (product.variants?.length > 1 ? 'multiple' : 'one'),
+      variants: (product.variants || []).map(v => ({
+        size: v.size || '',
+        color: v.color || '',
+        quantity: v.quantity || 0,
+        low_stock_threshold: v.low_stock_threshold || 5,
         price_override: v.price_override
       })),
       images: product.images || []
@@ -223,8 +226,8 @@ export default function Products() {
     p.supplier_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const totalCostValue = products.reduce((acc, p) => acc + (p.cost_price * p.total_stock), 0);
-  const totalSellingValue = products.reduce((acc, p) => acc + (p.selling_price * p.total_stock), 0);
+  const totalCostValue = products.reduce((acc, p) => acc + ((p.cost_price || 0) * (p.total_stock || 0)), 0);
+  const totalSellingValue = products.reduce((acc, p) => acc + ((p.selling_price || 0) * (p.total_stock || 0)), 0);
 
   return (
     <div className="space-y-8">

@@ -116,12 +116,16 @@ app.get("/api/products", async (req, res) => {
 
     if (error) throw error;
 
-    const productsWithVariants = products.map(p => ({
-      ...p,
-      category_name: p.categories?.name,
-      variants: p.product_variants,
-      images: p.product_images?.map((img: any) => img.image_data) || []
-    }));
+    const productsWithVariants = products.map(p => {
+      const total_stock = p.product_variants?.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0) || 0;
+      return {
+        ...p,
+        category_name: p.categories?.name,
+        variants: p.product_variants,
+        images: p.product_images?.map((img: any) => img.image_data) || [],
+        total_stock
+      };
+    });
 
     res.json(productsWithVariants);
   } catch (e) {
@@ -134,10 +138,10 @@ app.post("/api/products", async (req, res) => {
     return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
   }
   try {
-    const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
+    const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
     const { data: product, error: productError } = await supabase
       .from('products')
-      .insert([{ name, category_id, description, cost_price, selling_price, supplier_name }])
+      .insert([{ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type }])
       .select()
       .single();
 
@@ -157,10 +161,70 @@ app.post("/api/products", async (req, res) => {
     }
 
     if (images && Array.isArray(images) && images.length > 0) {
-      await supabase.from('product_images').insert([{ product_id: productId, image_data: images[0] }]);
+      const imagesToInsert = images.map(img => ({ product_id: productId, image_data: img }));
+      await supabase.from('product_images').insert(imagesToInsert);
     }
 
     res.json({ id: productId });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put("/api/products/:id", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
+  const { id } = req.params;
+  const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
+  
+  try {
+    const { error: productError } = await supabase
+      .from('products')
+      .update({ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type })
+      .eq('id', id);
+
+    if (productError) throw productError;
+
+    // Update variants: delete old ones and insert new ones
+    await supabase.from('product_variants').delete().eq('product_id', id);
+    if (variants && Array.isArray(variants)) {
+      const variantsToInsert = variants.map(v => ({
+        product_id: id,
+        size: v.size,
+        color: v.color,
+        quantity: v.quantity,
+        low_stock_threshold: v.low_stock_threshold,
+        price_override: v.price_override
+      }));
+      await supabase.from('product_variants').insert(variantsToInsert);
+    }
+
+    // Update images: delete old ones and insert new ones
+    await supabase.from('product_images').delete().eq('product_id', id);
+    if (images && Array.isArray(images) && images.length > 0) {
+      const imagesToInsert = images.map(img => ({ product_id: id, image_data: img }));
+      await supabase.from('product_images').insert(imagesToInsert);
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete("/api/products/:id", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+  }
+  const { id } = req.params;
+  try {
+    // Supabase should handle cascading deletes if configured, but let's be safe
+    await supabase.from('product_variants').delete().eq('product_id', id);
+    await supabase.from('product_images').delete().eq('product_id', id);
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
