@@ -68,7 +68,7 @@ export default function Login() {
             
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Username</label>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Username or Email</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                   <input 
@@ -76,7 +76,7 @@ export default function Login() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter your username"
+                    placeholder="Enter username or email"
                     className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                   />
                 </div>

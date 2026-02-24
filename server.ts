@@ -212,7 +212,12 @@ async function createServer() {
   // Auth
   const loginHandler = (req: any, res: any) => {
     const { username, password } = req.body;
-    const trimmedUsername = username?.trim();
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username/Email and password are required" });
+    }
+
+    const trimmedUsername = username.trim();
     console.log(`[AUTH] Login attempt for: "${trimmedUsername}"`);
     
     try {
@@ -224,17 +229,19 @@ async function createServer() {
       `).get(trimmedUsername, trimmedUsername);
 
       if (user) {
+        console.log(`[AUTH] User found: "${user.username}" (ID: ${user.id}, Email: ${user.email})`);
         if (user.password === password) {
           console.log(`[AUTH] Login success: "${trimmedUsername}" (ID: ${user.id})`);
           // Don't send password back to client
           const { password: _, ...userWithoutPassword } = user;
           res.json(userWithoutPassword);
         } else {
-          console.log(`[AUTH] Login failed: "${trimmedUsername}" - Password mismatch`);
+          console.log(`[AUTH] Login failed: "${trimmedUsername}" - Password mismatch.`);
+          console.log(`[AUTH] Debug: Expected length ${user.password?.length}, Got length ${password?.length}`);
           res.status(401).json({ error: "Invalid username or password" });
         }
       } else {
-        console.log(`[AUTH] Login failed: "${trimmedUsername}" - User not found`);
+        console.log(`[AUTH] Login failed: "${trimmedUsername}" - No user found with this username or email`);
         res.status(401).json({ error: "Invalid username or password" });
       }
     } catch (error) {
@@ -266,7 +273,7 @@ async function createServer() {
         name?.trim()
       );
       const userId = info.lastInsertRowid;
-      console.log(`Register success: ${trimmedUsername}`);
+      console.log(`[AUTH] Register success: "${trimmedUsername}" (ID: ${userId}). Password saved: "${password}"`);
 
       // Send confirmation email
       sendEmail(
