@@ -15,16 +15,23 @@ dotenv.config();
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('[INIT] WARNING: Supabase credentials missing. App will fail on database operations.');
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
 console.log(`[INIT] Starting server at ${new Date().toISOString()}`);
 console.log(`[INIT] NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`[INIT] VERCEL: ${process.env.VERCEL}`);
-console.log(`[INIT] Supabase URL: ${supabaseUrl}`);
+
+let supabase: any;
+try {
+  if (!supabaseUrl || !supabaseUrl.startsWith('http')) {
+    console.error('[INIT] ERROR: Invalid or missing SUPABASE_URL');
+  } else if (!supabaseAnonKey) {
+    console.error('[INIT] ERROR: Missing SUPABASE_ANON_KEY');
+  } else {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log(`[INIT] Supabase client initialized with URL: ${supabaseUrl}`);
+  }
+} catch (err) {
+  console.error('[INIT] CRITICAL: Failed to initialize Supabase client:', err);
+}
 
 // Email transporter setup
 // Note: In a real app, use environment variables for credentials
@@ -88,6 +95,16 @@ async function createServer() {
     res.json({ status: "ok", time: new Date().toISOString() });
   });
 
+  app.get("/api/diag", (req, res) => {
+    res.json({
+      supabaseUrl: supabaseUrl ? `${supabaseUrl.substring(0, 10)}...` : 'MISSING',
+      supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING',
+      supabaseInitialized: !!supabase,
+      nodeEnv: process.env.NODE_ENV,
+      currentTime: new Date().toISOString()
+    });
+  });
+
   app.get("/api/test", (req, res) => {
     res.json({ message: "API is working", env: process.env.NODE_ENV });
   });
@@ -103,9 +120,11 @@ async function createServer() {
     const trimmedUsername = username.trim();
     console.log(`[AUTH] Login attempt for: "${trimmedUsername}"`);
     
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('[AUTH] Supabase credentials missing from environment variables');
-      return res.status(500).json({ error: "Server configuration error: SUPABASE_URL or SUPABASE_ANON_KEY is missing." });
+    if (!supabase) {
+      console.error('[AUTH] Supabase client not initialized');
+      return res.status(500).json({ 
+        error: "Server configuration error: Supabase client is not initialized. Please check your SUPABASE_URL and SUPABASE_ANON_KEY environment variables." 
+      });
     }
 
     try {
@@ -113,7 +132,7 @@ async function createServer() {
       const { data: user, error: supabaseError } = await supabase
         .from('users')
         .select('id, username, email, role, name, password')
-        .or(`username.ilike.${trimmedUsername},email.ilike.${trimmedUsername}`)
+        .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
         .maybeSingle();
 
       if (supabaseError) {
@@ -150,13 +169,22 @@ async function createServer() {
     const trimmedUsername = username?.trim();
     const trimmedEmail = email?.trim()?.toLowerCase();
     console.log(`Register attempt: ${trimmedUsername} (${trimmedEmail})`);
+    if (!supabase) {
+      return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+    }
+
     try {
       // Check if exists case-insensitively
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from('users')
         .select('id')
         .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedEmail}"`)
         .maybeSingle();
+
+      if (checkError) {
+        console.error('[AUTH] Registration check failed:', checkError);
+        return res.status(500).json({ error: `Database error: ${checkError.message}` });
+      }
 
       if (existing) {
         return res.status(400).json({ error: "Username or email already exists" });

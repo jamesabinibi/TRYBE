@@ -42,7 +42,8 @@ export default function Register() {
           const data = await response.json();
           setError(data.error || 'Registration failed');
         } else {
-          setError(`Server error (${response.status}). Please try again later.`);
+          const text = await response.text();
+          setError(text || `Server error (${response.status}). Please try again later.`);
         }
       }
     } catch (err) {
