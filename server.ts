@@ -213,18 +213,32 @@ async function createServer() {
   const loginHandler = (req: any, res: any) => {
     const { username, password } = req.body;
     const trimmedUsername = username?.trim();
-    console.log(`Login attempt for: ${trimmedUsername}`);
+    console.log(`[AUTH] Login attempt for: "${trimmedUsername}"`);
+    
     try {
-      const user = db.prepare("SELECT id, username, role, name FROM users WHERE LOWER(username) = LOWER(?) AND password = ?").get(trimmedUsername, password);
+      // Support login via username or email
+      const user = db.prepare(`
+        SELECT id, username, email, role, name, password 
+        FROM users 
+        WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?))
+      `).get(trimmedUsername, trimmedUsername);
+
       if (user) {
-        console.log(`Login success: ${trimmedUsername}`);
-        res.json(user);
+        if (user.password === password) {
+          console.log(`[AUTH] Login success: "${trimmedUsername}" (ID: ${user.id})`);
+          // Don't send password back to client
+          const { password: _, ...userWithoutPassword } = user;
+          res.json(userWithoutPassword);
+        } else {
+          console.log(`[AUTH] Login failed: "${trimmedUsername}" - Password mismatch`);
+          res.status(401).json({ error: "Invalid username or password" });
+        }
       } else {
-        console.log(`Login failed: ${trimmedUsername} - Invalid credentials`);
+        console.log(`[AUTH] Login failed: "${trimmedUsername}" - User not found`);
         res.status(401).json({ error: "Invalid username or password" });
       }
     } catch (error) {
-      console.error(`Login error:`, error);
+      console.error(`[AUTH] Login error:`, error);
       res.status(500).json({ error: "Internal server error" });
     }
   };
@@ -249,7 +263,7 @@ async function createServer() {
         trimmedEmail,
         password,
         role,
-        name
+        name?.trim()
       );
       const userId = info.lastInsertRowid;
       console.log(`Register success: ${trimmedUsername}`);

@@ -22,7 +22,12 @@ export default function Register() {
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, name })
+        body: JSON.stringify({ 
+          username: username.trim(), 
+          email: email.trim(), 
+          password, 
+          name: name.trim() 
+        })
       });
       
       if (response.ok) {
