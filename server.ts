@@ -355,14 +355,26 @@ async function createServer() {
     let total_profit = 0;
     
     try {
+      // Ensure staff_id is a valid number or null
+      const validStaffId = (staff_id && !isNaN(Number(staff_id))) ? Number(staff_id) : null;
+
       // Create the sale record
       const { data: sale, error: saleError } = await supabase
         .from('sales')
-        .insert([{ invoice_number, total_amount: 0, total_profit: 0, payment_method, staff_id }])
+        .insert([{ 
+          invoice_number, 
+          total_amount: 0, 
+          total_profit: 0, 
+          payment_method, 
+          staff_id: validStaffId 
+        }])
         .select()
         .single();
 
-      if (saleError) throw saleError;
+      if (saleError) {
+        console.error(`[SALES] Sale creation error:`, saleError);
+        throw new Error(saleError.message);
+      }
       const saleId = sale.id;
 
       for (const item of items) {
