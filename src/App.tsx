@@ -27,6 +27,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import { cn } from './lib/utils';
+import NotificationCenter from './components/NotificationCenter';
 
 interface AuthContextType {
   user: User | null;
@@ -151,6 +152,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
 
@@ -180,10 +182,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
           <div className="flex items-center gap-3 sm:gap-6">
-            <button className="p-3 text-zinc-500 hover:bg-zinc-100 rounded-2xl relative transition-all active:scale-95 group">
-              <Bell className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
-            </button>
+            {user && <NotificationCenter userId={user.id} />}
             <div className="h-10 w-px bg-zinc-200 hidden sm:block"></div>
             {location.pathname === '/products' ? (
               <Link 

@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import fs from 'fs';
+import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -93,6 +94,16 @@ try {
       image_data TEXT,
       FOREIGN KEY(product_id) REFERENCES products(id)
     );
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      title TEXT,
+      message TEXT,
+      type TEXT,
+      is_read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
     INSERT OR IGNORE INTO categories (name) VALUES ('Electronics'), ('Fashion'), ('Food'), ('General');
   `);
   console.log(`[INIT] Schema initialized successfully`);
@@ -130,6 +141,46 @@ if (!adminExists) {
   db.prepare("UPDATE users SET email = ? WHERE username = ?").run("admin@example.com", "admin");
 } else {
   console.log("Admin user already exists and is up to date.");
+}
+
+// Email transporter setup
+// Note: In a real app, use environment variables for credentials
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: {
+    user: process.env.SMTP_USER || 'mock_user',
+    pass: process.env.SMTP_PASS || 'mock_pass',
+  },
+});
+
+async function sendEmail(to: string, subject: string, text: string, html?: string) {
+  console.log(`[EMAIL] Sending to ${to}: ${subject}`);
+  try {
+    // For demo purposes, we'll log the email content if no real credentials are provided
+    if (!process.env.SMTP_USER || process.env.SMTP_USER === 'mock_user') {
+      console.log('--- MOCK EMAIL START ---');
+      console.log(`To: ${to}`);
+      console.log(`Subject: ${subject}`);
+      console.log(`Body: ${text}`);
+      console.log('--- MOCK EMAIL END ---');
+      return { messageId: 'mock-id-' + Date.now() };
+    }
+
+    const info = await transporter.sendMail({
+      from: `"StockFlow Pro" <${process.env.SMTP_FROM || 'noreply@stockflow.pro'}>`,
+      to,
+      subject,
+      text,
+      html: html || text,
+    });
+    console.log(`[EMAIL] Sent: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error(`[EMAIL] Failed to send:`, error);
+    throw error;
+  }
 }
 
 async function createServer() {
@@ -200,8 +251,26 @@ async function createServer() {
         role,
         name
       );
+      const userId = info.lastInsertRowid;
       console.log(`Register success: ${trimmedUsername}`);
-      res.json({ id: info.lastInsertRowid, username: trimmedUsername, email: trimmedEmail, role, name });
+
+      // Send confirmation email
+      sendEmail(
+        trimmedEmail,
+        'Welcome to StockFlow Pro!',
+        `Hi ${name},\n\nYour account has been successfully created. You can now sign in with your username: ${trimmedUsername}.\n\nBest regards,\nThe StockFlow Team`,
+        `<h1>Welcome to StockFlow Pro!</h1><p>Hi ${name},</p><p>Your account has been successfully created. You can now sign in with your username: <strong>${trimmedUsername}</strong>.</p><p>Best regards,<br>The StockFlow Team</p>`
+      ).catch(err => console.error('Failed to send registration email:', err));
+
+      // Create notification
+      db.prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)").run(
+        userId,
+        'Welcome!',
+        'Your account has been successfully created. Welcome to StockFlow Pro!',
+        'info'
+      );
+
+      res.json({ id: userId, username: trimmedUsername, email: trimmedEmail, role, name });
     } catch (e: any) {
       console.error(`Register failed:`, e);
       res.status(400).json({ error: "Registration failed. Please try again." });
@@ -344,6 +413,27 @@ async function createServer() {
   app.get("/api/sales", (req, res) => {
     const sales = db.prepare(`SELECT s.*, u.name as staff_name FROM sales s LEFT JOIN users u ON s.staff_id = u.id ORDER BY s.created_at DESC`).all();
     res.json(sales);
+  });
+
+  // Notifications
+  app.get("/api/notifications/:userId", (req, res) => {
+    const { userId } = req.params;
+    try {
+      const notifications = db.prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC").all(userId);
+      res.json(notifications);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.post("/api/notifications/:id/read", (req, res) => {
+    const { id } = req.params;
+    try {
+      db.prepare("UPDATE notifications SET is_read = 1 WHERE id = ?").run(id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark notification as read" });
+    }
   });
 
   // Analytics
