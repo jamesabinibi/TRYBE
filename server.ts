@@ -339,49 +339,54 @@ async function createServer() {
 
       if (productError) throw productError;
 
-      // Update variants: delete old ones and insert new ones
-      // We try to delete, but if it fails (e.g. due to sales), we'll have to handle it
-      const { error: deleteError } = await supabase.from('product_variants').delete().eq('product_id', id);
+      // Update variants: be smart about it to avoid foreign key violations
+      const { data: existingVariants, error: fetchError } = await supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', id);
       
-      if (deleteError) {
-        console.warn('[PRODUCTS] Could not delete some variants, likely due to existing sales:', deleteError);
-        // If we can't delete, we should at least try to update existing ones or just append new ones
-        // For now, we'll proceed but this is why duplicates happen if delete fails.
-        // A better way is to update by size/color match if delete fails.
-      }
+      if (fetchError) throw fetchError;
 
       if (variants && Array.isArray(variants)) {
-        // If delete failed, we might want to filter out variants that already exist to avoid duplicates
-        let variantsToInsert = variants.map(v => ({
-          product_id: id,
-          size: v.size,
-          color: v.color,
-          quantity: v.quantity,
-          low_stock_threshold: v.low_stock_threshold,
-          price_override: v.price_override
-        }));
+        // 1. Identify variants to delete (those in DB but not in new list)
+        const variantsToDelete = existingVariants.filter((ev: any) => 
+          !variants.some(v => v.size === ev.size && v.color === ev.color)
+        );
 
-        if (deleteError) {
-          // Try to be smart: only insert if not already there (this is a fallback)
-          const { data: existingVariants } = await supabase.from('product_variants').select('size, color').eq('product_id', id);
-          if (existingVariants) {
-            variantsToInsert = variantsToInsert.filter(v => 
-              !existingVariants.some((ev: any) => ev.size === v.size && ev.color === v.color)
-            );
-            
-            // Also update quantities for existing ones that we couldn't delete
-            for (const v of variants) {
-              await supabase.from('product_variants')
-                .update({ quantity: v.quantity, low_stock_threshold: v.low_stock_threshold, price_override: v.price_override })
-                .eq('product_id', id)
-                .eq('size', v.size)
-                .eq('color', v.color);
-            }
+        for (const ev of variantsToDelete) {
+          const { error: delErr } = await supabase.from('product_variants').delete().eq('id', ev.id);
+          if (delErr) {
+            console.warn(`[PRODUCTS] Could not delete variant ${ev.id}, likely has sales history:`, delErr);
+            // We don't throw here because we want to allow the rest of the update to proceed
           }
         }
 
-        if (variantsToInsert.length > 0) {
-          await supabase.from('product_variants').insert(variantsToInsert);
+        // 2. Update existing or Insert new ones
+        for (const v of variants) {
+          const existing = existingVariants.find((ev: any) => ev.size === v.size && ev.color === v.color);
+          
+          if (existing) {
+            // Update existing variant
+            const { error: updErr } = await supabase.from('product_variants')
+              .update({ 
+                quantity: v.quantity, 
+                low_stock_threshold: v.low_stock_threshold, 
+                price_override: v.price_override 
+              })
+              .eq('id', existing.id);
+            if (updErr) throw updErr;
+          } else {
+            // Insert new variant
+            const { error: insErr } = await supabase.from('product_variants').insert([{
+              product_id: id,
+              size: v.size,
+              color: v.color,
+              quantity: v.quantity,
+              low_stock_threshold: v.low_stock_threshold,
+              price_override: v.price_override
+            }]);
+            if (insErr) throw insErr;
+          }
         }
       }
 

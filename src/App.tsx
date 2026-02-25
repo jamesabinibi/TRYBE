@@ -152,6 +152,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
+  const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { searchQuery, setSearchQuery } = useSearch();
 
@@ -185,7 +186,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <div className="flex items-center gap-3 sm:gap-6">
             {user && <NotificationCenter userId={user.id} />}
             <div className="h-10 w-px bg-zinc-200 hidden sm:block"></div>
-            {location.pathname === '/products' ? (
+            {location.pathname.startsWith('/products') ? (
               <Link 
                 to="/products?action=add"
                 className="flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/10 active:scale-95"
