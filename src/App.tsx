@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
+import { useSearch } from './contexts/SearchContext';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Sales from './pages/Sales';
@@ -154,7 +155,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const location = useLocation();
+  const { searchQuery, setSearchQuery } = useSearch();
 
   return (
     <div className="flex min-h-screen bg-zinc-50 font-sans selection:bg-emerald-100 selection:text-emerald-900">
@@ -173,6 +174,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <input 
                 type="text" 
                 placeholder="Search for products, sales, or reports..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-zinc-100/50 border-transparent rounded-2xl text-sm font-medium focus:bg-white focus:ring-8 focus:ring-emerald-500/5 focus:border-emerald-500/20 transition-all outline-none border border-zinc-200/0 focus:border-zinc-200"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-1 bg-white border border-zinc-200 rounded-lg text-[10px] font-black text-zinc-400 shadow-sm">

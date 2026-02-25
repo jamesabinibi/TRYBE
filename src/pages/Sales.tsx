@@ -15,6 +15,7 @@ import { Product, Variant } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../App';
+import { useSearch } from '../contexts/SearchContext';
 
 interface CartItem {
   variant: Variant;
@@ -25,6 +26,7 @@ interface CartItem {
 
 export default function Sales() {
   const { user } = useAuth();
+  const { searchQuery } = useSearch();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
@@ -113,6 +115,12 @@ export default function Sales() {
     }
   };
 
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.category_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.supplier_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="h-full flex flex-col lg:flex-row gap-6 sm:gap-8 overflow-hidden">
       {/* Product Selection */}
@@ -131,7 +139,7 @@ export default function Sales() {
                 }}
               >
                 <option value="">Choose a product...</option>
-                {products.map(p => (
+                {filteredProducts.map(p => (
                   <option key={p.id} value={p.id}>{p.name} - {formatCurrency(p.selling_price)}</option>
                 ))}
               </select>
@@ -209,7 +217,7 @@ export default function Sales() {
         {!selectedProduct && (
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <button 
                   key={product.id} 
                   onClick={() => setSelectedProduct(product)}

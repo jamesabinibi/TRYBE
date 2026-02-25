@@ -216,14 +216,16 @@ async function createServer() {
       ).catch(err => console.error('Failed to send registration email:', err));
 
       // Create notification
-      await supabase
-        .from('notifications')
-        .insert([{
-          user_id: userId,
-          title: 'Welcome!',
-          message: 'Your account has been successfully created. Welcome to StockFlow Pro!',
-          type: 'info'
-        }]);
+      if (supabase) {
+        await supabase
+          .from('notifications')
+          .insert([{
+            user_id: userId,
+            title: 'Welcome!',
+            message: 'Your account has been successfully created. Welcome to StockFlow Pro!',
+            type: 'info'
+          }]);
+      }
 
       res.json(newUser);
     } catch (e: any) {
@@ -255,6 +257,7 @@ async function createServer() {
 
   // Products
   app.get("/api/products", async (req, res) => {
+    if (!supabase) return res.json([]);
     try {
       const { data: products, error } = await supabase
         .from('products')
@@ -286,6 +289,7 @@ async function createServer() {
   });
 
   app.post("/api/products", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
       
@@ -323,6 +327,7 @@ async function createServer() {
   });
 
   app.put("/api/products/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
     
@@ -362,6 +367,7 @@ async function createServer() {
   });
 
   app.delete("/api/products/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
       await supabase.from('product_variants').delete().eq('product_id', id);
@@ -376,6 +382,7 @@ async function createServer() {
 
   // Categories
   app.get("/api/categories", async (req, res) => {
+    if (!supabase) return res.json([]);
     const { data, error } = await supabase.from('categories').select('*');
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
@@ -494,9 +501,67 @@ async function createServer() {
   });
 
   // Notifications
+  const checkLowStock = async (userId: string) => {
+    if (!supabase) {
+      console.warn('[NOTIFICATIONS] Supabase client not initialized, skipping low stock check');
+      return;
+    }
+    try {
+      console.log(`[NOTIFICATIONS] Checking low stock for user: ${userId}`);
+      const { data: variants, error: variantsError } = await supabase
+        .from('product_variants')
+        .select('*, products(name)');
+
+      if (variantsError) {
+        console.error('[NOTIFICATIONS] Error fetching variants:', variantsError);
+        return;
+      }
+      
+      if (!variants || !Array.isArray(variants)) {
+        console.log('[NOTIFICATIONS] No variants found or invalid data');
+        return;
+      }
+
+      const lowStockVariants = variants.filter(v => v.quantity < (v.low_stock_threshold || 5));
+        
+        for (const variant of lowStockVariants) {
+          const title = 'Low Stock Alert';
+          const message = `Product "${variant.products?.name || 'Unknown'}" (Size: ${variant.size}) is low on stock. Current quantity: ${variant.quantity}.`;
+          
+          // Check if notification already exists for this variant to avoid spam
+          const { data: existing } = await supabase
+            .from('notifications')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('title', title)
+            .eq('message', message)
+            .eq('is_read', false)
+            .limit(1);
+
+          if (!existing || existing.length === 0) {
+            await supabase.from('notifications').insert([{
+              user_id: userId,
+              title,
+              message,
+              type: 'warning',
+              is_read: false
+            }]);
+          }
+        }
+    } catch (error) {
+      console.error('Error checking low stock:', error);
+    }
+  };
+
   app.get("/api/notifications/:userId", async (req, res) => {
+    if (!supabase) return res.json([]);
     const { userId } = req.params;
     try {
+      // Generate low stock notifications before fetching
+      if (userId && userId !== 'undefined') {
+        await checkLowStock(userId);
+      }
+
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -510,6 +575,7 @@ async function createServer() {
   });
 
   app.post("/api/notifications/:id/read", async (req, res) => {
+    if (!supabase) return res.json({ success: true });
     const { id } = req.params;
     try {
       await supabase.from('notifications').update({ is_read: true }).eq('id', id);

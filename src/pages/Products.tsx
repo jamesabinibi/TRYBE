@@ -18,6 +18,7 @@ import {
 import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSearch } from '../contexts/SearchContext';
 
 const getInitialProductState = () => ({
   name: '',
@@ -67,9 +68,9 @@ export default function Products() {
       openAddModal();
     }
   }, [searchParams, setSearchParams, openAddModal]);
+  const { searchQuery, setSearchQuery } = useSearch();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'list' | 'count'>('list');
   const [activeSubTab, setActiveSubTab] = useState<'products' | 'services'>('products');
   
@@ -105,15 +106,21 @@ export default function Products() {
       const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
       const method = editingProduct ? 'PUT' : 'POST';
       
+      const payload = {
+        name: newProduct.name,
+        category_id: parseInt(newProduct.category_id) || null,
+        description: newProduct.description,
+        cost_price: parseFloat(newProduct.cost_price) || 0,
+        selling_price: parseFloat(newProduct.selling_price) || 0,
+        supplier_name: newProduct.supplier_name,
+        variants: newProduct.variants,
+        images: newProduct.images
+      };
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newProduct,
-          cost_price: parseFloat(newProduct.cost_price) || 0,
-          selling_price: parseFloat(newProduct.selling_price) || 0,
-          category_id: parseInt(newProduct.category_id) || null
-        })
+        body: JSON.stringify(payload)
       });
       
       if (response.ok) {
@@ -303,6 +310,7 @@ export default function Products() {
                   <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</th>
                   <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Stock</th>
                   <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Price</th>
+                  <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Total Value</th>
                   <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
@@ -348,6 +356,9 @@ export default function Products() {
                     </td>
                     <td className="py-5 text-sm text-zinc-900 font-black tracking-tight">
                       {formatCurrency(product.selling_price)}
+                    </td>
+                    <td className="py-5 text-sm text-zinc-900 font-black tracking-tight">
+                      {formatCurrency(product.selling_price * product.total_stock)}
                     </td>
                     <td className="py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
