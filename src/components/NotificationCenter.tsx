@@ -8,7 +8,7 @@ interface Notification {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'success' | 'error';
-  is_read: number;
+  is_read: boolean;
   created_at: string;
 }
 
@@ -23,16 +23,28 @@ export default function NotificationCenter({ userId }: { userId: number }) {
       const response = await fetch(`/api/notifications/${userId}`);
       const contentType = response.headers.get("content-type");
       
-      if (response.ok && contentType && contentType.includes("application/json")) {
-        const data = await response.json();
-        setNotifications(data);
-        setUnreadCount(data.filter((n: Notification) => n.is_read === 0).length);
+      if (!response.ok) {
+        const text = await response.text();
+        console.warn(`[Notifications] Fetch failed with status ${response.status}. Content-Type: ${contentType}`);
+        return;
+      }
+
+      if (contentType && contentType.includes("application/json")) {
+        const text = await response.text();
+        if (text.trim().startsWith('<!doctype') || text.trim().startsWith('<html')) {
+          console.warn(`[Notifications] Received HTML instead of JSON for user ${userId}. First 100 chars: ${text.substring(0, 100)}`);
+          return;
+        }
+        try {
+          const data = JSON.parse(text);
+          setNotifications(data);
+          setUnreadCount(data.filter((n: Notification) => !n.is_read).length);
+        } catch (e) {
+          console.error('[Notifications] Failed to parse JSON:', e, 'Text:', text.substring(0, 100));
+        }
       } else {
         const text = await response.text();
-        console.warn(`[Notifications] Expected JSON but got ${contentType}. Status: ${response.status}`);
-        if (!response.ok) {
-          console.error(`[Notifications] Fetch failed with status ${response.status}: ${text.substring(0, 100)}`);
-        }
+        console.warn(`[Notifications] Expected JSON but got ${contentType}. Status: ${response.status}. Text: ${text.substring(0, 100)}`);
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -52,7 +64,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
     try {
       const response = await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
       if (response.ok) {
-        setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: 1 } : n));
+        setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
@@ -110,13 +122,13 @@ export default function NotificationCenter({ userId }: { userId: number }) {
                         key={notification.id}
                         className={cn(
                           "p-4 transition-colors hover:bg-zinc-50 flex gap-4",
-                          notification.is_read === 0 ? "bg-emerald-50/30" : ""
+                          !notification.is_read ? "bg-emerald-50/30" : ""
                         )}
                         onClick={() => markAsRead(notification.id)}
                       >
                         <div className={cn(
                           "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border",
-                          notification.is_read === 0 ? "bg-white border-emerald-100" : "bg-zinc-50 border-zinc-100"
+                          !notification.is_read ? "bg-white border-emerald-100" : "bg-zinc-50 border-zinc-100"
                         )}>
                           {getIcon(notification.type)}
                         </div>

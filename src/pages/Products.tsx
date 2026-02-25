@@ -224,6 +224,7 @@ export default function Products() {
   const filteredProducts = products.filter(p => 
     (p.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (p.supplier_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (p.category_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (p.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
 

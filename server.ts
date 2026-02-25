@@ -340,9 +340,19 @@ async function createServer() {
       if (productError) throw productError;
 
       // Update variants: delete old ones and insert new ones
-      await supabase.from('product_variants').delete().eq('product_id', id);
+      // We try to delete, but if it fails (e.g. due to sales), we'll have to handle it
+      const { error: deleteError } = await supabase.from('product_variants').delete().eq('product_id', id);
+      
+      if (deleteError) {
+        console.warn('[PRODUCTS] Could not delete some variants, likely due to existing sales:', deleteError);
+        // If we can't delete, we should at least try to update existing ones or just append new ones
+        // For now, we'll proceed but this is why duplicates happen if delete fails.
+        // A better way is to update by size/color match if delete fails.
+      }
+
       if (variants && Array.isArray(variants)) {
-        const variantsToInsert = variants.map(v => ({
+        // If delete failed, we might want to filter out variants that already exist to avoid duplicates
+        let variantsToInsert = variants.map(v => ({
           product_id: id,
           size: v.size,
           color: v.color,
@@ -350,7 +360,29 @@ async function createServer() {
           low_stock_threshold: v.low_stock_threshold,
           price_override: v.price_override
         }));
-        await supabase.from('product_variants').insert(variantsToInsert);
+
+        if (deleteError) {
+          // Try to be smart: only insert if not already there (this is a fallback)
+          const { data: existingVariants } = await supabase.from('product_variants').select('size, color').eq('product_id', id);
+          if (existingVariants) {
+            variantsToInsert = variantsToInsert.filter(v => 
+              !existingVariants.some((ev: any) => ev.size === v.size && ev.color === v.color)
+            );
+            
+            // Also update quantities for existing ones that we couldn't delete
+            for (const v of variants) {
+              await supabase.from('product_variants')
+                .update({ quantity: v.quantity, low_stock_threshold: v.low_stock_threshold, price_override: v.price_override })
+                .eq('product_id', id)
+                .eq('size', v.size)
+                .eq('color', v.color);
+            }
+          }
+        }
+
+        if (variantsToInsert.length > 0) {
+          await supabase.from('product_variants').insert(variantsToInsert);
+        }
       }
 
       // Update images: delete old ones and insert new ones

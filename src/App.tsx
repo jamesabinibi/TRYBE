@@ -21,7 +21,6 @@ import { useSearch } from './contexts/SearchContext';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Sales from './pages/Sales';
-import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
@@ -51,8 +50,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   const navItems = [
     { icon: LayoutDashboard, label: 'Home', path: '/' },
     { icon: Package, label: 'Inventory', path: '/products' },
-    { icon: ShoppingCart, label: 'Sales', path: '/sales' },
-    { icon: BarChart3, label: 'Analytics', path: '/reports' },
+    { icon: ShoppingCart, label: 'Sales & Analytics', path: '/sales' },
     ...(user?.role === 'admin' ? [{ icon: UsersIcon, label: 'Team', path: '/users' }] : []),
     { icon: SettingsIcon, label: 'Settings', path: '/settings' },
   ];
@@ -255,7 +253,6 @@ export default function App() {
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/sales" element={<Sales />} />
-                    <Route path="/reports" element={<Reports />} />
                     <Route path="/users" element={<Users />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="*" element={<Navigate to="/" />} />
