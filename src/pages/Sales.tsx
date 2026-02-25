@@ -538,6 +538,7 @@ export default function Sales() {
                         <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Payment</th>
                         <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Amount</th>
                         <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Profit</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
@@ -558,6 +559,22 @@ export default function Sales() {
                           </td>
                           <td className="px-8 py-5 text-sm font-black text-emerald-600 text-right tracking-tight">
                             {formatCurrency(sale.total_profit)}
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <button 
+                              onClick={async () => {
+                                if (confirm('Are you sure you want to delete this sale? Stock will be reverted.')) {
+                                  const res = await fetch(`/api/sales/${sale.id}`, { method: 'DELETE' });
+                                  if (res.ok) {
+                                    fetch('/api/sales').then(res => res.json()).then(setSales);
+                                    fetch('/api/products').then(res => res.json()).then(setProducts);
+                                  }
+                                }
+                              }}
+                              className="p-2 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </td>
                         </tr>
                       ))}

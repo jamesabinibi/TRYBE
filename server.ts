@@ -436,6 +436,63 @@ async function createServer() {
     }
   });
 
+  app.put("/api/categories/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    const { name } = req.body;
+    const { data, error } = await supabase.from('categories').update({ name }).eq('id', id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  });
+
+  app.delete("/api/categories/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    try {
+      // Check if category is in use
+      const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('category_id', id);
+      if (count && count > 0) {
+        return res.status(400).json({ error: "Category is in use by products" });
+      }
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/settings", async (req, res) => {
+    if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false });
+    try {
+      const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
+      if (error) throw error;
+      res.json(data || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false });
+    } catch (error) {
+      res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false });
+    }
+  });
+
+  app.post("/api/settings", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { business_name, currency, vat_enabled } = req.body;
+    try {
+      const { data: existing } = await supabase.from('settings').select('id').limit(1).maybeSingle();
+      
+      let result;
+      if (existing) {
+        result = await supabase.from('settings').update({ business_name, currency, vat_enabled }).eq('id', existing.id).select().single();
+      } else {
+        result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled }]).select().single();
+      }
+      
+      if (result.error) throw result.error;
+      res.json(result.data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Sales
   app.post("/api/sales", async (req, res) => {
     const { items, payment_method, staff_id } = req.body;
@@ -535,6 +592,49 @@ async function createServer() {
       staff_name: s.users?.name
     }));
     res.json(salesWithStaff);
+  });
+
+  app.delete("/api/sales/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+
+    try {
+      // 1. Get sale items to revert stock
+      const { data: items, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('*')
+        .eq('sale_id', id);
+
+      if (itemsError) throw itemsError;
+
+      // 2. Revert stock for each item
+      for (const item of items) {
+        const { data: variant } = await supabase
+          .from('product_variants')
+          .select('quantity')
+          .eq('id', item.variant_id)
+          .single();
+
+        if (variant) {
+          await supabase
+            .from('product_variants')
+            .update({ quantity: variant.quantity + item.quantity })
+            .eq('id', item.variant_id);
+        }
+      }
+
+      // 3. Delete sale items (Supabase might handle this with cascade, but let's be safe)
+      await supabase.from('sale_items').delete().eq('sale_id', id);
+
+      // 4. Delete the sale record
+      const { error: saleError } = await supabase.from('sales').delete().eq('id', id);
+      if (saleError) throw saleError;
+
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error(`[SALES] Delete failed:`, e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // Notifications
