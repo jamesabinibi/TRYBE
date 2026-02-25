@@ -287,11 +287,11 @@ async function createServer() {
 
   app.post("/api/products", async (req, res) => {
     try {
-      const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
+      const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
       
       const { data: product, error: productError } = await supabase
         .from('products')
-        .insert([{ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type }])
+        .insert([{ name, category_id, description, cost_price, selling_price, supplier_name }])
         .select()
         .single();
 
@@ -324,12 +324,12 @@ async function createServer() {
 
   app.put("/api/products/:id", async (req, res) => {
     const { id } = req.params;
-    const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
+    const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
     
     try {
       const { error: productError } = await supabase
         .from('products')
-        .update({ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type })
+        .update({ name, category_id, description, cost_price, selling_price, supplier_name })
         .eq('id', id);
 
       if (productError) throw productError;
