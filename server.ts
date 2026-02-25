@@ -556,11 +556,14 @@ async function createServer() {
   app.get("/api/notifications/:userId", async (req, res) => {
     if (!supabase) return res.json([]);
     const { userId } = req.params;
+    
+    if (!userId || userId === 'undefined' || userId === 'null' || userId === '[object Object]') {
+      return res.json([]);
+    }
+
     try {
       // Generate low stock notifications before fetching
-      if (userId && userId !== 'undefined') {
-        await checkLowStock(userId);
-      }
+      await checkLowStock(userId);
 
       const { data, error } = await supabase
         .from('notifications')

@@ -18,12 +18,21 @@ export default function NotificationCenter({ userId }: { userId: number }) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchNotifications = async () => {
+    if (!userId) return;
     try {
       const response = await fetch(`/api/notifications/${userId}`);
-      if (response.ok) {
+      const contentType = response.headers.get("content-type");
+      
+      if (response.ok && contentType && contentType.includes("application/json")) {
         const data = await response.json();
         setNotifications(data);
         setUnreadCount(data.filter((n: Notification) => n.is_read === 0).length);
+      } else {
+        const text = await response.text();
+        console.warn(`[Notifications] Expected JSON but got ${contentType}. Status: ${response.status}`);
+        if (!response.ok) {
+          console.error(`[Notifications] Fetch failed with status ${response.status}: ${text.substring(0, 100)}`);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);

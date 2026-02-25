@@ -218,8 +218,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
 export default function App() {
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('user');
+      if (!saved || saved === 'undefined' || saved === 'null') return null;
+      return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to parse user from localStorage:', e);
+      localStorage.removeItem('user');
+      return null;
+    }
   });
 
   const login = (userData: User) => {
