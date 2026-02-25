@@ -215,8 +215,9 @@ export default function Products() {
   };
 
   const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.supplier_name.toLowerCase().includes(searchQuery.toLowerCase())
+    (p.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (p.supplier_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (p.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
 
   const totalCostValue = products.reduce((acc, p) => acc + ((p.cost_price || 0) * (p.total_stock || 0)), 0);
@@ -236,20 +237,10 @@ export default function Products() {
           Inventory list
           {activeTab === 'list' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600 rounded-full" />}
         </button>
-        <button 
-          onClick={() => setActiveTab('count')}
-          className={cn(
-            "pb-4 text-sm font-bold transition-all relative",
-            activeTab === 'count' ? "text-emerald-600" : "text-zinc-400 hover:text-zinc-600"
-          )}
-        >
-          Inventory count
-          {activeTab === 'count' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600 rounded-full" />}
-        </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-[2rem] border border-zinc-200 shadow-sm">
           <p className="text-sm text-zinc-500 font-medium mb-4">Stock value @ cost price</p>
           <h3 className="text-3xl font-black text-zinc-900 tracking-tight">{formatCurrency(totalCostValue)}</h3>
@@ -257,15 +248,6 @@ export default function Products() {
         <div className="bg-white p-6 rounded-[2rem] border border-zinc-200 shadow-sm">
           <p className="text-sm text-zinc-500 font-medium mb-4">Stock value @ selling price</p>
           <h3 className="text-3xl font-black text-zinc-900 tracking-tight">{formatCurrency(totalSellingValue)}</h3>
-        </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-zinc-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-sm text-zinc-500 font-medium mb-4">Review prices</p>
-            <h3 className="text-3xl font-black text-zinc-400 tracking-tight">-</h3>
-          </div>
-          <button className="flex items-center gap-1 text-emerald-600 text-xs font-bold hover:underline">
-            Review <ChevronRight className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
@@ -346,10 +328,23 @@ export default function Products() {
                       <span className="text-xs font-bold text-zinc-600">{product.category_name}</span>
                     </td>
                     <td className="py-5">
-                      <p className={cn(
-                        "text-sm font-bold tracking-tight",
-                        product.total_stock <= 5 ? "text-red-600" : "text-zinc-900"
-                      )}>{product.total_stock} units</p>
+                      <div className="space-y-1">
+                        <p className={cn(
+                          "text-sm font-bold tracking-tight",
+                          product.total_stock <= 5 ? "text-red-600" : "text-zinc-900"
+                        )}>
+                          {product.total_stock} units
+                        </p>
+                        {product.variants && product.variants.length > 1 && (
+                          <div className="flex flex-wrap gap-1">
+                            {product.variants.map((v, i) => v.quantity > 0 && (
+                              <span key={i} className="text-[9px] font-black px-1.5 py-0.5 bg-zinc-100 text-zinc-500 rounded-md uppercase tracking-tighter">
+                                {v.size}: {v.quantity}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="py-5 text-sm text-zinc-900 font-black tracking-tight">
                       {formatCurrency(product.selling_price)}
@@ -508,18 +503,16 @@ export default function Products() {
                             </div>
                             <div className="space-y-2">
                               <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select unit</label>
-                              <div className="relative">
+                              <div className="relative group">
                                 <select 
                                   value={newProduct.unit}
                                   onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
-                                  className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all appearance-none"
+                                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none appearance-none cursor-pointer"
                                 >
                                   <option value="Pieces">Pieces</option>
-                                  <option value="Dozens">Dozens</option>
-                                  <option value="Boxes">Boxes</option>
                                   <option value="Kilograms">Kilograms</option>
                                 </select>
-                                <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none" />
+                                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-emerald-500 transition-colors" />
                               </div>
                             </div>
                           </div>
@@ -559,7 +552,20 @@ export default function Products() {
                           </button>
                           <button 
                             type="button"
-                            onClick={() => setNewProduct({...newProduct, product_type: 'multiple'})}
+                            onClick={() => {
+                              const defaultVariants = ['M', 'L', 'XL', '2X', '3X'].map(size => ({
+                                size,
+                                color: '',
+                                quantity: 0,
+                                low_stock_threshold: 5
+                              }));
+                              setNewProduct({
+                                ...newProduct, 
+                                product_type: 'multiple',
+                                variants: defaultVariants
+                              });
+                              setIsBulkEditing(true); // Always show grid for multiple
+                            }}
                             className={cn(
                               "px-6 py-2 rounded-full text-sm font-bold transition-all border flex items-center gap-2",
                               newProduct.product_type === 'multiple' 
@@ -576,155 +582,87 @@ export default function Products() {
                       {newProduct.product_type === 'multiple' && (
                         <div className="space-y-8">
                           <div className="space-y-6">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                              <h4 className="text-sm font-black text-zinc-900">Size</h4>
-                            </div>
-                            
-                            {!isBulkEditing ? (
-                              <div className="flex flex-wrap gap-3 items-center">
-                                {newProduct.variants.map((v, i) => v.size && (
-                                  <div key={i} className="group relative px-4 py-2 bg-zinc-50 text-zinc-600 rounded-xl text-xs font-bold border border-zinc-100 flex items-center gap-2">
-                                    {v.size}
-                                    <button 
-                                      type="button"
-                                      onClick={() => {
-                                        const updated = newProduct.variants.filter((_, idx) => idx !== i);
-                                        setNewProduct({...newProduct, variants: updated});
-                                      }}
-                                      className="hover:text-red-500 transition-colors"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                ))}
-                                <div className="flex items-center gap-2 ml-auto">
-                                  <button 
-                                    type="button" 
-                                    onClick={() => setIsBulkEditing(true)}
-                                    className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors"
-                                  >
-                                    <Edit3 className="w-4 h-4" />
-                                  </button>
-                                  <button 
-                                    type="button" 
-                                    onClick={() => setNewProduct({...newProduct, variants: []})}
-                                    className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                                <h4 className="text-sm font-black text-zinc-900">Size & Stock</h4>
                               </div>
-                            ) : (
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-4 gap-4 px-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                                  <div>Size</div>
-                                  <div>Color</div>
-                                  <div>Quantity</div>
-                                  <div>Alert</div>
-                                </div>
-                                {newProduct.variants.map((v, i) => (
-                                  <div key={i} className="grid grid-cols-4 gap-4 p-4 bg-zinc-50 rounded-xl border border-zinc-100 relative group">
-                                    <input 
-                                      value={v.size}
-                                      onChange={(e) => {
-                                        const updated = [...newProduct.variants];
-                                        updated[i].size = e.target.value;
-                                        setNewProduct({...newProduct, variants: updated});
-                                      }}
-                                      className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
-                                      placeholder="Size"
-                                    />
-                                    <input 
-                                      value={v.color}
-                                      onChange={(e) => {
-                                        const updated = [...newProduct.variants];
-                                        updated[i].color = e.target.value;
-                                        setNewProduct({...newProduct, variants: updated});
-                                      }}
-                                      className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
-                                      placeholder="Color"
-                                    />
-                                    <input 
-                                      type="number"
-                                      value={v.quantity}
-                                      onChange={(e) => {
-                                        const updated = [...newProduct.variants];
-                                        updated[i].quantity = parseInt(e.target.value) || 0;
-                                        setNewProduct({...newProduct, variants: updated});
-                                      }}
-                                      className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
-                                    />
-                                    <input 
-                                      type="number"
-                                      value={v.low_stock_threshold}
-                                      onChange={(e) => {
-                                        const updated = [...newProduct.variants];
-                                        updated[i].low_stock_threshold = parseInt(e.target.value) || 5;
-                                        setNewProduct({...newProduct, variants: updated});
-                                      }}
-                                      className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
-                                    />
-                                    <button 
-                                      type="button"
-                                      onClick={() => {
-                                        const updated = newProduct.variants.filter((_, idx) => idx !== i);
-                                        setNewProduct({...newProduct, variants: updated});
-                                      }}
-                                      className="absolute -right-2 -top-2 w-6 h-6 bg-white border border-zinc-200 rounded-full flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                ))}
-                                <button 
-                                  type="button"
-                                  onClick={() => setIsBulkEditing(false)}
-                                  className="w-full py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors"
-                                >
-                                  Done Editing
-                                </button>
-                              </div>
-                            )}
-
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                const sizes = ['S', 'M', 'L', 'XL'];
-                                const newVariants = sizes.map(s => ({
-                                  size: s,
-                                  color: '',
-                                  quantity: 0,
-                                  low_stock_threshold: 5
-                                }));
-                                setNewProduct(prev => ({
-                                  ...prev,
-                                  variants: [...prev.variants, ...newVariants]
-                                }));
-                              }}
-                              className="flex items-center gap-2 px-4 py-2 bg-emerald-50/50 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all"
-                            >
-                              <Plus className="w-3 h-3" />
-                              Add more
-                            </button>
-                          </div>
-
-                          <div className="pt-8 border-t border-zinc-50 flex items-center justify-between">
-                            <h4 className="text-sm font-black text-zinc-900">Manage product types</h4>
-                            <div className="relative">
                               <button 
                                 type="button"
-                                onClick={() => setIsBulkEditing(!isBulkEditing)}
-                                className={cn(
-                                  "px-6 py-2 border rounded-xl text-xs font-bold transition-all",
-                                  isBulkEditing 
-                                    ? "bg-emerald-600 border-emerald-600 text-white" 
-                                    : "border-emerald-500 text-emerald-600 hover:bg-emerald-50"
-                                )}
+                                onClick={() => {
+                                  setNewProduct({
+                                    ...newProduct,
+                                    variants: [...newProduct.variants, { size: '', color: '', quantity: 0, low_stock_threshold: 5 }]
+                                  });
+                                }}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all"
                               >
-                                {isBulkEditing ? 'Close Bulk Edit' : 'Bulk edit'}
+                                <Plus className="w-3 h-3" />
+                                Add more
                               </button>
-                              {!isBulkEditing && <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-200 rounded-full border-2 border-white"></span>}
+                            </div>
+                            
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-4 gap-4 px-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                                <div>Size</div>
+                                <div>Color</div>
+                                <div>Quantity</div>
+                                <div>Alert</div>
+                              </div>
+                              {newProduct.variants.map((v, i) => (
+                                <div key={i} className="grid grid-cols-4 gap-4 p-4 bg-zinc-50 rounded-xl border border-zinc-100 relative group">
+                                  <input 
+                                    value={v.size}
+                                    onChange={(e) => {
+                                      const updated = [...newProduct.variants];
+                                      updated[i].size = e.target.value;
+                                      setNewProduct({...newProduct, variants: updated});
+                                    }}
+                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                    placeholder="Size"
+                                  />
+                                  <input 
+                                    value={v.color}
+                                    onChange={(e) => {
+                                      const updated = [...newProduct.variants];
+                                      updated[i].color = e.target.value;
+                                      setNewProduct({...newProduct, variants: updated});
+                                    }}
+                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                    placeholder="Color"
+                                  />
+                                  <input 
+                                    type="number"
+                                    value={v.quantity}
+                                    onChange={(e) => {
+                                      const updated = [...newProduct.variants];
+                                      updated[i].quantity = parseInt(e.target.value) || 0;
+                                      setNewProduct({...newProduct, variants: updated});
+                                    }}
+                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                  />
+                                  <input 
+                                    type="number"
+                                    value={v.low_stock_threshold}
+                                    onChange={(e) => {
+                                      const updated = [...newProduct.variants];
+                                      updated[i].low_stock_threshold = parseInt(e.target.value) || 5;
+                                      setNewProduct({...newProduct, variants: updated});
+                                    }}
+                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                  />
+                                  <button 
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = newProduct.variants.filter((_, idx) => idx !== i);
+                                      setNewProduct({...newProduct, variants: updated});
+                                    }}
+                                    className="absolute -right-2 -top-2 w-6 h-6 bg-white border border-zinc-200 rounded-full flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         </div>
