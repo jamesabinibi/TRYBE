@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Plus, 
@@ -19,53 +19,61 @@ import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
+const getInitialProductState = () => ({
+  name: '',
+  category_id: '',
+  description: '',
+  cost_price: '',
+  selling_price: '',
+  supplier_name: '',
+  unit: 'Pieces',
+  pieces_per_unit: 1,
+  product_type: 'one' as const,
+  variants: [{ size: '', color: '', quantity: 0, low_stock_threshold: 5 }],
+  images: []
+});
+
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  const closeModal = useCallback(() => {
+    setIsAddModalOpen(false);
+    setEditingProduct(null);
+    setNewProduct(getInitialProductState());
+    setImagePreviews([]);
+    setIsBulkEditing(false);
+  }, []);
+
+  const openAddModal = useCallback(() => {
+    setEditingProduct(null);
+    setNewProduct(getInitialProductState());
+    setImagePreviews([]);
+    setIsBulkEditing(false);
+    setIsAddModalOpen(true);
+  }, []);
+
   useEffect(() => {
-    if (searchParams.get('action') === 'add') {
-      setIsAddModalOpen(true);
-      // Remove the param so it doesn't re-open on every render or navigation back
+    const action = searchParams.get('action');
+    if (action === 'add') {
+      // Clear the action immediately to prevent re-triggering
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('action');
       setSearchParams(newParams, { replace: true });
+      
+      // Open the modal with fresh state
+      openAddModal();
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, openAddModal]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'list' | 'count'>('list');
   const [activeSubTab, setActiveSubTab] = useState<'products' | 'services'>('products');
   
-  // Form State
-  const [newProduct, setNewProduct] = useState<{
-    name: string;
-    category_id: string;
-    description: string;
-    cost_price: string;
-    selling_price: string;
-    supplier_name: string;
-    unit: string;
-    pieces_per_unit: number;
-    product_type: 'one' | 'multiple';
-    variants: { size: string; color: string; quantity: number; low_stock_threshold: number; price_override?: number }[];
-    images: string[];
-  }>({
-    name: '',
-    category_id: '',
-    description: '',
-    cost_price: '',
-    selling_price: '',
-    supplier_name: '',
-    unit: 'Pieces',
-    pieces_per_unit: 1,
-    product_type: 'one',
-    variants: [{ size: '', color: '', quantity: 0, low_stock_threshold: 5 }],
-    images: []
-  });
+  const [newProduct, setNewProduct] = useState(getInitialProductState());
 
   const [showAttributeDropdown, setShowAttributeDropdown] = useState(false);
   const [isBulkEditing, setIsBulkEditing] = useState(false);
@@ -109,23 +117,8 @@ export default function Products() {
       });
       
       if (response.ok) {
-        setIsAddModalOpen(false);
-        setEditingProduct(null);
+        closeModal();
         fetchProducts();
-        setNewProduct({
-          name: '',
-          category_id: '',
-          description: '',
-          cost_price: '',
-          selling_price: '',
-          supplier_name: '',
-          unit: 'Pieces',
-          pieces_per_unit: 1,
-          product_type: 'one',
-          variants: [{ size: '', color: '', quantity: 0, low_stock_threshold: 5 }],
-          images: []
-        });
-        setImagePreviews([]);
       } else {
         const errorData = await response.json();
         alert(`Error: ${errorData.error || 'Failed to save product'}`);
@@ -396,7 +389,7 @@ export default function Products() {
             <h3 className="text-xl font-black text-zinc-900 mb-2">Add all your products</h3>
             <p className="text-zinc-400 font-medium mb-8">Start by adding your first product in seconds</p>
             <button 
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={openAddModal}
               className="inline-flex items-center gap-2 px-8 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20"
             >
               <Plus className="w-4 h-4" />
@@ -416,8 +409,7 @@ export default function Products() {
               exit={{ opacity: 0 }}
               onClick={() => {
                 if (!isSaving) {
-                  setIsAddModalOpen(false);
-                  setEditingProduct(null);
+                  closeModal();
                 }
               }}
               className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
@@ -432,10 +424,7 @@ export default function Products() {
               <div className="p-6 sm:p-8 bg-white border-b border-zinc-100 flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-4">
                   <button 
-                    onClick={() => {
-                      setIsAddModalOpen(false);
-                      setEditingProduct(null);
-                    }}
+                    onClick={closeModal}
                     className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-zinc-50 text-emerald-600 rounded-full text-sm font-bold transition-all border border-zinc-200"
                   >
                     <ChevronRight className="w-4 h-4 rotate-180" />
@@ -807,10 +796,7 @@ export default function Products() {
                     </button>
                     <button 
                       type="button"
-                      onClick={() => {
-                        setIsAddModalOpen(false);
-                        setEditingProduct(null);
-                      }}
+                      onClick={closeModal}
                       className="w-full py-4 bg-zinc-50 text-zinc-600 rounded-xl text-sm font-bold hover:bg-zinc-100 transition-all active:scale-95 border border-zinc-200"
                     >
                       Cancel
