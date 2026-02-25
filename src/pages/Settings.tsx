@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Plus, Tag, Bell, Shield, Globe, Database, Trash2, Edit2, Check, X } from 'lucide-react';
 import { Category } from '../types';
 import { cn } from '../lib/utils';
+import { toast } from 'sonner';
 
 export default function Settings() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -17,10 +18,17 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    fetchCategories();
+    fetchSettings();
+  }, []);
+
+  const fetchCategories = () => {
     fetch('/api/categories')
       .then(res => res.json())
       .then(setCategories);
-      
+  };
+
+  const fetchSettings = () => {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
@@ -32,47 +40,75 @@ export default function Settings() {
           });
         }
       });
-  }, []);
+  };
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCategory) return;
     
-    const response = await fetch('/api/categories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newCategory })
-    });
-    
-    if (response.ok) {
-      setNewCategory('');
-      fetch('/api/categories').then(res => res.json()).then(setCategories);
+    try {
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategory })
+      });
+      
+      if (response.ok) {
+        setNewCategory('');
+        fetchCategories();
+        toast.success('Category added successfully');
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to add category');
+      }
+    } catch (error) {
+      toast.error('Network error');
     }
   };
 
   const handleUpdateCategory = async (id: number) => {
     if (!editCategoryName) return;
-    const response = await fetch(`/api/categories/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: editCategoryName })
-    });
-    if (response.ok) {
-      setEditingCategory(null);
-      fetch('/api/categories').then(res => res.json()).then(setCategories);
+    try {
+      const response = await fetch(`/api/categories/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editCategoryName })
+      });
+      if (response.ok) {
+        setEditingCategory(null);
+        fetchCategories();
+        toast.success('Category updated');
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to update category');
+      }
+    } catch (error) {
+      toast.error('Network error');
     }
   };
 
   const handleDeleteCategory = async (id: number) => {
-    if (confirm('Are you sure you want to delete this category?')) {
-      const response = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        fetch('/api/categories').then(res => res.json()).then(setCategories);
-      } else {
-        const data = await response.json();
-        alert(data.error || 'Failed to delete category');
+    toast.promise(
+      new Promise(async (resolve, reject) => {
+        try {
+          const response = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+          if (response.ok) {
+            fetchCategories();
+            resolve(true);
+          } else {
+            const data = await response.json();
+            reject(data.error || 'Failed to delete category');
+          }
+        } catch (error) {
+          reject('Network error');
+        }
+      }),
+      {
+        loading: 'Deleting category...',
+        success: 'Category deleted',
+        error: (err) => err
       }
-    }
+    );
   };
 
   const saveSettings = async (updatedSettings = settings) => {
@@ -90,9 +126,12 @@ export default function Settings() {
           currency: data.currency,
           vat_enabled: data.vat_enabled
         });
+        toast.success('Settings saved successfully');
+      } else {
+        toast.error('Failed to save settings');
       }
     } catch (e) {
-      console.error('Failed to save settings:', e);
+      toast.error('Network error');
     } finally {
       setIsSaving(false);
     }

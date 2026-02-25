@@ -407,10 +407,28 @@ async function createServer() {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
+      // 1. Check if any variant has sales
+      const { data: variants } = await supabase.from('product_variants').select('id').eq('product_id', id);
+      if (variants && variants.length > 0) {
+        const variantIds = variants.map(v => v.id);
+        const { count } = await supabase
+          .from('sale_items')
+          .select('*', { count: 'exact', head: true })
+          .in('variant_id', variantIds);
+        
+        if (count && count > 0) {
+          return res.status(400).json({ error: "Cannot delete product with sales history. Try updating it instead." });
+        }
+      }
+
+      // 2. Delete variants and images
       await supabase.from('product_variants').delete().eq('product_id', id);
       await supabase.from('product_images').delete().eq('product_id', id);
+      
+      // 3. Delete product
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
+      
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

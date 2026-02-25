@@ -23,6 +23,7 @@ import { useSearch } from '../contexts/SearchContext';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
 
 interface CartItem {
   variant: Variant;
@@ -45,28 +46,42 @@ export default function Sales() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
+    fetchProducts();
+    fetchSales();
+  }, []);
+
+  const fetchProducts = () => {
     fetch('/api/products')
       .then(res => res.json())
       .then(setProducts);
-    
+  };
+
+  const fetchSales = () => {
     fetch('/api/sales')
       .then(res => res.json())
       .then(setSales);
-  }, []);
+  };
 
   const addToCart = (product: Product, variant: Variant) => {
-    if (variant.quantity <= 0) return;
+    if (variant.quantity <= 0) {
+      toast.error('Item out of stock');
+      return;
+    }
     
     setCart(prev => {
       const existing = prev.find(item => item.variant.id === variant.id);
       if (existing) {
-        if (existing.quantity >= variant.quantity) return prev;
+        if (existing.quantity >= variant.quantity) {
+          toast.warning('Maximum stock reached');
+          return prev;
+        }
         return prev.map(item => 
           item.variant.id === variant.id 
             ? { ...item, quantity: item.quantity + 1 } 
             : item
         );
       }
+      toast.success(`Added ${product.name} to cart`);
       return [...prev, { product, variant, quantity: 1 }];
     });
   };
@@ -79,6 +94,9 @@ export default function Sales() {
     setCart(prev => prev.map(item => {
       if (item.variant.id === variantId) {
         const newQty = Math.max(1, Math.min(item.variant.quantity, item.quantity + delta));
+        if (newQty === item.variant.quantity && delta > 0) {
+          toast.warning('Maximum stock reached');
+        }
         return { ...item, quantity: newQty };
       }
       return item;
@@ -94,37 +112,70 @@ export default function Sales() {
     setIsProcessing(true);
     setError(null);
     
-    try {
-      const response = await fetch('/api/sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: cart.map(item => ({
-            variant_id: item.variant.id,
-            quantity: item.quantity,
-            price_override: item.price_override
-          })),
-          payment_method: paymentMethod,
-          staff_id: user?.id
-        })
-      });
+    const checkoutPromise = new Promise(async (resolve, reject) => {
+      try {
+        const response = await fetch('/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: cart.map(item => ({
+              variant_id: item.variant.id,
+              quantity: item.quantity,
+              price_override: item.price_override
+            })),
+            payment_method: paymentMethod,
+            staff_id: user?.id
+          })
+        });
 
-      if (response.ok) {
-        setCart([]);
-        // Refresh products and sales
-        fetch('/api/products').then(res => res.json()).then(setProducts);
-        fetch('/api/sales').then(res => res.json()).then(setSales);
-        alert("Sale recorded successfully!");
-      } else {
-        const data = await response.json();
-        setError(data.error || "Checkout failed. Please try again.");
+        if (response.ok) {
+          setCart([]);
+          fetchProducts();
+          fetchSales();
+          resolve(true);
+        } else {
+          const data = await response.json();
+          reject(data.error || "Checkout failed");
+        }
+      } catch (e) {
+        reject("Network error");
+      } finally {
+        setIsProcessing(false);
       }
-    } catch (e) {
-      console.error(e);
-      setError("Network error. Please check your connection.");
-    } finally {
-      setIsProcessing(false);
-    }
+    });
+
+    toast.promise(checkoutPromise, {
+      loading: 'Processing checkout...',
+      success: 'Sale recorded successfully!',
+      error: (err) => err
+    });
+  };
+
+  const handleDeleteSale = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this sale? Stock will be reverted.')) return;
+
+    toast.promise(
+      new Promise(async (resolve, reject) => {
+        try {
+          const res = await fetch(`/api/sales/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            fetchSales();
+            fetchProducts();
+            resolve(true);
+          } else {
+            const data = await res.json();
+            reject(data.error || 'Failed to delete sale');
+          }
+        } catch (error) {
+          reject('Network error');
+        }
+      }),
+      {
+        loading: 'Deleting sale and reverting stock...',
+        success: 'Sale deleted successfully',
+        error: (err) => err
+      }
+    );
   };
 
   const exportPDF = () => {
