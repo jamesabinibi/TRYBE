@@ -16,6 +16,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Toaster } from 'sonner';
 import { User } from './types';
 import { useSearch } from './contexts/SearchContext';
 import Dashboard from './pages/Dashboard';
@@ -158,6 +159,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="flex min-h-screen bg-zinc-50 font-sans selection:bg-emerald-100 selection:text-emerald-900">
+      <Toaster position="top-right" expand={true} richColors />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <header className="h-20 bg-white/80 backdrop-blur-xl border-b border-zinc-200/50 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-30">
