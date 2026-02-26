@@ -571,19 +571,19 @@ async function createServer() {
   });
 
   app.get("/api/settings", async (req, res) => {
-    if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
+    if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
     try {
       const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
       if (error) throw error;
-      res.json(data || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
+      res.json(data || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
     } catch (error) {
-      res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
+      res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
     }
   });
 
   app.post("/api/settings", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
-    const { business_name, currency, vat_enabled, low_stock_threshold } = req.body;
+    const { business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color } = req.body;
     console.log(`[SETTINGS] Update request:`, JSON.stringify(req.body));
     try {
       const { data: existing, error: fetchError } = await supabase.from('settings').select('id').limit(1).maybeSingle();
@@ -596,10 +596,10 @@ async function createServer() {
       let result;
       if (existing) {
         console.log(`[SETTINGS] Updating existing record ID: ${existing.id}`);
-        result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
+        result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }).eq('id', existing.id).select().single();
       } else {
         console.log(`[SETTINGS] Inserting new record`);
-        result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold }]).select().single();
+        result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }]).select().single();
       }
       
       if (result.error) {
@@ -923,6 +923,7 @@ async function createServer() {
       const today = new Date().toISOString().split('T')[0];
       
       const { count: totalProducts } = await supabase.from('products').select('*', { count: 'exact', head: true });
+      const { count: totalSalesCount } = await supabase.from('sales').select('*', { count: 'exact', head: true });
       
       const { data: variants } = await supabase.from('product_variants').select('quantity, low_stock_threshold');
       const totalStock = variants?.reduce((acc, v) => acc + (v.quantity || 0), 0) || 0;
@@ -938,6 +939,7 @@ async function createServer() {
 
       res.json({
         total_products: totalProducts,
+        total_sales_count: totalSalesCount,
         total_stock: totalStock,
         low_stock_count: lowStockCount,
         today_sales: todaySales,

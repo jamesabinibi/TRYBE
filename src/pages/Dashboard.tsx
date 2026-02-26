@@ -43,12 +43,15 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
 );
 
 import { cn } from '../lib/utils';
-import { Plus, ChevronRight } from 'lucide-react';
+import { Plus, ChevronRight, CheckCircle2, Circle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [summary, setSummary] = useState<any>(null);
   const [trends, setTrends] = useState<any[]>([]);
   const [recentSales, setRecentSales] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
     fetch('/api/analytics/summary')
@@ -62,9 +65,49 @@ export default function Dashboard() {
     fetch('/api/sales')
       .then(res => res.json())
       .then(data => setRecentSales(data.slice(0, 5)));
+
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(setSettings);
   }, []);
 
   if (!summary) return <div className="animate-pulse">Loading...</div>;
+
+  const gettingStartedTasks = [
+    {
+      id: 'logo',
+      label: "Add your business logo to stand out.",
+      path: '/settings',
+      isCompleted: !!settings?.logo_url
+    },
+    {
+      id: 'colors',
+      label: "Customise your invoices with your brand colours",
+      path: '/settings',
+      isCompleted: !!settings?.brand_color
+    },
+    {
+      id: 'tax',
+      label: "Add your tax & payment details to start collecting payments.",
+      path: '/settings',
+      isCompleted: settings?.vat_enabled
+    },
+    {
+      id: 'product',
+      label: "Add your first product or service and start selling.",
+      path: '/products?action=add',
+      isCompleted: summary.total_products > 0
+    },
+    {
+      id: 'sale',
+      label: "Record your first sale and see your money grow in seconds.",
+      path: '/sales',
+      isCompleted: summary.total_sales_count > 0
+    }
+  ];
+
+  const completedTasksCount = gettingStartedTasks.filter(t => t.isCompleted).length;
+  const progressPercentage = (completedTasksCount / gettingStartedTasks.length) * 100;
 
   return (
     <div className="space-y-8">
@@ -217,28 +260,59 @@ export default function Dashboard() {
               <h4 className="font-bold text-emerald-900 flex items-center gap-2">
                 Welcome to StockFlow <span role="img" aria-label="rocket">🚀</span>
               </h4>
-              <p className="text-emerald-700 text-sm">Get started with our customised setup guide</p>
+              <p className="text-emerald-700 text-sm">
+                {completedTasksCount === gettingStartedTasks.length 
+                  ? "You're all set! Your business is ready to grow." 
+                  : `Complete ${gettingStartedTasks.length - completedTasksCount} more tasks to finish your setup.`}
+              </p>
             </div>
             <div className="w-24 h-24 relative">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#10b981" strokeWidth="8" strokeDasharray="251.2" strokeDashoffset="251.2" />
-                <path d="M30 50 L45 65 L70 35" fill="none" stroke="#10b981" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+              <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#ecfdf5" strokeWidth="8" />
+                <circle 
+                  cx="50" 
+                  cy="50" 
+                  r="40" 
+                  fill="none" 
+                  stroke="#10b981" 
+                  strokeWidth="8" 
+                  strokeDasharray="251.2" 
+                  strokeDashoffset={251.2 - (251.2 * progressPercentage) / 100}
+                  className="transition-all duration-1000 ease-out"
+                />
               </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                {progressPercentage === 100 ? (
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                ) : (
+                  <span className="text-sm font-black text-emerald-600">{Math.round(progressPercentage)}%</span>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="space-y-4">
-            {[
-              "Add your business logo to stand out.",
-              "Customise your invoices with your brand colours",
-              "Add your tax & payment details to start collecting payments.",
-              "Add your first product or service and start selling.",
-              "Record your first sale and see your money grow in seconds."
-            ].map((task, i) => (
-              <div key={i} className="flex items-center justify-between p-4 border-b border-zinc-100 last:border-0 group cursor-pointer hover:bg-zinc-50 rounded-xl transition-colors">
+            {gettingStartedTasks.map((task) => (
+              <div 
+                key={task.id} 
+                onClick={() => navigate(task.path)}
+                className={cn(
+                  "flex items-center justify-between p-4 border-b border-zinc-100 last:border-0 group cursor-pointer hover:bg-zinc-50 rounded-xl transition-colors",
+                  task.isCompleted && "opacity-60"
+                )}
+              >
                 <div className="flex items-center gap-4">
-                  <div className="w-5 h-5 rounded-full border-2 border-zinc-200" />
-                  <span className="text-sm font-medium text-zinc-600">{task}</span>
+                  {task.isCompleted ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  ) : (
+                    <Circle className="w-5 h-5 text-zinc-200 group-hover:border-emerald-500 transition-colors" />
+                  )}
+                  <span className={cn(
+                    "text-sm font-medium transition-colors",
+                    task.isCompleted ? "text-zinc-400 line-through" : "text-zinc-600 group-hover:text-zinc-900"
+                  )}>
+                    {task.label}
+                  </span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-emerald-500 transition-colors" />
               </div>

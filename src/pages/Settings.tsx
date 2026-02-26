@@ -33,7 +33,9 @@ export default function Settings() {
     business_name: 'StockFlow Pro',
     currency: 'NGN',
     vat_enabled: false,
-    low_stock_threshold: 5
+    low_stock_threshold: 5,
+    logo_url: '',
+    brand_color: '#10b981'
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -95,7 +97,9 @@ export default function Settings() {
           business_name: data.business_name || 'StockFlow Pro',
           currency: data.currency || 'NGN',
           vat_enabled: data.vat_enabled || false,
-          low_stock_threshold: data.low_stock_threshold || 5
+          low_stock_threshold: data.low_stock_threshold || 5,
+          logo_url: data.logo_url || '',
+          brand_color: data.brand_color || '#10b981'
         });
       }
     } catch (err) {
@@ -210,7 +214,9 @@ export default function Settings() {
           business_name: data.business_name,
           currency: data.currency,
           vat_enabled: data.vat_enabled,
-          low_stock_threshold: data.low_stock_threshold
+          low_stock_threshold: data.low_stock_threshold,
+          logo_url: data.logo_url,
+          brand_color: data.brand_color
         });
         toast.success('Settings saved successfully');
       } else {
@@ -423,6 +429,56 @@ export default function Settings() {
           <p className="text-xs text-zinc-500 font-medium">Update your business information and tax settings.</p>
         </div>
         <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Logo URL</label>
+              <div className="flex flex-col gap-4">
+                {settings.logo_url && (
+                  <div className="w-20 h-20 rounded-2xl border border-zinc-100 overflow-hidden bg-zinc-50">
+                    <img src={settings.logo_url} alt="Logo Preview" className="w-full h-full object-contain" />
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={settings.logo_url} 
+                    onChange={(e) => setSettings({...settings, logo_url: e.target.value})}
+                    placeholder="https://example.com/logo.png"
+                    className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all" 
+                  />
+                  <button 
+                    onClick={() => saveSettings()}
+                    className="px-4 py-3 bg-zinc-100 text-zinc-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+                  >
+                    Update
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Brand Color</label>
+              <div className="flex items-center gap-4">
+                <input 
+                  type="color" 
+                  value={settings.brand_color} 
+                  onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
+                  className="w-16 h-16 rounded-2xl border-none cursor-pointer bg-transparent" 
+                />
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-bold text-zinc-900">{settings.brand_color}</p>
+                  <p className="text-[10px] text-zinc-400 font-medium">Used for invoices and accent highlights</p>
+                </div>
+                <button 
+                  onClick={() => saveSettings()}
+                  className="px-4 py-3 bg-zinc-100 text-zinc-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Name</label>
