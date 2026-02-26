@@ -102,7 +102,7 @@ async function createServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "2.4.1-stable", time: new Date().toISOString() });
+    res.json({ status: "ok", version: "2.4.2-stable", time: new Date().toISOString() });
   });
 
   app.get("/api/diag", async (req, res) => {
@@ -131,7 +131,7 @@ async function createServer() {
   });
 
   app.get("/api/test", (req, res) => {
-    res.json({ message: "API is working", version: "2.4.1", env: process.env.NODE_ENV });
+    res.json({ message: "API is working", version: "2.4.2", env: process.env.NODE_ENV });
   });
 
   // Auth
@@ -928,7 +928,7 @@ async function createServer() {
   app.all("/api/*", (req, res) => {
     console.log(`[API 404] ${req.method} ${req.url} - No route matched`);
     res.status(404).json({ 
-      error: `API route not found (v2.4.1): ${req.method} ${req.path}`,
+      error: `API route not found (v2.4.2): ${req.method} ${req.path}`,
       method: req.method,
       path: req.path,
       url: req.url 

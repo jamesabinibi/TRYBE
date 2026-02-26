@@ -30,10 +30,55 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Trailing slash middleware for API
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/') && req.path.length > 1 && req.path.endsWith('/')) {
+    const query = req.url.slice(req.path.length);
+    const safepath = req.path.slice(0, -1);
+    req.url = safepath + query;
+  }
+  next();
+});
+
 // Logging middleware
 app.use((req, res, next) => {
-  console.log(`[API] ${req.method} ${req.url}`);
+  console.log(`[API] ${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
+});
+
+// Health & Diag
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", version: "2.4.2-stable", time: new Date().toISOString() });
+});
+
+app.get("/api/diag", async (req, res) => {
+  let dbStatus = "Not tested";
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('users').select('id').limit(1);
+      dbStatus = error ? `Error: ${error.message}` : "Connected";
+    } catch (e: any) {
+      dbStatus = `Exception: ${e.message}`;
+    }
+  }
+
+  res.json({
+    supabaseUrl: supabaseUrl ? `${supabaseUrl.substring(0, 10)}...` : 'MISSING',
+    supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING',
+    supabaseInitialized: !!supabase,
+    dbStatus,
+    nodeEnv: process.env.NODE_ENV,
+    currentTime: new Date().toISOString(),
+    headers: req.headers,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    version: "2.4.2-stable"
+  });
+});
+
+app.get("/api/test", (req, res) => {
+  res.json({ message: "API is working", version: "2.4.2", env: process.env.NODE_ENV });
 });
 
 // Auth
@@ -95,6 +140,72 @@ app.post("/api/register", async (req, res) => {
     res.json(newUser);
   } catch (e) {
     res.status(400).json({ error: "Registration failed" });
+  }
+});
+
+app.post("/api/forgot-password", (req, res) => {
+  const { email } = req.body;
+  res.json({ message: "Confirmation code sent to " + email, code: "123456" });
+});
+
+app.post("/api/reset-password", async (req, res) => {
+  const { username, newPassword, code } = req.body;
+  if (code !== "123456") return res.status(400).json({ error: "Invalid code" });
+  if (!supabase) return res.status(503).json({ error: "Database not available" });
+  
+  const { data, error } = await supabase
+    .from('users')
+    .update({ password: newPassword })
+    .or(`username.ilike."${username}",email.ilike."${username}"`)
+    .select()
+    .single();
+    
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// Users Management
+app.get("/api/users", async (req, res) => {
+  if (!supabase) return res.json([]);
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, username, email, role, name, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put("/api/users/:id", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "Database not available" });
+  const { id } = req.params;
+  const { name, role, email } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ name, role, email })
+      .eq('id', id)
+      .select('id, username, email, role, name')
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete("/api/users/:id", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "Database not available" });
+  const { id } = req.params;
+  try {
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -230,27 +341,73 @@ app.delete("/api/products/:id", async (req, res) => {
   }
 });
 
-// Categories
-app.get("/api/categories", async (req, res) => {
-  if (!supabase) {
-    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
-  }
-  const { data, error } = await supabase.from('categories').select('*');
+app.put("/api/categories/:id", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "Database not available" });
+  const { id } = req.params;
+  const { name } = req.body;
+  const { data, error } = await supabase.from('categories').update({ name }).eq('id', id).select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
-app.post("/api/categories", async (req, res) => {
-  if (!supabase) {
-    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
-  }
-  const { name } = req.body;
+app.delete("/api/categories/:id", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "Database not available" });
+  const { id } = req.params;
   try {
-    const { data, error } = await supabase.from('categories').insert([{ name }]).select().single();
+    // Check if category has products
+    const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('category_id', id);
+    if (count && count > 0) {
+      return res.status(400).json({ error: "Cannot delete category with associated products" });
+    }
+    const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) throw error;
-    res.json(data);
-  } catch (e) {
-    res.status(400).json({ error: "Category already exists" });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Settings
+app.get("/api/settings", async (req, res) => {
+  if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
+  try {
+    const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
+    if (error) throw error;
+    res.json(data || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
+  } catch (error) {
+    res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
+  }
+});
+
+app.post("/api/settings", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "Database not available" });
+  const { business_name, currency, vat_enabled, low_stock_threshold } = req.body;
+  console.log(`[SETTINGS] Update request:`, JSON.stringify(req.body));
+  try {
+    const { data: existing, error: fetchError } = await supabase.from('settings').select('id').limit(1).maybeSingle();
+    
+    if (fetchError) {
+      console.error(`[SETTINGS] Fetch error:`, fetchError);
+      throw fetchError;
+    }
+
+    let result;
+    if (existing) {
+      console.log(`[SETTINGS] Updating existing record ID: ${existing.id}`);
+      result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
+    } else {
+      console.log(`[SETTINGS] Inserting new record`);
+      result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold }]).select().single();
+    }
+    
+    if (result.error) {
+      console.error(`[SETTINGS] Save error:`, result.error);
+      throw result.error;
+    }
+    res.json(result.data);
+  } catch (error: any) {
+    console.error(`[SETTINGS] Exception:`, error);
+    res.status(500).json({ error: error.message || "Internal server error" });
   }
 });
 
@@ -325,22 +482,61 @@ app.post("/api/sales", async (req, res) => {
   }
 });
 
-app.get("/api/sales", async (req, res) => {
-  if (!supabase) {
-    return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+app.delete("/api/sales", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "Database not available" });
+  try {
+    await supabase.from('sale_items').delete().neq('id', 0);
+    const { error } = await supabase.from('sales').delete().neq('id', 0);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
-  const { data, error } = await supabase
-    .from('sales')
-    .select('*, users(name)')
-    .order('created_at', { ascending: false });
+});
 
-  if (error) return res.status(500).json({ error: error.message });
+app.delete("/api/sales/:id", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "Database not available" });
+  const { id } = req.params;
+
+  try {
+    await supabase.from('sale_items').delete().eq('sale_id', id);
+    const { error } = await supabase.from('sales').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Notifications
+app.get("/api/notifications/:userId", async (req, res) => {
+  if (!supabase) return res.json([]);
+  const { userId } = req.params;
   
-  const salesWithStaff = data.map(s => ({
-    ...s,
-    staff_name: s.users?.name
-  }));
-  res.json(salesWithStaff);
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/notifications/:id/read", async (req, res) => {
+  if (!supabase) return res.json({ success: true });
+  const { id } = req.params;
+  try {
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Analytics
@@ -410,7 +606,12 @@ app.get("/api/analytics/trends", async (req, res) => {
 
 // API 404
 app.all("/api/*", (req, res) => {
-  res.status(404).json({ error: "API route not found", path: req.url });
+  res.status(404).json({ 
+    error: `API route not found (v2.4.2): ${req.method} ${req.path}`,
+    method: req.method,
+    path: req.path,
+    url: req.url 
+  });
 });
 
 export default app;

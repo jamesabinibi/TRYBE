@@ -144,7 +144,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
           </div>
           
           <div className="px-4 py-2 text-center">
-            <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.3em]">Version 2.4.1-Stable</p>
+            <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.3em]">Version 2.4.2-Stable</p>
           </div>
         </div>
       </aside>
