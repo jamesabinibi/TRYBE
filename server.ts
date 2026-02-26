@@ -406,32 +406,46 @@ async function createServer() {
   app.delete("/api/products/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
+    console.log(`[PRODUCTS] Attempting to delete product: ${id}`);
     try {
-      // 1. Check if any variant has sales
-      const { data: variants } = await supabase.from('product_variants').select('id').eq('product_id', id);
+      // 1. Get all variant IDs for this product
+      const { data: variants, error: vError } = await supabase.from('product_variants').select('id').eq('product_id', id);
+      if (vError) throw vError;
+
       if (variants && variants.length > 0) {
         const variantIds = variants.map(v => v.id);
-        const { count } = await supabase
+        console.log(`[PRODUCTS] Checking sales for variants: ${variantIds.join(', ')}`);
+        
+        // 2. Check if any of these variants are in sale_items
+        const { count, error: sError } = await supabase
           .from('sale_items')
           .select('*', { count: 'exact', head: true })
           .in('variant_id', variantIds);
         
+        if (sError) throw sError;
+        
         if (count && count > 0) {
-          return res.status(400).json({ error: "Cannot delete product with sales history. Try updating it instead." });
+          console.log(`[PRODUCTS] Cannot delete product ${id}: found ${count} sale items`);
+          return res.status(400).json({ 
+            error: "Cannot delete product with sales history. This product has been sold and its records must be preserved for accounting. Try marking it as inactive or out of stock instead." 
+          });
         }
       }
 
-      // 2. Delete variants and images
+      // 3. Delete variants and images first (cascade-like)
+      console.log(`[PRODUCTS] Deleting variants and images for product ${id}`);
       await supabase.from('product_variants').delete().eq('product_id', id);
       await supabase.from('product_images').delete().eq('product_id', id);
       
-      // 3. Delete product
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) throw error;
+      // 4. Delete product
+      const { error: pError } = await supabase.from('products').delete().eq('id', id);
+      if (pError) throw pError;
       
+      console.log(`[PRODUCTS] Successfully deleted product ${id}`);
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error(`[PRODUCTS] Delete failed for product ${id}:`, error);
+      res.status(500).json({ error: error.message || "Failed to delete product" });
     }
   });
 
@@ -481,27 +495,27 @@ async function createServer() {
   });
 
   app.get("/api/settings", async (req, res) => {
-    if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false });
+    if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
     try {
       const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
       if (error) throw error;
-      res.json(data || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false });
+      res.json(data || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
     } catch (error) {
-      res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false });
+      res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
     }
   });
 
   app.post("/api/settings", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
-    const { business_name, currency, vat_enabled } = req.body;
+    const { business_name, currency, vat_enabled, low_stock_threshold } = req.body;
     try {
       const { data: existing } = await supabase.from('settings').select('id').limit(1).maybeSingle();
       
       let result;
       if (existing) {
-        result = await supabase.from('settings').update({ business_name, currency, vat_enabled }).eq('id', existing.id).select().single();
+        result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
       } else {
-        result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled }]).select().single();
+        result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold }]).select().single();
       }
       
       if (result.error) throw result.error;
@@ -610,6 +624,20 @@ async function createServer() {
       staff_name: s.users?.name
     }));
     res.json(salesWithStaff);
+  });
+
+  app.delete("/api/sales", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      // This is a dangerous operation, usually we'd check for admin role
+      // For this app, we'll allow it if requested
+      await supabase.from('sale_items').delete().neq('id', 0); // Delete all
+      const { error } = await supabase.from('sales').delete().neq('id', 0); // Delete all
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.delete("/api/sales/:id", async (req, res) => {

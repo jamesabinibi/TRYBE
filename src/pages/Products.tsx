@@ -18,7 +18,7 @@ import {
 import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { useSearch } from '../contexts/SearchContext';
+import { toast } from 'sonner';
 
 const getInitialProductState = () => ({
   name: '',
@@ -126,13 +126,14 @@ export default function Products() {
       if (response.ok) {
         closeModal();
         fetchProducts();
+        toast.success(editingProduct ? 'Product updated' : 'Product added');
       } else {
         const errorData = await response.json();
-        alert(`Error: ${errorData.error || 'Failed to save product'}`);
+        toast.error(errorData.error || 'Failed to save product');
       }
     } catch (err) {
       console.error(err);
-      alert('An unexpected error occurred');
+      toast.error('An unexpected error occurred');
     } finally {
       setIsSaving(false);
     }
@@ -164,23 +165,43 @@ export default function Products() {
   };
 
   const handleDeleteProduct = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this product? This will remove all variants and images.')) return;
-    
-    try {
-      const response = await fetch(`/api/products/${id}`, {
-        method: 'DELETE'
-      });
-      
-      if (response.ok) {
-        fetchProducts();
-      } else {
-        const errorData = await response.json();
-        alert(`Error: ${errorData.error || 'Failed to delete product'}`);
-      }
-    } catch (err) {
-      console.error(err);
-      alert('An unexpected error occurred');
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-red-600">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Confirm Deletion</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this product? This action cannot be undone.</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              try {
+                const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                  fetchProducts();
+                  toast.success('Product deleted');
+                } else {
+                  const errorData = await response.json();
+                  toast.error(errorData.error || 'Failed to delete product');
+                }
+              } catch (err) {
+                toast.error('Network error');
+              }
+            }}
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+          >
+            Delete
+          </button>
+          <button 
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

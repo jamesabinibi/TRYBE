@@ -24,6 +24,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
+import { AlertCircle } from 'lucide-react';
 
 interface CartItem {
   variant: Variant;
@@ -152,30 +153,52 @@ export default function Sales() {
   };
 
   const handleDeleteSale = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this sale? Stock will be reverted.')) return;
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-red-600">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Confirm Deletion</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this sale? Stock will be reverted and this action cannot be undone.</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              const deletePromise = new Promise(async (resolve, reject) => {
+                try {
+                  const res = await fetch(`/api/sales/${id}`, { method: 'DELETE' });
+                  if (res.ok) {
+                    fetchSales();
+                    fetchProducts();
+                    resolve(true);
+                  } else {
+                    const data = await res.json();
+                    reject(data.error || 'Failed to delete sale');
+                  }
+                } catch (error) {
+                  reject('Network error');
+                }
+              });
 
-    toast.promise(
-      new Promise(async (resolve, reject) => {
-        try {
-          const res = await fetch(`/api/sales/${id}`, { method: 'DELETE' });
-          if (res.ok) {
-            fetchSales();
-            fetchProducts();
-            resolve(true);
-          } else {
-            const data = await res.json();
-            reject(data.error || 'Failed to delete sale');
-          }
-        } catch (error) {
-          reject('Network error');
-        }
-      }),
-      {
-        loading: 'Deleting sale and reverting stock...',
-        success: 'Sale deleted successfully',
-        error: (err) => err
-      }
-    );
+              toast.promise(deletePromise, {
+                loading: 'Deleting sale and reverting stock...',
+                success: 'Sale deleted successfully',
+                error: (err) => err
+              });
+            }}
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+          >
+            Delete
+          </button>
+          <button 
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const exportPDF = () => {
@@ -613,15 +636,7 @@ export default function Sales() {
                           </td>
                           <td className="px-8 py-5 text-right">
                             <button 
-                              onClick={async () => {
-                                if (confirm('Are you sure you want to delete this sale? Stock will be reverted.')) {
-                                  const res = await fetch(`/api/sales/${sale.id}`, { method: 'DELETE' });
-                                  if (res.ok) {
-                                    fetch('/api/sales').then(res => res.json()).then(setSales);
-                                    fetch('/api/products').then(res => res.json()).then(setProducts);
-                                  }
-                                }
-                              }}
+                              onClick={() => handleDeleteSale(sale.id)}
                               className="p-2 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90"
                             >
                               <Trash2 className="w-4 h-4" />
