@@ -91,11 +91,11 @@ async function createServer() {
   });
 
   // Health check
-  app.get("/api/health", (req, res) => {
+  app.get(["/api/health", "/api/health/"], (req, res) => {
     res.json({ status: "ok", time: new Date().toISOString() });
   });
 
-  app.get("/api/diag", (req, res) => {
+  app.get(["/api/diag", "/api/diag/"], (req, res) => {
     res.json({
       supabaseUrl: supabaseUrl ? `${supabaseUrl.substring(0, 10)}...` : 'MISSING',
       supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING',
@@ -105,7 +105,7 @@ async function createServer() {
     });
   });
 
-  app.get("/api/test", (req, res) => {
+  app.get(["/api/test", "/api/test/"], (req, res) => {
     res.json({ message: "API is working", env: process.env.NODE_ENV });
   });
 
@@ -237,12 +237,12 @@ async function createServer() {
   app.post("/api/register", registerHandler);
   app.post("/api/register/", registerHandler);
 
-  app.post("/api/forgot-password", (req, res) => {
+  app.post(["/api/forgot-password", "/api/forgot-password/"], (req, res) => {
     const { email } = req.body;
     res.json({ message: "Confirmation code sent to " + email, code: "123456" });
   });
 
-  app.post("/api/reset-password", async (req, res) => {
+  app.post(["/api/reset-password", "/api/reset-password/"], async (req, res) => {
     const { username, newPassword, code } = req.body;
     if (code !== "123456") return res.status(400).json({ error: "Invalid code" });
     const { data, error } = await supabase
@@ -256,7 +256,7 @@ async function createServer() {
   });
 
   // Products
-  app.get("/api/products", async (req, res) => {
+  app.get(["/api/products", "/api/products/"], async (req, res) => {
     if (!supabase) return res.json([]);
     try {
       const { data: products, error } = await supabase
@@ -288,7 +288,7 @@ async function createServer() {
     }
   });
 
-  app.post("/api/products", async (req, res) => {
+  app.post(["/api/products", "/api/products/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
@@ -326,7 +326,7 @@ async function createServer() {
     }
   });
 
-  app.put("/api/products/:id", async (req, res) => {
+  app.put(["/api/products/:id", "/api/products/:id/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
@@ -403,7 +403,7 @@ async function createServer() {
     }
   });
 
-  app.delete("/api/products/:id", async (req, res) => {
+  app.delete(["/api/products/:id", "/api/products/:id/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     console.log(`[PRODUCTS] Attempting to delete product: ${id}`);
@@ -450,14 +450,14 @@ async function createServer() {
   });
 
   // Categories
-  app.get("/api/categories", async (req, res) => {
+  app.get(["/api/categories", "/api/categories/"], async (req, res) => {
     if (!supabase) return res.json([]);
     const { data, error } = await supabase.from('categories').select('*');
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
   });
 
-  app.post("/api/categories", async (req, res) => {
+  app.post(["/api/categories", "/api/categories/"], async (req, res) => {
     const { name } = req.body;
     try {
       const { data, error } = await supabase.from('categories').insert([{ name }]).select().single();
@@ -468,7 +468,7 @@ async function createServer() {
     }
   });
 
-  app.put("/api/categories/:id", async (req, res) => {
+  app.put(["/api/categories/:id", "/api/categories/:id/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { name } = req.body;
@@ -477,7 +477,7 @@ async function createServer() {
     res.json(data);
   });
 
-  app.delete("/api/categories/:id", async (req, res) => {
+  app.delete(["/api/categories/:id", "/api/categories/:id/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
@@ -494,7 +494,7 @@ async function createServer() {
     }
   });
 
-  app.get("/api/settings", async (req, res) => {
+  app.get(["/api/settings", "/api/settings/"], async (req, res) => {
     if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
     try {
       const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
@@ -505,7 +505,7 @@ async function createServer() {
     }
   });
 
-  app.post("/api/settings", async (req, res) => {
+  app.post(["/api/settings", "/api/settings/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { business_name, currency, vat_enabled, low_stock_threshold } = req.body;
     try {
@@ -611,7 +611,7 @@ async function createServer() {
     }
   });
 
-  app.get("/api/sales", async (req, res) => {
+  app.get(["/api/sales", "/api/sales/"], async (req, res) => {
     const { data, error } = await supabase
       .from('sales')
       .select('*, users(name)')
@@ -685,58 +685,62 @@ async function createServer() {
 
   // Notifications
   const checkLowStock = async (userId: string) => {
-    if (!supabase) {
-      console.warn('[NOTIFICATIONS] Supabase client not initialized, skipping low stock check');
-      return;
-    }
+    if (!supabase) return;
+    
     try {
-      console.log(`[NOTIFICATIONS] Checking low stock for user: ${userId}`);
+      // 1. Get all variants and their product names
       const { data: variants, error: variantsError } = await supabase
         .from('product_variants')
         .select('*, products(name)');
 
-      if (variantsError) {
-        console.error('[NOTIFICATIONS] Error fetching variants:', variantsError);
-        return;
-      }
+      if (variantsError || !variants) return;
+
+      // 2. Filter for low stock
+      const lowStockVariants = variants.filter(v => 
+        v.quantity !== null && 
+        v.quantity < (v.low_stock_threshold || 5)
+      );
       
-      if (!variants || !Array.isArray(variants)) {
-        console.log('[NOTIFICATIONS] No variants found or invalid data');
+      if (lowStockVariants.length === 0) return;
+
+      // 3. Get existing unread low stock notifications for this user to avoid duplicates
+      const { data: existingNotifications } = await supabase
+        .from('notifications')
+        .select('message')
+        .eq('user_id', userId)
+        .eq('title', 'Low Stock Alert')
+        .eq('is_read', false);
+
+      const existingMessages = new Set(existingNotifications?.map(n => n.message) || []);
+
+      // 4. Prepare new notifications
+      const newNotifications = lowStockVariants
+        .map(variant => {
+          const message = `Product "${variant.products?.name || 'Unknown'}" (Size: ${variant.size}) is low on stock. Current quantity: ${variant.quantity}.`;
+          return {
+            user_id: userId,
+            title: 'Low Stock Alert',
+            message,
+            type: 'warning',
+            is_read: false
+          };
+        })
+        .filter(n => !existingMessages.has(n.message));
+
+      // 5. Batch insert new notifications
+      if (newNotifications.length > 0) {
+        await supabase.from('notifications').insert(newNotifications);
+      }
+    } catch (error: any) {
+      // Ignore errors if the notifications table doesn't exist
+      if (error?.message?.includes('relation "notifications" does not exist')) {
         return;
       }
-
-      const lowStockVariants = variants.filter(v => v.quantity < (v.low_stock_threshold || 5));
-        
-        for (const variant of lowStockVariants) {
-          const title = 'Low Stock Alert';
-          const message = `Product "${variant.products?.name || 'Unknown'}" (Size: ${variant.size}) is low on stock. Current quantity: ${variant.quantity}.`;
-          
-          // Check if notification already exists for this variant to avoid spam
-          const { data: existing } = await supabase
-            .from('notifications')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('title', title)
-            .eq('message', message)
-            .eq('is_read', false)
-            .limit(1);
-
-          if (!existing || existing.length === 0) {
-            await supabase.from('notifications').insert([{
-              user_id: userId,
-              title,
-              message,
-              type: 'warning',
-              is_read: false
-            }]);
-          }
-        }
-    } catch (error) {
-      console.error('Error checking low stock:', error);
+      console.error('[NOTIFICATIONS] Error checking low stock:', error);
     }
   };
 
-  app.get("/api/notifications/:userId", async (req, res) => {
+  app.get(["/api/notifications/:userId", "/api/notifications/:userId/"], async (req, res) => {
     if (!supabase) return res.json([]);
     const { userId } = req.params;
     
@@ -745,22 +749,29 @@ async function createServer() {
     }
 
     try {
-      // Generate low stock notifications before fetching
-      await checkLowStock(userId);
+      // Run low stock check in background - don't await to keep response fast
+      checkLowStock(userId).catch(err => console.error('[NOTIFICATIONS] Background check failed:', err));
 
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50); // Limit to avoid huge responses
+        
       if (error) throw error;
-      res.json(data);
-    } catch (error) {
+      res.json(data || []);
+    } catch (error: any) {
+      // If the table doesn't exist yet, just return an empty array instead of 500
+      if (error?.code === 'PGRST116' || error?.message?.includes('relation "notifications" does not exist')) {
+        return res.json([]);
+      }
+      console.error('[NOTIFICATIONS] Fetch error:', error);
       res.status(500).json({ error: "Failed to fetch notifications" });
     }
   });
 
-  app.post("/api/notifications/:id/read", async (req, res) => {
+  app.post(["/api/notifications/:id/read", "/api/notifications/:id/read/"], async (req, res) => {
     if (!supabase) return res.json({ success: true });
     const { id } = req.params;
     try {
@@ -772,7 +783,7 @@ async function createServer() {
   });
 
   // Analytics
-  app.get("/api/analytics/summary", async (req, res) => {
+  app.get(["/api/analytics/summary", "/api/analytics/summary/"], async (req, res) => {
     try {
       const today = new Date().toISOString().split('T')[0];
       
@@ -802,7 +813,7 @@ async function createServer() {
     }
   });
 
-  app.get("/api/analytics/trends", async (req, res) => {
+  app.get(["/api/analytics/trends", "/api/analytics/trends/"], async (req, res) => {
     try {
       const { data, error } = await supabase
         .from('sales')

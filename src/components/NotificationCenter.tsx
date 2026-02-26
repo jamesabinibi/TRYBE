@@ -18,35 +18,28 @@ export default function NotificationCenter({ userId }: { userId: number }) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchNotifications = async () => {
-    if (!userId) return;
+    if (!userId || typeof userId !== 'number') return;
     try {
       const response = await fetch(`/api/notifications/${userId}`);
-      const contentType = response.headers.get("content-type");
       
       if (!response.ok) {
-        const text = await response.text();
-        console.warn(`[Notifications] Fetch failed with status ${response.status}. Content-Type: ${contentType}`);
         return;
       }
 
+      const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
-        const text = await response.text();
-        if (text.trim().startsWith('<!doctype') || text.trim().startsWith('<html')) {
-          console.warn(`[Notifications] Received HTML instead of JSON for user ${userId}. First 100 chars: ${text.substring(0, 100)}`);
-          return;
-        }
-        try {
-          const data = JSON.parse(text);
+        const data = await response.json();
+        if (Array.isArray(data)) {
           setNotifications(data);
           setUnreadCount(data.filter((n: Notification) => !n.is_read).length);
-        } catch (e) {
-          console.error('[Notifications] Failed to parse JSON:', e, 'Text:', text.substring(0, 100));
         }
-      } else {
-        const text = await response.text();
-        console.warn(`[Notifications] Expected JSON but got ${contentType}. Status: ${response.status}. Text: ${text.substring(0, 100)}`);
       }
     } catch (error) {
+      // Silently fail for transient network errors (common during server restarts or sleep)
+      const isFetchError = error instanceof TypeError || (error as any)?.message?.includes('fetch');
+      if (isFetchError) {
+        return;
+      }
       console.error('Failed to fetch notifications:', error);
     }
   };
