@@ -105,11 +105,22 @@ async function createServer() {
     res.json({ status: "ok", time: new Date().toISOString() });
   });
 
-  app.get(["/api/diag", "/api/diag/"], (req, res) => {
+  app.get(["/api/diag", "/api/diag/"], async (req, res) => {
+    let dbStatus = "Not tested";
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('users').select('id').limit(1);
+        dbStatus = error ? `Error: ${error.message}` : "Connected";
+      } catch (e: any) {
+        dbStatus = `Exception: ${e.message}`;
+      }
+    }
+
     res.json({
       supabaseUrl: supabaseUrl ? `${supabaseUrl.substring(0, 10)}...` : 'MISSING',
       supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING',
       supabaseInitialized: !!supabase,
+      dbStatus,
       nodeEnv: process.env.NODE_ENV,
       currentTime: new Date().toISOString(),
       headers: req.headers,
@@ -566,20 +577,32 @@ async function createServer() {
   app.post(["/api/settings", "/api/settings/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { business_name, currency, vat_enabled, low_stock_threshold } = req.body;
+    console.log(`[SETTINGS] Update request:`, JSON.stringify(req.body));
     try {
-      const { data: existing } = await supabase.from('settings').select('id').limit(1).maybeSingle();
+      const { data: existing, error: fetchError } = await supabase.from('settings').select('id').limit(1).maybeSingle();
       
+      if (fetchError) {
+        console.error(`[SETTINGS] Fetch error:`, fetchError);
+        throw fetchError;
+      }
+
       let result;
       if (existing) {
+        console.log(`[SETTINGS] Updating existing record ID: ${existing.id}`);
         result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
       } else {
+        console.log(`[SETTINGS] Inserting new record`);
         result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold }]).select().single();
       }
       
-      if (result.error) throw result.error;
+      if (result.error) {
+        console.error(`[SETTINGS] Save error:`, result.error);
+        throw result.error;
+      }
       res.json(result.data);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error(`[SETTINGS] Exception:`, error);
+      res.status(500).json({ error: error.message || "Internal server error" });
     }
   });
 

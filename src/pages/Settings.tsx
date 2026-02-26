@@ -42,25 +42,41 @@ export default function Settings() {
     fetchSettings();
   }, []);
 
-  const fetchCategories = () => {
-    fetch('/api/categories')
-      .then(res => res.json())
-      .then(setCategories);
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/categories');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Categories fetch error:', errorData);
+        return;
+      }
+      const data = await res.json();
+      setCategories(data);
+    } catch (err) {
+      console.error('Categories fetch network error:', err);
+    }
   };
 
-  const fetchSettings = () => {
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => {
-        if (data && !data.error) {
-          setSettings({
-            business_name: data.business_name || 'StockFlow Pro',
-            currency: data.currency || 'NGN',
-            vat_enabled: data.vat_enabled || false,
-            low_stock_threshold: data.low_stock_threshold || 5
-          });
-        }
-      });
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Settings fetch error:', errorData);
+        return;
+      }
+      const data = await res.json();
+      if (data && !data.error) {
+        setSettings({
+          business_name: data.business_name || 'StockFlow Pro',
+          currency: data.currency || 'NGN',
+          vat_enabled: data.vat_enabled || false,
+          low_stock_threshold: data.low_stock_threshold || 5
+        });
+      }
+    } catch (err) {
+      console.error('Settings fetch network error:', err);
+    }
   };
 
   const handleAddCategory = async (e: React.FormEvent) => {
@@ -171,7 +187,8 @@ export default function Settings() {
         });
         toast.success('Settings saved successfully');
       } else {
-        toast.error('Failed to save settings');
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData.error || 'Failed to save settings');
       }
     } catch (e) {
       toast.error('Network error');
@@ -460,6 +477,24 @@ export default function Settings() {
               className="px-6 py-3 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 active:scale-95"
             >
               Clear Data
+            </button>
+          </div>
+
+          <div className="pt-6 border-t border-zinc-100">
+            <button 
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/diag');
+                  const data = await res.json();
+                  console.log('System Diagnostics:', data);
+                  toast.info('Diagnostic info logged to console');
+                } catch (e) {
+                  toast.error('Failed to fetch diagnostics');
+                }
+              }}
+              className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.2em] hover:text-zinc-500 transition-colors"
+            >
+              Run System Diagnostics
             </button>
           </div>
         </div>
