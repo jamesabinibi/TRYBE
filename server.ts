@@ -80,6 +80,17 @@ async function createServer() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+  // Trailing slash middleware for API
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/') && req.path.length > 5 && req.path.endsWith('/')) {
+      const query = req.url.slice(req.path.length);
+      const safepath = req.path.slice(0, -1);
+      req.url = safepath + query;
+      console.log(`[ROUTING] Normalized ${req.method} ${req.path}/ to ${req.path}`);
+    }
+    next();
+  });
+
   // Logging middleware
   app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -253,6 +264,52 @@ async function createServer() {
     if (error) return res.status(500).json({ error: error.message });
     if (data && data.length > 0) res.json({ success: true });
     else res.status(404).json({ error: "User not found" });
+  });
+
+  // Users Management
+  app.get("/api/users", async (req, res) => {
+    if (!supabase) return res.json([]);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, username, email, role, name, created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/users/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    const { name, role, email } = req.body;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ name, role, email })
+        .eq('id', id)
+        .select('id, username, email, role, name')
+        .single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/users/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    try {
+      // Don't allow deleting the last admin or yourself if we had auth context here
+      const { error } = await supabase.from('users').delete().eq('id', id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
   // Products
