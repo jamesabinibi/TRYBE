@@ -101,11 +101,11 @@ async function createServer() {
   });
 
   // Health check
-  app.get(["/api/health", "/api/health/"], (req, res) => {
-    res.json({ status: "ok", time: new Date().toISOString() });
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", version: "2.4.1-stable", time: new Date().toISOString() });
   });
 
-  app.get(["/api/diag", "/api/diag/"], async (req, res) => {
+  app.get("/api/diag", async (req, res) => {
     let dbStatus = "Not tested";
     if (supabase) {
       try {
@@ -130,8 +130,8 @@ async function createServer() {
     });
   });
 
-  app.get(["/api/test", "/api/test/"], (req, res) => {
-    res.json({ message: "API is working", env: process.env.NODE_ENV });
+  app.get("/api/test", (req, res) => {
+    res.json({ message: "API is working", version: "2.4.1", env: process.env.NODE_ENV });
   });
 
   // Auth
@@ -260,12 +260,12 @@ async function createServer() {
 
   app.post(["/api/register", "/api/register/"], registerHandler);
 
-  app.post(["/api/forgot-password", "/api/forgot-password/"], (req, res) => {
+  app.post("/api/forgot-password", (req, res) => {
     const { email } = req.body;
     res.json({ message: "Confirmation code sent to " + email, code: "123456" });
   });
 
-  app.post(["/api/reset-password", "/api/reset-password/"], async (req, res) => {
+  app.post("/api/reset-password", async (req, res) => {
     const { username, newPassword, code } = req.body;
     if (code !== "123456") return res.status(400).json({ error: "Invalid code" });
     const { data, error } = await supabase
@@ -279,7 +279,7 @@ async function createServer() {
   });
 
   // Users Management
-  app.get(["/api/users", "/api/users/"], async (req, res) => {
+  app.get("/api/users", async (req, res) => {
     if (!supabase) return res.json([]);
     try {
       const { data, error } = await supabase
@@ -293,7 +293,7 @@ async function createServer() {
     }
   });
 
-  app.put(["/api/users/:id", "/api/users/:id/"], async (req, res) => {
+  app.put("/api/users/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { name, role, email } = req.body;
@@ -311,11 +311,10 @@ async function createServer() {
     }
   });
 
-  app.delete(["/api/users/:id", "/api/users/:id/"], async (req, res) => {
+  app.delete("/api/users/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
-      // Don't allow deleting the last admin or yourself if we had auth context here
       const { error } = await supabase.from('users').delete().eq('id', id);
       if (error) throw error;
       res.json({ success: true });
@@ -325,7 +324,7 @@ async function createServer() {
   });
 
   // Products
-  app.get(["/api/products", "/api/products/"], async (req, res) => {
+  app.get("/api/products", async (req, res) => {
     if (!supabase) return res.json([]);
     try {
       const { data: products, error } = await supabase
@@ -357,7 +356,7 @@ async function createServer() {
     }
   });
 
-  app.post(["/api/products", "/api/products/"], async (req, res) => {
+  app.post("/api/products", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
@@ -395,7 +394,7 @@ async function createServer() {
     }
   });
 
-  app.put(["/api/products/:id", "/api/products/:id/"], async (req, res) => {
+  app.put("/api/products/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
@@ -472,7 +471,7 @@ async function createServer() {
     }
   });
 
-  app.delete(["/api/products/:id", "/api/products/:id/"], async (req, res) => {
+  app.delete("/api/products/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     console.log(`[PRODUCTS] Attempting to delete product: ${id}`);
@@ -519,14 +518,14 @@ async function createServer() {
   });
 
   // Categories
-  app.get(["/api/categories", "/api/categories/"], async (req, res) => {
+  app.get("/api/categories", async (req, res) => {
     if (!supabase) return res.json([]);
     const { data, error } = await supabase.from('categories').select('*');
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
   });
 
-  app.post(["/api/categories", "/api/categories/"], async (req, res) => {
+  app.post("/api/categories", async (req, res) => {
     const { name } = req.body;
     try {
       const { data, error } = await supabase.from('categories').insert([{ name }]).select().single();
@@ -537,7 +536,7 @@ async function createServer() {
     }
   });
 
-  app.put(["/api/categories/:id", "/api/categories/:id/"], async (req, res) => {
+  app.put("/api/categories/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { name } = req.body;
@@ -546,7 +545,7 @@ async function createServer() {
     res.json(data);
   });
 
-  app.delete(["/api/categories/:id", "/api/categories/:id/"], async (req, res) => {
+  app.delete("/api/categories/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
@@ -563,7 +562,7 @@ async function createServer() {
     }
   });
 
-  app.get(["/api/settings", "/api/settings/"], async (req, res) => {
+  app.get("/api/settings", async (req, res) => {
     if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
     try {
       const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
@@ -574,7 +573,7 @@ async function createServer() {
     }
   });
 
-  app.post(["/api/settings", "/api/settings/"], async (req, res) => {
+  app.post("/api/settings", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { business_name, currency, vat_enabled, low_stock_threshold } = req.body;
     console.log(`[SETTINGS] Update request:`, JSON.stringify(req.body));
@@ -607,7 +606,7 @@ async function createServer() {
   });
 
   // Sales
-  app.post(["/api/sales", "/api/sales/"], async (req, res) => {
+  app.post("/api/sales", async (req, res) => {
     const { items, payment_method, staff_id } = req.body;
     console.log(`[SALES] New sale request:`, JSON.stringify({ itemsCount: items?.length, payment_method, staff_id }));
     
@@ -692,7 +691,7 @@ async function createServer() {
     }
   });
 
-  app.get(["/api/sales", "/api/sales/"], async (req, res) => {
+  app.get("/api/sales", async (req, res) => {
     const { data, error } = await supabase
       .from('sales')
       .select('*, users(name)')
@@ -707,7 +706,7 @@ async function createServer() {
     res.json(salesWithStaff);
   });
 
-  app.delete(["/api/sales", "/api/sales/"], async (req, res) => {
+  app.delete("/api/sales", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       // This is a dangerous operation, usually we'd check for admin role
@@ -721,7 +720,7 @@ async function createServer() {
     }
   });
 
-  app.delete(["/api/sales/:id", "/api/sales/:id/"], async (req, res) => {
+  app.delete("/api/sales/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
 
@@ -821,7 +820,7 @@ async function createServer() {
     }
   };
 
-  app.get(["/api/notifications/:userId", "/api/notifications/:userId/"], async (req, res) => {
+  app.get("/api/notifications/:userId", async (req, res) => {
     if (!supabase) return res.json([]);
     const { userId } = req.params;
     
@@ -852,7 +851,7 @@ async function createServer() {
     }
   });
 
-  app.post(["/api/notifications/:id/read", "/api/notifications/:id/read/"], async (req, res) => {
+  app.post("/api/notifications/:id/read", async (req, res) => {
     if (!supabase) return res.json({ success: true });
     const { id } = req.params;
     try {
@@ -864,7 +863,7 @@ async function createServer() {
   });
 
   // Analytics
-  app.get(["/api/analytics/summary", "/api/analytics/summary/"], async (req, res) => {
+  app.get("/api/analytics/summary", async (req, res) => {
     try {
       const today = new Date().toISOString().split('T')[0];
       
@@ -894,7 +893,7 @@ async function createServer() {
     }
   });
 
-  app.get(["/api/analytics/trends", "/api/analytics/trends/"], async (req, res) => {
+  app.get("/api/analytics/trends", async (req, res) => {
     try {
       const { data, error } = await supabase
         .from('sales')
@@ -929,7 +928,7 @@ async function createServer() {
   app.all("/api/*", (req, res) => {
     console.log(`[API 404] ${req.method} ${req.url} - No route matched`);
     res.status(404).json({ 
-      error: `API route not found: ${req.method} ${req.path}`,
+      error: `API route not found (v2.4.1): ${req.method} ${req.path}`,
       method: req.method,
       path: req.path,
       url: req.url 
