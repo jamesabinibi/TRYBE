@@ -169,6 +169,8 @@ export default function Settings() {
     ), { duration: Infinity });
   };
 
+  const [diagResults, setDiagResults] = useState<any>(null);
+
   const saveSettings = async (updatedSettings = settings) => {
     setIsSaving(true);
     try {
@@ -177,6 +179,7 @@ export default function Settings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedSettings)
       });
+      
       if (response.ok) {
         const data = await response.json();
         setSettings({
@@ -187,11 +190,19 @@ export default function Settings() {
         });
         toast.success('Settings saved successfully');
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        toast.error(errorData.error || 'Failed to save settings');
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const errorData = await response.json();
+          toast.error(errorData.error || `Error ${response.status}: Failed to save`);
+        } else {
+          const textError = await response.text();
+          console.error('Non-JSON error:', textError);
+          toast.error(`Server Error ${response.status}: Check console or run diagnostics`);
+        }
       }
-    } catch (e) {
-      toast.error('Network error');
+    } catch (e: any) {
+      console.error('Network error during save:', e);
+      toast.error(`Network Error: ${e.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -480,14 +491,15 @@ export default function Settings() {
             </button>
           </div>
 
-          <div className="pt-6 border-t border-zinc-100">
+          <div className="pt-6 border-t border-zinc-100 space-y-4">
             <button 
               onClick={async () => {
                 try {
                   const res = await fetch('/api/diag');
                   const data = await res.json();
+                  setDiagResults(data);
                   console.log('System Diagnostics:', data);
-                  toast.info('Diagnostic info logged to console');
+                  toast.info('Diagnostic info retrieved');
                 } catch (e) {
                   toast.error('Failed to fetch diagnostics');
                 }
@@ -496,6 +508,20 @@ export default function Settings() {
             >
               Run System Diagnostics
             </button>
+
+            {diagResults && (
+              <div className="p-4 bg-zinc-900 rounded-2xl overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Diagnostic Results</p>
+                  <button onClick={() => setDiagResults(null)} className="text-zinc-500 hover:text-white">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+                <pre className="text-[10px] font-mono text-zinc-400 overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                  {JSON.stringify(diagResults, null, 2)}
+                </pre>
+              </div>
+            )}
           </div>
         </div>
       </section>
