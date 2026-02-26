@@ -18,6 +18,7 @@ import {
 import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSearch } from '../contexts/SearchContext';
 import { toast } from 'sonner';
 
 const getInitialProductState = () => ({
