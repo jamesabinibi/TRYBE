@@ -37,6 +37,30 @@ export default function Settings() {
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  // Profile Editing State
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || '',
+    email: user?.email || ''
+  });
+
+  // Password Change State
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name,
+        email: user.email
+      });
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchCategories();
     fetchSettings();
@@ -205,6 +229,64 @@ export default function Settings() {
       toast.error(`Network Error: ${e.message}`);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    
+    try {
+      const response = await fetch(`/api/profile/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileForm)
+      });
+      
+      if (response.ok) {
+        const updatedUser = await response.json();
+        // Update local storage/auth context if possible
+        // For now, just show success and close
+        toast.success('Profile updated successfully. Please sign out and back in to see all changes.');
+        setIsEditingProfile(false);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to update profile');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/change-password/${user.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+      
+      if (response.ok) {
+        toast.success('Password changed successfully');
+        setIsChangingPassword(false);
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to change password');
+      }
+    } catch (err) {
+      toast.error('Network error');
     }
   };
 
@@ -430,7 +512,7 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* User Profile Section */}
+      {/* User Account Section */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-12 border-t border-zinc-200">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -440,26 +522,111 @@ export default function Settings() {
           <p className="text-xs text-zinc-500 font-medium">Manage your personal profile and security settings.</p>
         </div>
         <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
-          <div className="flex items-center gap-6 p-4 bg-zinc-50 rounded-2xl">
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 text-xl font-black">
+          <div className="flex items-center gap-6 p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-emerald-500/20">
               {user?.name?.charAt(0) || 'U'}
             </div>
-            <div>
-              <h4 className="font-black text-zinc-900 tracking-tight">{user?.name}</h4>
-              <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{user?.role}</p>
+            <div className="flex-1">
+              {isEditingProfile ? (
+                <form onSubmit={handleUpdateProfile} className="space-y-3">
+                  <input
+                    type="text"
+                    value={profileForm.name}
+                    onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                    className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Full Name"
+                    required
+                  />
+                  <input
+                    type="email"
+                    value={profileForm.email}
+                    onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                    className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Email Address"
+                    required
+                  />
+                  <div className="flex gap-2">
+                    <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">
+                      Save Changes
+                    </button>
+                    <button type="button" onClick={() => setIsEditingProfile(false)} className="px-4 py-2 bg-zinc-200 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 transition-all">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-black text-zinc-900 tracking-tight">{user?.name}</h4>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">{user?.role}</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsEditingProfile(true)}
+                    className="p-2 text-zinc-400 hover:text-emerald-600 transition-colors"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
-            <button className="ml-auto p-2 text-zinc-400 hover:text-emerald-600 transition-colors">
-              <Edit2 className="w-4 h-4" />
-            </button>
           </div>
-          
-          <button className="w-full flex items-center justify-between p-4 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all group">
-            <div className="flex items-center gap-3">
-              <Lock className="w-4 h-4 text-zinc-400 group-hover:text-emerald-600" />
-              <span className="text-sm font-bold text-zinc-600">Change Password</span>
-            </div>
-            <ChevronRight className="w-4 h-4 text-zinc-300" />
-          </button>
+
+          <div className="space-y-4">
+            {isChangingPassword ? (
+              <form onSubmit={handleChangePassword} className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Lock className="w-4 h-4 text-emerald-600" />
+                  <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">Change Password</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <input
+                    type="password"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Current Password"
+                    required
+                  />
+                  <div className="hidden sm:block" />
+                  <input
+                    type="password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="New Password"
+                    required
+                  />
+                  <input
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Confirm New Password"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button type="submit" className="px-6 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20">
+                    Update Password
+                  </button>
+                  <button type="button" onClick={() => setIsChangingPassword(false)} className="px-6 py-3 bg-zinc-200 text-zinc-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 transition-all">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button 
+                onClick={() => setIsChangingPassword(true)}
+                className="w-full flex items-center justify-between p-4 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <Lock className="w-4 h-4 text-zinc-400 group-hover:text-emerald-600" />
+                  <span className="text-sm font-bold text-zinc-600">Change Password</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-zinc-300" />
+              </button>
+            )}
+          </div>
         </div>
       </section>
 

@@ -134,6 +134,59 @@ async function createServer() {
     res.json({ message: "API is working", version: "2.4.2", env: process.env.NODE_ENV });
   });
 
+  // Categories (Moved to top)
+  app.get("/api/categories", async (req, res) => {
+    if (!supabase) return res.json([]);
+    try {
+      const { data, error } = await supabase.from('categories').select('*').order('name');
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/categories", async (req, res) => {
+    const { name } = req.body;
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase.from('categories').insert([{ name }]).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message || "Category already exists" });
+    }
+  });
+
+  app.put("/api/categories/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    const { name } = req.body;
+    try {
+      const { data, error } = await supabase.from('categories').update({ name }).eq('id', id).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/categories/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    try {
+      const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('category_id', id);
+      if (count && count > 0) {
+        return res.status(400).json({ error: "Cannot delete category with associated products" });
+      }
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Auth
   const loginHandler = async (req: any, res: any) => {
     const { username, password } = req.body;
@@ -517,51 +570,6 @@ async function createServer() {
     }
   });
 
-  // Categories
-  app.get("/api/categories", async (req, res) => {
-    if (!supabase) return res.json([]);
-    const { data, error } = await supabase.from('categories').select('*');
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
-  });
-
-  app.post("/api/categories", async (req, res) => {
-    const { name } = req.body;
-    try {
-      const { data, error } = await supabase.from('categories').insert([{ name }]).select().single();
-      if (error) throw error;
-      res.json(data);
-    } catch (e) {
-      res.status(400).json({ error: "Category already exists" });
-    }
-  });
-
-  app.put("/api/categories/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    const { id } = req.params;
-    const { name } = req.body;
-    const { data, error } = await supabase.from('categories').update({ name }).eq('id', id).select().single();
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
-  });
-
-  app.delete("/api/categories/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    const { id } = req.params;
-    try {
-      // Check if category is in use
-      const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('category_id', id);
-      if (count && count > 0) {
-        return res.status(400).json({ error: "Category is in use by products" });
-      }
-      const { error } = await supabase.from('categories').delete().eq('id', id);
-      if (error) throw error;
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   app.get("/api/settings", async (req, res) => {
     if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5 });
     try {
@@ -602,6 +610,53 @@ async function createServer() {
     } catch (error: any) {
       console.error(`[SETTINGS] Exception:`, error);
       res.status(500).json({ error: error.message || "Internal server error" });
+    }
+  });
+
+  // User Profile
+  app.put("/api/profile/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    const { name, email } = req.body;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ name, email })
+        .eq('id', id)
+        .select('id, username, email, role, name')
+        .single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/change-password/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    const { currentPassword, newPassword } = req.body;
+    try {
+      const { data: user, error: fetchError } = await supabase
+        .from('users')
+        .select('password')
+        .eq('id', id)
+        .single();
+      
+      if (fetchError || !user) throw new Error("User not found");
+      if (user.password !== currentPassword) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ password: newPassword })
+        .eq('id', id);
+      
+      if (updateError) throw updateError;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
