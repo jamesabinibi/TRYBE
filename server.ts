@@ -82,11 +82,10 @@ async function createServer() {
 
   // Trailing slash middleware for API
   app.use((req, res, next) => {
-    if (req.path.startsWith('/api/') && req.path.length > 5 && req.path.endsWith('/')) {
+    if (req.path.startsWith('/api/') && req.path.length > 1 && req.path.endsWith('/')) {
       const query = req.url.slice(req.path.length);
       const safepath = req.path.slice(0, -1);
       req.url = safepath + query;
-      console.log(`[ROUTING] Normalized ${req.method} ${req.path}/ to ${req.path}`);
     }
     next();
   });
@@ -112,7 +111,11 @@ async function createServer() {
       supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING',
       supabaseInitialized: !!supabase,
       nodeEnv: process.env.NODE_ENV,
-      currentTime: new Date().toISOString()
+      currentTime: new Date().toISOString(),
+      headers: req.headers,
+      url: req.url,
+      path: req.path,
+      originalUrl: req.originalUrl
     });
   });
 
@@ -172,8 +175,7 @@ async function createServer() {
     }
   };
 
-  app.post("/api/login", loginHandler);
-  app.post("/api/login/", loginHandler);
+  app.post(["/api/login", "/api/login/"], loginHandler);
 
   const registerHandler = async (req: any, res: any) => {
     const { username, email, password, name, role = 'staff' } = req.body;
@@ -245,8 +247,7 @@ async function createServer() {
     }
   };
 
-  app.post("/api/register", registerHandler);
-  app.post("/api/register/", registerHandler);
+  app.post(["/api/register", "/api/register/"], registerHandler);
 
   app.post(["/api/forgot-password", "/api/forgot-password/"], (req, res) => {
     const { email } = req.body;
@@ -267,7 +268,7 @@ async function createServer() {
   });
 
   // Users Management
-  app.get("/api/users", async (req, res) => {
+  app.get(["/api/users", "/api/users/"], async (req, res) => {
     if (!supabase) return res.json([]);
     try {
       const { data, error } = await supabase
@@ -281,7 +282,7 @@ async function createServer() {
     }
   });
 
-  app.put("/api/users/:id", async (req, res) => {
+  app.put(["/api/users/:id", "/api/users/:id/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { name, role, email } = req.body;
@@ -299,7 +300,7 @@ async function createServer() {
     }
   });
 
-  app.delete("/api/users/:id", async (req, res) => {
+  app.delete(["/api/users/:id", "/api/users/:id/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
@@ -583,7 +584,7 @@ async function createServer() {
   });
 
   // Sales
-  app.post("/api/sales", async (req, res) => {
+  app.post(["/api/sales", "/api/sales/"], async (req, res) => {
     const { items, payment_method, staff_id } = req.body;
     console.log(`[SALES] New sale request:`, JSON.stringify({ itemsCount: items?.length, payment_method, staff_id }));
     
@@ -905,9 +906,10 @@ async function createServer() {
   app.all("/api/*", (req, res) => {
     console.log(`[API 404] ${req.method} ${req.url} - No route matched`);
     res.status(404).json({ 
-      error: "API route not found",
+      error: `API route not found: ${req.method} ${req.path}`,
       method: req.method,
-      path: req.url 
+      path: req.path,
+      url: req.url 
     });
   });
 
