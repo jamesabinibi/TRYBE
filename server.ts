@@ -626,7 +626,7 @@ async function createServer() {
     res.json(salesWithStaff);
   });
 
-  app.delete("/api/sales", async (req, res) => {
+  app.delete(["/api/sales", "/api/sales/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       // This is a dangerous operation, usually we'd check for admin role
@@ -640,7 +640,7 @@ async function createServer() {
     }
   });
 
-  app.delete("/api/sales/:id", async (req, res) => {
+  app.delete(["/api/sales/:id", "/api/sales/:id/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
 
