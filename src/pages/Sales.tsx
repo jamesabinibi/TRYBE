@@ -403,7 +403,7 @@ export default function Sales() {
                             <span className="text-sm font-black text-emerald-600 whitespace-nowrap">{formatCurrency(product.selling_price)}</span>
                           </div>
                           <div className="flex items-center justify-between mt-auto">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{product.variants.length} variants</span>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{(product.variants || []).length} variants</span>
                             <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
                           </div>
                         </button>
@@ -434,48 +434,51 @@ export default function Sales() {
                     </div>
                   )}
                   <AnimatePresence initial={false}>
-                    {cart.map((item) => (
-                      <motion.div 
-                        key={item.variant.id}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className="flex items-center gap-4 group"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-black text-zinc-900 truncate tracking-tight">{item.product.name}</p>
-                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{item.variant.size} {item.variant.color && `· ${item.variant.color}`}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center bg-zinc-100 rounded-xl overflow-hidden p-1">
+                    {(cart || []).map((item) => {
+                      if (!item || !item.variant || !item.product) return null;
+                      return (
+                        <motion.div 
+                          key={item.variant.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          className="flex items-center gap-4 group"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-black text-zinc-900 truncate tracking-tight">{item.product.name}</p>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{item.variant.size} {item.variant.color && `· ${item.variant.color}`}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center bg-zinc-100 rounded-xl overflow-hidden p-1">
+                              <button 
+                                onClick={() => updateQuantity(item.variant.id, -1)}
+                                className="p-1.5 hover:bg-white rounded-lg text-zinc-500 transition-colors"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="w-8 text-center text-xs font-black text-zinc-900">{item.quantity}</span>
+                              <button 
+                                onClick={() => updateQuantity(item.variant.id, 1)}
+                                className="p-1.5 hover:bg-white rounded-lg text-zinc-500 transition-colors"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <div className="text-right min-w-[80px]">
+                              <p className="text-sm font-black text-zinc-900 tracking-tight">
+                                {formatCurrency(((item.price_override || item.variant.price_override || item.product.selling_price) || 0) * item.quantity)}
+                              </p>
+                            </div>
                             <button 
-                              onClick={() => updateQuantity(item.variant.id, -1)}
-                              className="p-1.5 hover:bg-white rounded-lg text-zinc-500 transition-colors"
+                              onClick={() => removeFromCart(item.variant.id)}
+                              className="p-2 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90"
                             >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <span className="w-8 text-center text-xs font-black text-zinc-900">{item.quantity}</span>
-                            <button 
-                              onClick={() => updateQuantity(item.variant.id, 1)}
-                              className="p-1.5 hover:bg-white rounded-lg text-zinc-500 transition-colors"
-                            >
-                              <Plus className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
-                          <div className="text-right min-w-[80px]">
-                            <p className="text-sm font-black text-zinc-900 tracking-tight">
-                              {formatCurrency((item.price_override || item.variant.price_override || item.product.selling_price) * item.quantity)}
-                            </p>
-                          </div>
-                          <button 
-                            onClick={() => removeFromCart(item.variant.id)}
-                            className="p-2 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
+                        </motion.div>
+                      );
+                    })}
                   </AnimatePresence>
                   {cart.length === 0 && (
                     <div className="h-full flex flex-col items-center justify-center text-center py-12">

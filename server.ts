@@ -346,14 +346,30 @@ async function createServer() {
     }
   });
 
-  app.put("/api/users/:id", async (req, res) => {
+  app.post("/api/users", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
-    const { id } = req.params;
-    const { name, role, email } = req.body;
+    const { username, password, name, role, email } = req.body;
     try {
       const { data, error } = await supabase
         .from('users')
-        .update({ name, role, email })
+        .insert([{ username, password, name, role, email }])
+        .select('id, username, email, role, name')
+        .single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/users/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    const { username, name, role, email } = req.body;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ username, name, role, email })
         .eq('id', id)
         .select('id, username, email, role, name')
         .single();
@@ -605,7 +621,8 @@ async function createServer() {
         
         if (result.error) throw result.error;
       } catch (err: any) {
-        if (err.message?.includes('Could not find the') || err.code === 'PGRST204') {
+        const errMsg = err.message || (typeof err === 'string' ? err : '');
+        if (errMsg.includes('Could not find the') || err.code === 'PGRST204') {
           console.log(`[SETTINGS] Schema missing columns, falling back to core fields`);
           if (existing) {
             result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
@@ -623,53 +640,6 @@ async function createServer() {
     } catch (error: any) {
       console.error(`[SETTINGS] Exception:`, error);
       res.status(500).json({ error: error.message || "Internal server error" });
-    }
-  });
-
-  // User Management
-  app.post("/api/users", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    const { username, password, name, role, email } = req.body;
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .insert([{ username, password, name, role, email }])
-        .select()
-        .single();
-      if (error) throw error;
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.put("/api/users/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    const { id } = req.params;
-    const { username, name, role, email } = req.body;
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .update({ username, name, role, email })
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.delete("/api/users/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    const { id } = req.params;
-    try {
-      const { error } = await supabase.from('users').delete().eq('id', id);
-      if (error) throw error;
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
     }
   });
 
