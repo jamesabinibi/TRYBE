@@ -594,22 +594,82 @@ async function createServer() {
       }
 
       let result;
-      if (existing) {
-        console.log(`[SETTINGS] Updating existing record ID: ${existing.id}`);
-        result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }).eq('id', existing.id).select().single();
-      } else {
-        console.log(`[SETTINGS] Inserting new record`);
-        result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }]).select().single();
+      try {
+        if (existing) {
+          console.log(`[SETTINGS] Updating existing record ID: ${existing.id}`);
+          result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }).eq('id', existing.id).select().single();
+        } else {
+          console.log(`[SETTINGS] Inserting new record`);
+          result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }]).select().single();
+        }
+        
+        if (result.error) throw result.error;
+      } catch (err: any) {
+        if (err.message?.includes('Could not find the') || err.code === 'PGRST204') {
+          console.log(`[SETTINGS] Schema missing columns, falling back to core fields`);
+          if (existing) {
+            result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
+          } else {
+            result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold }]).select().single();
+          }
+          if (result.error) throw result.error;
+          result.data = { ...result.data, logo_url, brand_color };
+        } else {
+          throw err;
+        }
       }
       
-      if (result.error) {
-        console.error(`[SETTINGS] Save error:`, result.error);
-        throw result.error;
-      }
       res.json(result.data);
     } catch (error: any) {
       console.error(`[SETTINGS] Exception:`, error);
       res.status(500).json({ error: error.message || "Internal server error" });
+    }
+  });
+
+  // User Management
+  app.post("/api/users", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { username, password, name, role, email } = req.body;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{ username, password, name, role, email }])
+        .select()
+        .single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/users/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    const { username, name, role, email } = req.body;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ username, name, role, email })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/users/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    try {
+      const { error } = await supabase.from('users').delete().eq('id', id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

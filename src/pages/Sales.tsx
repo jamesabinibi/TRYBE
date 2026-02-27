@@ -246,17 +246,19 @@ export default function Sales() {
     XLSX.writeFile(wb, "sales-report.xlsx");
   };
 
-  const filteredProducts = (products || []).filter(p => 
-    (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.category_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.supplier_name || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = (products || []).filter(p => {
+    const search = (searchQuery || '').toLowerCase();
+    return (p.name || '').toLowerCase().includes(search) ||
+           (p.category_name || '').toLowerCase().includes(search) ||
+           (p.supplier_name || '').toLowerCase().includes(search);
+  });
 
-  const filteredSales = (sales || []).filter(s => 
-    (s.invoice_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (s.staff_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (s.payment_method || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredSales = (sales || []).filter(s => {
+    const search = (searchQuery || '').toLowerCase();
+    return (s.invoice_number || '').toLowerCase().includes(search) ||
+           (s.staff_name || '').toLowerCase().includes(search) ||
+           (s.payment_method || '').toLowerCase().includes(search);
+  });
 
   return (
     <div className="h-full flex flex-col gap-6 overflow-hidden">
@@ -343,7 +345,7 @@ export default function Sales() {
                         <div className="space-y-3">
                           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Pick Size & Color</p>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {selectedProduct.variants.map((variant) => (
+                            {(selectedProduct.variants || []).map((variant) => (
                               <button
                                 key={variant.id}
                                 disabled={variant.quantity <= 0}
@@ -580,7 +582,7 @@ export default function Sales() {
                   <div className="relative z-10">
                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Total Revenue</p>
                     <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">
-                      {formatCurrency(filteredSales.reduce((acc, s) => acc + s.total_amount, 0))}
+                      {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0))}
                     </h3>
                   </div>
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-zinc-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
@@ -589,7 +591,7 @@ export default function Sales() {
                   <div className="relative z-10">
                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Total Profit</p>
                     <h3 className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight">
-                      {formatCurrency(filteredSales.reduce((acc, s) => acc + s.total_profit, 0))}
+                      {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0))}
                     </h3>
                   </div>
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-50/30 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
