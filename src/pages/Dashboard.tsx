@@ -77,19 +77,19 @@ export default function Dashboard() {
     {
       id: 'logo',
       label: "Add your business logo to stand out.",
-      path: '/settings',
+      path: '/settings?section=logo',
       isCompleted: !!settings?.logo_url
     },
     {
       id: 'colors',
       label: "Customise your invoices with your brand colours",
-      path: '/settings',
-      isCompleted: !!settings?.brand_color
+      path: '/settings?section=brand',
+      isCompleted: !!settings?.brand_color && settings?.brand_color !== '#10b981'
     },
     {
       id: 'tax',
       label: "Add your tax & payment details to start collecting payments.",
-      path: '/settings',
+      path: '/settings?section=tax',
       isCompleted: settings?.vat_enabled
     },
     {

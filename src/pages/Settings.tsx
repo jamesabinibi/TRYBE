@@ -38,6 +38,31 @@ export default function Settings() {
     brand_color: '#10b981'
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const section = params.get('section');
+    if (section) {
+      const element = document.getElementById(section);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, []);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setLogoPreview(base64);
+      setSettings(prev => ({ ...prev, logo_url: base64 }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Profile Editing State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -93,14 +118,16 @@ export default function Settings() {
       }
       const data = await res.json();
       if (data && !data.error) {
-        setSettings({
+        const fetchedSettings = {
           business_name: data.business_name || 'StockFlow Pro',
           currency: data.currency || 'NGN',
           vat_enabled: data.vat_enabled || false,
           low_stock_threshold: data.low_stock_threshold || 5,
           logo_url: data.logo_url || '',
           brand_color: data.brand_color || '#10b981'
-        });
+        };
+        setSettings(fetchedSettings);
+        setLogoPreview(data.logo_url || null);
       }
     } catch (err) {
       console.error('Settings fetch network error:', err);
@@ -420,7 +447,7 @@ export default function Settings() {
       </section>
 
       {/* Business Profile Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-12 border-t border-zinc-200">
+      <section id="profile" className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-12 border-t border-zinc-200">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-emerald-600" />
@@ -428,46 +455,58 @@ export default function Settings() {
           </div>
           <p className="text-xs text-zinc-500 font-medium">Update your business information and tax settings.</p>
         </div>
-        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-8">
+        <div id="logo" className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Logo URL</label>
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Logo</label>
               <div className="flex flex-col gap-4">
-                {settings.logo_url && (
-                  <div className="w-20 h-20 rounded-2xl border border-zinc-100 overflow-hidden bg-zinc-50">
-                    <img src={settings.logo_url} alt="Logo Preview" className="w-full h-full object-contain" />
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    value={settings.logo_url} 
-                    onChange={(e) => setSettings({...settings, logo_url: e.target.value})}
-                    placeholder="https://example.com/logo.png"
-                    className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all" 
-                  />
-                  <button 
-                    onClick={() => saveSettings()}
-                    className="px-4 py-3 bg-zinc-100 text-zinc-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
-                  >
-                    Update
-                  </button>
+                <div className="w-32 h-32 rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden bg-zinc-50 flex items-center justify-center relative group">
+                  {logoPreview ? (
+                    <>
+                      <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-contain p-2" />
+                      <button 
+                        onClick={() => {
+                          setLogoPreview(null);
+                          setSettings(prev => ({ ...prev, logo_url: '' }));
+                        }}
+                        className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Trash2 className="w-6 h-6" />
+                      </button>
+                    </>
+                  ) : (
+                    <label className="cursor-pointer flex flex-col items-center gap-2">
+                      <Plus className="w-6 h-6 text-zinc-300" />
+                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Upload Logo</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                    </label>
+                  )}
                 </div>
+                <button 
+                  onClick={() => saveSettings()}
+                  disabled={isSaving}
+                  className="w-full sm:w-auto px-6 py-3 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 transition-all disabled:opacity-50"
+                >
+                  {isSaving ? '...' : 'Save Logo'}
+                </button>
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div id="brand" className="space-y-4">
               <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Brand Color</label>
               <div className="flex items-center gap-4">
-                <input 
-                  type="color" 
-                  value={settings.brand_color} 
-                  onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
-                  className="w-16 h-16 rounded-2xl border-none cursor-pointer bg-transparent" 
-                />
+                <div className="relative">
+                  <input 
+                    type="color" 
+                    value={settings.brand_color} 
+                    onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
+                    className="w-20 h-20 rounded-3xl border-none cursor-pointer bg-transparent" 
+                  />
+                  <div className="absolute inset-0 rounded-3xl pointer-events-none border-4 border-white shadow-inner" style={{ backgroundColor: settings.brand_color }} />
+                </div>
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-bold text-zinc-900">{settings.brand_color}</p>
-                  <p className="text-[10px] text-zinc-400 font-medium">Used for invoices and accent highlights</p>
+                  <p className="text-[10px] text-zinc-400 font-medium">Accent color for your brand</p>
                 </div>
                 <button 
                   onClick={() => saveSettings()}
@@ -538,7 +577,7 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-emerald-50/50 rounded-[2rem] border border-emerald-100 gap-4">
+          <div id="tax" className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-emerald-50/50 rounded-[2rem] border border-emerald-100 gap-4">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-white rounded-2xl text-emerald-600 shadow-sm">
                 <Shield className="w-6 h-6" />

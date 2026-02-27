@@ -202,16 +202,20 @@ export default function Sales() {
   };
 
   const exportPDF = () => {
+    if (!filteredSales || filteredSales.length === 0) {
+      toast.error('No sales data to export');
+      return;
+    }
     const doc = new jsPDF();
     doc.text('Sales Report', 14, 15);
     
-    const tableData = filteredSales.map(s => [
-      s.invoice_number,
-      new Date(s.created_at).toLocaleDateString(),
-      s.staff_name,
-      s.payment_method,
-      formatCurrency(s.total_amount),
-      formatCurrency(s.total_profit)
+    const tableData = (filteredSales || []).map(s => [
+      s.invoice_number || 'N/A',
+      s.created_at ? new Date(s.created_at).toLocaleDateString() : 'N/A',
+      s.staff_name || 'N/A',
+      s.payment_method || 'N/A',
+      formatCurrency(s.total_amount || 0),
+      formatCurrency(s.total_profit || 0)
     ]);
 
     (doc as any).autoTable({
@@ -224,22 +228,34 @@ export default function Sales() {
   };
 
   const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(filteredSales);
+    if (!filteredSales || filteredSales.length === 0) {
+      toast.error('No sales data to export');
+      return;
+    }
+    const data = (filteredSales || []).map(s => ({
+      'Invoice #': s.invoice_number || 'N/A',
+      'Date': s.created_at ? new Date(s.created_at).toLocaleDateString() : 'N/A',
+      'Staff': s.staff_name || 'N/A',
+      'Payment': s.payment_method || 'N/A',
+      'Total': s.total_amount || 0,
+      'Profit': s.total_profit || 0
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sales");
     XLSX.writeFile(wb, "sales-report.xlsx");
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.category_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.supplier_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = (products || []).filter(p => 
+    (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.category_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.supplier_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredSales = sales.filter(s => 
-    s.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.staff_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.payment_method.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredSales = (sales || []).filter(s => 
+    (s.invoice_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s.staff_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s.payment_method || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
