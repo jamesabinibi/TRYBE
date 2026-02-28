@@ -56,19 +56,35 @@ export default function Dashboard() {
   useEffect(() => {
     fetch('/api/analytics/summary')
       .then(res => res.json())
-      .then(setSummary);
+      .then(data => {
+        if (data && !data.error) setSummary(data);
+        else setSummary({});
+      })
+      .catch(() => setSummary({}));
     
     fetch('/api/analytics/trends')
       .then(res => res.json())
-      .then(setTrends);
+      .then(data => {
+        if (Array.isArray(data)) setTrends(data);
+        else setTrends([]);
+      })
+      .catch(() => setTrends([]));
 
     fetch('/api/sales')
       .then(res => res.json())
-      .then(data => setRecentSales(data.slice(0, 5)));
+      .then(data => {
+        if (Array.isArray(data)) setRecentSales(data.slice(0, 5));
+        else setRecentSales([]);
+      })
+      .catch(() => setRecentSales([]));
 
     fetch('/api/settings')
       .then(res => res.json())
-      .then(setSettings);
+      .then(data => {
+        if (data && !data.error) setSettings(data);
+        else setSettings(null);
+      })
+      .catch(() => setSettings(null));
   }, []);
 
   if (!summary) return <div className="animate-pulse">Loading...</div>;

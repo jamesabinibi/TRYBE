@@ -91,13 +91,35 @@ export default function Products() {
   const fetchProducts = () => {
     fetch('/api/products')
       .then(res => res.json())
-      .then(setProducts);
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          console.error("Failed to fetch products:", data);
+          setProducts([]);
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching products:", err);
+        setProducts([]);
+      });
   };
 
   const fetchCategories = () => {
     fetch('/api/categories')
       .then(res => res.json())
-      .then(setCategories);
+      .then(data => {
+        if (Array.isArray(data)) {
+          setCategories(data);
+        } else {
+          console.error("Failed to fetch categories:", data);
+          setCategories([]);
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching categories:", err);
+        setCategories([]);
+      });
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {

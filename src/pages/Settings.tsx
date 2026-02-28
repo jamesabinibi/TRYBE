@@ -102,7 +102,7 @@ export default function Settings() {
         return;
       }
       const data = await res.json();
-      setCategories(data);
+      setCategories(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Categories fetch network error:', err);
     }

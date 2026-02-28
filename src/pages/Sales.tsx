@@ -54,13 +54,35 @@ export default function Sales() {
   const fetchProducts = () => {
     fetch('/api/products')
       .then(res => res.json())
-      .then(setProducts);
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          console.error("Failed to fetch products:", data);
+          setProducts([]);
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching products:", err);
+        setProducts([]);
+      });
   };
 
   const fetchSales = () => {
     fetch('/api/sales')
       .then(res => res.json())
-      .then(setSales);
+      .then(data => {
+        if (Array.isArray(data)) {
+          setSales(data);
+        } else {
+          console.error("Failed to fetch sales:", data);
+          setSales([]);
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching sales:", err);
+        setSales([]);
+      });
   };
 
   const addToCart = (product: Product, variant: Variant) => {
@@ -389,7 +411,7 @@ export default function Sales() {
                 {!selectedProduct && (
                   <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {filteredProducts.map((product) => (
+                      {(filteredProducts || []).map((product) => (
                         <button 
                           key={product.id} 
                           onClick={() => setSelectedProduct(product)}
@@ -637,11 +659,11 @@ export default function Sales() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
-                      {filteredSales.map((sale) => (
+                      {(filteredSales || []).map((sale) => (
                         <tr key={sale.id} className="hover:bg-zinc-50/50 transition-colors group">
                           <td className="px-8 py-5 text-sm font-black text-zinc-900 tracking-tight">{sale.invoice_number}</td>
                           <td className="px-8 py-5 text-sm text-zinc-500 font-medium">
-                            {new Date(sale.created_at).toLocaleDateString()}
+                            {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'N/A'}
                           </td>
                           <td className="px-8 py-5 text-sm text-zinc-600 font-bold">{sale.staff_name}</td>
                           <td className="px-8 py-5">
