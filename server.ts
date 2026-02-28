@@ -107,10 +107,14 @@ async function createServer() {
 
   app.get("/api/diag", async (req, res) => {
     let dbStatus = "Not tested";
+    let settingsSchema = null;
     if (supabase) {
       try {
         const { error } = await supabase.from('users').select('id').limit(1);
         dbStatus = error ? `Error: ${error.message}` : "Connected";
+        
+        const { data: settingsData } = await supabase.from('settings').select('*').limit(1);
+        settingsSchema = settingsData && settingsData.length > 0 ? Object.keys(settingsData[0]) : [];
       } catch (e: any) {
         dbStatus = `Exception: ${e.message}`;
       }
@@ -121,12 +125,9 @@ async function createServer() {
       supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING',
       supabaseInitialized: !!supabase,
       dbStatus,
+      settingsSchema,
       nodeEnv: process.env.NODE_ENV,
-      currentTime: new Date().toISOString(),
-      headers: req.headers,
-      url: req.url,
-      path: req.path,
-      originalUrl: req.originalUrl
+      currentTime: new Date().toISOString()
     });
   });
 
