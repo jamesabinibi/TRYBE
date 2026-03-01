@@ -329,7 +329,7 @@ export default function Products() {
             </button>
           </div>
           
-          <div className="flex flex-1 max-w-md items-center gap-4">
+          <div className="flex flex-1 max-w-2xl items-center gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
               <input 
@@ -340,9 +340,25 @@ export default function Products() {
                 className="w-full pl-12 pr-4 py-2.5 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
               />
             </div>
-            <button className="flex items-center justify-center gap-2 px-4 py-2.5 border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-50 transition-colors">
-              Sort <Filter className="w-4 h-4" />
-            </button>
+            <div className="relative group">
+              <select 
+                value={searchParams.get('category') || 'all'}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const newParams = new URLSearchParams(searchParams);
+                  if (val === 'all') newParams.delete('category');
+                  else newParams.set('category', val);
+                  setSearchParams(newParams);
+                }}
+                className="pl-4 pr-10 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none appearance-none cursor-pointer min-w-[140px]"
+              >
+                <option value="all">All Categories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none group-hover:text-emerald-500 transition-colors" />
+            </div>
           </div>
         </div>
 
@@ -360,7 +376,12 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
-                {filteredProducts.map((product) => (
+                {filteredProducts
+                  .filter(p => {
+                    const catFilter = searchParams.get('category');
+                    return !catFilter || p.category_id?.toString() === catFilter;
+                  })
+                  .map((product) => (
                   <tr key={product.id} className="hover:bg-zinc-50/50 transition-colors group">
                     <td className="py-5">
                       <div className="flex items-center gap-4">
@@ -558,6 +579,25 @@ export default function Products() {
                               />
                             </div>
                             <div className="space-y-2">
+                              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</label>
+                              <div className="relative group">
+                                <select 
+                                  value={newProduct.category_id}
+                                  onChange={(e) => setNewProduct({...newProduct, category_id: e.target.value})}
+                                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none appearance-none cursor-pointer"
+                                >
+                                  <option value="">Select Category</option>
+                                  {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                  ))}
+                                </select>
+                                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-emerald-500 transition-colors" />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div className="space-y-2">
                               <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select unit</label>
                               <div className="relative group">
                                 <select 
@@ -571,18 +611,17 @@ export default function Products() {
                                 <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-emerald-500 transition-colors" />
                               </div>
                             </div>
-                          </div>
-
-                          <div className="space-y-2 max-w-xs">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">How many pieces in 1 unit?</label>
-                            <div className="relative">
-                              <input 
-                                type="number" 
-                                value={newProduct.pieces_per_unit}
-                                onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: parseInt(e.target.value) || 1})}
-                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all"
-                              />
-                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">How many pieces in 1 unit?</label>
+                              <div className="relative">
+                                <input 
+                                  type="number" 
+                                  value={newProduct.pieces_per_unit}
+                                  onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: parseInt(e.target.value) || 1})}
+                                  className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all"
+                                />
+                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
+                              </div>
                             </div>
                           </div>
                         </div>

@@ -5,6 +5,7 @@ export interface User {
   username: string;
   role: Role;
   name: string;
+  email?: string;
 }
 
 export interface Category {

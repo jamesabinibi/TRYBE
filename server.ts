@@ -347,7 +347,7 @@ async function createServer() {
     }
   });
 
-  app.post("/api/users", async (req, res) => {
+  app.post(["/api/users", "/api/users/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { username, password, name, role, email } = req.body;
     try {
@@ -363,14 +363,17 @@ async function createServer() {
     }
   });
 
-  app.put("/api/users/:id", async (req, res) => {
+  app.put(["/api/users/:id", "/api/users/:id/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
-    const { username, name, role, email } = req.body;
+    const { username, password, name, role, email } = req.body;
     try {
+      const updateData: any = { username, name, role, email };
+      if (password) updateData.password = password;
+      
       const { data, error } = await supabase
         .from('users')
-        .update({ username, name, role, email })
+        .update(updateData)
         .eq('id', id)
         .select('id, username, email, role, name')
         .single();
@@ -381,7 +384,7 @@ async function createServer() {
     }
   });
 
-  app.delete("/api/users/:id", async (req, res) => {
+  app.delete(["/api/users/:id", "/api/users/:id/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
@@ -598,7 +601,7 @@ async function createServer() {
     }
   });
 
-  app.post("/api/settings", async (req, res) => {
+  app.post(["/api/settings", "/api/settings/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color } = req.body;
     console.log(`[SETTINGS] Update request:`, JSON.stringify(req.body));
@@ -623,7 +626,9 @@ async function createServer() {
         if (result.error) throw result.error;
       } catch (err: any) {
         const errMsg = err.message || (typeof err === 'string' ? err : '');
-        if (errMsg.includes('Could not find the') || err.code === 'PGRST204') {
+        console.log(`[SETTINGS] Primary update failed, checking for schema issues: ${errMsg}`);
+        
+        if (errMsg.includes('column') || errMsg.includes('brand_color') || errMsg.includes('logo_url') || err.code === 'PGRST204') {
           console.log(`[SETTINGS] Schema missing columns, falling back to core fields`);
           if (existing) {
             result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
@@ -631,6 +636,8 @@ async function createServer() {
             result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold }]).select().single();
           }
           if (result.error) throw result.error;
+          
+          // Return the data with the requested fields even if they aren't in the DB
           result.data = { ...result.data, logo_url, brand_color };
         } else {
           throw err;

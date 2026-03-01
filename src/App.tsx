@@ -37,7 +37,17 @@ interface AuthContextType {
   logout: () => void;
 }
 
+interface Settings {
+  business_name: string;
+  currency: string;
+  vat_enabled: boolean;
+  low_stock_threshold: number;
+  logo_url: string | null;
+  brand_color: string;
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
+const SettingsContext = createContext<Settings | null>(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -45,8 +55,14 @@ export const useAuth = () => {
   return context;
 };
 
+export const useSettings = () => {
+  const context = useContext(SettingsContext);
+  return context;
+};
+
 const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { user, logout } = useAuth();
+  const settings = useSettings();
   const location = useLocation();
   
   const navItems = [
@@ -56,6 +72,8 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     ...(user?.role === 'admin' ? [{ icon: UsersIcon, label: 'Team', path: '/users' }] : []),
     { icon: SettingsIcon, label: 'Settings', path: '/settings' },
   ];
+
+  const brandColor = settings?.brand_color || '#10b981';
 
   return (
     <>
@@ -77,12 +95,28 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       )}>
         <div className="p-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl shadow-emerald-500/20 rotate-3">
-              S
-            </div>
+            {settings?.logo_url ? (
+              <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-xl shadow-black/20">
+                <img src={settings.logo_url} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              </div>
+            ) : (
+              <div 
+                className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl rotate-3"
+                style={{ backgroundColor: brandColor, shadowColor: `${brandColor}33` }}
+              >
+                {settings?.business_name?.charAt(0) || 'S'}
+              </div>
+            )}
             <div>
-              <span className="text-white font-black text-xl tracking-tight block leading-none">StockFlow</span>
-              <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mt-1 block">Pro Edition</span>
+              <span className="text-white font-black text-xl tracking-tight block leading-none">
+                {settings?.business_name || 'StockFlow'}
+              </span>
+              <span 
+                className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 block"
+                style={{ color: brandColor }}
+              >
+                Pro Edition
+              </span>
             </div>
           </div>
           <button onClick={onClose} className="lg:hidden p-2 text-zinc-500 hover:text-white bg-zinc-900 rounded-xl">
@@ -106,16 +140,18 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                 className={cn(
                   "flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative overflow-hidden",
                   isActive 
-                    ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" 
+                    ? "text-white shadow-lg" 
                     : "hover:bg-zinc-900 hover:text-zinc-200"
                 )}
+                style={isActive ? { backgroundColor: brandColor, boxShadow: `0 10px 15px -3px ${brandColor}33` } : {}}
               >
                 <item.icon className={cn("w-5 h-5 transition-transform duration-300 group-hover:scale-110", isActive ? "text-white" : "text-zinc-500 group-hover:text-emerald-400")} />
                 <span className="text-sm font-bold tracking-tight">{item.label}</span>
                 {isActive && (
                   <motion.div 
                     layoutId="active-nav-bg"
-                    className="absolute inset-0 bg-emerald-500 -z-10"
+                    className="absolute inset-0 -z-10"
+                    style={{ backgroundColor: brandColor }}
                   />
                 )}
               </Link>
@@ -126,7 +162,14 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         <div className="p-6 space-y-4">
           <div className="bg-zinc-900/50 rounded-3xl p-4 border border-zinc-800/50">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-sm font-black text-emerald-500 border border-emerald-500/20">
+              <div 
+                className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-black border"
+                style={{ 
+                  backgroundColor: `${brandColor}1a`, 
+                  color: brandColor,
+                  borderColor: `${brandColor}33`
+                }}
+              >
                 {user?.name.charAt(0)}
               </div>
               <div className="flex-1 overflow-hidden">
@@ -154,9 +197,12 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
+  const settings = useSettings();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { searchQuery, setSearchQuery } = useSearch();
+
+  const brandColor = settings?.brand_color || '#10b981';
 
   return (
     <div className="flex min-h-screen bg-zinc-50 font-sans selection:bg-emerald-100 selection:text-emerald-900">
@@ -191,7 +237,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {location.pathname.startsWith('/products') ? (
               <Link 
                 to="/products?action=add"
-                className="flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/10 active:scale-95"
+                className="flex items-center gap-2 px-5 py-3 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl active:scale-95"
+                style={{ backgroundColor: brandColor, boxShadow: `0 20px 25px -5px ${brandColor}33` }}
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">Add Product</span>
@@ -218,6 +265,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function App() {
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('user');
@@ -229,6 +277,21 @@ export default function App() {
       return null;
     }
   });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          setSettings(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const login = (userData: User) => {
     setUser(userData);
@@ -242,33 +305,35 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
-      <Toaster position="top-right" richColors />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-          <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
-          <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
-          <Route 
-            path="/*" 
-            element={
-              user ? (
-                <Layout>
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/products" element={<Products />} />
-                    <Route path="/sales" element={<Sales />} />
-                    <Route path="/users" element={<Users />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="*" element={<Navigate to="/" />} />
-                  </Routes>
-                </Layout>
-              ) : (
-                <Navigate to="/login" />
-              )
-            } 
-          />
-        </Routes>
-      </BrowserRouter>
+      <SettingsContext.Provider value={settings}>
+        <Toaster position="top-right" richColors />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+            <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
+            <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
+            <Route 
+              path="/*" 
+              element={
+                user ? (
+                  <Layout>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/products" element={<Products />} />
+                      <Route path="/sales" element={<Sales />} />
+                      <Route path="/users" element={<Users />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
+                  </Layout>
+                ) : (
+                  <Navigate to="/login" />
+                )
+              } 
+            />
+          </Routes>
+        </BrowserRouter>
+      </SettingsContext.Provider>
     </AuthContext.Provider>
   );
 }
