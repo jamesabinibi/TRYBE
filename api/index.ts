@@ -232,6 +232,22 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
+app.post("/api/users", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "Database not available" });
+  const { username, password, name, role, email } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{ username, password, name, role, email }])
+      .select('id, username, email, role, name')
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.put("/api/users/:id", async (req, res) => {
   if (!supabase) return res.status(503).json({ error: "Database not available" });
   const { id } = req.params;
