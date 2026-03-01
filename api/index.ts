@@ -481,7 +481,23 @@ app.get("/api/settings", async (req, res) => {
   try {
     const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
     if (error) throw error;
-    res.json(data || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
+    
+    let settings = data || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' };
+    
+    // Parse branding from business_name if it looks like JSON (our fallback)
+    if (settings.business_name && settings.business_name.startsWith('{"')) {
+      try {
+        const branding = JSON.parse(settings.business_name);
+        settings = {
+          ...settings,
+          business_name: branding.name,
+          logo_url: settings.logo_url || branding.logo,
+          brand_color: settings.brand_color || branding.color
+        };
+      } catch (e) {}
+    }
+    
+    res.json(settings);
   } catch (error) {
     res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
   }
@@ -513,14 +529,29 @@ app.post("/api/settings", async (req, res) => {
     } catch (err: any) {
       const errMsg = err.message || (typeof err === 'string' ? err : '');
       if (errMsg.includes('column') || errMsg.includes('brand_color') || errMsg.includes('logo_url') || err.code === 'PGRST204') {
-        console.log(`[SETTINGS] Schema missing columns, falling back to core fields`);
+        console.log(`[SETTINGS] Schema missing columns, falling back to core fields and encoding branding in business_name`);
+        
+        // Encode branding in business_name
+        const encodedName = JSON.stringify({
+          name: business_name,
+          logo: logo_url,
+          color: brand_color
+        });
+
         if (existing) {
-          result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
+          result = await supabase.from('settings').update({ business_name: encodedName, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
         } else {
-          result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold }]).select().single();
+          result = await supabase.from('settings').insert([{ business_name: encodedName, currency, vat_enabled, low_stock_threshold }]).select().single();
         }
         if (result.error) throw result.error;
-        result.data = { ...result.data, logo_url, brand_color };
+        
+        // Return the data with the requested fields decoded
+        result.data = { 
+          ...result.data, 
+          business_name: business_name,
+          logo_url: logo_url, 
+          brand_color: brand_color 
+        };
       } else {
         throw err;
       }

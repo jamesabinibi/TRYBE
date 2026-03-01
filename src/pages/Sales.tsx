@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ProductSelect from '../components/ProductSelect';
 import { 
   Search, 
   ShoppingCart, 
@@ -323,25 +324,12 @@ export default function Sales() {
                 <div className="bg-white p-6 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select Product</label>
-                    <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                      <select 
-                        className="w-full pl-12 pr-10 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-base focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all shadow-sm font-bold appearance-none cursor-pointer"
-                        value={selectedProduct?.id || ''}
-                        onChange={(e) => {
-                          const product = products.find(p => p.id === parseInt(e.target.value));
-                          setSelectedProduct(product || null);
-                        }}
-                      >
-                        <option value="">Choose a product...</option>
-                        {filteredProducts.map(p => (
-                          <option key={p.id} value={p.id}>{p.name} - {formatCurrency(p.selling_price)}</option>
-                        ))}
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400">
-                        <ChevronRight className="w-5 h-5 rotate-90" />
-                      </div>
-                    </div>
+                    <ProductSelect 
+                      products={products}
+                      selectedProduct={selectedProduct}
+                      onSelect={setSelectedProduct}
+                      formatCurrency={formatCurrency}
+                    />
                   </div>
 
                   <AnimatePresence mode="wait">
