@@ -21,14 +21,21 @@ export default function Users() {
   });
 
   const fetchUsers = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch('/api/users');
+      const data = await response.json();
       if (response.ok) {
-        const data = await response.json();
         setUsers(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Failed to fetch users:', data.error);
+        toast.error(data.error || 'Failed to load team members');
+        setUsers([]);
       }
     } catch (error) {
       console.error('Failed to fetch users:', error);
+      toast.error('Network error while loading team members');
+      setUsers([]);
     } finally {
       setIsLoading(false);
     }

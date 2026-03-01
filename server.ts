@@ -115,6 +115,9 @@ async function createServer() {
         
         const { data: settingsData } = await supabase.from('settings').select('*').limit(1);
         settingsSchema = settingsData && settingsData.length > 0 ? Object.keys(settingsData[0]) : [];
+
+        const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        (res as any).userCount = userCount;
       } catch (e: any) {
         dbStatus = `Exception: ${e.message}`;
       }
@@ -126,6 +129,7 @@ async function createServer() {
       supabaseInitialized: !!supabase,
       dbStatus,
       settingsSchema,
+      userCount: (res as any).userCount,
       nodeEnv: process.env.NODE_ENV,
       currentTime: new Date().toISOString()
     });
@@ -336,13 +340,22 @@ async function createServer() {
   app.get("/api/users", async (req, res) => {
     if (!supabase) return res.json([]);
     try {
-      const { data, error } = await supabase
+      // Try selecting specific columns first
+      let { data, error } = await supabase
         .from('users')
-        .select('id, username, email, role, name, created_at')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      res.json(data);
+        .select('id, username, email, role, name');
+      
+      if (error) {
+        console.error('[SERVER] Users fetch error (specific columns):', error);
+        // Fallback to select all if specific columns fail
+        const fallback = await supabase.from('users').select('*');
+        if (fallback.error) throw fallback.error;
+        data = fallback.data;
+      }
+      
+      res.json(data || []);
     } catch (error: any) {
+      console.error('[SERVER] Users fetch exception:', error);
       res.status(500).json({ error: error.message });
     }
   });

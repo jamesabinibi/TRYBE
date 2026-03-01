@@ -221,12 +221,17 @@ app.post("/api/reset-password", async (req, res) => {
 app.get("/api/users", async (req, res) => {
   if (!supabase) return res.json([]);
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('users')
-      .select('id, username, email, role, name, created_at')
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    res.json(data);
+      .select('id, username, email, role, name');
+    
+    if (error) {
+      console.error('[API] Users fetch error:', error);
+      const fallback = await supabase.from('users').select('*');
+      if (fallback.error) throw fallback.error;
+      data = fallback.data;
+    }
+    res.json(data || []);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
