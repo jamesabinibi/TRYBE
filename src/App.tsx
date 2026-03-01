@@ -46,8 +46,13 @@ interface Settings {
   brand_color: string;
 }
 
+interface SettingsContextType {
+  settings: Settings | null;
+  refreshSettings: () => Promise<void>;
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
-const SettingsContext = createContext<Settings | null>(null);
+const SettingsContext = createContext<SettingsContextType | null>(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -57,12 +62,13 @@ export const useAuth = () => {
 
 export const useSettings = () => {
   const context = useContext(SettingsContext);
+  if (!context) throw new Error("useSettings must be used within SettingsProvider");
   return context;
 };
 
 const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { user, logout } = useAuth();
-  const settings = useSettings();
+  const { settings } = useSettings();
   const location = useLocation();
   
   const navItems = [
@@ -197,7 +203,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
-  const settings = useSettings();
+  const { settings } = useSettings();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { searchQuery, setSearchQuery } = useSearch();
@@ -278,18 +284,33 @@ export default function App() {
     }
   });
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch('/api/settings');
-        if (res.ok) {
-          const data = await res.json();
-          setSettings(data);
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        let data = await res.json();
+        
+        // Fallback for branding from localStorage if missing in DB
+        const localBranding = localStorage.getItem('branding_settings');
+        if (localBranding) {
+          try {
+            const parsed = JSON.parse(localBranding);
+            data = {
+              ...data,
+              logo_url: data.logo_url || parsed.logo_url,
+              brand_color: data.brand_color || parsed.brand_color
+            };
+          } catch (e) {}
         }
-      } catch (err) {
-        console.error('Failed to fetch settings:', err);
+        
+        setSettings(data);
       }
-    };
+    } catch (err) {
+      console.error('Failed to fetch settings:', err);
+    }
+  };
+
+  useEffect(() => {
     fetchSettings();
   }, []);
 
@@ -305,7 +326,7 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
-      <SettingsContext.Provider value={settings}>
+      <SettingsContext.Provider value={{ settings, refreshSettings: fetchSettings }}>
         <Toaster position="top-right" richColors />
         <BrowserRouter>
           <Routes>

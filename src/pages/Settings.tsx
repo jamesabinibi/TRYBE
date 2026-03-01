@@ -20,10 +20,11 @@ import {
 import { Category } from '../types';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
-import { useAuth } from '../App';
+import { useAuth, useSettings } from '../App';
 
 export default function Settings() {
   const { user } = useAuth();
+  const { refreshSettings } = useSettings();
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState('');
   const [editingCategory, setEditingCategory] = useState<number | null>(null);
@@ -118,16 +119,29 @@ export default function Settings() {
       }
       const data = await res.json();
       if (data && !data.error) {
+        // Fallback for branding from localStorage if missing in DB
+        const localBranding = localStorage.getItem('branding_settings');
+        let logo_url = data.logo_url;
+        let brand_color = data.brand_color;
+        
+        if (localBranding) {
+          try {
+            const parsed = JSON.parse(localBranding);
+            logo_url = logo_url || parsed.logo_url;
+            brand_color = brand_color || parsed.brand_color;
+          } catch (e) {}
+        }
+
         const fetchedSettings = {
           business_name: data.business_name || 'StockFlow Pro',
           currency: data.currency || 'NGN',
           vat_enabled: data.vat_enabled || false,
           low_stock_threshold: data.low_stock_threshold || 5,
-          logo_url: data.logo_url || '',
-          brand_color: data.brand_color || '#10b981'
+          logo_url: logo_url || '',
+          brand_color: brand_color || '#10b981'
         };
         setSettings(fetchedSettings);
-        setLogoPreview(data.logo_url || null);
+        setLogoPreview(logo_url || null);
       }
     } catch (err) {
       console.error('Settings fetch network error:', err);
@@ -237,6 +251,13 @@ export default function Settings() {
       
       if (response.ok) {
         const data = await response.json();
+        
+        // Save branding to localStorage as fallback
+        localStorage.setItem('branding_settings', JSON.stringify({
+          logo_url: updatedSettings.logo_url,
+          brand_color: updatedSettings.brand_color
+        }));
+
         setSettings({
           business_name: data.business_name,
           currency: data.currency,
@@ -245,6 +266,7 @@ export default function Settings() {
           logo_url: data.logo_url,
           brand_color: data.brand_color
         });
+        await refreshSettings();
         toast.success('Settings saved successfully');
       } else {
         const contentType = response.headers.get("content-type");
