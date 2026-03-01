@@ -303,11 +303,45 @@ app.post("/api/products", async (req, res) => {
   }
   try {
     const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
-    const { data: product, error: productError } = await supabase
-      .from('products')
-      .insert([{ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type }])
-      .select()
-      .single();
+    
+    let product;
+    let productError;
+
+    try {
+      const result = await supabase
+        .from('products')
+        .insert([{ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type }])
+        .select()
+        .single();
+      product = result.data;
+      productError = result.error;
+    } catch (err: any) {
+      if (err.message?.includes('column') || err.message?.includes('pieces_per_unit') || err.message?.includes('unit')) {
+        console.log("[API] Products schema missing new columns, falling back to core fields");
+        const result = await supabase
+          .from('products')
+          .insert([{ name, category_id, description, cost_price, selling_price, supplier_name }])
+          .select()
+          .single();
+        product = result.data;
+        productError = result.error;
+      } else {
+        throw err;
+      }
+    }
+
+    if (productError) {
+      if (productError.message?.includes('column') || productError.message?.includes('pieces_per_unit') || productError.message?.includes('unit')) {
+        console.log("[API] Products schema missing new columns (via error), falling back to core fields");
+        const result = await supabase
+          .from('products')
+          .insert([{ name, category_id, description, cost_price, selling_price, supplier_name }])
+          .select()
+          .single();
+        product = result.data;
+        productError = result.error;
+      }
+    }
 
     if (productError) throw productError;
     const productId = product.id;
@@ -331,6 +365,7 @@ app.post("/api/products", async (req, res) => {
 
     res.json({ id: productId });
   } catch (error: any) {
+    console.error("[API] Product save error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -343,10 +378,35 @@ app.put("/api/products/:id", async (req, res) => {
   const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
   
   try {
-    const { error: productError } = await supabase
-      .from('products')
-      .update({ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type })
-      .eq('id', id);
+    let productError;
+    try {
+      const result = await supabase
+        .from('products')
+        .update({ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type })
+        .eq('id', id);
+      productError = result.error;
+    } catch (err: any) {
+      if (err.message?.includes('column') || err.message?.includes('pieces_per_unit') || err.message?.includes('unit')) {
+        console.log("[API] Products schema missing new columns on update, falling back");
+        const result = await supabase
+          .from('products')
+          .update({ name, category_id, description, cost_price, selling_price, supplier_name })
+          .eq('id', id);
+        productError = result.error;
+      } else {
+        throw err;
+      }
+    }
+
+    if (productError) {
+      if (productError.message?.includes('column') || productError.message?.includes('pieces_per_unit') || productError.message?.includes('unit')) {
+        const result = await supabase
+          .from('products')
+          .update({ name, category_id, description, cost_price, selling_price, supplier_name })
+          .eq('id', id);
+        productError = result.error;
+      }
+    }
 
     if (productError) throw productError;
 
@@ -419,17 +479,30 @@ app.post("/api/settings", async (req, res) => {
     }
 
     let result;
-    if (existing) {
-      console.log(`[SETTINGS] Updating existing record ID: ${existing.id}`);
-      result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }).eq('id', existing.id).select().single();
-    } else {
-      console.log(`[SETTINGS] Inserting new record`);
-      result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }]).select().single();
-    }
-    
-    if (result.error) {
-      console.error(`[SETTINGS] Save error:`, result.error);
-      throw result.error;
+    try {
+      if (existing) {
+        console.log(`[SETTINGS] Updating existing record ID: ${existing.id}`);
+        result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }).eq('id', existing.id).select().single();
+      } else {
+        console.log(`[SETTINGS] Inserting new record`);
+        result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }]).select().single();
+      }
+      
+      if (result.error) throw result.error;
+    } catch (err: any) {
+      const errMsg = err.message || (typeof err === 'string' ? err : '');
+      if (errMsg.includes('column') || errMsg.includes('brand_color') || errMsg.includes('logo_url') || err.code === 'PGRST204') {
+        console.log(`[SETTINGS] Schema missing columns, falling back to core fields`);
+        if (existing) {
+          result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
+        } else {
+          result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold }]).select().single();
+        }
+        if (result.error) throw result.error;
+        result.data = { ...result.data, logo_url, brand_color };
+      } else {
+        throw err;
+      }
     }
     res.json(result.data);
   } catch (error: any) {

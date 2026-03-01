@@ -136,6 +136,9 @@ export default function Products() {
         cost_price: parseFloat(newProduct.cost_price) || 0,
         selling_price: parseFloat(newProduct.selling_price) || 0,
         supplier_name: newProduct.supplier_name,
+        unit: newProduct.unit,
+        pieces_per_unit: newProduct.pieces_per_unit,
+        product_type: newProduct.product_type,
         variants: newProduct.variants,
         images: newProduct.images
       };

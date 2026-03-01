@@ -432,13 +432,46 @@ async function createServer() {
   app.post("/api/products", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
-      const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
+      const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
       
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .insert([{ name, category_id, description, cost_price, selling_price, supplier_name }])
-        .select()
-        .single();
+      let product;
+      let productError;
+
+      try {
+        const result = await supabase
+          .from('products')
+          .insert([{ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type }])
+          .select()
+          .single();
+        product = result.data;
+        productError = result.error;
+      } catch (err: any) {
+        if (err.message?.includes('column') || err.message?.includes('pieces_per_unit') || err.message?.includes('unit')) {
+          console.log("[SERVER] Products schema missing new columns, falling back to core fields");
+          const result = await supabase
+            .from('products')
+            .insert([{ name, category_id, description, cost_price, selling_price, supplier_name }])
+            .select()
+            .single();
+          product = result.data;
+          productError = result.error;
+        } else {
+          throw err;
+        }
+      }
+
+      if (productError) {
+        if (productError.message?.includes('column') || productError.message?.includes('pieces_per_unit') || productError.message?.includes('unit')) {
+          console.log("[SERVER] Products schema missing new columns (via error), falling back to core fields");
+          const result = await supabase
+            .from('products')
+            .insert([{ name, category_id, description, cost_price, selling_price, supplier_name }])
+            .select()
+            .single();
+          product = result.data;
+          productError = result.error;
+        }
+      }
 
       if (productError) throw productError;
 
@@ -463,6 +496,7 @@ async function createServer() {
 
       res.json({ id: productId });
     } catch (error: any) {
+      console.error("[SERVER] Product save error:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -470,13 +504,38 @@ async function createServer() {
   app.put("/api/products/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
-    const { name, category_id, description, cost_price, selling_price, supplier_name, variants, images } = req.body;
+    const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
     
     try {
-      const { error: productError } = await supabase
-        .from('products')
-        .update({ name, category_id, description, cost_price, selling_price, supplier_name })
-        .eq('id', id);
+      let productError;
+      try {
+        const result = await supabase
+          .from('products')
+          .update({ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type })
+          .eq('id', id);
+        productError = result.error;
+      } catch (err: any) {
+        if (err.message?.includes('column') || err.message?.includes('pieces_per_unit') || err.message?.includes('unit')) {
+          console.log("[SERVER] Products schema missing new columns on update, falling back");
+          const result = await supabase
+            .from('products')
+            .update({ name, category_id, description, cost_price, selling_price, supplier_name })
+            .eq('id', id);
+          productError = result.error;
+        } else {
+          throw err;
+        }
+      }
+
+      if (productError) {
+        if (productError.message?.includes('column') || productError.message?.includes('pieces_per_unit') || productError.message?.includes('unit')) {
+          const result = await supabase
+            .from('products')
+            .update({ name, category_id, description, cost_price, selling_price, supplier_name })
+            .eq('id', id);
+          productError = result.error;
+        }
+      }
 
       if (productError) throw productError;
 
