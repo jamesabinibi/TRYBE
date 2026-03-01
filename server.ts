@@ -670,16 +670,30 @@ async function createServer() {
       
       let settings = data || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' };
       
-      // Parse branding from business_name if it looks like JSON (our fallback)
-      if (settings.business_name && settings.business_name.startsWith('{"')) {
+      // 1. Parse branding from business_name if it uses our compact format
+      if (settings.business_name && settings.business_name.startsWith('[')) {
+        const match = settings.business_name.match(/^\[(#?[a-fA-F0-9]{3,6})\]\s*(.*)/);
+        if (match) {
+          settings.brand_color = match[1];
+          settings.business_name = match[2];
+        }
+      } else if (settings.business_name && settings.business_name.startsWith('{"')) {
+        // Legacy JSON fallback support
         try {
           const branding = JSON.parse(settings.business_name);
-          settings = {
-            ...settings,
-            business_name: branding.name,
-            logo_url: settings.logo_url || branding.logo,
-            brand_color: settings.brand_color || branding.color
-          };
+          settings.business_name = branding.name;
+          settings.brand_color = settings.brand_color || branding.color;
+          settings.logo_url = settings.logo_url || branding.logo;
+        } catch (e) {}
+      }
+      
+      // 2. Fetch logo from product_images if missing in settings
+      if (!settings.logo_url) {
+        try {
+          const { data: logoData } = await supabase.from('product_images').select('image_data').eq('product_id', -1).limit(1).maybeSingle();
+          if (logoData) {
+            settings.logo_url = logoData.image_data;
+          }
         } catch (e) {}
       }
       
@@ -717,14 +731,10 @@ async function createServer() {
         console.log(`[SETTINGS] Primary update failed, checking for schema issues: ${errMsg}`);
         
         if (errMsg.includes('column') || errMsg.includes('brand_color') || errMsg.includes('logo_url') || err.code === 'PGRST204') {
-          console.log(`[SETTINGS] Schema missing columns, falling back to core fields and encoding branding in business_name`);
+          console.log(`[SETTINGS] Schema missing columns, using robust fallback`);
           
-          // Encode branding in business_name
-          const encodedName = JSON.stringify({
-            name: business_name,
-            logo: logo_url,
-            color: brand_color
-          });
+          // 1. Encode color in business_name (compact format)
+          const encodedName = `[${brand_color}] ${business_name}`;
 
           if (existing) {
             result = await supabase.from('settings').update({ business_name: encodedName, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
@@ -732,6 +742,16 @@ async function createServer() {
             result = await supabase.from('settings').insert([{ business_name: encodedName, currency, vat_enabled, low_stock_threshold }]).select().single();
           }
           if (result.error) throw result.error;
+          
+          // 2. Store logo in product_images with ID -1
+          if (logo_url) {
+            try {
+              await supabase.from('product_images').delete().eq('product_id', -1);
+              await supabase.from('product_images').insert([{ product_id: -1, image_data: logo_url }]);
+            } catch (logoErr) {
+              console.error('[SETTINGS] Failed to save logo to fallback storage:', logoErr);
+            }
+          }
           
           // Return the data with the requested fields decoded
           result.data = { 

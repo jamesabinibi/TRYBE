@@ -119,7 +119,23 @@ export default function Settings() {
       }
       const data = await res.json();
       if (data && !data.error) {
-        // Fallback for branding from localStorage if missing in DB
+        // 1. Decode branding from business_name if it's encoded (Server-side fallback)
+        if (data.business_name && data.business_name.startsWith('[')) {
+          const match = data.business_name.match(/^\[(#?[a-fA-F0-9]{3,6})\]\s*(.*)/);
+          if (match) {
+            data.brand_color = match[1];
+            data.business_name = match[2];
+          }
+        } else if (data.business_name && data.business_name.startsWith('{"')) {
+          try {
+            const branding = JSON.parse(data.business_name);
+            data.business_name = branding.name;
+            data.brand_color = data.brand_color || branding.color;
+            data.logo_url = data.logo_url || branding.logo;
+          } catch (e) {}
+        }
+
+        // 2. Fallback for branding from localStorage if missing in DB
         const localBranding = localStorage.getItem('branding_settings');
         let logo_url = data.logo_url;
         let brand_color = data.brand_color;
