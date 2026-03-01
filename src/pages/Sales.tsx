@@ -291,21 +291,21 @@ export default function Sales() {
           onClick={() => setActiveTab('pos')}
           className={cn(
             "pb-4 text-sm font-bold transition-all relative",
-            activeTab === 'pos' ? "text-emerald-600" : "text-zinc-400 hover:text-zinc-600"
+            activeTab === 'pos' ? "text-brand" : "text-zinc-400 hover:text-zinc-600"
           )}
         >
           Point of Sale
-          {activeTab === 'pos' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600 rounded-full" />}
+          {activeTab === 'pos' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-brand rounded-full" />}
         </button>
         <button 
           onClick={() => setActiveTab('history')}
           className={cn(
             "pb-4 text-sm font-bold transition-all relative",
-            activeTab === 'history' ? "text-emerald-600" : "text-zinc-400 hover:text-zinc-600"
+            activeTab === 'history' ? "text-brand" : "text-zinc-400 hover:text-zinc-600"
           )}
         >
           Sales History & Analytics
-          {activeTab === 'history' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600 rounded-full" />}
+          {activeTab === 'history' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-brand rounded-full" />}
         </button>
       </div>
 
@@ -513,7 +513,7 @@ export default function Sales() {
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-zinc-200">
                       <span className="text-sm font-black text-zinc-900 uppercase tracking-widest">Total Amount</span>
-                      <span className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(subtotal)}</span>
+                      <span className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(subtotal)}</span>
                     </div>
                   </div>
 
@@ -523,7 +523,7 @@ export default function Sales() {
                       className={cn(
                         "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95",
                         paymentMethod === 'Cash' 
-                          ? "bg-white border-emerald-500 text-emerald-600 shadow-lg shadow-emerald-500/10" 
+                          ? "bg-white border-brand text-brand shadow-lg shadow-brand/10" 
                           : "bg-transparent border-zinc-200 text-zinc-400 hover:bg-white hover:border-zinc-300"
                       )}
                     >
@@ -535,7 +535,7 @@ export default function Sales() {
                       className={cn(
                         "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95",
                         paymentMethod === 'POS' 
-                          ? "bg-white border-emerald-500 text-emerald-600 shadow-lg shadow-emerald-500/10" 
+                          ? "bg-white border-brand text-brand shadow-lg shadow-brand/10" 
                           : "bg-transparent border-zinc-200 text-zinc-400 hover:bg-white hover:border-zinc-300"
                       )}
                     >
@@ -547,7 +547,7 @@ export default function Sales() {
                   <button 
                     onClick={handleCheckout}
                     disabled={cart.length === 0 || isProcessing}
-                    className="w-full py-5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl shadow-emerald-500/20 active:scale-[0.98]"
+                    className="w-full py-5 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl shadow-brand/20 active:scale-[0.98]"
                   >
                     {isProcessing ? "Processing..." : (
                       <>

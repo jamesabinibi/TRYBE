@@ -48,6 +48,15 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [brandColor, setBrandColor] = useState('#10b981');
+
+  useEffect(() => {
+    // Get brand color from CSS variable
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--brand-color').trim();
+    if (color) {
+      setBrandColor(color);
+    }
+  }, []);
   const [summary, setSummary] = useState<any>(null);
   const [trends, setTrends] = useState<any[]>([]);
   const [recentSales, setRecentSales] = useState<any[]>([]);
@@ -134,7 +143,7 @@ export default function Dashboard() {
         </div>
         <Link 
           to="/products?action=add"
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-brand hover:bg-brand-hover text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-brand/20 active:scale-95"
         >
           <Plus className="w-4 h-4" />
           Add Product
@@ -145,7 +154,7 @@ export default function Dashboard() {
         <StatCard 
           title="Money In today" 
           value={formatCurrency(summary.today_sales || 0)} 
-          color="text-emerald-600"
+          color="text-brand"
         />
         <StatCard 
           title="Money Out today" 
@@ -179,8 +188,8 @@ export default function Dashboard() {
                 <AreaChart data={trends}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor={brandColor} stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor={brandColor} stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="colorOut" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
@@ -203,7 +212,7 @@ export default function Dashboard() {
                   <Tooltip 
                     contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
                   />
-                  <Area type="monotone" dataKey="revenue" stroke="#10b981" fill="url(#colorRevenue)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="revenue" stroke={brandColor} fill="url(#colorRevenue)" strokeWidth={3} />
                   <Area type="monotone" dataKey="profit" stroke="#ef4444" fill="url(#colorOut)" strokeWidth={3} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -234,7 +243,7 @@ export default function Dashboard() {
                 <h3 className="font-black text-zinc-900 tracking-tight text-lg">Top sales</h3>
                 <div className="w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
               </div>
-              <select className="text-xs font-bold text-emerald-600 bg-transparent border-none outline-none cursor-pointer">
+              <select className="text-xs font-bold text-brand bg-transparent border-none outline-none cursor-pointer">
                 <option>This week</option>
               </select>
             </div>
@@ -253,7 +262,7 @@ export default function Dashboard() {
                 <h3 className="font-black text-zinc-900 tracking-tight text-lg">Top expenses</h3>
                 <div className="w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
               </div>
-              <select className="text-xs font-bold text-emerald-600 bg-transparent border-none outline-none cursor-pointer">
+              <select className="text-xs font-bold text-brand bg-transparent border-none outline-none cursor-pointer">
                 <option>This week</option>
               </select>
             </div>
@@ -271,12 +280,12 @@ export default function Dashboard() {
           <div className="text-center mb-8">
             <h3 className="font-black text-zinc-900 tracking-tight text-lg">Getting Started</h3>
           </div>
-          <div className="bg-emerald-50/50 rounded-3xl p-6 mb-8 flex items-center justify-between border border-emerald-100">
+          <div className="bg-brand/5 rounded-3xl p-6 mb-8 flex items-center justify-between border border-brand/10">
             <div>
-              <h4 className="font-bold text-emerald-900 flex items-center gap-2">
+              <h4 className="font-bold text-brand flex items-center gap-2">
                 Welcome to StockFlow <span role="img" aria-label="rocket">🚀</span>
               </h4>
-              <p className="text-emerald-700 text-sm">
+              <p className="text-brand/70 text-sm">
                 {completedTasksCount === gettingStartedTasks.length 
                   ? "You're all set! Your business is ready to grow." 
                   : `Complete ${gettingStartedTasks.length - completedTasksCount} more tasks to finish your setup.`}
@@ -284,24 +293,24 @@ export default function Dashboard() {
             </div>
             <div className="w-24 h-24 relative">
               <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#ecfdf5" strokeWidth="8" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" className="text-brand/10" strokeWidth="8" />
                 <circle 
                   cx="50" 
                   cy="50" 
                   r="40" 
                   fill="none" 
-                  stroke="#10b981" 
+                  stroke="currentColor"
+                  className="text-brand transition-all duration-1000 ease-out"
                   strokeWidth="8" 
                   strokeDasharray="251.2" 
                   strokeDashoffset={251.2 - (251.2 * progressPercentage) / 100}
-                  className="transition-all duration-1000 ease-out"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
                 {progressPercentage === 100 ? (
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                  <CheckCircle2 className="w-8 h-8 text-brand" />
                 ) : (
-                  <span className="text-sm font-black text-emerald-600">{Math.round(progressPercentage)}%</span>
+                  <span className="text-sm font-black text-brand">{Math.round(progressPercentage)}%</span>
                 )}
               </div>
             </div>
@@ -319,9 +328,9 @@ export default function Dashboard() {
               >
                 <div className="flex items-center gap-4">
                   {task.isCompleted ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    <CheckCircle2 className="w-5 h-5 text-brand" />
                   ) : (
-                    <Circle className="w-5 h-5 text-zinc-200 group-hover:border-emerald-500 transition-colors" />
+                    <Circle className="w-5 h-5 text-zinc-200 group-hover:border-brand transition-colors" />
                   )}
                   <span className={cn(
                     "text-sm font-medium transition-colors",
@@ -330,7 +339,7 @@ export default function Dashboard() {
                     {task.label}
                   </span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-emerald-500 transition-colors" />
+                <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-brand transition-colors" />
               </div>
             ))}
           </div>

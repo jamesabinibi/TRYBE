@@ -479,36 +479,28 @@ app.delete("/api/products/:id", async (req, res) => {
 app.get("/api/settings", async (req, res) => {
   if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
   try {
-    const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
+    const { data, error } = await supabase.from('settings').select('*');
     if (error) throw error;
     
-    let settings = data || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' };
+    // Find main settings (not a logo record)
+    let mainSettings = data.find(s => !s.business_name.startsWith('__LOGO__')) || data[0];
+    // Find logo record
+    const logoRecord = data.find(s => s.business_name.startsWith('__LOGO__'));
     
-    // 1. Parse branding from business_name if it uses our compact format
+    let settings = mainSettings || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' };
+    
+    // 1. Decode branding from business_name
     if (settings.business_name && settings.business_name.startsWith('[')) {
       const match = settings.business_name.match(/^\[(#?[a-fA-F0-9]{3,6})\]\s*(.*)/);
       if (match) {
         settings.brand_color = match[1];
         settings.business_name = match[2];
       }
-    } else if (settings.business_name && settings.business_name.startsWith('{"')) {
-      // Legacy JSON fallback support
-      try {
-        const branding = JSON.parse(settings.business_name);
-        settings.business_name = branding.name;
-        settings.brand_color = settings.brand_color || branding.color;
-        settings.logo_url = settings.logo_url || branding.logo;
-      } catch (e) {}
     }
     
-    // 2. Fetch logo from product_images if missing in settings
-    if (!settings.logo_url) {
-      try {
-        const { data: logoData } = await supabase.from('product_images').select('image_data').eq('product_id', -1).limit(1).maybeSingle();
-        if (logoData) {
-          settings.logo_url = logoData.image_data;
-        }
-      } catch (e) {}
+    // 2. Get logo from logo record if available
+    if (logoRecord) {
+      settings.logo_url = logoRecord.business_name.replace('__LOGO__', '');
     }
     
     res.json(settings);
@@ -543,9 +535,9 @@ app.post("/api/settings", async (req, res) => {
     } catch (err: any) {
       const errMsg = err.message || (typeof err === 'string' ? err : '');
       if (errMsg.includes('column') || errMsg.includes('brand_color') || errMsg.includes('logo_url') || err.code === 'PGRST204') {
-        console.log(`[SETTINGS] Schema missing columns, using robust fallback`);
+        console.log(`[SETTINGS] Schema missing columns, using multi-record fallback`);
         
-        // 1. Encode color in business_name (compact format)
+        // 1. Encode color in business_name
         const encodedName = `[${brand_color}] ${business_name}`;
 
         if (existing) {
@@ -555,11 +547,18 @@ app.post("/api/settings", async (req, res) => {
         }
         if (result.error) throw result.error;
         
-        // 2. Store logo in product_images with ID -1
+        // 2. Store logo in a separate settings record
         if (logo_url) {
           try {
-            await supabase.from('product_images').delete().eq('product_id', -1);
-            await supabase.from('product_images').insert([{ product_id: -1, image_data: logo_url }]);
+            // Check if logo record exists
+            const { data: logoRecords } = await supabase.from('settings').select('id').like('business_name', '__LOGO__%');
+            const logoId = logoRecords?.[0]?.id;
+            
+            if (logoId) {
+              await supabase.from('settings').update({ business_name: `__LOGO__${logo_url}` }).eq('id', logoId);
+            } else {
+              await supabase.from('settings').insert([{ business_name: `__LOGO__${logo_url}`, currency: 'SYSTEM', vat_enabled: false, low_stock_threshold: 0 }]);
+            }
           } catch (logoErr) {
             console.error('[SETTINGS] Failed to save logo to fallback storage:', logoErr);
           }

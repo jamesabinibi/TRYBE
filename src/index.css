@@ -4,6 +4,11 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand: var(--brand-color);
+  --color-brand-light: var(--brand-color-light);
+  --color-brand-muted: var(--brand-color-muted);
+  --color-brand-hover: var(--brand-color-hover);
 }
 
 @layer base {
@@ -11,6 +16,12 @@
     @apply font-sans text-zinc-900 antialiased;
   }
 }
+
+.bg-brand { background-color: var(--brand-color); }
+.text-brand { color: var(--brand-color); }
+.border-brand { border-color: var(--brand-color); }
+.ring-brand { --tw-ring-color: var(--brand-color); }
+.selection-brand { --tw-selection-bg: var(--brand-color-light); }
 
 .animate-in {
   animation: animate-in 0.3s ease-out;

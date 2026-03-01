@@ -564,7 +564,7 @@ export default function Settings() {
                   type="text" 
                   value={settings.business_name} 
                   onChange={(e) => setSettings({...settings, business_name: e.target.value})}
-                  className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all" 
+                  className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all" 
                 />
                 <button 
                   onClick={() => saveSettings()}
@@ -584,7 +584,7 @@ export default function Settings() {
                   setSettings(newSettings);
                   saveSettings(newSettings);
                 }}
-                className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all appearance-none"
+                className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none"
               >
                 <option value="NGN">NGN (₦)</option>
                 <option value="USD">USD ($)</option>
@@ -615,14 +615,14 @@ export default function Settings() {
             </div>
           </div>
 
-          <div id="tax" className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-emerald-50/50 rounded-[2rem] border border-emerald-100 gap-4">
+          <div id="tax" className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-brand/5 rounded-[2rem] border border-brand/10 gap-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-white rounded-2xl text-emerald-600 shadow-sm">
+              <div className="p-3 bg-white rounded-2xl text-brand shadow-sm">
                 <Shield className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-black text-emerald-900 uppercase tracking-widest">VAT Enabled</p>
-                <p className="text-xs text-emerald-700 font-medium">Apply 7.5% tax to all sales by default.</p>
+                <p className="text-sm font-black text-brand uppercase tracking-widest">VAT Enabled</p>
+                <p className="text-xs text-brand/70 font-medium">Apply 7.5% tax to all sales by default.</p>
               </div>
             </div>
             <button 
@@ -633,7 +633,7 @@ export default function Settings() {
               }}
               className={cn(
                 "w-14 h-8 rounded-full relative transition-all shadow-inner",
-                settings.vat_enabled ? "bg-emerald-500" : "bg-zinc-200"
+                settings.vat_enabled ? "bg-brand" : "bg-zinc-200"
               )}
             >
               <div className={cn(

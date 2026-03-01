@@ -151,7 +151,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                 )}
                 style={isActive ? { backgroundColor: brandColor, boxShadow: `0 10px 15px -3px ${brandColor}33` } : {}}
               >
-                <item.icon className={cn("w-5 h-5 transition-transform duration-300 group-hover:scale-110", isActive ? "text-white" : "text-zinc-500 group-hover:text-emerald-400")} />
+                <item.icon className={cn("w-5 h-5 transition-transform duration-300 group-hover:scale-110", isActive ? "text-white" : "text-zinc-500 group-hover:text-brand")} />
                 <span className="text-sm font-bold tracking-tight">{item.label}</span>
                 {isActive && (
                   <motion.div 
@@ -211,7 +211,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const brandColor = settings?.brand_color || '#10b981';
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 font-sans selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="flex min-h-screen bg-zinc-50 font-sans selection-brand selection:text-white">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <header className="h-20 bg-white/80 backdrop-blur-xl border-b border-zinc-200/50 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-30">
@@ -223,13 +223,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Menu className="w-6 h-6" />
             </button>
             <div className="relative w-full max-w-md hidden md:block group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-emerald-500 transition-colors" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-brand transition-colors" />
               <input 
                 type="text" 
                 placeholder="Search for products, sales, or reports..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-zinc-100/50 border-transparent rounded-2xl text-sm font-medium focus:bg-white focus:ring-8 focus:ring-emerald-500/5 focus:border-emerald-500/20 transition-all outline-none border border-zinc-200/0 focus:border-zinc-200"
+                className="w-full pl-12 pr-4 py-3 bg-zinc-100/50 border-transparent rounded-2xl text-sm font-medium focus:bg-white focus:ring-8 focus:ring-brand/5 focus:border-brand/20 transition-all outline-none border border-zinc-200/0 focus:border-zinc-200"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-1 bg-white border border-zinc-200 rounded-lg text-[10px] font-black text-zinc-400 shadow-sm">
                 <span>⌘</span>

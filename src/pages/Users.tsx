@@ -142,7 +142,7 @@ export default function Users() {
         </div>
         <button 
           onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-xl text-sm font-medium hover:bg-brand-hover transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Add User
@@ -165,7 +165,7 @@ export default function Users() {
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+                      <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
                       <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Loading team members...</p>
                     </div>
                   </td>
@@ -195,7 +195,7 @@ export default function Users() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand/10 text-brand">
                         Active
                       </span>
                     </td>
@@ -203,7 +203,7 @@ export default function Users() {
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => handleOpenModal(user)}
-                          className="p-2 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          className="p-2 text-zinc-400 hover:text-brand hover:bg-brand/5 rounded-lg transition-colors"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -263,7 +263,7 @@ export default function Users() {
                     type="text" 
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     placeholder="John Doe"
                   />
                 </div>
@@ -275,7 +275,7 @@ export default function Users() {
                     type="text" 
                     value={formData.username}
                     onChange={(e) => setFormData({...formData, username: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     placeholder="johndoe"
                   />
                 </div>
@@ -287,7 +287,7 @@ export default function Users() {
                     type="email" 
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     placeholder="john@example.com"
                   />
                 </div>
@@ -300,7 +300,7 @@ export default function Users() {
                       type="password" 
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                       placeholder="••••••••"
                     />
                   </div>
@@ -311,7 +311,7 @@ export default function Users() {
                   <select 
                     value={formData.role}
                     onChange={(e) => setFormData({...formData, role: e.target.value as any})}
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all appearance-none"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none"
                   >
                     <option value="staff">Staff</option>
                     <option value="manager">Manager</option>
@@ -323,7 +323,7 @@ export default function Users() {
                   <button 
                     type="submit"
                     disabled={isSaving}
-                    className="w-full py-4 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                    className="w-full py-4 bg-brand text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 disabled:opacity-50"
                   >
                     {isSaving ? 'Saving...' : editingUser ? 'Update User' : 'Create User'}
                   </button>
