@@ -633,7 +633,7 @@ export default function Sales() {
                   </div>
                 </div>
                 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto hidden md:block">
                   <table className="w-full text-left border-collapse min-w-[800px]">
                     <thead>
                       <tr className="bg-zinc-50/30 border-b border-zinc-100">
@@ -677,6 +677,46 @@ export default function Sales() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile Sales Cards */}
+                <div className="md:hidden divide-y divide-zinc-100">
+                  {(filteredSales || []).map((sale) => (
+                    <div key={sale.id} className="p-6 space-y-4 hover:bg-zinc-50/50 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-black text-zinc-900 tracking-tight">{sale.invoice_number}</p>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                            {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'N/A'} · {sale.staff_name}
+                          </p>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-zinc-100 text-zinc-600">
+                          {sale.payment_method}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="space-y-1">
+                          <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Total Amount</p>
+                          <p className="text-base font-black text-zinc-900 tracking-tight">{formatCurrency(sale.total_amount)}</p>
+                        </div>
+                        <div className="text-right space-y-1">
+                          <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Profit</p>
+                          <p className="text-base font-black text-brand tracking-tight">{formatCurrency(sale.total_profit)}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button 
+                          onClick={() => handleDeleteSale(sale.id)}
+                          className="flex items-center gap-2 px-4 py-2 text-red-600 bg-red-50 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete Sale
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 
                 {filteredSales.length === 0 && (

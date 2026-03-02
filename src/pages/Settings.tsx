@@ -406,22 +406,22 @@ export default function Settings() {
   };
 
   return (
-    <div className="max-w-4xl space-y-12 pb-20">
+    <div className="max-w-4xl space-y-8 sm:space-y-12 pb-20">
       <div>
-        <h1 className="text-3xl font-black text-zinc-900 tracking-tight">Settings</h1>
-        <p className="text-zinc-500 font-medium">Configure your business preferences and system settings.</p>
+        <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">Settings</h1>
+        <p className="text-sm sm:text-base text-zinc-500 font-medium">Configure your business preferences and system settings.</p>
       </div>
 
       {/* Product Categories Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-xs tracking-widest">Categories</h3>
+            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Categories</h3>
           </div>
-          <p className="text-xs text-zinc-500 font-medium">Manage the categories used to organize your inventory.</p>
+          <p className="text-[10px] sm:text-xs text-zinc-500 font-medium">Manage the categories used to organize your inventory.</p>
         </div>
-        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-8">
+        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6 sm:space-y-8">
           <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
             <input 
               type="text" 
@@ -432,7 +432,7 @@ export default function Settings() {
             />
             <button 
               type="submit"
-              className="px-8 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95"
+              className="w-full sm:w-auto px-8 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95"
             >
               Add
             </button>
@@ -485,20 +485,20 @@ export default function Settings() {
       </section>
 
       {/* Business Profile Section */}
-      <section id="profile" className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-12 border-t border-zinc-200">
+      <section id="profile" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-xs tracking-widest">Business Profile</h3>
+            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Business Profile</h3>
           </div>
-          <p className="text-xs text-zinc-500 font-medium">Update your business information and tax settings.</p>
+          <p className="text-[10px] sm:text-xs text-zinc-500 font-medium">Update your business information and tax settings.</p>
         </div>
-        <div id="logo" className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+        <div id="logo" className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6 sm:space-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
             <div className="space-y-4">
               <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Logo</label>
               <div className="flex flex-col gap-4">
-                <div className="w-32 h-32 rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden bg-zinc-50 flex items-center justify-center relative group">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl sm:rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden bg-zinc-50 flex items-center justify-center relative group">
                   {logoPreview ? (
                     <>
                       <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-contain p-2" />
@@ -507,15 +507,15 @@ export default function Settings() {
                           setLogoPreview(null);
                           setSettings(prev => ({ ...prev, logo_url: '' }));
                         }}
-                        className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                        className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all"
                       >
-                        <Trash2 className="w-6 h-6" />
+                        <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
                       </button>
                     </>
                   ) : (
                     <label className="cursor-pointer flex flex-col items-center gap-2">
-                      <Plus className="w-6 h-6 text-zinc-300" />
-                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Upload Logo</span>
+                      <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-300" />
+                      <span className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Upload Logo</span>
                       <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                     </label>
                   )}
@@ -538,13 +538,13 @@ export default function Settings() {
                     type="color" 
                     value={settings.brand_color} 
                     onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
-                    className="w-20 h-20 rounded-3xl border-none cursor-pointer bg-transparent" 
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border-none cursor-pointer bg-transparent" 
                   />
-                  <div className="absolute inset-0 rounded-3xl pointer-events-none border-4 border-white shadow-inner" style={{ backgroundColor: settings.brand_color }} />
+                  <div className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none border-4 border-white shadow-inner" style={{ backgroundColor: settings.brand_color }} />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <p className="text-sm font-bold text-zinc-900">{settings.brand_color}</p>
-                  <p className="text-[10px] text-zinc-400 font-medium">Accent color for your brand</p>
+                  <p className="text-xs sm:text-sm font-bold text-zinc-900">{settings.brand_color}</p>
+                  <p className="text-[9px] sm:text-[10px] text-zinc-400 font-medium">Accent color for your brand</p>
                 </div>
                 <button 
                   onClick={() => saveSettings()}
@@ -615,14 +615,14 @@ export default function Settings() {
             </div>
           </div>
 
-          <div id="tax" className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-brand/5 rounded-[2rem] border border-brand/10 gap-4">
+          <div id="tax" className="flex flex-col sm:flex-row sm:items-center justify-between p-5 sm:p-6 bg-brand/5 rounded-2xl sm:rounded-[2rem] border border-brand/10 gap-4">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-white rounded-2xl text-brand shadow-sm">
-                <Shield className="w-6 h-6" />
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="text-sm font-black text-brand uppercase tracking-widest">VAT Enabled</p>
-                <p className="text-xs text-brand/70 font-medium">Apply 7.5% tax to all sales by default.</p>
+                <p className="text-[10px] sm:text-sm font-black text-brand uppercase tracking-widest">VAT Enabled</p>
+                <p className="text-[10px] sm:text-xs text-brand/70 font-medium">Apply 7.5% tax to all sales by default.</p>
               </div>
             </div>
             <button 
@@ -632,12 +632,12 @@ export default function Settings() {
                 saveSettings(newSettings);
               }}
               className={cn(
-                "w-14 h-8 rounded-full relative transition-all shadow-inner",
+                "w-12 h-7 sm:w-14 sm:h-8 rounded-full relative transition-all shadow-inner self-end sm:self-auto",
                 settings.vat_enabled ? "bg-brand" : "bg-zinc-200"
               )}
             >
               <div className={cn(
-                "absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all",
+                "absolute top-1 w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full shadow-md transition-all",
                 settings.vat_enabled ? "right-1" : "left-1"
               )}></div>
             </button>
@@ -646,20 +646,20 @@ export default function Settings() {
       </section>
 
       {/* User Account Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-12 border-t border-zinc-200">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <UserIcon className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-xs tracking-widest">User Account</h3>
+            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">User Account</h3>
           </div>
-          <p className="text-xs text-zinc-500 font-medium">Manage your personal profile and security settings.</p>
+          <p className="text-[10px] sm:text-xs text-zinc-500 font-medium">Manage your personal profile and security settings.</p>
         </div>
-        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
-          <div className="flex items-center gap-6 p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100">
-            <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-brand/20">
+        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-zinc-50 rounded-2xl sm:rounded-[2rem] border border-zinc-100">
+            <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-brand/20 shrink-0">
               {user?.name?.charAt(0) || 'U'}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 w-full">
               {isEditingProfile ? (
                 <form onSubmit={handleUpdateProfile} className="space-y-3">
                   <input
@@ -679,17 +679,17 @@ export default function Settings() {
                     required
                   />
                   <div className="flex gap-2">
-                    <button type="submit" className="px-4 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all">
+                    <button type="submit" className="flex-1 sm:flex-none px-4 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all">
                       Save Changes
                     </button>
-                    <button type="button" onClick={() => setIsEditingProfile(false)} className="px-4 py-2 bg-zinc-200 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 transition-all">
+                    <button type="button" onClick={() => setIsEditingProfile(false)} className="flex-1 sm:flex-none px-4 py-2 bg-zinc-200 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 transition-all">
                       Cancel
                     </button>
                   </div>
                 </form>
               ) : (
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="text-center sm:text-left">
                     <h4 className="text-lg font-black text-zinc-900 tracking-tight">{user?.name}</h4>
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">{user?.role}</p>
                   </div>
@@ -706,7 +706,7 @@ export default function Settings() {
 
           <div className="space-y-4">
             {isChangingPassword ? (
-              <form onSubmit={handleChangePassword} className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100 space-y-4">
+              <form onSubmit={handleChangePassword} className="p-6 bg-zinc-50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Lock className="w-4 h-4 text-brand" />
                   <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">Change Password</h4>
@@ -738,11 +738,11 @@ export default function Settings() {
                     required
                   />
                 </div>
-                <div className="flex gap-2 pt-2">
-                  <button type="submit" className="px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20">
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                  <button type="submit" className="w-full sm:w-auto px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20">
                     Update Password
                   </button>
-                  <button type="button" onClick={() => setIsChangingPassword(false)} className="px-6 py-3 bg-zinc-200 text-zinc-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 transition-all">
+                  <button type="button" onClick={() => setIsChangingPassword(false)} className="w-full sm:w-auto px-6 py-3 bg-zinc-200 text-zinc-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 transition-all">
                     Cancel
                   </button>
                 </div>
@@ -764,28 +764,28 @@ export default function Settings() {
       </section>
 
       {/* Data Management Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-12 border-t border-zinc-200">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-red-600" />
-            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-xs tracking-widest">Data Management</h3>
+            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Data Management</h3>
           </div>
-          <p className="text-xs text-zinc-500 font-medium">Dangerous operations. Use with extreme caution.</p>
+          <p className="text-[10px] sm:text-xs text-zinc-500 font-medium">Dangerous operations. Use with extreme caution.</p>
         </div>
-        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
-          <div className="flex items-center justify-between p-6 bg-red-50 rounded-[2rem] border border-red-100">
+        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-red-50 rounded-2xl sm:rounded-[2rem] border border-red-100 gap-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-white rounded-2xl text-red-600 shadow-sm">
-                <History className="w-6 h-6" />
+              <div className="p-3 bg-white rounded-2xl text-red-600 shadow-sm shrink-0">
+                <History className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="text-sm font-black text-red-900 uppercase tracking-widest">Clear Sales History</p>
-                <p className="text-xs text-red-700 font-medium">Delete all transaction logs and profit data.</p>
+                <p className="text-[10px] sm:text-sm font-black text-red-900 uppercase tracking-widest">Clear Sales History</p>
+                <p className="text-[10px] sm:text-xs text-red-700 font-medium">Delete all transaction logs and profit data.</p>
               </div>
             </div>
             <button 
               onClick={handleClearSales}
-              className="px-6 py-3 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 active:scale-95"
+              className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 active:scale-95"
             >
               Clear Data
             </button>

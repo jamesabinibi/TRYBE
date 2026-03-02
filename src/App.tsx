@@ -330,6 +330,17 @@ export default function App() {
     fetchSettings();
   }, []);
 
+  useEffect(() => {
+    if (settings?.brand_color) {
+      const root = document.documentElement;
+      root.style.setProperty('--brand-color', settings.brand_color);
+      // Generate variants
+      root.style.setProperty('--brand-color-hover', `${settings.brand_color}dd`);
+      root.style.setProperty('--brand-color-muted', `${settings.brand_color}1a`);
+      root.style.setProperty('--brand-color-light', `${settings.brand_color}33`);
+    }
+  }, [settings]);
+
   const login = (userData: User) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
