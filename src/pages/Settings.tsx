@@ -34,7 +34,7 @@ export default function Settings() {
     business_name: 'StockFlow Pro',
     currency: 'NGN',
     vat_enabled: false,
-    low_stock_threshold: 5,
+    low_stock_threshold: '5',
     logo_url: '',
     brand_color: '#10b981'
   });
@@ -152,7 +152,7 @@ export default function Settings() {
           business_name: data.business_name || 'StockFlow Pro',
           currency: data.currency || 'NGN',
           vat_enabled: data.vat_enabled || false,
-          low_stock_threshold: data.low_stock_threshold || 5,
+          low_stock_threshold: (data.low_stock_threshold || 5).toString(),
           logo_url: logo_url || '',
           brand_color: brand_color || '#10b981'
         };
@@ -259,10 +259,14 @@ export default function Settings() {
   const saveSettings = async (updatedSettings = settings) => {
     setIsSaving(true);
     try {
+      const payload = {
+        ...updatedSettings,
+        low_stock_threshold: parseInt(updatedSettings.low_stock_threshold as any) || 0
+      };
       const response = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedSettings)
+        body: JSON.stringify(payload)
       });
       
       if (response.ok) {
@@ -278,7 +282,7 @@ export default function Settings() {
           business_name: data.business_name,
           currency: data.currency,
           vat_enabled: data.vat_enabled,
-          low_stock_threshold: data.low_stock_threshold,
+          low_stock_threshold: (data.low_stock_threshold || 0).toString(),
           logo_url: data.logo_url,
           brand_color: data.brand_color
         });
@@ -601,7 +605,7 @@ export default function Settings() {
                 <input 
                   type="number" 
                   value={settings.low_stock_threshold} 
-                  onChange={(e) => setSettings({...settings, low_stock_threshold: parseInt(e.target.value) || 0})}
+                  onChange={(e) => setSettings({...settings, low_stock_threshold: e.target.value})}
                   className="w-24 px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all" 
                 />
                 <span className="text-xs text-zinc-400 font-medium">units</span>

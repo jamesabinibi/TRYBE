@@ -29,9 +29,9 @@ const getInitialProductState = () => ({
   selling_price: '',
   supplier_name: '',
   unit: 'Pieces',
-  pieces_per_unit: 1,
+  pieces_per_unit: '1',
   product_type: 'one' as const,
-  variants: [{ size: '', color: '', quantity: 0, low_stock_threshold: 5 }],
+  variants: [{ size: '', color: '', quantity: '0', low_stock_threshold: '5' }],
   images: []
 });
 
@@ -81,7 +81,7 @@ export default function Products() {
   const [isBulkEditing, setIsBulkEditing] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
-  const totalQuantity = newProduct.variants.reduce((acc, v) => acc + (v.quantity || 0), 0);
+  const totalQuantity = newProduct.variants.reduce((acc, v) => acc + (Number(v.quantity) || 0), 0);
 
   useEffect(() => {
     fetchProducts();
@@ -137,9 +137,13 @@ export default function Products() {
         selling_price: parseFloat(newProduct.selling_price) || 0,
         supplier_name: newProduct.supplier_name,
         unit: newProduct.unit,
-        pieces_per_unit: newProduct.pieces_per_unit,
+        pieces_per_unit: parseInt(newProduct.pieces_per_unit as any) || 1,
         product_type: newProduct.product_type,
-        variants: newProduct.variants,
+        variants: newProduct.variants.map(v => ({
+          ...v,
+          quantity: parseInt(v.quantity as any) || 0,
+          low_stock_threshold: parseInt(v.low_stock_threshold as any) || 5
+        })),
         images: newProduct.images
       };
 
@@ -175,13 +179,13 @@ export default function Products() {
       selling_price: (product.selling_price || 0).toString(),
       supplier_name: product.supplier_name || '',
       unit: (product as any).unit || 'Pieces',
-      pieces_per_unit: (product as any).pieces_per_unit || 1,
+      pieces_per_unit: (product as any).pieces_per_unit?.toString() || '1',
       product_type: (product as any).product_type || (product.variants?.length > 1 ? 'multiple' : 'one'),
       variants: (product.variants || []).map(v => ({
         size: v.size || '',
         color: v.color || '',
-        quantity: v.quantity || 0,
-        low_stock_threshold: v.low_stock_threshold || 5,
+        quantity: (v.quantity || 0).toString(),
+        low_stock_threshold: (v.low_stock_threshold || 5).toString(),
         price_override: v.price_override
       })),
       images: product.images || []
@@ -681,7 +685,7 @@ export default function Products() {
                                 <input 
                                   type="number" 
                                   value={newProduct.pieces_per_unit}
-                                  onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: parseInt(e.target.value) || 1})}
+                                  onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: e.target.value})}
                                   className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-base sm:text-lg font-bold focus:border-brand outline-none transition-all"
                                 />
                                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
@@ -715,8 +719,8 @@ export default function Products() {
                               const defaultVariants = ['M', 'L', 'XL', '2X', '3X'].map(size => ({
                                 size,
                                 color: '',
-                                quantity: 0,
-                                low_stock_threshold: 5
+                                quantity: '0',
+                                low_stock_threshold: '5'
                               }));
                               setNewProduct({
                                 ...newProduct, 
@@ -751,7 +755,7 @@ export default function Products() {
                                 onClick={() => {
                                   setNewProduct({
                                     ...newProduct,
-                                    variants: [...newProduct.variants, { size: '', color: '', quantity: 0, low_stock_threshold: 5 }]
+                                    variants: [...newProduct.variants, { size: '', color: '', quantity: '0', low_stock_threshold: '5' }]
                                   });
                                 }}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-brand/10 text-brand rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-brand/20 transition-all"
@@ -780,7 +784,7 @@ export default function Products() {
                                     value={v.quantity}
                                     onChange={(e) => {
                                       const updated = [...newProduct.variants];
-                                      updated[i].quantity = parseInt(e.target.value) || 0;
+                                      updated[i].quantity = e.target.value;
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
                                     className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-brand"
