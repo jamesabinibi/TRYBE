@@ -48,6 +48,24 @@ export interface Sale {
   staff_id: number;
   staff_name?: string;
   created_at: string;
+  customer_id?: number;
+}
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  email?: string;
+  loyalty_points: number;
+  created_at: string;
+}
+
+export interface Expense {
+  id: number;
+  category: string;
+  amount: number;
+  description: string;
+  date: string;
 }
 
 export interface SaleItem {

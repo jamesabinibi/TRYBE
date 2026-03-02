@@ -8,7 +8,12 @@ import {
   ArrowDownRight,
   Clock,
   MoreHorizontal,
-  ShoppingCart
+  ShoppingCart,
+  Sparkles,
+  Trophy,
+  Users,
+  Loader2,
+  BrainCircuit
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -23,7 +28,7 @@ import {
   Cell
 } from 'recharts';
 import { formatCurrency } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
@@ -61,6 +66,9 @@ export default function Dashboard() {
   const [trends, setTrends] = useState<any[]>([]);
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
+  const [staffPerformance, setStaffPerformance] = useState<any[]>([]);
+  const [forecast, setForecast] = useState<any>(null);
+  const [isForecasting, setIsForecasting] = useState(false);
 
   useEffect(() => {
     fetch('/api/analytics/summary')
@@ -94,7 +102,28 @@ export default function Dashboard() {
         else setSettings(null);
       })
       .catch(() => setSettings(null));
+
+    fetch('/api/analytics/staff-performance')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setStaffPerformance(data);
+        else setStaffPerformance([]);
+      })
+      .catch(() => setStaffPerformance([]));
   }, []);
+
+  const generateForecast = async () => {
+    setIsForecasting(true);
+    try {
+      const res = await fetch('/api/ai/forecast', { method: 'POST' });
+      const data = await res.json();
+      setForecast(data);
+    } catch (err) {
+      console.error('Forecast failed');
+    } finally {
+      setIsForecasting(false);
+    }
+  };
 
   if (!summary) return <div className="animate-pulse">Loading...</div>;
 
@@ -135,19 +164,29 @@ export default function Dashboard() {
   const progressPercentage = (completedTasksCount / gettingStartedTasks.length) * 100;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">Home</h1>
-          <p className="text-zinc-500 font-medium">Overview of your business performance</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Home</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 font-medium">Overview of your business performance</p>
         </div>
-        <Link 
-          to="/products?action=add"
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-brand hover:bg-brand-hover text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-brand/20 active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          Add Product
-        </Link>
+        <div className="flex gap-3">
+          <button 
+            onClick={generateForecast}
+            disabled={isForecasting}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-zinc-800 text-white rounded-2xl text-sm font-bold transition-all shadow-lg active:scale-95 disabled:opacity-50"
+          >
+            {isForecasting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-400" />}
+            AI Forecast
+          </button>
+          <Link 
+            to="/products?action=add"
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-brand hover:bg-brand-hover text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-brand/20 active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            Add Product
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -164,18 +203,76 @@ export default function Dashboard() {
         <StatCard 
           title="Today's Balance" 
           value={formatCurrency(summary.today_sales || 0)} 
-          color="text-zinc-900"
+          color="text-zinc-900 dark:text-white"
           className="sm:col-span-2 lg:col-span-1"
         />
       </div>
 
+      <AnimatePresence>
+        {forecast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-black p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <BrainCircuit className="w-32 h-32" />
+            </div>
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-400/20 rounded-xl text-amber-400">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-black tracking-tight uppercase tracking-widest text-xs">AI Business Intelligence</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <p className="text-zinc-400 text-sm font-medium leading-relaxed">
+                    {forecast.strategic_advice}
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Forecasted Revenue</p>
+                      <p className="text-2xl font-black text-amber-400">{formatCurrency(forecast.forecasted_revenue)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white/5 rounded-3xl p-6 border border-white/10">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4">Restock Suggestions</h4>
+                  <div className="space-y-3">
+                    {forecast.restock_suggestions.map((item: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-zinc-300">{item.product_name}</span>
+                        <span className="px-3 py-1 bg-amber-400/10 text-amber-400 rounded-full text-[10px] font-black uppercase">
+                          Buy {item.suggested_quantity}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => setForecast(null)}
+                className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-colors"
+              >
+                Dismiss Forecast
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="grid grid-cols-1 gap-8">
         {/* Cash Flow Section */}
-        <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
           <div className="flex items-center justify-between mb-6 sm:mb-8">
             <div className="flex items-center gap-2">
-              <h3 className="font-black text-zinc-900 tracking-tight text-base sm:text-lg">Cash flow</h3>
-              <div className="w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
+              <h3 className="font-black text-zinc-900 dark:text-white tracking-tight text-base sm:text-lg">Cash flow</h3>
+              <div className="w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
             </div>
             <select className="text-[10px] sm:text-xs font-bold text-brand bg-transparent border-none outline-none cursor-pointer">
               <option>This week</option>
@@ -226,7 +323,7 @@ export default function Dashboard() {
                   <path d="M10 90 Q 50 40, 90 90 T 170 90" fill="none" stroke="#ef4444" strokeWidth="2" />
                 </svg>
               </div>
-              <h4 className="text-zinc-900 font-bold mb-1">Cash flow trends</h4>
+              <h4 className="text-zinc-900 dark:text-white font-bold mb-1">Cash flow trends</h4>
               <p className="text-zinc-400 text-sm mb-6">Track Money In & Money Out</p>
               <button className="inline-flex items-center gap-2 px-6 py-2 bg-brand/10 text-brand rounded-xl text-sm font-bold hover:bg-brand/20 transition-colors">
                 <Plus className="w-4 h-4" />
@@ -237,49 +334,65 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-          {/* Top Sales */}
-          <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm">
+          {/* Staff Performance */}
+          <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <div className="flex items-center justify-between mb-6 sm:mb-8">
               <div className="flex items-center gap-2">
-                <h3 className="font-black text-zinc-900 tracking-tight text-base sm:text-lg">Top sales</h3>
-                <div className="w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
+                <h3 className="font-black text-zinc-900 dark:text-white tracking-tight text-base sm:text-lg">Staff Performance</h3>
+                <Trophy className="w-4 h-4 text-amber-400" />
+              </div>
+            </div>
+            <div className="space-y-4">
+              {staffPerformance.map((staff, i) => (
+                <div key={staff.id} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl flex items-center justify-center font-black text-brand shadow-sm border border-zinc-100 dark:border-zinc-700">
+                      {i + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-zinc-900 dark:text-white">{staff.name}</p>
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{staff.transaction_count} sales</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-brand">{formatCurrency(staff.total_sales)}</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Revenue</p>
+                  </div>
+                </div>
+              ))}
+              {staffPerformance.length === 0 && (
+                <div className="py-8 text-center">
+                  <Users className="w-10 h-10 text-zinc-200 mx-auto mb-2" />
+                  <p className="text-xs text-zinc-400 font-medium">No performance data yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top Sales */}
+          <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-zinc-900 dark:text-white tracking-tight text-base sm:text-lg">Top sales</h3>
+                <div className="w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
               </div>
               <select className="text-[10px] sm:text-xs font-bold text-brand bg-transparent border-none outline-none cursor-pointer">
                 <option>This week</option>
               </select>
             </div>
             <div className="py-8 sm:py-12 text-center">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-zinc-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 text-zinc-200" />
               </div>
               <p className="text-zinc-400 text-xs sm:text-sm">No sales data for this period</p>
             </div>
           </div>
-
-          {/* Top Expenses */}
-          <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm">
-            <div className="flex items-center justify-between mb-6 sm:mb-8">
-              <div className="flex items-center gap-2">
-                <h3 className="font-black text-zinc-900 tracking-tight text-base sm:text-lg">Top expenses</h3>
-                <div className="w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
-              </div>
-              <select className="text-[10px] sm:text-xs font-bold text-brand bg-transparent border-none outline-none cursor-pointer">
-                <option>This week</option>
-              </select>
-            </div>
-            <div className="py-8 sm:py-12 text-center">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <ArrowDownRight className="w-8 h-8 sm:w-10 sm:h-10 text-zinc-200" />
-              </div>
-              <p className="text-zinc-400 text-xs sm:text-sm">No expense data for this period</p>
-            </div>
-          </div>
         </div>
 
         {/* Getting Started Section */}
-        <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
           <div className="text-center mb-6 sm:mb-8">
-            <h3 className="font-black text-zinc-900 tracking-tight text-base sm:text-lg">Getting Started</h3>
+            <h3 className="font-black text-zinc-900 dark:text-white tracking-tight text-base sm:text-lg">Getting Started</h3>
           </div>
           <div className="bg-brand/5 rounded-2xl sm:rounded-3xl p-4 sm:p-6 mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-6 border border-brand/10">
             <div className="text-center sm:text-left">
@@ -323,7 +436,7 @@ export default function Dashboard() {
                 key={task.id} 
                 onClick={() => navigate(task.path)}
                 className={cn(
-                  "flex items-center justify-between p-4 border-b border-zinc-100 last:border-0 group cursor-pointer hover:bg-zinc-50 rounded-xl transition-colors",
+                  "flex items-center justify-between p-4 border-b border-zinc-100 dark:border-zinc-800 last:border-0 group cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl transition-colors",
                   task.isCompleted && "opacity-60"
                 )}
               >
@@ -331,11 +444,11 @@ export default function Dashboard() {
                   {task.isCompleted ? (
                     <CheckCircle2 className="w-5 h-5 text-brand" />
                   ) : (
-                    <Circle className="w-5 h-5 text-zinc-200 group-hover:border-brand transition-colors" />
+                    <Circle className="w-5 h-5 text-zinc-200 dark:text-zinc-700 group-hover:border-brand transition-colors" />
                   )}
                   <span className={cn(
                     "text-sm font-medium transition-colors",
-                    task.isCompleted ? "text-zinc-400 line-through" : "text-zinc-600 group-hover:text-zinc-900"
+                    task.isCompleted ? "text-zinc-400 line-through" : "text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white"
                   )}>
                     {task.label}
                   </span>

@@ -14,9 +14,16 @@ import {
   FileText,
   Download,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  Maximize,
+  Scan,
+  User,
+  Image as ImageIcon,
+  Sparkles,
+  Loader2,
+  History
 } from 'lucide-react';
-import { Product, Variant, Sale } from '../types';
+import { Product, Variant, Sale, Customer } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../App';
@@ -26,6 +33,7 @@ import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 interface CartItem {
   variant: Variant;
@@ -40,9 +48,13 @@ export default function Sales() {
   const [activeTab, setActiveTab] = useState<'pos' | 'history'>('pos');
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -50,7 +62,18 @@ export default function Sales() {
   useEffect(() => {
     fetchProducts();
     fetchSales();
+    fetchCustomers();
   }, []);
+
+  const fetchCustomers = async () => {
+    try {
+      const res = await fetch('/api/customers');
+      const data = await res.json();
+      setCustomers(data);
+    } catch (err) {
+      console.error('Failed to fetch customers');
+    }
+  };
 
   const fetchProducts = () => {
     fetch('/api/products')
@@ -148,12 +171,14 @@ export default function Sales() {
               price_override: item.price_override
             })),
             payment_method: paymentMethod,
-            staff_id: user?.id
+            staff_id: user?.id,
+            customer_id: selectedCustomer?.id
           })
         });
 
         if (response.ok) {
           setCart([]);
+          setSelectedCustomer(null);
           fetchProducts();
           fetchSales();
           resolve(true);
@@ -173,6 +198,68 @@ export default function Sales() {
       success: 'Sale recorded successfully!',
       error: (err) => err
     });
+  };
+
+  const startScanner = () => {
+    setIsScanning(true);
+    setTimeout(() => {
+      const scanner = new Html5QrcodeScanner(
+        "reader", 
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        false
+      );
+      
+      scanner.render((decodedText) => {
+        // Find product by SKU or name (mocking SKU search with name for now)
+        const product = products.find(p => p.name.toLowerCase() === decodedText.toLowerCase());
+        if (product && product.variants.length > 0) {
+          addToCart(product, product.variants[0]);
+          scanner.clear();
+          setIsScanning(false);
+          toast.success(`Scanned: ${product.name}`);
+        } else {
+          toast.error(`Product not found: ${decodedText}`);
+        }
+      }, (err) => {
+        // console.warn(err);
+      });
+    }, 100);
+  };
+
+  const handleAIScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingAI(true);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      try {
+        const response = await fetch('/api/ai/process-transaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64 })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          toast.success(`AI Extracted: ${formatCurrency(data.amount)}`);
+          // For now, we just show the data. In a real app, we'd add a generic "AI Sale" item to cart
+          // or pre-fill the checkout amount.
+          if (data.amount > 0) {
+            setPaymentMethod('Bank Transfer');
+            toast.info(`Narration: ${data.narration}`);
+          }
+        } else {
+          toast.error('AI failed to process image');
+        }
+      } catch (err) {
+        toast.error('Network error during AI processing');
+      } finally {
+        setIsProcessingAI(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDeleteSale = async (id: number) => {
@@ -322,14 +409,43 @@ export default function Sales() {
               {/* Product Selection */}
               <div className="flex-1 flex flex-col gap-6 min-h-0">
                 <div className="bg-white p-6 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select Product</label>
+                      <ProductSelect 
+                        products={products}
+                        selectedProduct={selectedProduct}
+                        onSelect={setSelectedProduct}
+                        formatCurrency={formatCurrency}
+                      />
+                    </div>
+                    <button 
+                      onClick={startScanner}
+                      className="mt-6 p-4 bg-zinc-100 text-zinc-600 rounded-2xl hover:bg-zinc-200 transition-all active:scale-95"
+                      title="Scan Barcode"
+                    >
+                      <Scan className="w-5 h-5" />
+                    </button>
+                  </div>
+
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select Product</label>
-                    <ProductSelect 
-                      products={products}
-                      selectedProduct={selectedProduct}
-                      onSelect={setSelectedProduct}
-                      formatCurrency={formatCurrency}
-                    />
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Customer (Optional)</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                      <select 
+                        value={selectedCustomer?.id || ''}
+                        onChange={(e) => {
+                          const customer = customers.find(c => c.id === parseInt(e.target.value));
+                          setSelectedCustomer(customer || null);
+                        }}
+                        className="w-full pl-12 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none"
+                      >
+                        <option value="">Walk-in Customer</option>
+                        {customers.map(c => (
+                          <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   <AnimatePresence mode="wait">
@@ -530,6 +646,28 @@ export default function Sales() {
                       <Banknote className="w-6 h-6" />
                       <span className="text-[10px] font-black uppercase tracking-widest">Cash</span>
                     </button>
+                    <div className="relative">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleAIScreenshot}
+                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                      />
+                      <button 
+                        className={cn(
+                          "w-full h-full flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95",
+                          isProcessingAI 
+                            ? "bg-brand/5 border-brand/30 text-brand animate-pulse" 
+                            : "bg-transparent border-zinc-200 text-zinc-400 hover:bg-white hover:border-zinc-300"
+                        )}
+                      >
+                        {isProcessingAI ? <Loader2 className="w-6 h-6 animate-spin" /> : <Sparkles className="w-6 h-6" />}
+                        <span className="text-[10px] font-black uppercase tracking-widest">AI Screenshot</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <button 
                       onClick={() => setPaymentMethod('POS')}
                       className={cn(
@@ -541,6 +679,18 @@ export default function Sales() {
                     >
                       <CreditCard className="w-6 h-6" />
                       <span className="text-[10px] font-black uppercase tracking-widest">POS</span>
+                    </button>
+                    <button 
+                      onClick={() => setPaymentMethod('Transfer')}
+                      className={cn(
+                        "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95",
+                        paymentMethod === 'Transfer' 
+                          ? "bg-white border-brand text-brand shadow-lg shadow-brand/10" 
+                          : "bg-transparent border-zinc-200 text-zinc-400 hover:bg-white hover:border-zinc-300"
+                      )}
+                    >
+                      <History className="w-6 h-6" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Transfer</span>
                     </button>
                   </div>
 
@@ -731,7 +881,44 @@ export default function Sales() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        <AnimatePresence>
+          {isScanning && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsScanning(false)}
+                className="absolute inset-0 bg-zinc-900/90 backdrop-blur-md"
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl"
+              >
+                <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
+                  <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Scan Barcode</h3>
+                  <button onClick={() => setIsScanning(false)} className="p-2 hover:bg-zinc-100 rounded-xl transition-colors">
+                    <X className="w-5 h-5 text-zinc-400" />
+                  </button>
+                </div>
+                <div id="reader" className="w-full aspect-square bg-black"></div>
+                <div className="p-6 text-center">
+                  <p className="text-xs text-zinc-500 font-medium">Point your camera at a product barcode</p>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 }
+
+const X = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);

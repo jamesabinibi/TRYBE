@@ -13,7 +13,11 @@ import {
   Bell,
   Search,
   Plus,
-  ChevronRight
+  ChevronRight,
+  Wallet,
+  Users,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
@@ -21,8 +25,10 @@ import { useSearch } from './contexts/SearchContext';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Sales from './pages/Sales';
-import Users from './pages/Users';
+import UsersPage from './pages/Users';
 import Settings from './pages/Settings';
+import Expenses from './pages/Expenses';
+import Customers from './pages/Customers';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -51,8 +57,14 @@ interface SettingsContextType {
   refreshSettings: () => Promise<void>;
 }
 
+interface ThemeContextType {
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
 const SettingsContext = createContext<SettingsContextType | null>(null);
+const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -66,15 +78,24 @@ export const useSettings = () => {
   return context;
 };
 
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) throw new Error("useTheme must be used within ThemeProvider");
+  return context;
+};
+
 const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { user, logout } = useAuth();
   const { settings } = useSettings();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const location = useLocation();
   
   const navItems = [
     { icon: LayoutDashboard, label: 'Home', path: '/' },
     { icon: Package, label: 'Inventory', path: '/products' },
     { icon: ShoppingCart, label: 'Sales & Analytics', path: '/sales' },
+    { icon: Wallet, label: 'Expenses', path: '/expenses' },
+    { icon: Users, label: 'Customers', path: '/customers' },
     ...(user?.role === 'admin' ? [{ icon: UsersIcon, label: 'Team', path: '/users' }] : []),
     { icon: SettingsIcon, label: 'Settings', path: '/settings' },
   ];
@@ -131,8 +152,14 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         </div>
         
         <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto custom-scrollbar">
-          <div className="px-4 mb-4">
+          <div className="px-4 mb-4 flex items-center justify-between">
             <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Main Menu</p>
+            <button 
+              onClick={toggleDarkMode}
+              className="p-2 bg-zinc-900 rounded-xl text-zinc-500 hover:text-white transition-colors"
+            >
+              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
           </div>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -204,6 +231,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const { settings } = useSettings();
+  const { isDarkMode } = useTheme();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { searchQuery, setSearchQuery } = useSearch();
@@ -211,14 +239,22 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const brandColor = settings?.brand_color || '#10b981';
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 font-sans selection-brand selection:text-white">
+    <div className={cn(
+      "flex min-h-screen font-sans selection-brand selection:text-white transition-colors duration-500",
+      isDarkMode ? "bg-black" : "bg-zinc-50"
+    )}>
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <header className="h-20 bg-white/80 backdrop-blur-xl border-b border-zinc-200/50 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-30">
+        <header className={cn(
+          "h-20 backdrop-blur-xl border-b flex items-center justify-between px-6 lg:px-10 sticky top-0 z-30 transition-colors duration-500",
+          isDarkMode 
+            ? "bg-zinc-900/80 border-zinc-800/50" 
+            : "bg-white/80 border-zinc-200/50"
+        )}>
           <div className="flex items-center gap-6 flex-1">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-3 text-zinc-500 hover:bg-zinc-100 rounded-2xl transition-all active:scale-95"
+              className="lg:hidden p-3 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -229,9 +265,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 placeholder="Search for products, sales, or reports..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-zinc-100/50 border-transparent rounded-2xl text-sm font-medium focus:bg-white focus:ring-8 focus:ring-brand/5 focus:border-brand/20 transition-all outline-none border border-zinc-200/0 focus:border-zinc-200"
+                className={cn(
+                  "w-full pl-12 pr-4 py-3 border-transparent rounded-2xl text-sm font-medium focus:ring-8 focus:ring-brand/5 focus:border-brand/20 transition-all outline-none border",
+                  isDarkMode
+                    ? "bg-zinc-800/50 text-white focus:bg-zinc-800 border-zinc-700/50 focus:border-zinc-600"
+                    : "bg-zinc-100/50 text-zinc-900 focus:bg-white border-zinc-200/0 focus:border-zinc-200"
+                )}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-1 bg-white border border-zinc-200 rounded-lg text-[10px] font-black text-zinc-400 shadow-sm">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-[10px] font-black text-zinc-400 shadow-sm">
                 <span>⌘</span>
                 <span>K</span>
               </div>
@@ -239,7 +280,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
           <div className="flex items-center gap-3 sm:gap-6">
             {user && <NotificationCenter userId={user.id} />}
-            <div className="h-10 w-px bg-zinc-200 hidden sm:block"></div>
+            <div className="h-10 w-px bg-zinc-200 dark:bg-zinc-800 hidden sm:block"></div>
             {location.pathname.startsWith('/products') ? (
               <Link 
                 to="/products?action=add"
@@ -252,7 +293,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             ) : (
               <Link 
                 to="/sales"
-                className="flex items-center gap-2 px-5 py-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-zinc-900/10 active:scale-95"
+                className="flex items-center gap-2 px-5 py-3 bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-zinc-900/10 active:scale-95"
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">New Transaction</span>
@@ -272,6 +313,26 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
 export default function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('theme', next ? 'dark' : 'light');
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('user');
@@ -354,33 +415,37 @@ export default function App() {
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
       <SettingsContext.Provider value={{ settings, refreshSettings: fetchSettings }}>
-        <Toaster position="top-right" richColors />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-            <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
-            <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
-            <Route 
-              path="/*" 
-              element={
-                user ? (
-                  <Layout>
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/products" element={<Products />} />
-                      <Route path="/sales" element={<Sales />} />
-                      <Route path="/users" element={<Users />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="*" element={<Navigate to="/" />} />
-                    </Routes>
-                  </Layout>
-                ) : (
-                  <Navigate to="/login" />
-                )
-              } 
-            />
-          </Routes>
-        </BrowserRouter>
+        <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
+          <Toaster position="top-right" richColors />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+              <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
+              <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
+              <Route 
+                path="/*" 
+                element={
+                  user ? (
+                    <Layout>
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/products" element={<Products />} />
+                        <Route path="/sales" element={<Sales />} />
+                        <Route path="/expenses" element={<Expenses />} />
+                        <Route path="/customers" element={<Customers />} />
+                        <Route path="/users" element={<UsersPage />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="*" element={<Navigate to="/" />} />
+                      </Routes>
+                    </Layout>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                } 
+              />
+            </Routes>
+          </BrowserRouter>
+        </ThemeContext.Provider>
       </SettingsContext.Provider>
     </AuthContext.Provider>
   );

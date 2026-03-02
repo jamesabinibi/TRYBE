@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import fs from 'fs';
 import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
+import { GoogleGenAI, Type } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1134,6 +1135,182 @@ async function createServer() {
       }));
 
       res.json(trends);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // --- NEW FEATURES: EXPENSES, CUSTOMERS, AI ---
+
+  // Expenses API
+  app.get("/api/expenses", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
+      if (error) throw error;
+      res.json(data || []);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/expenses", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { category, amount, description, date } = req.body;
+      const { data, error } = await supabase.from('expenses').insert([{ category, amount, description, date: date || new Date().toISOString() }]).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/expenses/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { error } = await supabase.from('expenses').delete().eq('id', req.params.id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Customers API
+  app.get("/api/customers", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase.from('customers').select('*').order('name', { ascending: true });
+      if (error) throw error;
+      res.json(data || []);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/customers", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { name, phone, email } = req.body;
+      const { data, error } = await supabase.from('customers').insert([{ name, phone, email, loyalty_points: 0 }]).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // AI Forecasting
+  app.post("/api/ai/forecast", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data: sales } = await supabase.from('sales').select('created_at, total_amount').order('created_at', { ascending: true });
+      const { data: products } = await supabase.from('products').select('name, total_stock');
+      
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Analyze this sales data: ${JSON.stringify(sales)} and current stock: ${JSON.stringify(products)}. 
+        Provide a forecast for the next 30 days including:
+        1. Predicted Revenue
+        2. Top 3 products to restock
+        3. A brief strategic advice.
+        Return as JSON.`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              predicted_revenue: { type: Type.NUMBER },
+              restock_suggestions: { 
+                type: Type.ARRAY, 
+                items: { 
+                  type: Type.OBJECT,
+                  properties: {
+                    product_name: { type: Type.STRING },
+                    reason: { type: Type.STRING }
+                  }
+                } 
+              },
+              advice: { type: Type.STRING }
+            }
+          }
+        }
+      });
+
+      res.json(JSON.parse(response.text || '{}'));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // AI Bank Transaction Processing
+  app.post("/api/ai/process-transaction", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { image } = req.body; // base64 image
+      if (!image) return res.status(400).json({ error: "Image is required" });
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: {
+          parts: [
+            { text: "Extract the transaction amount, date, and narration from this bank screenshot. Return as JSON." },
+            { inlineData: { mimeType: "image/png", data: image.split(',')[1] || image } }
+          ]
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              amount: { type: Type.NUMBER },
+              date: { type: Type.STRING },
+              narration: { type: Type.STRING },
+              confidence: { type: Type.NUMBER }
+            }
+          }
+        }
+      });
+
+      res.json(JSON.parse(response.text || '{}'));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Staff Performance API
+  app.get("/api/analytics/staff-performance", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('staff_id, total_amount, total_profit');
+      
+      if (error) throw error;
+
+      const { data: users } = await supabase.from('users').select('id, name');
+      const userMap = new Map(users?.map(u => [u.id, u.name]));
+
+      const performanceMap = new Map();
+      data.forEach(s => {
+        const staffName = userMap.get(s.staff_id) || `Staff #${s.staff_id}`;
+        const existing = performanceMap.get(staffName) || { sales: 0, profit: 0, count: 0 };
+        performanceMap.set(staffName, {
+          sales: existing.sales + s.total_amount,
+          profit: existing.profit + s.total_profit,
+          count: existing.count + 1
+        });
+      });
+
+      const performance = Array.from(performanceMap.entries()).map(([name, values]) => ({
+        name,
+        ...values
+      }));
+
+      res.json(performance);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
