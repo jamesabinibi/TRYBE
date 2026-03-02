@@ -35,8 +35,8 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
       <div 
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "w-full pl-4 pr-10 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-base focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-500 outline-none transition-all shadow-sm font-bold cursor-pointer flex items-center gap-3",
-          isOpen && "border-emerald-500 ring-4 ring-emerald-500/10"
+          "w-full pl-4 pr-10 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-base focus-within:ring-4 focus-within:ring-brand/10 focus-within:border-brand outline-none transition-all shadow-sm font-bold cursor-pointer flex items-center gap-3",
+          isOpen && "border-brand ring-4 ring-brand/10"
         )}
       >
         <Search className="w-5 h-5 text-zinc-400 shrink-0" />
@@ -68,7 +68,7 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
                 type="text"
                 autoFocus
                 placeholder="Search products..."
-                className="w-full pl-9 pr-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full pl-9 pr-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
@@ -87,7 +87,7 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
                   }}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 cursor-pointer transition-colors",
-                    selectedProduct?.id === product.id && "bg-emerald-50"
+                    selectedProduct?.id === product.id && "bg-brand/5"
                   )}
                 >
                   {product.images && product.images.length > 0 ? (
@@ -102,7 +102,7 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest truncate">{product.category_name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-emerald-600">{formatCurrency(product.selling_price)}</p>
+                    <p className="text-sm font-black text-brand">{formatCurrency(product.selling_price)}</p>
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                       {product.variants?.reduce((acc, v) => acc + v.quantity, 0) || 0} in stock
                     </p>

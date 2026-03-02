@@ -68,10 +68,10 @@ export default function NotificationCenter({ userId }: { userId: number }) {
   const getIcon = (type: string) => {
     switch (type) {
       case 'warning': return <AlertTriangle className="w-4 h-4 text-amber-500" />;
-      case 'success': return <Check className="w-4 h-4 text-emerald-500" />;
+      case 'success': return <Check className="w-4 h-4 text-brand" />;
       case 'error': return <X className="w-4 h-4 text-red-500" />;
       case 'stock': return <Package className="w-4 h-4 text-blue-500" />;
-      default: return <Info className="w-4 h-4 text-emerald-500" />;
+      default: return <Info className="w-4 h-4 text-brand" />;
     }
   };
 
@@ -83,7 +83,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
       >
         <Bell className="w-5 h-5 group-hover:rotate-12 transition-transform" />
         {unreadCount > 0 && (
-          <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
+          <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-brand rounded-full border-2 border-white shadow-[0_0_8px_rgba(var(--brand-rgb),0.4)]"></span>
         )}
       </button>
 
@@ -102,7 +102,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
             >
               <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
                 <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest">Notifications</h3>
-                <span className="px-2 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-[10px] font-black">
+                <span className="px-2 py-1 bg-brand/10 text-brand rounded-lg text-[10px] font-black">
                   {unreadCount} New
                 </span>
               </div>
@@ -115,13 +115,13 @@ export default function NotificationCenter({ userId }: { userId: number }) {
                         key={notification.id}
                         className={cn(
                           "p-4 transition-colors hover:bg-zinc-50 flex gap-4",
-                          !notification.is_read ? "bg-emerald-50/30" : ""
+                          !notification.is_read ? "bg-brand/5" : ""
                         )}
                         onClick={() => markAsRead(notification.id)}
                       >
                         <div className={cn(
                           "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border",
-                          !notification.is_read ? "bg-white border-emerald-100" : "bg-zinc-50 border-zinc-100"
+                          !notification.is_read ? "bg-white border-brand/20" : "bg-zinc-50 border-zinc-100"
                         )}>
                           {getIcon(notification.type)}
                         </div>
@@ -152,7 +152,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
               </div>
 
               <div className="p-4 bg-zinc-50/50 border-t border-zinc-100 text-center">
-                <button className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-emerald-600 transition-colors">
+                <button className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-brand transition-colors">
                   View All Notifications
                 </button>
               </div>

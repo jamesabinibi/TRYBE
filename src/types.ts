@@ -34,6 +34,7 @@ export interface Product {
   supplier_name: string;
   created_at: string;
   total_stock: number;
+  product_type: 'one' | 'bulk';
   variants: Variant[];
   images: string[];
 }

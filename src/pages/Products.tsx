@@ -268,15 +268,21 @@ export default function Products() {
     });
   };
 
-  const filteredProducts = products.filter(p => 
-    (p.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    (p.supplier_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    (p.category_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    (p.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = (p.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (p.supplier_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (p.category_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (p.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+    
+    const catFilter = searchParams.get('category');
+    // Ensure we compare strings to strings
+    const matchesCategory = !catFilter || catFilter === 'all' || p.category_id?.toString() === catFilter;
+    
+    return matchesSearch && matchesCategory;
+  });
 
-  const totalCostValue = products.reduce((acc, p) => acc + ((p.cost_price || 0) * (p.total_stock || 0)), 0);
-  const totalSellingValue = products.reduce((acc, p) => acc + ((p.selling_price || 0) * (p.total_stock || 0)), 0);
+  const totalCostValue = filteredProducts.reduce((acc, p) => acc + ((p.cost_price || 0) * (p.total_stock || 0)), 0);
+  const totalSellingValue = filteredProducts.reduce((acc, p) => acc + ((p.selling_price || 0) * (p.total_stock || 0)), 0);
 
   return (
     <div className="space-y-8">
@@ -286,11 +292,11 @@ export default function Products() {
           onClick={() => setActiveTab('list')}
           className={cn(
             "pb-4 text-sm font-bold transition-all relative",
-            activeTab === 'list' ? "text-emerald-600" : "text-zinc-400 hover:text-zinc-600"
+            activeTab === 'list' ? "text-brand" : "text-zinc-400 hover:text-zinc-600"
           )}
         >
           Inventory list
-          {activeTab === 'list' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600 rounded-full" />}
+          {activeTab === 'list' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-brand rounded-full" />}
         </button>
       </div>
 
@@ -314,21 +320,21 @@ export default function Products() {
               onClick={() => setActiveSubTab('products')}
               className={cn(
                 "pb-2 text-sm font-bold transition-all relative",
-                activeSubTab === 'products' ? "text-emerald-600" : "text-zinc-400 hover:text-zinc-600"
+                activeSubTab === 'products' ? "text-brand" : "text-zinc-400 hover:text-zinc-600"
               )}
             >
               Products
-              {activeSubTab === 'products' && <motion.div layoutId="activeSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-full" />}
+              {activeSubTab === 'products' && <motion.div layoutId="activeSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />}
             </button>
             <button 
               onClick={() => setActiveSubTab('services')}
               className={cn(
                 "pb-2 text-sm font-bold transition-all relative",
-                activeSubTab === 'services' ? "text-emerald-600" : "text-zinc-400 hover:text-zinc-600"
+                activeSubTab === 'services' ? "text-brand" : "text-zinc-400 hover:text-zinc-600"
               )}
             >
               Services
-              {activeSubTab === 'services' && <motion.div layoutId="activeSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-full" />}
+              {activeSubTab === 'services' && <motion.div layoutId="activeSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />}
             </button>
           </div>
           
@@ -340,7 +346,7 @@ export default function Products() {
                 placeholder="Search..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-2.5 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
+                className="w-full pl-12 pr-4 py-2.5 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
               />
             </div>
             <div className="relative group">
@@ -353,14 +359,14 @@ export default function Products() {
                   else newParams.set('category', val);
                   setSearchParams(newParams);
                 }}
-                className="pl-4 pr-10 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none appearance-none cursor-pointer min-w-[140px]"
+                className="pl-4 pr-10 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer min-w-[140px]"
               >
                 <option value="all">All Categories</option>
                 {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
-              <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none group-hover:text-emerald-500 transition-colors" />
+              <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none group-hover:text-brand transition-colors" />
             </div>
           </div>
         </div>
@@ -379,12 +385,7 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
-                {filteredProducts
-                  .filter(p => {
-                    const catFilter = searchParams.get('category');
-                    return !catFilter || p.category_id?.toString() === catFilter;
-                  })
-                  .map((product) => (
+                {filteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-zinc-50/50 transition-colors group">
                     <td className="py-5">
                       <div className="flex items-center gap-4">
@@ -431,7 +432,7 @@ export default function Products() {
                     </td>
                     <td className="py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleEditClick(product)} className="p-2 text-zinc-400 hover:text-emerald-600 transition-colors">
+                        <button onClick={() => handleEditClick(product)} className="p-2 text-zinc-400 hover:text-brand transition-colors">
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-zinc-400 hover:text-red-600 transition-colors">
@@ -445,32 +446,32 @@ export default function Products() {
             </table>
           </div>
         ) : (
-          <div className="py-20 text-center">
-            <div className="w-64 h-64 mx-auto mb-8 relative">
-              <div className="absolute inset-0 bg-emerald-50 rounded-full opacity-50 blur-3xl" />
-              <div className="relative bg-white rounded-3xl p-8 shadow-xl border border-zinc-100">
-                <div className="space-y-4">
-                  <div className="h-4 bg-zinc-100 rounded-full w-3/4" />
-                  <div className="h-4 bg-zinc-100 rounded-full w-1/2" />
-                  <div className="h-4 bg-zinc-100 rounded-full w-2/3" />
-                  <div className="pt-4 flex justify-center">
-                    <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                      <Package className="w-8 h-8 text-emerald-500" />
+            <div className="py-20 text-center">
+              <div className="w-64 h-64 mx-auto mb-8 relative">
+                <div className="absolute inset-0 bg-brand/5 rounded-full opacity-50 blur-3xl" />
+                <div className="relative bg-white rounded-3xl p-8 shadow-xl border border-zinc-100">
+                  <div className="space-y-4">
+                    <div className="h-4 bg-zinc-100 rounded-full w-3/4" />
+                    <div className="h-4 bg-zinc-100 rounded-full w-1/2" />
+                    <div className="h-4 bg-zinc-100 rounded-full w-2/3" />
+                    <div className="pt-4 flex justify-center">
+                      <div className="w-16 h-16 bg-brand/10 rounded-2xl flex items-center justify-center">
+                        <Package className="w-8 h-8 text-brand" />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+              <h3 className="text-xl font-black text-zinc-900 mb-2">Add all your products</h3>
+              <p className="text-zinc-400 font-medium mb-8">Start by adding your first product in seconds</p>
+              <button 
+                onClick={openAddModal}
+                className="inline-flex items-center gap-2 px-8 py-3 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
+              >
+                <Plus className="w-4 h-4" />
+                Add product
+              </button>
             </div>
-            <h3 className="text-xl font-black text-zinc-900 mb-2">Add all your products</h3>
-            <p className="text-zinc-400 font-medium mb-8">Start by adding your first product in seconds</p>
-            <button 
-              onClick={openAddModal}
-              className="inline-flex items-center gap-2 px-8 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20"
-            >
-              <Plus className="w-4 h-4" />
-              Add product
-            </button>
-          </div>
         )}
       </div>
 
@@ -500,7 +501,7 @@ export default function Products() {
                 <div className="flex items-center gap-4">
                   <button 
                     onClick={closeModal}
-                    className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-zinc-50 text-emerald-600 rounded-full text-sm font-bold transition-all border border-zinc-200"
+                    className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-zinc-50 text-brand rounded-full text-sm font-bold transition-all border border-zinc-200"
                   >
                     <ChevronRight className="w-4 h-4 rotate-180" />
                     Back
@@ -509,7 +510,7 @@ export default function Products() {
                     {editingProduct ? 'Edit Product' : 'Add Product'}
                   </h2>
                 </div>
-                <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm bg-zinc-50 px-4 py-2 rounded-xl">
+                <div className="flex items-center gap-2 text-brand font-bold text-sm bg-zinc-50 px-4 py-2 rounded-xl">
                   <span role="img" aria-label="calendar">📅</span>
                   {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </div>
@@ -538,9 +539,9 @@ export default function Products() {
                                 </button>
                               </div>
                             ) : (
-                              <label className="w-full aspect-square flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all cursor-pointer group">
-                                <ImageIcon className="w-8 h-8 text-zinc-300 group-hover:text-emerald-500 transition-colors" />
-                                <span className="text-[10px] font-black text-zinc-300 group-hover:text-emerald-500 mt-2 uppercase tracking-widest">Upload</span>
+                              <label className="w-full aspect-square flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 rounded-2xl hover:border-brand hover:bg-brand/5 transition-all cursor-pointer group">
+                                <ImageIcon className="w-8 h-8 text-zinc-300 group-hover:text-brand transition-colors" />
+                                <span className="text-[10px] font-black text-zinc-300 group-hover:text-brand mt-2 uppercase tracking-widest">Upload</span>
                                 <input 
                                   type="file" 
                                   accept="image/*" 
@@ -577,7 +578,7 @@ export default function Products() {
                                 type="text" 
                                 value={newProduct.name}
                                 onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-300"
+                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-brand outline-none transition-all placeholder:text-zinc-300"
                                 placeholder="e.g. Vintage Denim Jacket"
                               />
                             </div>
@@ -587,14 +588,14 @@ export default function Products() {
                                 <select 
                                   value={newProduct.category_id}
                                   onChange={(e) => setNewProduct({...newProduct, category_id: e.target.value})}
-                                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none appearance-none cursor-pointer"
+                                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer"
                                 >
                                   <option value="">Select Category</option>
                                   {categories.map(cat => (
                                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                                   ))}
                                 </select>
-                                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-emerald-500 transition-colors" />
+                                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-brand transition-colors" />
                               </div>
                             </div>
                           </div>
@@ -606,12 +607,12 @@ export default function Products() {
                                 <select 
                                   value={newProduct.unit}
                                   onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
-                                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none appearance-none cursor-pointer"
+                                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer"
                                 >
                                   <option value="Pieces">Pieces</option>
                                   <option value="Kilograms">Kilograms</option>
                                 </select>
-                                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-emerald-500 transition-colors" />
+                                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-brand transition-colors" />
                               </div>
                             </div>
                             <div className="space-y-2">
@@ -621,7 +622,7 @@ export default function Products() {
                                   type="number" 
                                   value={newProduct.pieces_per_unit}
                                   onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: parseInt(e.target.value) || 1})}
-                                  className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all"
+                                  className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-brand outline-none transition-all"
                                 />
                                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
                               </div>
@@ -642,7 +643,7 @@ export default function Products() {
                             className={cn(
                               "px-6 py-2 rounded-full text-sm font-bold transition-all border",
                               newProduct.product_type === 'one' 
-                                ? "bg-white border-emerald-500 text-emerald-600" 
+                                ? "bg-brand text-white border-brand" 
                                 : "bg-white border-zinc-200 text-zinc-400"
                             )}
                           >
@@ -667,7 +668,7 @@ export default function Products() {
                             className={cn(
                               "px-6 py-2 rounded-full text-sm font-bold transition-all border flex items-center gap-2",
                               newProduct.product_type === 'multiple' 
-                                ? "bg-white border-emerald-500 text-emerald-600" 
+                                ? "bg-brand text-white border-brand" 
                                 : "bg-white border-zinc-200 text-zinc-400"
                             )}
                           >
@@ -682,7 +683,7 @@ export default function Products() {
                           <div className="space-y-6">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                                <span className="w-2 h-2 bg-brand rounded-full"></span>
                                 <h4 className="text-sm font-black text-zinc-900">Size & Stock</h4>
                               </div>
                               <button 
@@ -693,7 +694,7 @@ export default function Products() {
                                     variants: [...newProduct.variants, { size: '', color: '', quantity: 0, low_stock_threshold: 5 }]
                                   });
                                 }}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-brand/10 text-brand rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-brand/20 transition-all"
                               >
                                 <Plus className="w-3 h-3" />
                                 Add more
@@ -716,7 +717,7 @@ export default function Products() {
                                       updated[i].size = e.target.value;
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
-                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-brand"
                                     placeholder="Size"
                                   />
                                   <input 
@@ -726,7 +727,7 @@ export default function Products() {
                                       updated[i].color = e.target.value;
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
-                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-brand"
                                     placeholder="Color"
                                   />
                                   <input 
@@ -737,7 +738,7 @@ export default function Products() {
                                       updated[i].quantity = parseInt(e.target.value) || 0;
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
-                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-brand"
                                   />
                                   <input 
                                     type="number"
@@ -747,7 +748,7 @@ export default function Products() {
                                       updated[i].low_stock_threshold = parseInt(e.target.value) || 5;
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
-                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-emerald-500"
+                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-brand"
                                   />
                                   <button 
                                     type="button"
@@ -777,7 +778,7 @@ export default function Products() {
                           step="0.01"
                           value={newProduct.cost_price}
                           onChange={(e) => setNewProduct({...newProduct, cost_price: e.target.value})}
-                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all"
+                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-brand outline-none transition-all"
                         />
                       </div>
                       <div className="space-y-2">
@@ -788,7 +789,7 @@ export default function Products() {
                           step="0.01"
                           value={newProduct.selling_price}
                           onChange={(e) => setNewProduct({...newProduct, selling_price: e.target.value})}
-                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-emerald-500 outline-none transition-all"
+                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-lg font-bold focus:border-brand outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -826,7 +827,7 @@ export default function Products() {
                       type="submit"
                       form="product-form"
                       disabled={isSaving}
-                      className="w-full py-4 bg-emerald-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                      className="w-full py-4 bg-brand text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                     >
                       {isSaving ? 'Saving...' : editingProduct ? 'Update Product' : 'Save Product'}
                     </button>

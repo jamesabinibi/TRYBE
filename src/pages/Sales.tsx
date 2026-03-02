@@ -347,7 +347,7 @@ export default function Sales() {
                             <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{selectedProduct.category_name}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(selectedProduct.selling_price)}</p>
+                            <p className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(selectedProduct.selling_price)}</p>
                             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Base Price</p>
                           </div>
                         </div>
@@ -363,7 +363,7 @@ export default function Sales() {
                                 className={cn(
                                   "p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 text-center group relative overflow-hidden",
                                   variant.quantity > 0 
-                                    ? "border-zinc-100 bg-zinc-50 hover:border-emerald-500 hover:bg-white text-zinc-900 active:scale-95" 
+                                    ? "border-zinc-100 bg-zinc-50 hover:border-brand hover:bg-white text-zinc-900 active:scale-95" 
                                     : "border-zinc-50 bg-zinc-50/50 text-zinc-300 cursor-not-allowed"
                                 )}
                               >
@@ -371,13 +371,13 @@ export default function Sales() {
                                 {variant.color && <span className="text-[10px] font-bold text-zinc-400">{variant.color}</span>}
                                 <span className={cn(
                                   "text-[9px] font-bold mt-1",
-                                  variant.quantity > 0 ? "text-emerald-500" : "text-zinc-300"
+                                  variant.quantity > 0 ? "text-brand" : "text-zinc-300"
                                 )}>
                                   {variant.quantity > 0 ? `${variant.quantity} in stock` : 'Out of stock'}
                                 </span>
                                 {variant.quantity > 0 && (
                                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Plus className="w-3 h-3 text-emerald-500" />
+                                    <Plus className="w-3 h-3 text-brand" />
                                   </div>
                                 )}
                               </button>
@@ -403,18 +403,18 @@ export default function Sales() {
                         <button 
                           key={product.id} 
                           onClick={() => setSelectedProduct(product)}
-                          className="bg-white p-5 rounded-[2rem] border border-zinc-200 shadow-sm flex flex-col gap-4 hover:shadow-md hover:border-emerald-500/30 transition-all text-left group"
+                          className="bg-white p-5 rounded-[2rem] border border-zinc-200 shadow-sm flex flex-col gap-4 hover:shadow-md hover:border-brand/30 transition-all text-left group"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <h4 className="font-black text-zinc-900 truncate tracking-tight group-hover:text-emerald-600 transition-colors">{product.name}</h4>
+                              <h4 className="font-black text-zinc-900 truncate tracking-tight group-hover:text-brand transition-colors">{product.name}</h4>
                               <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{product.category_name}</p>
                             </div>
-                            <span className="text-sm font-black text-emerald-600 whitespace-nowrap">{formatCurrency(product.selling_price)}</span>
+                            <span className="text-sm font-black text-brand whitespace-nowrap">{formatCurrency(product.selling_price)}</span>
                           </div>
                           <div className="flex items-center justify-between mt-auto">
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{(product.variants || []).length} variants</span>
-                            <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+                            <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-brand group-hover:translate-x-1 transition-all" />
                           </div>
                         </button>
                       ))}
@@ -427,7 +427,7 @@ export default function Sales() {
               <div className="w-full lg:w-[400px] bg-white border border-zinc-200 rounded-[2.5rem] shadow-xl flex flex-col overflow-hidden lg:h-full">
                 <div className="p-6 sm:p-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-500 rounded-xl text-white">
+                    <div className="p-2 bg-brand rounded-xl text-white">
                       <ShoppingCart className="w-5 h-5" />
                     </div>
                     <div>
@@ -603,11 +603,11 @@ export default function Sales() {
                 <div className="bg-white p-6 sm:p-8 rounded-[2rem] border border-zinc-200 shadow-sm relative overflow-hidden group">
                   <div className="relative z-10">
                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Total Profit</p>
-                    <h3 className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight">
+                    <h3 className="text-2xl sm:text-3xl font-black text-brand tracking-tight">
                       {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0))}
                     </h3>
                   </div>
-                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-50/30 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-brand/5 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
                 </div>
                 <div className="bg-white p-6 sm:p-8 rounded-[2rem] border border-zinc-200 shadow-sm relative overflow-hidden group sm:col-span-2 lg:col-span-1">
                   <div className="relative z-10">
@@ -662,7 +662,7 @@ export default function Sales() {
                           <td className="px-8 py-5 text-sm font-black text-zinc-900 text-right tracking-tight">
                             {formatCurrency(sale.total_amount)}
                           </td>
-                          <td className="px-8 py-5 text-sm font-black text-emerald-600 text-right tracking-tight">
+                          <td className="px-8 py-5 text-sm font-black text-brand text-right tracking-tight">
                             {formatCurrency(sale.total_profit)}
                           </td>
                           <td className="px-8 py-5 text-right">

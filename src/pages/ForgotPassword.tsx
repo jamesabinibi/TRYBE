@@ -74,7 +74,7 @@ export default function ForgotPassword() {
       >
         <div className="bg-white rounded-[32px] shadow-2xl shadow-zinc-200/50 border border-zinc-200 overflow-hidden">
           <div className="p-8 pt-12 text-center">
-            <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-emerald-200 rotate-3">
+            <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-brand/20 rotate-3">
               <Key className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Reset Password</h1>
@@ -102,7 +102,7 @@ export default function ForgotPassword() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                      className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -110,7 +110,7 @@ export default function ForgotPassword() {
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-200 group"
+                  className="w-full py-4 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/20 group"
                 >
                   {isLoading ? "Sending..." : "Send Reset Code"}
                 </button>
@@ -128,7 +128,7 @@ export default function ForgotPassword() {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Enter your username"
-                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -143,7 +143,7 @@ export default function ForgotPassword() {
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
                         placeholder="Enter 6-digit code"
-                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -158,7 +158,7 @@ export default function ForgotPassword() {
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -167,7 +167,7 @@ export default function ForgotPassword() {
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-200 group"
+                  className="w-full py-4 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/20 group"
                 >
                   {isLoading ? "Resetting..." : "Update Password"}
                 </button>
@@ -175,7 +175,7 @@ export default function ForgotPassword() {
             )}
 
             <div className="text-center mt-6">
-              <Link to="/login" className="text-sm text-zinc-500 font-medium hover:text-emerald-600 hover:underline">
+              <Link to="/login" className="text-sm text-zinc-500 font-medium hover:text-brand hover:underline">
                 Back to Sign In
               </Link>
             </div>

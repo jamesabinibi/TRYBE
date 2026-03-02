@@ -53,7 +53,7 @@ export default function Login() {
       >
         <div className="bg-white rounded-[32px] shadow-2xl shadow-zinc-200/50 border border-zinc-200 overflow-hidden">
           <div className="p-8 pt-12 text-center">
-            <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-emerald-200 rotate-3">
+            <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-brand/20 rotate-3">
               <ShieldCheck className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">StockFlow Pro</h1>
@@ -78,7 +78,7 @@ export default function Login() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter username or email"
-                    className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                    className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                   />
                 </div>
               </div>
@@ -93,7 +93,7 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                    className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                   />
                 </div>
               </div>
@@ -102,7 +102,7 @@ export default function Login() {
             <button 
               type="submit"
               disabled={isLoading}
-              className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-200 group"
+              className="w-full py-4 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/20 group"
             >
               {isLoading ? "Signing in..." : (
                 <>
@@ -115,7 +115,7 @@ export default function Login() {
             <div className="text-center">
               <Link 
                 to="/forgot-password"
-                className="text-xs text-zinc-400 font-medium hover:text-emerald-600 hover:underline"
+                className="text-xs text-zinc-400 font-medium hover:text-brand hover:underline"
               >
                 Forgot your password?
               </Link>
@@ -124,7 +124,7 @@ export default function Login() {
 
           <div className="p-6 bg-zinc-50 border-t border-zinc-100 text-center space-y-4">
             <p className="text-sm text-zinc-500 font-medium">
-              Don't have an account? <Link to="/register" className="text-emerald-600 font-bold hover:underline">Sign Up</Link>
+              Don't have an account? <Link to="/register" className="text-brand font-bold hover:underline">Sign Up</Link>
             </p>
             <div className="pt-4 border-t border-zinc-200">
               <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">

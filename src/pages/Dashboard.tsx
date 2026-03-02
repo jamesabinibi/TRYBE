@@ -176,7 +176,7 @@ export default function Dashboard() {
               <h3 className="font-black text-zinc-900 tracking-tight text-lg">Cash flow</h3>
               <div className="w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
             </div>
-            <select className="text-xs font-bold text-emerald-600 bg-transparent border-none outline-none cursor-pointer">
+            <select className="text-xs font-bold text-brand bg-transparent border-none outline-none cursor-pointer">
               <option>This week</option>
               <option>This month</option>
             </select>
@@ -221,13 +221,13 @@ export default function Dashboard() {
             <div className="py-20 text-center">
               <div className="w-48 h-32 mx-auto mb-6 opacity-40">
                 <svg viewBox="0 0 200 100" className="w-full h-full">
-                  <path d="M10 80 Q 50 10, 90 80 T 170 80" fill="none" stroke="#10b981" strokeWidth="2" />
+                  <path d="M10 80 Q 50 10, 90 80 T 170 80" fill="none" stroke={brandColor} strokeWidth="2" />
                   <path d="M10 90 Q 50 40, 90 90 T 170 90" fill="none" stroke="#ef4444" strokeWidth="2" />
                 </svg>
               </div>
               <h4 className="text-zinc-900 font-bold mb-1">Cash flow trends</h4>
               <p className="text-zinc-400 text-sm mb-6">Track Money In & Money Out</p>
-              <button className="inline-flex items-center gap-2 px-6 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors">
+              <button className="inline-flex items-center gap-2 px-6 py-2 bg-brand/10 text-brand rounded-xl text-sm font-bold hover:bg-brand/20 transition-colors">
                 <Plus className="w-4 h-4" />
                 Add
               </button>

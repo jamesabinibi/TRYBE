@@ -416,7 +416,7 @@ export default function Settings() {
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-emerald-600" />
+            <Tag className="w-4 h-4 text-brand" />
             <h3 className="font-black text-zinc-900 tracking-tight uppercase text-xs tracking-widest">Categories</h3>
           </div>
           <p className="text-xs text-zinc-500 font-medium">Manage the categories used to organize your inventory.</p>
@@ -428,11 +428,11 @@ export default function Settings() {
               placeholder="New category name..." 
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              className="flex-1 px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+              className="flex-1 px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
             />
             <button 
               type="submit"
-              className="px-8 py-3 bg-emerald-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+              className="px-8 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95"
             >
               Add
             </button>
@@ -441,7 +441,7 @@ export default function Settings() {
             {categories.map(c => (
               <div key={c.id} className="group relative">
                 {editingCategory === c.id ? (
-                  <div className="flex items-center gap-1 bg-white border border-emerald-500 rounded-xl px-2 py-1 shadow-sm">
+                  <div className="flex items-center gap-1 bg-white border border-brand rounded-xl px-2 py-1 shadow-sm">
                     <input 
                       autoFocus
                       type="text" 
@@ -449,7 +449,7 @@ export default function Settings() {
                       onChange={(e) => setEditCategoryName(e.target.value)}
                       className="w-24 text-xs font-bold outline-none"
                     />
-                    <button onClick={() => handleUpdateCategory(c.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg">
+                    <button onClick={() => handleUpdateCategory(c.id)} className="p-1 text-brand hover:bg-brand/5 rounded-lg">
                       <Check className="w-3 h-3" />
                     </button>
                     <button onClick={() => setEditingCategory(null)} className="p-1 text-zinc-400 hover:bg-zinc-50 rounded-lg">
@@ -457,7 +457,7 @@ export default function Settings() {
                     </button>
                   </div>
                 ) : (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 rounded-xl text-xs font-black uppercase tracking-widest text-zinc-600 border border-zinc-200/50 group-hover:bg-white group-hover:border-emerald-200 transition-all">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 rounded-xl text-xs font-black uppercase tracking-widest text-zinc-600 border border-zinc-200/50 group-hover:bg-white group-hover:border-brand/20 transition-all">
                     {c.name}
                     <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
@@ -465,7 +465,7 @@ export default function Settings() {
                           setEditingCategory(c.id);
                           setEditCategoryName(c.name);
                         }}
-                        className="p-1 text-zinc-400 hover:text-emerald-600 rounded-lg"
+                        className="p-1 text-zinc-400 hover:text-brand rounded-lg"
                       >
                         <Edit2 className="w-3 h-3" />
                       </button>
@@ -488,7 +488,7 @@ export default function Settings() {
       <section id="profile" className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-12 border-t border-zinc-200">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-emerald-600" />
+            <Globe className="w-4 h-4 text-brand" />
             <h3 className="font-black text-zinc-900 tracking-tight uppercase text-xs tracking-widest">Business Profile</h3>
           </div>
           <p className="text-xs text-zinc-500 font-medium">Update your business information and tax settings.</p>
@@ -602,7 +602,7 @@ export default function Settings() {
                   type="number" 
                   value={settings.low_stock_threshold} 
                   onChange={(e) => setSettings({...settings, low_stock_threshold: parseInt(e.target.value) || 0})}
-                  className="w-24 px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all" 
+                  className="w-24 px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all" 
                 />
                 <span className="text-xs text-zinc-400 font-medium">units</span>
                 <button 
@@ -649,14 +649,14 @@ export default function Settings() {
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-12 border-t border-zinc-200">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <UserIcon className="w-4 h-4 text-emerald-600" />
+            <UserIcon className="w-4 h-4 text-brand" />
             <h3 className="font-black text-zinc-900 tracking-tight uppercase text-xs tracking-widest">User Account</h3>
           </div>
           <p className="text-xs text-zinc-500 font-medium">Manage your personal profile and security settings.</p>
         </div>
         <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
           <div className="flex items-center gap-6 p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-emerald-500/20">
+            <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-brand/20">
               {user?.name?.charAt(0) || 'U'}
             </div>
             <div className="flex-1">
@@ -666,7 +666,7 @@ export default function Settings() {
                     type="text"
                     value={profileForm.name}
                     onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20"
                     placeholder="Full Name"
                     required
                   />
@@ -674,12 +674,12 @@ export default function Settings() {
                     type="email"
                     value={profileForm.email}
                     onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20"
                     placeholder="Email Address"
                     required
                   />
                   <div className="flex gap-2">
-                    <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">
+                    <button type="submit" className="px-4 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all">
                       Save Changes
                     </button>
                     <button type="button" onClick={() => setIsEditingProfile(false)} className="px-4 py-2 bg-zinc-200 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 transition-all">
@@ -695,7 +695,7 @@ export default function Settings() {
                   </div>
                   <button 
                     onClick={() => setIsEditingProfile(true)}
-                    className="p-2 text-zinc-400 hover:text-emerald-600 transition-colors"
+                    className="p-2 text-zinc-400 hover:text-brand transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
@@ -708,7 +708,7 @@ export default function Settings() {
             {isChangingPassword ? (
               <form onSubmit={handleChangePassword} className="p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Lock className="w-4 h-4 text-emerald-600" />
+                  <Lock className="w-4 h-4 text-brand" />
                   <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">Change Password</h4>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -716,7 +716,7 @@ export default function Settings() {
                     type="password"
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20"
                     placeholder="Current Password"
                     required
                   />
@@ -725,7 +725,7 @@ export default function Settings() {
                     type="password"
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20"
                     placeholder="New Password"
                     required
                   />
@@ -733,13 +733,13 @@ export default function Settings() {
                     type="password"
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20"
                     placeholder="Confirm New Password"
                     required
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <button type="submit" className="px-6 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20">
+                  <button type="submit" className="px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20">
                     Update Password
                   </button>
                   <button type="button" onClick={() => setIsChangingPassword(false)} className="px-6 py-3 bg-zinc-200 text-zinc-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 transition-all">
@@ -753,7 +753,7 @@ export default function Settings() {
                 className="w-full flex items-center justify-between p-4 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all group"
               >
                 <div className="flex items-center gap-3">
-                  <Lock className="w-4 h-4 text-zinc-400 group-hover:text-emerald-600" />
+                  <Lock className="w-4 h-4 text-zinc-400 group-hover:text-brand" />
                   <span className="text-sm font-bold text-zinc-600">Change Password</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-zinc-300" />
@@ -812,7 +812,7 @@ export default function Settings() {
             {diagResults && (
               <div className="p-4 bg-zinc-900 rounded-2xl overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Diagnostic Results</p>
+                  <p className="text-[10px] font-black text-brand uppercase tracking-widest">Diagnostic Results</p>
                   <button onClick={() => setDiagResults(null)} className="text-zinc-500 hover:text-white">
                     <X className="w-3 h-3" />
                   </button>
