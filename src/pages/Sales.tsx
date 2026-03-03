@@ -58,6 +58,8 @@ export default function Sales() {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
 
   useEffect(() => {
     fetchProducts();
@@ -178,7 +180,9 @@ export default function Sales() {
             })),
             payment_method: paymentMethod,
             staff_id: user?.id,
-            customer_id: selectedCustomer?.id
+            customer_id: selectedCustomer?.id,
+            customer_name: customerName,
+            customer_phone: customerPhone
           })
         });
 
@@ -434,24 +438,55 @@ export default function Sales() {
                     </button>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Customer (Optional)</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                      <select 
-                        value={selectedCustomer?.id || ''}
-                        onChange={(e) => {
-                          const customer = customers.find(c => c.id === parseInt(e.target.value));
-                          setSelectedCustomer(customer || null);
-                        }}
-                        className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none"
-                      >
-                        <option value="" className="dark:bg-zinc-900">Walk-in Customer</option>
-                        {customers.map(c => (
-                          <option key={c.id} value={c.id} className="dark:bg-zinc-900">{c.name} ({c.phone})</option>
-                        ))}
-                      </select>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Customer (Optional)</label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                        <select 
+                          value={selectedCustomer?.id || ''}
+                          onChange={(e) => {
+                            const customer = customers.find(c => c.id === parseInt(e.target.value));
+                            setSelectedCustomer(customer || null);
+                            if (customer) {
+                              setCustomerName('');
+                              setCustomerPhone('');
+                            }
+                          }}
+                          className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none"
+                        >
+                          <option value="" className="dark:bg-zinc-900">Walk-in Customer</option>
+                          {customers.map(c => (
+                            <option key={c.id} value={c.id} className="dark:bg-zinc-900">{c.name} ({c.phone})</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
+
+                    {!selectedCustomer && (
+                      <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">New Customer Name</label>
+                          <input 
+                            type="text"
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            placeholder="John Doe"
+                            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Phone Number</label>
+                          <input 
+                            type="tel"
+                            value={customerPhone}
+                            onChange={(e) => setCustomerPhone(e.target.value)}
+                            placeholder="080..."
+                            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <AnimatePresence mode="wait">
@@ -639,7 +674,7 @@ export default function Sales() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <button 
                       onClick={() => setPaymentMethod('Cash')}
                       className={cn(
@@ -652,28 +687,6 @@ export default function Sales() {
                       <Banknote className="w-6 h-6" />
                       <span className="text-[10px] font-black uppercase tracking-widest">Cash</span>
                     </button>
-                    <div className="relative">
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleAIScreenshot}
-                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                      />
-                      <button 
-                        className={cn(
-                          "w-full h-full flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95",
-                          isProcessingAI 
-                            ? "bg-brand/5 border-brand/30 text-brand animate-pulse" 
-                            : "bg-transparent border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:bg-white dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600"
-                        )}
-                      >
-                        {isProcessingAI ? <Loader2 className="w-6 h-6 animate-spin" /> : <Sparkles className="w-6 h-6" />}
-                        <span className="text-[10px] font-black uppercase tracking-widest">AI Screenshot</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
                     <button 
                       onClick={() => setPaymentMethod('POS')}
                       className={cn(

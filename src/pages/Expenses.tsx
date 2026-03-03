@@ -8,7 +8,10 @@ import {
   Calendar,
   Tag,
   FileText,
-  TrendingDown
+  TrendingDown,
+  X,
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -49,6 +52,8 @@ export default function Expenses() {
     fetchExpenses();
   }, []);
 
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
+
   const fetchExpenses = async () => {
     try {
       const res = await fetch('/api/expenses');
@@ -63,6 +68,39 @@ export default function Expenses() {
       toast.error('Failed to fetch expenses');
       setExpenses([]);
     }
+  };
+
+  const handleAIScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingAI(true);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      try {
+        const response = await fetch('/api/ai/process-transaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64 })
+        });
+        const data = await response.json();
+        if (data.amount) {
+          setNewExpense({
+            ...newExpense,
+            amount: data.amount.toString(),
+            description: data.narration || '',
+            date: data.date ? new Date(data.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+          });
+          toast.success('AI extracted transaction details!');
+        }
+      } catch (err) {
+        toast.error('AI failed to process image');
+      } finally {
+        setIsProcessingAI(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAddExpense = async (e: React.FormEvent) => {
@@ -245,9 +283,28 @@ export default function Expenses() {
                   </div>
                   <h2 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">Record Expense</h2>
                 </div>
-                <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
-                  <X className="w-5 h-5 text-zinc-400" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleAIScreenshot}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                    />
+                    <button 
+                      className={cn(
+                        "p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-brand transition-all",
+                        isProcessingAI && "animate-pulse text-brand"
+                      )}
+                      title="Extract from Screenshot"
+                    >
+                      {isProcessingAI ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                    <X className="w-5 h-5 text-zinc-400" />
+                  </button>
+                </div>
               </div>
 
               <form onSubmit={handleAddExpense} className="p-8 space-y-6">
@@ -257,9 +314,9 @@ export default function Expenses() {
                     <select 
                       value={newExpense.category}
                       onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     >
-                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                      {categories.map(c => <option key={c} value={c} className="dark:bg-zinc-900">{c}</option>)}
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -270,7 +327,7 @@ export default function Expenses() {
                       value={newExpense.amount}
                       onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
                       placeholder="0.00"
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     />
                   </div>
                 </div>
@@ -281,7 +338,7 @@ export default function Expenses() {
                     type="date" 
                     value={newExpense.date}
                     onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                   />
                 </div>
 
@@ -293,7 +350,7 @@ export default function Expenses() {
                     onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
                     placeholder="What was this expense for?"
                     rows={3}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all resize-none"
+                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all resize-none"
                   />
                 </div>
 
@@ -322,8 +379,3 @@ export default function Expenses() {
   );
 }
 
-const X = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);

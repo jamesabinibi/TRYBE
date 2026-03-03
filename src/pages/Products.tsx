@@ -561,20 +561,20 @@ export default function Products() {
               className="w-full max-w-6xl h-full sm:h-auto sm:max-h-[90vh] bg-white sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative z-10"
             >
               {/* Header */}
-              <div className="p-4 sm:p-8 bg-white border-b border-zinc-100 flex items-center justify-between sticky top-0 z-20">
+              <div className="p-4 sm:p-8 bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 z-20">
                 <div className="flex items-center gap-4">
                   <button 
                     onClick={closeModal}
-                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white hover:bg-zinc-50 text-brand rounded-full text-xs sm:text-sm font-bold transition-all border border-zinc-200"
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-brand rounded-full text-xs sm:text-sm font-bold transition-all border border-zinc-200 dark:border-zinc-700"
                   >
                     <ChevronRight className="w-4 h-4 rotate-180" />
-                    <span className="hidden sm:inline">Back</span>
+                    <span className="hidden sm:inline text-brand">Back</span>
                   </button>
-                  <h2 className="text-lg sm:text-xl font-black text-zinc-900 tracking-tight">
+                  <h2 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white tracking-tight">
                     {editingProduct ? 'Edit Product' : 'Add Product'}
                   </h2>
                 </div>
-                <div className="flex items-center gap-2 text-brand font-bold text-[10px] sm:text-sm bg-zinc-50 px-3 sm:px-4 py-2 rounded-xl">
+                <div className="flex items-center gap-2 text-brand font-bold text-[10px] sm:text-sm bg-zinc-50 dark:bg-zinc-800 px-3 sm:px-4 py-2 rounded-xl">
                   <span role="img" aria-label="calendar">📅</span>
                   {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </div>
@@ -582,17 +582,17 @@ export default function Products() {
 
               <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
                 {/* Main Form Area */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-10 custom-scrollbar bg-white order-2 lg:order-1">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-10 custom-scrollbar bg-white dark:bg-zinc-900 order-2 lg:order-1">
                   <form onSubmit={handleAddProduct} id="product-form" className="max-w-4xl mx-auto space-y-8 sm:space-y-10">
                     {/* Basic Info Section */}
-                    <div className="bg-white p-6 sm:p-8 rounded-xl border border-zinc-100 shadow-sm space-y-8 sm:space-y-10">
+                    <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-8 sm:space-y-10">
                       <div className="flex flex-col md:flex-row gap-8 sm:gap-10">
                         {/* Image Upload Area */}
                         <div className="w-full md:w-48 space-y-4">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Product Image</label>
+                          <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Product Image</label>
                           <div className="flex flex-wrap gap-4">
                             {imagePreviews.length > 0 ? (
-                              <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-zinc-200 group">
+                              <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-700 group">
                                 <img src={imagePreviews[0]} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 <button 
                                   type="button"
@@ -603,9 +603,9 @@ export default function Products() {
                                 </button>
                               </div>
                             ) : (
-                              <label className="w-full aspect-square flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 rounded-2xl hover:border-brand hover:bg-brand/5 transition-all cursor-pointer group">
-                                <ImageIcon className="w-8 h-8 text-zinc-300 group-hover:text-brand transition-colors" />
-                                <span className="text-[10px] font-black text-zinc-300 group-hover:text-brand mt-2 uppercase tracking-widest">Upload</span>
+                              <label className="w-full aspect-square flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-2xl hover:border-brand dark:hover:border-brand hover:bg-brand/5 dark:hover:bg-brand/5 transition-all cursor-pointer group">
+                                <ImageIcon className="w-8 h-8 text-zinc-300 dark:text-zinc-600 group-hover:text-brand transition-colors" />
+                                <span className="text-[10px] font-black text-zinc-300 dark:text-zinc-600 group-hover:text-brand mt-2 uppercase tracking-widest">Upload</span>
                                 <input 
                                   type="file" 
                                   accept="image/*" 
@@ -636,27 +636,27 @@ export default function Products() {
                         <div className="flex-1 space-y-8 sm:space-y-10">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Product name</label>
+                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Product name</label>
                               <input 
                                 required
                                 type="text" 
                                 value={newProduct.name}
                                 onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-base sm:text-lg font-bold focus:border-brand outline-none transition-all placeholder:text-zinc-300"
+                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
                                 placeholder="e.g. Vintage Denim Jacket"
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</label>
+                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
                               <div className="relative group">
                                 <select 
                                   value={newProduct.category_id}
                                   onChange={(e) => setNewProduct({...newProduct, category_id: e.target.value})}
-                                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer"
+                                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer"
                                 >
-                                  <option value="">Select Category</option>
+                                  <option value="" className="dark:bg-zinc-900">Select Category</option>
                                   {categories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    <option key={cat.id} value={cat.id} className="dark:bg-zinc-900">{cat.name}</option>
                                   ))}
                                 </select>
                                 <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-brand transition-colors" />
@@ -666,29 +666,29 @@ export default function Products() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select unit</label>
+                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Select unit</label>
                               <div className="relative group">
                                 <select 
                                   value={newProduct.unit}
                                   onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
-                                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer"
+                                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer"
                                 >
-                                  <option value="Pieces">Pieces</option>
-                                  <option value="Kilograms">Kilograms</option>
+                                  <option value="Pieces" className="dark:bg-zinc-900">Pieces</option>
+                                  <option value="Kilograms" className="dark:bg-zinc-900">Kilograms</option>
                                 </select>
                                 <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-brand transition-colors" />
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">How many pieces in 1 unit?</label>
+                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">How many pieces in 1 unit?</label>
                               <div className="relative">
                                 <input 
                                   type="number" 
                                   value={newProduct.pieces_per_unit}
                                   onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: e.target.value})}
-                                  className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-base sm:text-lg font-bold focus:border-brand outline-none transition-all"
+                                  className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all"
                                 />
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
+                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
                               </div>
                             </div>
                           </div>

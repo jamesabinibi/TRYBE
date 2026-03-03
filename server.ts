@@ -430,13 +430,17 @@ async function createServer() {
       // Fetch only the first image for each product to keep payload small
       const processedProducts = await Promise.all((products || []).map(async (p: any) => {
         let firstImage = null;
-        if (p.product_images && p.product_images.length > 0) {
-          const { data: imgData } = await supabase
-            .from('product_images')
-            .select('image_data')
-            .eq('id', p.product_images[0].id)
-            .single();
-          firstImage = imgData?.image_data;
+        try {
+          if (p.product_images && p.product_images.length > 0) {
+            const { data: imgData } = await supabase
+              .from('product_images')
+              .select('image_data')
+              .eq('id', p.product_images[0].id)
+              .single();
+            firstImage = imgData?.image_data;
+          }
+        } catch (e) {
+          console.error(`[PRODUCTS] Image fetch failed for product ${p.id}:`, e);
         }
 
         return {
@@ -833,8 +837,8 @@ async function createServer() {
 
   // Sales
   app.post("/api/sales", async (req, res) => {
-    const { items, payment_method, staff_id } = req.body;
-    console.log(`[SALES] New sale request:`, JSON.stringify({ itemsCount: items?.length, payment_method, staff_id }));
+    const { items, payment_method, staff_id, customer_id, customer_name, customer_phone } = req.body;
+    console.log(`[SALES] New sale request:`, JSON.stringify({ itemsCount: items?.length, payment_method, staff_id, customer_id }));
     
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "No items in sale" });
@@ -847,6 +851,33 @@ async function createServer() {
     try {
       // Ensure staff_id is a valid number or null
       const validStaffId = (staff_id && !isNaN(Number(staff_id))) ? Number(staff_id) : null;
+      
+      let finalCustomerId = customer_id;
+
+      // Automatic Customer Creation
+      if (!finalCustomerId && customer_name && customer_phone) {
+        // Check if customer already exists by phone
+        const { data: existingCustomer } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('phone', customer_phone)
+          .single();
+        
+        if (existingCustomer) {
+          finalCustomerId = existingCustomer.id;
+        } else {
+          // Create new customer
+          const { data: newCustomer, error: cError } = await supabase
+            .from('customers')
+            .insert([{ name: customer_name, phone: customer_phone, loyalty_points: 0 }])
+            .select()
+            .single();
+          
+          if (!cError && newCustomer) {
+            finalCustomerId = newCustomer.id;
+          }
+        }
+      }
 
       // Create the sale record
       const { data: sale, error: saleError } = await supabase
@@ -856,7 +887,8 @@ async function createServer() {
           total_amount: 0, 
           total_profit: 0, 
           payment_method, 
-          staff_id: validStaffId 
+          staff_id: validStaffId,
+          customer_id: finalCustomerId
         }])
         .select()
         .single();
