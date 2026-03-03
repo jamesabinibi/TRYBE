@@ -31,18 +31,18 @@ import { formatCurrency } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 
-const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
+const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any) => (
   <motion.div 
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
-    className="bg-white p-6 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-md transition-shadow relative group"
+    className={cn("bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow relative group", className)}
   >
     <div className="space-y-4">
-      <p className="text-sm text-zinc-500 font-medium">{title}</p>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">{title}</p>
       <div className="flex items-baseline gap-2">
         <h3 className={cn("text-3xl font-black tracking-tight", color)}>{value}</h3>
       </div>
-      {subtitle && <p className="text-xs text-zinc-400 font-medium">{subtitle}</p>}
+      {subtitle && <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">{subtitle}</p>}
     </div>
   </motion.div>
 );

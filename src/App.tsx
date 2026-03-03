@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
-import { useSearch } from './contexts/SearchContext';
+import { SearchProvider, useSearch } from './contexts/SearchContext';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Sales from './pages/Sales';
@@ -416,35 +416,37 @@ export default function App() {
     <AuthContext.Provider value={{ user, login, logout }}>
       <SettingsContext.Provider value={{ settings, refreshSettings: fetchSettings }}>
         <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
-          <Toaster position="top-right" richColors />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-              <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
-              <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
-              <Route 
-                path="/*" 
-                element={
-                  user ? (
-                    <Layout>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/products" element={<Products />} />
-                        <Route path="/sales" element={<Sales />} />
-                        <Route path="/expenses" element={<Expenses />} />
-                        <Route path="/customers" element={<Customers />} />
-                        <Route path="/users" element={<UsersPage />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="*" element={<Navigate to="/" />} />
-                      </Routes>
-                    </Layout>
-                  ) : (
-                    <Navigate to="/login" />
-                  )
-                } 
-              />
-            </Routes>
-          </BrowserRouter>
+          <SearchProvider>
+            <Toaster position="top-right" richColors />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+                <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
+                <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
+                <Route 
+                  path="/*" 
+                  element={
+                    user ? (
+                      <Layout>
+                        <Routes>
+                          <Route path="/" element={<Dashboard />} />
+                          <Route path="/products" element={<Products />} />
+                          <Route path="/sales" element={<Sales />} />
+                          <Route path="/expenses" element={<Expenses />} />
+                          <Route path="/customers" element={<Customers />} />
+                          <Route path="/users" element={<UsersPage />} />
+                          <Route path="/settings" element={<Settings />} />
+                          <Route path="*" element={<Navigate to="/" />} />
+                        </Routes>
+                      </Layout>
+                    ) : (
+                      <Navigate to="/login" />
+                    )
+                  } 
+                />
+              </Routes>
+            </BrowserRouter>
+          </SearchProvider>
         </ThemeContext.Provider>
       </SettingsContext.Provider>
     </AuthContext.Provider>

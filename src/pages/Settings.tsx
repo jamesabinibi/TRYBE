@@ -412,8 +412,8 @@ export default function Settings() {
   return (
     <div className="max-w-4xl space-y-8 sm:space-y-12 pb-20">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">Settings</h1>
-        <p className="text-sm sm:text-base text-zinc-500 font-medium">Configure your business preferences and system settings.</p>
+        <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Settings</h1>
+        <p className="text-sm sm:text-base text-zinc-500 dark:text-zinc-400 font-medium">Configure your business preferences and system settings.</p>
       </div>
 
       {/* Product Categories Section */}
@@ -421,18 +421,18 @@ export default function Settings() {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Categories</h3>
+            <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Categories</h3>
           </div>
-          <p className="text-[10px] sm:text-xs text-zinc-500 font-medium">Manage the categories used to organize your inventory.</p>
+          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage the categories used to organize your inventory.</p>
         </div>
-        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6 sm:space-y-8">
+        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
           <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
             <input 
               type="text" 
               placeholder="New category name..." 
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              className="flex-1 px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+              className="flex-1 px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all dark:text-white"
             />
             <button 
               type="submit"
@@ -489,20 +489,20 @@ export default function Settings() {
       </section>
 
       {/* Business Profile Section */}
-      <section id="profile" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200">
+      <section id="profile" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Business Profile</h3>
+            <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Business Profile</h3>
           </div>
-          <p className="text-[10px] sm:text-xs text-zinc-500 font-medium">Update your business information and tax settings.</p>
+          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Update your business information and tax settings.</p>
         </div>
-        <div id="logo" className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6 sm:space-y-8">
+        <div id="logo" className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
             <div className="space-y-4">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Logo</label>
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Logo</label>
               <div className="flex flex-col gap-4">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl sm:rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden bg-zinc-50 flex items-center justify-center relative group">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl sm:rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 overflow-hidden bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center relative group">
                   {logoPreview ? (
                     <>
                       <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-contain p-2" />
@@ -518,8 +518,8 @@ export default function Settings() {
                     </>
                   ) : (
                     <label className="cursor-pointer flex flex-col items-center gap-2">
-                      <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-300" />
-                      <span className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Upload Logo</span>
+                      <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-300 dark:text-zinc-600" />
+                      <span className="text-[9px] sm:text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Upload Logo</span>
                       <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                     </label>
                   )}
@@ -527,7 +527,7 @@ export default function Settings() {
                 <button 
                   onClick={() => saveSettings()}
                   disabled={isSaving}
-                  className="w-full sm:w-auto px-6 py-3 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 transition-all disabled:opacity-50"
+                  className="w-full sm:w-auto px-6 py-3 bg-zinc-900 dark:bg-zinc-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
                 >
                   {isSaving ? '...' : 'Save Logo'}
                 </button>
@@ -535,7 +535,7 @@ export default function Settings() {
             </div>
 
             <div id="brand" className="space-y-4">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Brand Color</label>
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Brand Color</label>
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <input 
@@ -544,15 +544,15 @@ export default function Settings() {
                     onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border-none cursor-pointer bg-transparent" 
                   />
-                  <div className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none border-4 border-white shadow-inner" style={{ backgroundColor: settings.brand_color }} />
+                  <div className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none border-4 border-white dark:border-zinc-800 shadow-inner" style={{ backgroundColor: settings.brand_color }} />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <p className="text-xs sm:text-sm font-bold text-zinc-900">{settings.brand_color}</p>
-                  <p className="text-[9px] sm:text-[10px] text-zinc-400 font-medium">Accent color for your brand</p>
+                  <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">{settings.brand_color}</p>
+                  <p className="text-[9px] sm:text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">Accent color for your brand</p>
                 </div>
                 <button 
                   onClick={() => saveSettings()}
-                  className="px-4 py-3 bg-zinc-100 text-zinc-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+                  className="px-4 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
                 >
                   Save
                 </button>
@@ -562,25 +562,25 @@ export default function Settings() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Name</label>
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Name</label>
               <div className="flex gap-2">
                 <input 
                   type="text" 
                   value={settings.business_name} 
                   onChange={(e) => setSettings({...settings, business_name: e.target.value})}
-                  className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all" 
+                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white" 
                 />
                 <button 
                   onClick={() => saveSettings()}
                   disabled={isSaving}
-                  className="px-4 py-3 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 transition-all disabled:opacity-50"
+                  className="px-4 py-3 bg-zinc-900 dark:bg-zinc-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
                 >
                   {isSaving ? '...' : 'Save'}
                 </button>
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Currency</label>
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Currency</label>
               <select 
                 value={settings.currency}
                 onChange={(e) => {
@@ -588,7 +588,7 @@ export default function Settings() {
                   setSettings(newSettings);
                   saveSettings(newSettings);
                 }}
-                className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none"
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none dark:text-white"
               >
                 <option value="NGN">NGN (₦)</option>
                 <option value="USD">USD ($)</option>
@@ -600,18 +600,18 @@ export default function Settings() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Global Low Stock Alert</label>
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Global Low Stock Alert</label>
               <div className="flex items-center gap-3">
                 <input 
                   type="number" 
                   value={settings.low_stock_threshold} 
                   onChange={(e) => setSettings({...settings, low_stock_threshold: e.target.value})}
-                  className="w-24 px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all" 
+                  className="w-24 px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white" 
                 />
-                <span className="text-xs text-zinc-400 font-medium">units</span>
+                <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">units</span>
                 <button 
                   onClick={() => saveSettings()}
-                  className="ml-auto px-4 py-3 bg-zinc-100 text-zinc-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+                  className="ml-auto px-4 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
                 >
                   Update
                 </button>
@@ -619,14 +619,14 @@ export default function Settings() {
             </div>
           </div>
 
-          <div id="tax" className="flex flex-col sm:flex-row sm:items-center justify-between p-5 sm:p-6 bg-brand/5 rounded-2xl sm:rounded-[2rem] border border-brand/10 gap-4">
+          <div id="tax" className="flex flex-col sm:flex-row sm:items-center justify-between p-5 sm:p-6 bg-brand/5 dark:bg-brand/10 rounded-2xl sm:rounded-[2rem] border border-brand/10 gap-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-white rounded-2xl text-brand shadow-sm">
+              <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-brand shadow-sm">
                 <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
                 <p className="text-[10px] sm:text-sm font-black text-brand uppercase tracking-widest">VAT Enabled</p>
-                <p className="text-[10px] sm:text-xs text-brand/70 font-medium">Apply 7.5% tax to all sales by default.</p>
+                <p className="text-[10px] sm:text-xs text-brand/70 dark:text-brand/80 font-medium">Apply 7.5% tax to all sales by default.</p>
               </div>
             </div>
             <button 
@@ -637,7 +637,7 @@ export default function Settings() {
               }}
               className={cn(
                 "w-12 h-7 sm:w-14 sm:h-8 rounded-full relative transition-all shadow-inner self-end sm:self-auto",
-                settings.vat_enabled ? "bg-brand" : "bg-zinc-200"
+                settings.vat_enabled ? "bg-brand" : "bg-zinc-200 dark:bg-zinc-700"
               )}
             >
               <div className={cn(
@@ -650,16 +650,16 @@ export default function Settings() {
       </section>
 
       {/* User Account Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <UserIcon className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">User Account</h3>
+            <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">User Account</h3>
           </div>
-          <p className="text-[10px] sm:text-xs text-zinc-500 font-medium">Manage your personal profile and security settings.</p>
+          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage your personal profile and security settings.</p>
         </div>
-        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-zinc-50 rounded-2xl sm:rounded-[2rem] border border-zinc-100">
+        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-700/50">
             <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-brand/20 shrink-0">
               {user?.name?.charAt(0) || 'U'}
             </div>
@@ -670,7 +670,7 @@ export default function Settings() {
                     type="text"
                     value={profileForm.name}
                     onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20 dark:text-white"
                     placeholder="Full Name"
                     required
                   />
@@ -678,7 +678,7 @@ export default function Settings() {
                     type="email"
                     value={profileForm.email}
                     onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                    className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20 dark:text-white"
                     placeholder="Email Address"
                     required
                   />
@@ -686,7 +686,7 @@ export default function Settings() {
                     <button type="submit" className="flex-1 sm:flex-none px-4 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all">
                       Save Changes
                     </button>
-                    <button type="button" onClick={() => setIsEditingProfile(false)} className="flex-1 sm:flex-none px-4 py-2 bg-zinc-200 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 transition-all">
+                    <button type="button" onClick={() => setIsEditingProfile(false)} className="flex-1 sm:flex-none px-4 py-2 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-all">
                       Cancel
                     </button>
                   </div>
@@ -694,8 +694,8 @@ export default function Settings() {
               ) : (
                 <div className="flex items-center justify-between">
                   <div className="text-center sm:text-left">
-                    <h4 className="text-lg font-black text-zinc-900 tracking-tight">{user?.name}</h4>
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">{user?.role}</p>
+                    <h4 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">{user?.name}</h4>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-widest font-black">{user?.role}</p>
                   </div>
                   <button 
                     onClick={() => setIsEditingProfile(true)}
@@ -710,17 +710,17 @@ export default function Settings() {
 
           <div className="space-y-4">
             {isChangingPassword ? (
-              <form onSubmit={handleChangePassword} className="p-6 bg-zinc-50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 space-y-4">
+              <form onSubmit={handleChangePassword} className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-700/50 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Lock className="w-4 h-4 text-brand" />
-                  <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">Change Password</h4>
+                  <h4 className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-widest">Change Password</h4>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <input
                     type="password"
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20 dark:text-white"
                     placeholder="Current Password"
                     required
                   />
@@ -729,7 +729,7 @@ export default function Settings() {
                     type="password"
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20 dark:text-white"
                     placeholder="New Password"
                     required
                   />
@@ -737,7 +737,7 @@ export default function Settings() {
                     type="password"
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    className="px-4 py-3 bg-white border border-zinc-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20 dark:text-white"
                     placeholder="Confirm New Password"
                     required
                   />
@@ -746,7 +746,7 @@ export default function Settings() {
                   <button type="submit" className="w-full sm:w-auto px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20">
                     Update Password
                   </button>
-                  <button type="button" onClick={() => setIsChangingPassword(false)} className="w-full sm:w-auto px-6 py-3 bg-zinc-200 text-zinc-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 transition-all">
+                  <button type="button" onClick={() => setIsChangingPassword(false)} className="w-full sm:w-auto px-6 py-3 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-all">
                     Cancel
                   </button>
                 </div>
@@ -754,13 +754,13 @@ export default function Settings() {
             ) : (
               <button 
                 onClick={() => setIsChangingPassword(true)}
-                className="w-full flex items-center justify-between p-4 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all group"
+                className="w-full flex items-center justify-between p-4 border border-zinc-100 dark:border-zinc-800 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all group"
               >
                 <div className="flex items-center gap-3">
                   <Lock className="w-4 h-4 text-zinc-400 group-hover:text-brand" />
-                  <span className="text-sm font-bold text-zinc-600">Change Password</span>
+                  <span className="text-sm font-bold text-zinc-600 dark:text-zinc-400">Change Password</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-zinc-300" />
+                <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600" />
               </button>
             )}
           </div>
@@ -768,23 +768,23 @@ export default function Settings() {
       </section>
 
       {/* Data Management Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-red-600" />
-            <h3 className="font-black text-zinc-900 tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Data Management</h3>
+            <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Data Management</h3>
           </div>
-          <p className="text-[10px] sm:text-xs text-zinc-500 font-medium">Dangerous operations. Use with extreme caution.</p>
+          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Dangerous operations. Use with extreme caution.</p>
         </div>
-        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-red-50 rounded-2xl sm:rounded-[2rem] border border-red-100 gap-6">
+        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-red-50 dark:bg-red-500/10 rounded-2xl sm:rounded-[2rem] border border-red-100 dark:border-red-500/20 gap-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-white rounded-2xl text-red-600 shadow-sm shrink-0">
+              <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-red-600 shadow-sm shrink-0">
                 <History className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="text-[10px] sm:text-sm font-black text-red-900 uppercase tracking-widest">Clear Sales History</p>
-                <p className="text-[10px] sm:text-xs text-red-700 font-medium">Delete all transaction logs and profit data.</p>
+                <p className="text-[10px] sm:text-sm font-black text-red-900 dark:text-red-500 uppercase tracking-widest">Clear Sales History</p>
+                <p className="text-[10px] sm:text-xs text-red-700 dark:text-red-400 font-medium">Delete all transaction logs and profit data.</p>
               </div>
             </div>
             <button 
