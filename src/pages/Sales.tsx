@@ -69,9 +69,15 @@ export default function Sales() {
     try {
       const res = await fetch('/api/customers');
       const data = await res.json();
-      setCustomers(data);
+      if (Array.isArray(data)) {
+        setCustomers(data);
+      } else {
+        console.error('Customers data is not an array:', data);
+        setCustomers([]);
+      }
     } catch (err) {
       console.error('Failed to fetch customers');
+      setCustomers([]);
     }
   };
 

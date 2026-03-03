@@ -53,9 +53,15 @@ export default function Expenses() {
     try {
       const res = await fetch('/api/expenses');
       const data = await res.json();
-      setExpenses(data);
+      if (Array.isArray(data)) {
+        setExpenses(data);
+      } else {
+        console.error('Expenses data is not an array:', data);
+        setExpenses([]);
+      }
     } catch (err) {
       toast.error('Failed to fetch expenses');
+      setExpenses([]);
     }
   };
 

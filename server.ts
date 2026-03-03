@@ -414,31 +414,43 @@ async function createServer() {
   app.get("/api/products", async (req, res) => {
     if (!supabase) return res.json([]);
     try {
+      // Optimize: Only fetch necessary fields and limit images to avoid huge payloads
       const { data: products, error } = await supabase
         .from('products')
         .select(`
-          *,
+          id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, created_at,
           categories(name),
           product_variants(*),
-          product_images(image_data)
+          product_images(id)
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const productsWithVariants = products.map(p => {
-        const total_stock = p.product_variants?.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0) || 0;
+      // Fetch only the first image for each product to keep payload small
+      const processedProducts = await Promise.all((products || []).map(async (p: any) => {
+        let firstImage = null;
+        if (p.product_images && p.product_images.length > 0) {
+          const { data: imgData } = await supabase
+            .from('product_images')
+            .select('image_data')
+            .eq('id', p.product_images[0].id)
+            .single();
+          firstImage = imgData?.image_data;
+        }
+
         return {
           ...p,
           category_name: p.categories?.name,
           variants: p.product_variants,
-          images: p.product_images?.map((img: any) => img.image_data) || [],
-          total_stock
+          total_stock: p.product_variants?.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0) || 0,
+          images: firstImage ? [firstImage] : []
         };
-      });
+      }));
 
-      res.json(productsWithVariants);
+      res.json(processedProducts);
     } catch (error: any) {
+      console.error('[PRODUCTS] Fetch error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1194,75 +1206,23 @@ async function createServer() {
     }
   });
 
-  // --- NEW FEATURES: EXPENSES, CUSTOMERS, AI ---
-
-  // Expenses API
-  app.get("/api/expenses", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
-      if (error) throw error;
-      res.json(data || []);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/expenses", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { category, amount, description, date } = req.body;
-      const { data, error } = await supabase.from('expenses').insert([{ category, amount, description, date: date || new Date().toISOString() }]).select().single();
-      if (error) throw error;
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.delete("/api/expenses/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { error } = await supabase.from('expenses').delete().eq('id', req.params.id);
-      if (error) throw error;
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Customers API
-  app.get("/api/customers", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { data, error } = await supabase.from('customers').select('*').order('name', { ascending: true });
-      if (error) throw error;
-      res.json(data || []);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/customers", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { name, phone, email } = req.body;
-      const { data, error } = await supabase.from('customers').insert([{ name, phone, email, loyalty_points: 0 }]).select().single();
-      if (error) throw error;
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+  // --- NEW FEATURES: EXPENSES, CUSTOMERS, SERVICES, AI ---
 
   // Services API
   app.get("/api/services", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const { data, error } = await supabase.from('services').select('*').order('name', { ascending: true });
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST116' || error.message.includes('relation "services" does not exist')) {
+          console.warn('[SERVICES] Table "services" not found. Returning empty array.');
+          return res.json([]);
+        }
+        throw error;
+      }
       res.json(data || []);
     } catch (error: any) {
+      console.error('[SERVICES] Fetch error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1297,6 +1257,75 @@ async function createServer() {
       const { error } = await supabase.from('services').delete().eq('id', req.params.id);
       if (error) throw error;
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Expenses API
+  app.get("/api/expenses", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
+      if (error) {
+        if (error.code === 'PGRST116' || error.message.includes('relation "expenses" does not exist')) {
+          return res.json([]);
+        }
+        throw error;
+      }
+      res.json(data || []);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/expenses", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { category, amount, description, date } = req.body;
+      const { data, error } = await supabase.from('expenses').insert([{ category, amount, description, date: date || new Date().toISOString() }]).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/expenses/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { error } = await supabase.from('expenses').delete().eq('id', req.params.id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Customers API
+  app.get("/api/customers", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase.from('customers').select('*').order('name', { ascending: true });
+      if (error) {
+        if (error.code === 'PGRST116' || error.message.includes('relation "customers" does not exist')) {
+          return res.json([]);
+        }
+        throw error;
+      }
+      res.json(data || []);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/customers", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { name, phone, email } = req.body;
+      const { data, error } = await supabase.from('customers').insert([{ name, phone, email, loyalty_points: 0 }]).select().single();
+      if (error) throw error;
+      res.json(data);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

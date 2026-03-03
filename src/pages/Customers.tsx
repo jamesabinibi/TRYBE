@@ -44,9 +44,15 @@ export default function Customers() {
     try {
       const res = await fetch('/api/customers');
       const data = await res.json();
-      setCustomers(data);
+      if (Array.isArray(data)) {
+        setCustomers(data);
+      } else {
+        console.error('Customers data is not an array:', data);
+        setCustomers([]);
+      }
     } catch (err) {
       toast.error('Failed to fetch customers');
+      setCustomers([]);
     }
   };
 
