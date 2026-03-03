@@ -86,11 +86,41 @@ export default function Expenses() {
         });
         const data = await response.json();
         if (data.amount) {
+          // Robust date parsing
+          let parsedDate = new Date().toISOString().split('T')[0];
+          if (data.date) {
+            try {
+              // Try standard parsing
+              const d = new Date(data.date);
+              if (!isNaN(d.getTime())) {
+                parsedDate = d.toISOString().split('T')[0];
+              } else {
+                // Try DD/MM/YY or DD/MM/YYYY
+                const parts = data.date.split(/[\/\-]/);
+                if (parts.length === 3) {
+                  let day, month, year;
+                  if (parts[0].length === 4) { // YYYY-MM-DD
+                    [year, month, day] = parts;
+                  } else { // DD/MM/YY
+                    [day, month, year] = parts;
+                    if (year.length === 2) year = '20' + year;
+                  }
+                  const d2 = new Date(`${year}-${month}-${day}`);
+                  if (!isNaN(d2.getTime())) {
+                    parsedDate = d2.toISOString().split('T')[0];
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('Date parsing failed:', e);
+            }
+          }
+
           setNewExpense({
             ...newExpense,
             amount: data.amount.toString(),
             description: data.narration || '',
-            date: data.date ? new Date(data.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+            date: parsedDate
           });
           toast.success('AI extracted transaction details!');
         }

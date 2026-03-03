@@ -94,6 +94,27 @@ export default function Settings() {
     fetchSettings();
   }, []);
 
+  const [isMigrating, setIsMigrating] = useState(false);
+
+  const handleMigrateImages = async () => {
+    if (!confirm('This will move all existing product images to Cloudinary for faster loading. Continue?')) return;
+    
+    setIsMigrating(true);
+    try {
+      const res = await fetch('/api/admin/migrate-images', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Successfully migrated ${data.migratedCount} images!`);
+      } else {
+        throw new Error(data.error || 'Migration failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   const fetchCategories = async () => {
     try {
       const res = await fetch('/api/categories');
