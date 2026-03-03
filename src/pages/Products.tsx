@@ -291,12 +291,12 @@ export default function Products() {
   return (
     <div className="space-y-8">
       {/* Top Tabs */}
-      <div className="flex items-center gap-8 border-b border-zinc-200">
+      <div className="flex items-center gap-8 border-b border-zinc-200 dark:border-zinc-800">
         <button 
           onClick={() => setActiveTab('list')}
           className={cn(
             "pb-4 text-sm font-bold transition-all relative",
-            activeTab === 'list' ? "text-brand" : "text-zinc-400 hover:text-zinc-600"
+            activeTab === 'list' ? "text-brand" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
           )}
         >
           Inventory list
@@ -306,17 +306,17 @@ export default function Products() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        <div className="bg-white p-6 rounded-[2rem] border border-zinc-200 shadow-sm">
-          <p className="text-sm text-zinc-500 font-medium mb-4">Stock value @ cost price</p>
-          <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">{formatCurrency(totalCostValue)}</h3>
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-4">Stock value @ cost price</p>
+          <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{formatCurrency(totalCostValue)}</h3>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-zinc-200 shadow-sm">
-          <p className="text-sm text-zinc-500 font-medium mb-4">Stock value @ selling price</p>
-          <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">{formatCurrency(totalSellingValue)}</h3>
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-4">Stock value @ selling price</p>
+          <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{formatCurrency(totalSellingValue)}</h3>
         </div>
       </div>
 
-      <div className="bg-white p-4 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-zinc-200 shadow-sm">
+      <div className="bg-white dark:bg-zinc-900 p-4 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
         {/* Sub Tabs and Search */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-6 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
@@ -324,7 +324,7 @@ export default function Products() {
               onClick={() => setActiveSubTab('products')}
               className={cn(
                 "pb-2 text-sm font-bold transition-all relative",
-                activeSubTab === 'products' ? "text-brand" : "text-zinc-400 hover:text-zinc-600"
+                activeSubTab === 'products' ? "text-brand" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
               )}
             >
               Products
@@ -334,7 +334,7 @@ export default function Products() {
               onClick={() => setActiveSubTab('services')}
               className={cn(
                 "pb-2 text-sm font-bold transition-all relative",
-                activeSubTab === 'services' ? "text-brand" : "text-zinc-400 hover:text-zinc-600"
+                activeSubTab === 'services' ? "text-brand" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
               )}
             >
               Services
@@ -344,13 +344,13 @@ export default function Products() {
           
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1 max-w-3xl">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
               <input 
                 type="text" 
                 placeholder="Search products..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-2.5 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
+                className="w-full pl-12 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
               />
             </div>
             <div className="relative group">
@@ -363,14 +363,14 @@ export default function Products() {
                   else newParams.set('category', val);
                   setSearchParams(newParams);
                 }}
-                className="w-full sm:w-auto pl-4 pr-10 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer min-w-[160px]"
+                className="w-full sm:w-auto pl-4 pr-10 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-bold text-zinc-900 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer min-w-[160px]"
               >
-                <option value="all">All Categories</option>
+                <option value="all" className="dark:bg-zinc-900">All Categories</option>
                 {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  <option key={cat.id} value={cat.id} className="dark:bg-zinc-900">{cat.name}</option>
                 ))}
               </select>
-              <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none group-hover:text-brand transition-colors" />
+              <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none group-hover:text-brand transition-colors" />
             </div>
           </div>
         </div>
@@ -381,21 +381,21 @@ export default function Products() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-zinc-100">
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Product</th>
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</th>
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Stock</th>
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Price</th>
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Total Value</th>
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                  <tr className="border-b border-zinc-100 dark:border-zinc-800">
+                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Product</th>
+                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</th>
+                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Stock</th>
+                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Price</th>
+                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Total Value</th>
+                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-50">
+                <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
                   {filteredProducts.map((product) => (
-                    <tr key={product.id} className="hover:bg-zinc-50/50 transition-colors group">
+                    <tr key={product.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
                       <td className="py-5">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 overflow-hidden border border-zinc-200">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
                             {product.images && product.images.length > 0 ? (
                               <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             ) : (
@@ -403,26 +403,26 @@ export default function Products() {
                             )}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-zinc-900 tracking-tight">{product.name}</p>
-                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{product.supplier_name}</p>
+                            <p className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">{product.name}</p>
+                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{product.supplier_name}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-5">
-                        <span className="text-xs font-bold text-zinc-600">{product.category_name}</span>
+                        <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{product.category_name}</span>
                       </td>
                       <td className="py-5">
                         <div className="space-y-1">
                           <p className={cn(
                             "text-sm font-bold tracking-tight",
-                            product.total_stock <= 5 ? "text-red-600" : "text-zinc-900"
+                            product.total_stock <= 5 ? "text-red-600" : "text-zinc-900 dark:text-white"
                           )}>
                             {product.total_stock} units
                           </p>
                           {product.variants && product.variants.length > 1 && (
                             <div className="flex flex-wrap gap-1">
                               {product.variants.map((v, i) => v.quantity > 0 && (
-                                <span key={i} className="text-[9px] font-black px-1.5 py-0.5 bg-zinc-100 text-zinc-500 rounded-md uppercase tracking-tighter">
+                                <span key={i} className="text-[9px] font-black px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-md uppercase tracking-tighter">
                                   {v.size}: {v.quantity}
                                 </span>
                               ))}
@@ -430,18 +430,18 @@ export default function Products() {
                           )}
                         </div>
                       </td>
-                      <td className="py-5 text-sm text-zinc-900 font-black tracking-tight">
+                      <td className="py-5 text-sm text-zinc-900 dark:text-white font-black tracking-tight">
                         {formatCurrency(product.selling_price)}
                       </td>
-                      <td className="py-5 text-sm text-zinc-900 font-black tracking-tight">
+                      <td className="py-5 text-sm text-zinc-900 dark:text-white font-black tracking-tight">
                         {formatCurrency(product.selling_price * product.total_stock)}
                       </td>
                       <td className="py-5 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => handleEditClick(product)} className="p-2 text-zinc-400 hover:text-brand transition-colors">
+                          <button onClick={() => handleEditClick(product)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-zinc-400 hover:text-red-600 transition-colors">
+                          <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -455,10 +455,10 @@ export default function Products() {
             {/* Mobile Card Grid */}
             <div className="md:hidden grid grid-cols-1 gap-4">
               {filteredProducts.map((product) => (
-                <div key={product.id} className="p-4 rounded-2xl border border-zinc-100 bg-zinc-50/30 space-y-4">
+                <div key={product.id} className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 overflow-hidden border border-zinc-200">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
                         {product.images && product.images.length > 0 ? (
                           <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         ) : (
@@ -466,40 +466,40 @@ export default function Products() {
                         )}
                       </div>
                       <div>
-                        <h4 className="text-sm font-black text-zinc-900 tracking-tight">{product.name}</h4>
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{product.category_name}</p>
+                        <h4 className="text-sm font-black text-zinc-900 dark:text-white tracking-tight">{product.name}</h4>
+                        <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{product.category_name}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => handleEditClick(product)} className="p-2 text-zinc-400 hover:text-brand transition-colors">
+                      <button onClick={() => handleEditClick(product)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-zinc-400 hover:text-red-600 transition-colors">
+                      <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                     <div>
-                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Stock</p>
+                      <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Stock</p>
                       <p className={cn(
                         "text-xs font-bold",
-                        product.total_stock <= 5 ? "text-red-600" : "text-zinc-900"
+                        product.total_stock <= 5 ? "text-red-600" : "text-zinc-900 dark:text-white"
                       )}>
                         {product.total_stock} units
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Price</p>
-                      <p className="text-xs font-black text-zinc-900">{formatCurrency(product.selling_price)}</p>
+                      <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Price</p>
+                      <p className="text-xs font-black text-zinc-900 dark:text-white">{formatCurrency(product.selling_price)}</p>
                     </div>
                   </div>
 
                   {product.variants && product.variants.length > 1 && (
                     <div className="flex flex-wrap gap-1.5 pt-2">
                       {product.variants.map((v, i) => v.quantity > 0 && (
-                        <span key={i} className="text-[9px] font-black px-2 py-0.5 bg-white border border-zinc-100 text-zinc-500 rounded-lg uppercase tracking-tighter">
+                        <span key={i} className="text-[9px] font-black px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-lg uppercase tracking-tighter">
                           {v.size}: {v.quantity}
                         </span>
                       ))}

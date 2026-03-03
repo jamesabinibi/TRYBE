@@ -13,7 +13,8 @@ import {
   Trophy,
   Users,
   Loader2,
-  BrainCircuit
+  BrainCircuit,
+  TrendingDown
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -67,6 +68,8 @@ export default function Dashboard() {
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
   const [staffPerformance, setStaffPerformance] = useState<any[]>([]);
+  const [topSales, setTopSales] = useState<any[]>([]);
+  const [topExpenses, setTopExpenses] = useState<any[]>([]);
   const [forecast, setForecast] = useState<any>(null);
   const [isForecasting, setIsForecasting] = useState(false);
 
@@ -110,6 +113,22 @@ export default function Dashboard() {
         else setStaffPerformance([]);
       })
       .catch(() => setStaffPerformance([]));
+
+    fetch('/api/analytics/top-sales')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setTopSales(data);
+        else setTopSales([]);
+      })
+      .catch(() => setTopSales([]));
+
+    fetch('/api/analytics/top-expenses')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setTopExpenses(data);
+        else setTopExpenses([]);
+      })
+      .catch(() => setTopExpenses([]));
   }, []);
 
   const generateForecast = async () => {
@@ -197,12 +216,12 @@ export default function Dashboard() {
         />
         <StatCard 
           title="Money Out today" 
-          value={formatCurrency(0)} 
+          value={formatCurrency(summary.today_expenses || 0)} 
           color="text-red-500"
         />
         <StatCard 
           title="Today's Balance" 
-          value={formatCurrency(summary.today_sales || 0)} 
+          value={formatCurrency((summary.today_sales || 0) - (summary.today_expenses || 0))} 
           color="text-zinc-900 dark:text-white"
           className="sm:col-span-2 lg:col-span-1"
         />
@@ -376,15 +395,66 @@ export default function Dashboard() {
                 <h3 className="font-black text-zinc-900 dark:text-white tracking-tight text-base sm:text-lg">Top sales</h3>
                 <div className="w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
               </div>
-              <select className="text-[10px] sm:text-xs font-bold text-brand bg-transparent border-none outline-none cursor-pointer">
-                <option>This week</option>
-              </select>
             </div>
-            <div className="py-8 sm:py-12 text-center">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-zinc-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 text-zinc-200" />
+            <div className="space-y-4">
+              {topSales.map((sale, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl flex items-center justify-center font-black text-brand shadow-sm border border-zinc-100 dark:border-zinc-700">
+                      <Package className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-zinc-900 dark:text-white truncate max-w-[120px]">{sale.name}</p>
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{sale.quantity} units sold</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-brand">{formatCurrency(sale.revenue)}</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Revenue</p>
+                  </div>
+                </div>
+              ))}
+              {topSales.length === 0 && (
+                <div className="py-8 text-center">
+                  <TrendingUp className="w-10 h-10 text-zinc-200 mx-auto mb-2" />
+                  <p className="text-xs text-zinc-400 font-medium">No sales data yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top Expenses */}
+          <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-zinc-900 dark:text-white tracking-tight text-base sm:text-lg">Top expenses</h3>
+                <div className="w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
               </div>
-              <p className="text-zinc-400 text-xs sm:text-sm">No sales data for this period</p>
+            </div>
+            <div className="space-y-4">
+              {topExpenses.map((expense, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl flex items-center justify-center font-black text-red-500 shadow-sm border border-zinc-100 dark:border-zinc-700">
+                      <ArrowDownRight className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-zinc-900 dark:text-white">{expense.category}</p>
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Category</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-red-500">{formatCurrency(expense.amount)}</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Amount</p>
+                  </div>
+                </div>
+              ))}
+              {topExpenses.length === 0 && (
+                <div className="py-8 text-center">
+                  <TrendingDown className="w-10 h-10 text-zinc-200 mx-auto mb-2" />
+                  <p className="text-xs text-zinc-400 font-medium">No expenses data yet</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

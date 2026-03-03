@@ -1096,13 +1096,20 @@ async function createServer() {
       const todaySales = todaySalesData?.reduce((acc, s) => acc + (s.total_amount || 0), 0) || 0;
       const todayProfit = todaySalesData?.reduce((acc, s) => acc + (s.total_profit || 0), 0) || 0;
 
+      const { data: todayExpensesData } = await supabase
+        .from('expenses')
+        .select('amount')
+        .gte('date', today);
+      const todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (e.amount || 0), 0) || 0;
+
       res.json({
         total_products: totalProducts,
         total_sales_count: totalSalesCount,
         total_stock: totalStock,
         low_stock_count: lowStockCount,
         today_sales: todaySales,
-        today_profit: todayProfit
+        today_profit: todayProfit,
+        today_expenses: todayExpenses
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1135,6 +1142,53 @@ async function createServer() {
       }));
 
       res.json(trends);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/analytics/top-sales", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase
+        .from('sale_items')
+        .select('quantity, selling_price, product_variants(products(name))')
+        .limit(50);
+      
+      if (error) throw error;
+      
+      const topSalesMap = new Map();
+      data.forEach((item: any) => {
+        const name = item.product_variants?.products?.name || 'Unknown';
+        const existing = topSalesMap.get(name) || { name, quantity: 0, revenue: 0 };
+        topSalesMap.set(name, {
+          name,
+          quantity: existing.quantity + item.quantity,
+          revenue: existing.revenue + (item.quantity * item.selling_price)
+        });
+      });
+      
+      const topSales = Array.from(topSalesMap.values())
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5);
+        
+      res.json(topSales);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/analytics/top-expenses", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('category, amount')
+        .order('amount', { ascending: false })
+        .limit(5);
+        
+      if (error) throw error;
+      res.json(data || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1196,6 +1250,53 @@ async function createServer() {
       const { data, error } = await supabase.from('customers').insert([{ name, phone, email, loyalty_points: 0 }]).select().single();
       if (error) throw error;
       res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Services API
+  app.get("/api/services", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase.from('services').select('*').order('name', { ascending: true });
+      if (error) throw error;
+      res.json(data || []);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/services", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { name, description, price, duration_minutes, category } = req.body;
+      const { data, error } = await supabase.from('services').insert([{ name, description, price, duration_minutes, category }]).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/services/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { name, description, price, duration_minutes, category } = req.body;
+      const { data, error } = await supabase.from('services').update({ name, description, price, duration_minutes, category }).eq('id', req.params.id).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/services/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { error } = await supabase.from('services').delete().eq('id', req.params.id);
+      if (error) throw error;
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

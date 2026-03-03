@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Wallet,
   Users,
+  Briefcase,
   Moon,
   Sun
 } from 'lucide-react';
@@ -24,6 +25,7 @@ import { User } from './types';
 import { SearchProvider, useSearch } from './contexts/SearchContext';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
+import Services from './pages/Services';
 import Sales from './pages/Sales';
 import UsersPage from './pages/Users';
 import Settings from './pages/Settings';
@@ -93,6 +95,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   const navItems = [
     { icon: LayoutDashboard, label: 'Home', path: '/' },
     { icon: Package, label: 'Inventory', path: '/products' },
+    { icon: Briefcase, label: 'Services', path: '/services' },
     { icon: ShoppingCart, label: 'Sales & Analytics', path: '/sales' },
     { icon: Wallet, label: 'Expenses', path: '/expenses' },
     { icon: Users, label: 'Customers', path: '/customers' },
@@ -431,6 +434,7 @@ export default function App() {
                         <Routes>
                           <Route path="/" element={<Dashboard />} />
                           <Route path="/products" element={<Products />} />
+                          <Route path="/services" element={<Services />} />
                           <Route path="/sales" element={<Sales />} />
                           <Route path="/expenses" element={<Expenses />} />
                           <Route path="/customers" element={<Customers />} />
