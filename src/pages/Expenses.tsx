@@ -173,7 +173,8 @@ export default function Expenses() {
         fetchExpenses();
         toast.success('Expense recorded');
       } else {
-        toast.error('Failed to save expense');
+        const data = await response.json();
+        toast.error(data.error || 'Failed to save expense');
       }
     } catch (err) {
       toast.error('Network error');

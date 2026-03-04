@@ -137,7 +137,7 @@ async function createServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "2.4.5-stable", time: new Date().toISOString() });
+    res.json({ status: "ok", version: "2.4.6-stable", time: new Date().toISOString() });
   });
 
   // Diagnostics
@@ -151,7 +151,7 @@ async function createServer() {
 
     if (!supabase) {
       return res.json({
-        version: "2.4.5-stable",
+        version: "2.4.6-stable",
         supabase_connected: false,
         supabase_status,
         tables: {},
@@ -182,7 +182,7 @@ async function createServer() {
     }
     
     res.json({
-      version: "2.4.5-stable",
+      version: "2.4.6-stable",
       supabase_connected: true,
       supabase_status,
       tables: results,
@@ -273,9 +273,13 @@ async function createServer() {
     try {
       const { category, amount, description, date } = req.body;
       const { data, error } = await supabase.from('expenses').insert([{ category, amount, description, date: date || new Date().toISOString() }]).select().single();
-      if (error) throw error;
+      if (error) {
+        console.error('[DB] Expense save error:', error);
+        return res.status(400).json({ error: error.message });
+      }
       res.json(data);
     } catch (error: any) {
+      console.error('[SERVER] Expense save error:', error);
       res.status(500).json({ error: error.message });
     }
   });
