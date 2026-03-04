@@ -981,9 +981,9 @@ CREATE TABLE IF NOT EXISTS notifications (
             </button>
           </div>
 
-          {diagResults?.tables && Object.keys(diagResults.tables).length > 0 && (
+          {diagResults?.tables && Object.keys(diagResults.tables || {}).length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {Object.entries(diagResults.tables).map(([name, status]: [string, any]) => (
+              {Object.entries(diagResults.tables || {}).map(([name, status]: [string, any]) => (
                 <div key={name} className={cn(
                   "p-3 rounded-xl border flex items-center justify-between",
                   status.exists ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20" : "bg-red-50/50 dark:bg-red-500/5 border-red-100 dark:border-red-500/20"

@@ -380,13 +380,19 @@ async function createServer() {
 
   app.post("/api/ai/forecast", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
+    
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing." });
+    }
+
     try {
       // Fetch data for AI context
       const { data: sales } = await supabase.from('sales').select('*, sale_items(*)').order('created_at', { ascending: false }).limit(50);
       const { data: products } = await supabase.from('products').select('*, product_variants(*)');
       const { data: expenses } = await supabase.from('expenses').select('*').order('date', { ascending: false }).limit(20);
 
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: {
