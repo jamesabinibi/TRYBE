@@ -816,6 +816,25 @@ export default function Settings() {
             </button>
           </div>
 
+          <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-brand/5 dark:bg-brand/10 rounded-2xl sm:rounded-[2rem] border border-brand/10 dark:border-brand/20 gap-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-brand shadow-sm shrink-0">
+                <Globe className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] sm:text-sm font-black text-brand uppercase tracking-widest">Cloudinary Migration</p>
+                <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Move existing product images to Cloudinary for faster loading.</p>
+              </div>
+            </div>
+            <button 
+              onClick={handleMigrateImages}
+              disabled={isMigrating}
+              className="w-full sm:w-auto px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 disabled:opacity-50"
+            >
+              {isMigrating ? 'Migrating...' : 'Start Migration'}
+            </button>
+          </div>
+
           <div className="pt-6 border-t border-zinc-100 space-y-4">
             <button 
               onClick={async () => {

@@ -74,17 +74,28 @@ export default function Expenses() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    console.log('AI Screenshot: File selected', file.name);
     setIsProcessingAI(true);
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64 = reader.result as string;
+      console.log('AI Screenshot: Image loaded, calling API...');
       try {
         const response = await fetch('/api/ai/process-transaction', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: base64 })
         });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI Screenshot: API Error', errorText);
+          throw new Error('API Error');
+        }
+
         const data = await response.json();
+        console.log('AI Screenshot: API Success', data);
+        
         if (data.amount) {
           // Robust date parsing
           let parsedDate = new Date().toISOString().split('T')[0];
@@ -116,12 +127,12 @@ export default function Expenses() {
             }
           }
 
-          setNewExpense({
-            ...newExpense,
+          setNewExpense(prev => ({
+            ...prev,
             amount: data.amount.toString(),
             description: data.narration || '',
             date: parsedDate
-          });
+          }));
           toast.success('AI extracted transaction details!');
         }
       } catch (err) {

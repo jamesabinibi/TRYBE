@@ -140,6 +140,175 @@ async function createServer() {
     res.json({ status: "ok", version: "2.4.2-stable", time: new Date().toISOString() });
   });
 
+  // --- NEW FEATURES: EXPENSES, CUSTOMERS, SERVICES, AI (MOVED TO TOP OF API) ---
+
+  // Services API
+  app.get("/api/services", async (req, res) => {
+    console.log('[API] GET /api/services called');
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase.from('services').select('*').order('name', { ascending: true });
+      if (error) {
+        if (error.code === 'PGRST116' || error.message.includes('relation "services" does not exist')) {
+          console.warn('[SERVICES] Table "services" not found. Returning empty array.');
+          return res.json([]);
+        }
+        throw error;
+      }
+      res.json(data || []);
+    } catch (error: any) {
+      console.error('[SERVICES] Fetch error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/services", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { name, description, price, duration_minutes, category } = req.body;
+      const { data, error } = await supabase.from('services').insert([{ name, description, price, duration_minutes, category }]).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/services/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { name, description, price, duration_minutes, category } = req.body;
+      const { data, error } = await supabase.from('services').update({ name, description, price, duration_minutes, category }).eq('id', req.params.id).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/services/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { error } = await supabase.from('services').delete().eq('id', req.params.id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Expenses API
+  app.get("/api/expenses", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
+      if (error) {
+        if (error.code === 'PGRST116' || error.message.includes('relation "expenses" does not exist')) {
+          return res.json([]);
+        }
+        throw error;
+      }
+      res.json(data || []);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/expenses", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { category, amount, description, date } = req.body;
+      const { data, error } = await supabase.from('expenses').insert([{ category, amount, description, date: date || new Date().toISOString() }]).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/expenses/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { error } = await supabase.from('expenses').delete().eq('id', req.params.id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Customers API
+  app.get("/api/customers", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase.from('customers').select('*').order('name', { ascending: true });
+      if (error) {
+        if (error.code === 'PGRST116' || error.message.includes('relation "customers" does not exist')) {
+          return res.json([]);
+        }
+        throw error;
+      }
+      res.json(data || []);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/customers", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { name, phone, email } = req.body;
+      const { data, error } = await supabase.from('customers').insert([{ name, phone, email, loyalty_points: 0 }]).select().single();
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // AI Bank Transaction Processing
+  app.post("/api/ai/process-transaction", async (req, res) => {
+    console.log('[API] POST /api/ai/process-transaction called');
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { image } = req.body; // base64 image
+      if (!image) return res.status(400).json({ error: "Image is required" });
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: {
+          parts: [
+            { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
+            Common formats include OPay, PalmPay, Kuda, or traditional bank receipts.
+            - Amount: Look for the total amount transferred (e.g., ₦174,000.00). Return as a number without currency symbols.
+            - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
+            - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
+            Return as JSON.` },
+            { inlineData: { mimeType: "image/png", data: image.split(',')[1] || image } }
+          ]
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              amount: { type: Type.NUMBER },
+              date: { type: Type.STRING },
+              narration: { type: Type.STRING },
+              confidence: { type: Type.NUMBER }
+            }
+          }
+        }
+      });
+
+      res.json(JSON.parse(response.text || '{}'));
+    } catch (error: any) {
+      console.error('[AI] Transaction processing error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/diag", async (req, res) => {
     let dbStatus = "Not tested";
     let settingsSchema = null;
@@ -352,173 +521,6 @@ async function createServer() {
   };
 
   app.post(["/api/register", "/api/register/"], registerHandler);
-
-  // --- NEW FEATURES: EXPENSES, CUSTOMERS, SERVICES, AI (MOVED UP) ---
-
-  // Services API
-  app.get("/api/services", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { data, error } = await supabase.from('services').select('*').order('name', { ascending: true });
-      if (error) {
-        if (error.code === 'PGRST116' || error.message.includes('relation "services" does not exist')) {
-          console.warn('[SERVICES] Table "services" not found. Returning empty array.');
-          return res.json([]);
-        }
-        throw error;
-      }
-      res.json(data || []);
-    } catch (error: any) {
-      console.error('[SERVICES] Fetch error:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/services", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { name, description, price, duration_minutes, category } = req.body;
-      const { data, error } = await supabase.from('services').insert([{ name, description, price, duration_minutes, category }]).select().single();
-      if (error) throw error;
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.put("/api/services/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { name, description, price, duration_minutes, category } = req.body;
-      const { data, error } = await supabase.from('services').update({ name, description, price, duration_minutes, category }).eq('id', req.params.id).select().single();
-      if (error) throw error;
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.delete("/api/services/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { error } = await supabase.from('services').delete().eq('id', req.params.id);
-      if (error) throw error;
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Expenses API
-  app.get("/api/expenses", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
-      if (error) {
-        if (error.code === 'PGRST116' || error.message.includes('relation "expenses" does not exist')) {
-          return res.json([]);
-        }
-        throw error;
-      }
-      res.json(data || []);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/expenses", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { category, amount, description, date } = req.body;
-      const { data, error } = await supabase.from('expenses').insert([{ category, amount, description, date: date || new Date().toISOString() }]).select().single();
-      if (error) throw error;
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.delete("/api/expenses/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { error } = await supabase.from('expenses').delete().eq('id', req.params.id);
-      if (error) throw error;
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Customers API
-  app.get("/api/customers", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { data, error } = await supabase.from('customers').select('*').order('name', { ascending: true });
-      if (error) {
-        if (error.code === 'PGRST116' || error.message.includes('relation "customers" does not exist')) {
-          return res.json([]);
-        }
-        throw error;
-      }
-      res.json(data || []);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/customers", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { name, phone, email } = req.body;
-      const { data, error } = await supabase.from('customers').insert([{ name, phone, email, loyalty_points: 0 }]).select().single();
-      if (error) throw error;
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // AI Bank Transaction Processing
-  app.post("/api/ai/process-transaction", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
-    try {
-      const { image } = req.body; // base64 image
-      if (!image) return res.status(400).json({ error: "Image is required" });
-
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: {
-          parts: [
-            { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
-            Common formats include OPay, PalmPay, Kuda, or traditional bank receipts.
-            - Amount: Look for the total amount transferred (e.g., ₦174,000.00). Return as a number without currency symbols.
-            - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
-            - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
-            Return as JSON.` },
-            { inlineData: { mimeType: "image/png", data: image.split(',')[1] || image } }
-          ]
-        },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              amount: { type: Type.NUMBER },
-              date: { type: Type.STRING },
-              narration: { type: Type.STRING },
-              confidence: { type: Type.NUMBER }
-            }
-          }
-        }
-      });
-
-      res.json(JSON.parse(response.text || '{}'));
-    } catch (error: any) {
-      console.error('[AI] Transaction processing error:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
 
   app.post("/api/forgot-password", (req, res) => {
     const { email } = req.body;
@@ -1509,7 +1511,7 @@ async function createServer() {
   app.all("/api/*", (req, res) => {
     console.log(`[API 404] ${req.method} ${req.url} - No route matched`);
     res.status(404).json({ 
-      error: `API route not found (v2.4.2): ${req.method} ${req.path}`,
+      error: `API route not found (v2.4.3): ${req.method} ${req.path}`,
       method: req.method,
       path: req.path,
       url: req.url 
