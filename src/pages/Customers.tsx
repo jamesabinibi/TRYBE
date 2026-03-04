@@ -72,7 +72,8 @@ export default function Customers() {
         fetchCustomers();
         toast.success('Customer added');
       } else {
-        toast.error('Failed to save customer');
+        const data = await response.json();
+        toast.error(data.error || 'Failed to save customer');
       }
     } catch (err) {
       toast.error('Network error');

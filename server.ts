@@ -137,7 +137,7 @@ async function createServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "2.4.7-stable", time: new Date().toISOString() });
+    res.json({ status: "ok", version: "2.4.8-stable", time: new Date().toISOString() });
   });
 
   // Diagnostics
@@ -151,7 +151,7 @@ async function createServer() {
 
     if (!supabase) {
       return res.json({
-        version: "2.4.7-stable",
+        version: "2.4.8-stable",
         supabase_connected: false,
         supabase_status,
         tables: {},
@@ -182,7 +182,7 @@ async function createServer() {
     }
     
     res.json({
-      version: "2.4.7-stable",
+      version: "2.4.8-stable",
       supabase_connected: true,
       supabase_status,
       tables: results,
@@ -317,9 +317,13 @@ async function createServer() {
     try {
       const { name, phone, email } = req.body;
       const { data, error } = await supabase.from('customers').insert([{ name, phone, email, loyalty_points: 0 }]).select().single();
-      if (error) throw error;
+      if (error) {
+        console.error('[DB] Customer save error:', error);
+        return res.status(400).json({ error: error.message });
+      }
       res.json(data);
     } catch (error: any) {
+      console.error('[SERVER] Customer save error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1298,18 +1302,30 @@ async function createServer() {
   });
 
   app.get("/api/sales", async (req, res) => {
-    const { data, error } = await supabase
-      .from('sales')
-      .select('*, users(name)')
-      .order('created_at', { ascending: false });
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*, users(name)')
+        .order('created_at', { ascending: false });
 
-    if (error) return res.status(500).json({ error: error.message });
-    
-    const salesWithStaff = data.map(s => ({
-      ...s,
-      staff_name: s.users?.name
-    }));
-    res.json(salesWithStaff);
+      if (error) {
+        if (error.code === 'PGRST116' || error.message.includes('relation "sales" does not exist')) {
+          console.warn('[SALES] Table "sales" not found. Returning empty array.');
+          return res.json([]);
+        }
+        throw error;
+      }
+      
+      const salesWithStaff = (data || []).map(s => ({
+        ...s,
+        staff_name: s.users?.name
+      }));
+      res.json(salesWithStaff);
+    } catch (error: any) {
+      console.error('[SALES] Fetch error:', error);
+      res.status(500).json({ error: error.message });
+    }
   });
 
   app.delete("/api/sales", async (req, res) => {

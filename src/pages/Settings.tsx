@@ -286,8 +286,8 @@ export default function Settings() {
       const data = await res.json();
       setDiagResults(data);
       if (res.ok) {
-        if (data.version && data.version !== "2.4.7-stable") {
-          toast.warning(`Version mismatch! Your server is running ${data.version} but needs 2.4.7-stable. Please redeploy to Vercel.`);
+        if (data.version && data.version !== "2.4.8-stable") {
+          toast.warning(`Version mismatch! Your server is running ${data.version} but needs 2.4.8-stable. Please redeploy to Vercel.`);
         } else {
           toast.success('Diagnostics complete');
         }
@@ -407,6 +407,7 @@ CREATE TABLE IF NOT EXISTS customers (
   email TEXT,
   phone TEXT,
   address TEXT,
+  loyalty_points INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
