@@ -137,7 +137,41 @@ async function createServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "2.4.3-stable", time: new Date().toISOString() });
+    res.json({ status: "ok", version: "2.4.4-stable", time: new Date().toISOString() });
+  });
+
+  // Diagnostics
+  app.get("/api/diag", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    
+    const tables = [
+      'users', 'products', 'categories', 'product_variants', 'product_images', 
+      'sales', 'sale_items', 'expenses', 'customers', 'services', 'settings', 'notifications'
+    ];
+    
+    const results: any = {};
+    for (const table of tables) {
+      try {
+        const { error } = await supabase.from(table).select('*', { count: 'exact', head: true }).limit(1);
+        results[table] = {
+          exists: !error || (error.code !== 'PGRST116' && !error.message.includes('relation') && !error.message.includes('does not exist')),
+          error: error ? error.message : null
+        };
+      } catch (e: any) {
+        results[table] = { exists: false, error: e.message };
+      }
+    }
+    
+    res.json({
+      version: "2.4.4-stable",
+      supabase_connected: !!supabase,
+      tables: results,
+      env: {
+        cloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,
+        gemini: !!process.env.GEMINI_API_KEY,
+        smtp: !!process.env.SMTP_USER
+      }
+    });
   });
 
   // --- NEW FEATURES: EXPENSES, CUSTOMERS, SERVICES, AI (MOVED TO TOP OF API) ---
@@ -270,11 +304,22 @@ async function createServer() {
   app.post("/api/ai/process-transaction", async (req, res) => {
     console.log('[API] POST /api/ai/process-transaction called');
     if (!supabase) return res.status(503).json({ error: "Database not available" });
+    
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error('[AI] GEMINI_API_KEY is missing');
+      return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing. Please add it to your environment variables." });
+    }
+
     try {
       const { image } = req.body; // base64 image
       if (!image) return res.status(400).json({ error: "Image is required" });
 
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const ai = new GoogleGenAI({ apiKey });
+      
+      // Clean up base64 string if it contains prefix
+      const base64Data = image.includes(',') ? image.split(',')[1] : image;
+      
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: {
@@ -285,7 +330,7 @@ async function createServer() {
             - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
             - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
             Return as JSON.` },
-            { inlineData: { mimeType: "image/png", data: image.split(',')[1] || image } }
+            { inlineData: { mimeType: "image/png", data: base64Data } }
           ]
         },
         config: {
@@ -302,10 +347,14 @@ async function createServer() {
         }
       });
 
-      res.json(JSON.parse(response.text || '{}'));
+      const text = response.text;
+      if (!text) throw new Error("AI returned empty response");
+      
+      console.log('[AI] Processed transaction:', text);
+      res.json(JSON.parse(text));
     } catch (error: any) {
       console.error('[AI] Transaction processing error:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message || "Failed to process image with AI" });
     }
   });
 
@@ -682,7 +731,13 @@ async function createServer() {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('relation "products" does not exist')) {
+          console.warn('[PRODUCTS] Table "products" missing, returning empty array');
+          return res.json([]);
+        }
+        throw error;
+      }
 
       // Fetch only the first image for each product to keep payload small
       const processedProducts = await Promise.all((products || []).map(async (p: any) => {
