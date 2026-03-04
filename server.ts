@@ -137,7 +137,7 @@ async function createServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "2.4.8-stable", time: new Date().toISOString() });
+    res.json({ status: "ok", version: "2.4.9-stable", time: new Date().toISOString() });
   });
 
   // Diagnostics
@@ -151,7 +151,7 @@ async function createServer() {
 
     if (!supabase) {
       return res.json({
-        version: "2.4.8-stable",
+        version: "2.4.9-stable",
         supabase_connected: false,
         supabase_status,
         tables: {},
@@ -182,7 +182,7 @@ async function createServer() {
     }
     
     res.json({
-      version: "2.4.8-stable",
+      version: "2.4.9-stable",
       supabase_connected: true,
       supabase_status,
       tables: results,
@@ -1487,32 +1487,36 @@ async function createServer() {
   // Analytics
   app.get("/api/analytics/summary", async (req, res) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      // Use a slightly wider range for "today" to account for timezone differences
+      // or just stick to UTC if that's what the client uses.
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
       
       const { count: totalProducts } = await supabase.from('products').select('*', { count: 'exact', head: true });
       const { count: totalSalesCount } = await supabase.from('sales').select('*', { count: 'exact', head: true });
       
       const { data: variants } = await supabase.from('product_variants').select('quantity, low_stock_threshold');
       const totalStock = variants?.reduce((acc, v) => acc + (v.quantity || 0), 0) || 0;
-      const lowStockCount = variants?.filter(v => v.quantity <= v.low_stock_threshold).length || 0;
+      const lowStockCount = variants?.filter(v => v.quantity <= (v.low_stock_threshold || 0)).length || 0;
 
       const { data: todaySalesData } = await supabase
         .from('sales')
         .select('total_amount, total_profit')
         .gte('created_at', today);
 
-      const todaySales = todaySalesData?.reduce((acc, s) => acc + (s.total_amount || 0), 0) || 0;
-      const todayProfit = todaySalesData?.reduce((acc, s) => acc + (s.total_profit || 0), 0) || 0;
+      const todaySales = todaySalesData?.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0) || 0;
+      const todayProfit = todaySalesData?.reduce((acc, s) => acc + (Number(s.total_profit) || 0), 0) || 0;
 
       const { data: todayExpensesData } = await supabase
         .from('expenses')
         .select('amount')
         .gte('date', today);
-      const todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (e.amount || 0), 0) || 0;
+      const todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (Number(e.amount) || 0), 0) || 0;
 
       res.json({
-        total_products: totalProducts,
-        total_sales_count: totalSalesCount,
+        version: "2.4.9-stable",
+        total_products: totalProducts || 0,
+        total_sales_count: totalSalesCount || 0,
         total_stock: totalStock,
         low_stock_count: lowStockCount,
         today_sales: todaySales,
@@ -1520,6 +1524,7 @@ async function createServer() {
         today_expenses: todayExpenses
       });
     } catch (error: any) {
+      console.error('[ANALYTICS] Summary error:', error);
       res.status(500).json({ error: error.message });
     }
   });

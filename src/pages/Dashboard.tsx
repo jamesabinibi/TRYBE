@@ -220,6 +220,15 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        {summary?.version && summary.version !== "2.4.9-stable" && (
+          <div className="col-span-full bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-3 text-red-500">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <p className="text-xs font-bold">
+              CRITICAL: Your server is running an outdated version ({summary.version}). 
+              Recorded sales and expenses will NOT reflect correctly until you redeploy to Vercel.
+            </p>
+          </div>
+        )}
         <StatCard 
           title="Money In today" 
           value={formatCurrency(summary.today_sales || 0)} 

@@ -286,8 +286,8 @@ export default function Settings() {
       const data = await res.json();
       setDiagResults(data);
       if (res.ok) {
-        if (data.version && data.version !== "2.4.8-stable") {
-          toast.warning(`Version mismatch! Your server is running ${data.version} but needs 2.4.8-stable. Please redeploy to Vercel.`);
+        if (data.version && data.version !== "2.4.9-stable") {
+          toast.error(`CRITICAL: Version mismatch! Your server is running ${data.version} but needs 2.4.9-stable. recorded sales and expenses will NOT work correctly until you redeploy to Vercel.`, { duration: 10000 });
         } else {
           toast.success('Diagnostics complete');
         }
