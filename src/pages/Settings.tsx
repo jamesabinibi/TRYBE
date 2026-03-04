@@ -286,7 +286,11 @@ export default function Settings() {
       const data = await res.json();
       setDiagResults(data);
       if (res.ok) {
-        toast.success('Diagnostics complete');
+        if (data.version && data.version !== "2.4.7-stable") {
+          toast.warning(`Version mismatch! Your server is running ${data.version} but needs 2.4.7-stable. Please redeploy to Vercel.`);
+        } else {
+          toast.success('Diagnostics complete');
+        }
       } else {
         toast.error('Diagnostics failed to run');
       }
