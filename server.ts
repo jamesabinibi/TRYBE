@@ -137,7 +137,7 @@ async function createServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "2.4.6-stable", time: new Date().toISOString() });
+    res.json({ status: "ok", version: "2.4.7-stable", time: new Date().toISOString() });
   });
 
   // Diagnostics
@@ -151,7 +151,7 @@ async function createServer() {
 
     if (!supabase) {
       return res.json({
-        version: "2.4.6-stable",
+        version: "2.4.7-stable",
         supabase_connected: false,
         supabase_status,
         tables: {},
@@ -182,7 +182,7 @@ async function createServer() {
     }
     
     res.json({
-      version: "2.4.6-stable",
+      version: "2.4.7-stable",
       supabase_connected: true,
       supabase_status,
       tables: results,
