@@ -962,9 +962,14 @@ CREATE TABLE IF NOT EXISTS notifications (
                 "w-3 h-3 rounded-full",
                 diagResults?.supabase_connected ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-red-500"
               )} />
-              <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                {diagResults?.supabase_connected ? 'Supabase Connected' : 'Supabase Disconnected'}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                  {diagResults?.supabase_connected ? 'Supabase Connected' : 'Supabase Disconnected'}
+                </span>
+                {diagResults?.supabase_status?.error && (
+                  <span className="text-[10px] text-red-500 font-black uppercase tracking-widest">{diagResults.supabase_status.error}</span>
+                )}
+              </div>
             </div>
             <button 
               onClick={runDiagnostics}
@@ -976,7 +981,7 @@ CREATE TABLE IF NOT EXISTS notifications (
             </button>
           </div>
 
-          {diagResults && (
+          {diagResults?.tables && Object.keys(diagResults.tables).length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {Object.entries(diagResults.tables).map(([name, status]: [string, any]) => (
                 <div key={name} className={cn(

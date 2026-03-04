@@ -87,13 +87,18 @@ export default function Expenses() {
           body: JSON.stringify({ image: base64 })
         });
         
+        const data = await response.json();
+        
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('AI Screenshot: API Error', errorText);
-          throw new Error('API Error');
+          console.error('AI Screenshot: API Error', data);
+          if (data.error?.includes('API key not valid')) {
+            toast.error('Invalid Gemini API Key. Please check your settings.');
+          } else {
+            toast.error(data.error || 'AI failed to process image');
+          }
+          return;
         }
 
-        const data = await response.json();
         console.log('AI Screenshot: API Success', data);
         
         if (data.amount) {

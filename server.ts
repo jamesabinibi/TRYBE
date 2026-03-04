@@ -137,12 +137,31 @@ async function createServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "2.4.4-stable", time: new Date().toISOString() });
+    res.json({ status: "ok", version: "2.4.5-stable", time: new Date().toISOString() });
   });
 
   // Diagnostics
   app.get("/api/diag", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const supabase_status = {
+      connected: !!supabase,
+      url_configured: !!supabaseUrl,
+      key_configured: !!supabaseAnonKey,
+      error: !supabaseUrl ? "Missing SUPABASE_URL" : (!supabaseAnonKey ? "Missing SUPABASE_ANON_KEY" : null)
+    };
+
+    if (!supabase) {
+      return res.json({
+        version: "2.4.5-stable",
+        supabase_connected: false,
+        supabase_status,
+        tables: {},
+        env: {
+          cloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,
+          gemini: !!process.env.GEMINI_API_KEY,
+          smtp: !!process.env.SMTP_USER
+        }
+      });
+    }
     
     const tables = [
       'users', 'products', 'categories', 'product_variants', 'product_images', 
@@ -163,8 +182,9 @@ async function createServer() {
     }
     
     res.json({
-      version: "2.4.4-stable",
-      supabase_connected: !!supabase,
+      version: "2.4.5-stable",
+      supabase_connected: true,
+      supabase_status,
       tables: results,
       env: {
         cloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,

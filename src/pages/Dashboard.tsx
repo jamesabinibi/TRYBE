@@ -137,8 +137,12 @@ export default function Dashboard() {
     try {
       const res = await fetch('/api/ai/forecast', { method: 'POST' });
       const data = await res.json();
-      if (data.error) {
-        toast.error(data.error);
+      if (!res.ok) {
+        if (data.error?.includes('API key not valid')) {
+          toast.error('Invalid Gemini API Key. Please check your settings.');
+        } else {
+          toast.error(data.error || 'Failed to generate forecast');
+        }
         return;
       }
       setForecast(data);
