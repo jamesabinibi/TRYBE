@@ -137,7 +137,7 @@ async function createServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "2.4.2-stable", time: new Date().toISOString() });
+    res.json({ status: "ok", version: "2.4.3-stable", time: new Date().toISOString() });
   });
 
   // --- NEW FEATURES: EXPENSES, CUSTOMERS, SERVICES, AI (MOVED TO TOP OF API) ---
@@ -309,6 +309,60 @@ async function createServer() {
     }
   });
 
+  app.post("/api/ai/forecast", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      // Fetch data for AI context
+      const { data: sales } = await supabase.from('sales').select('*, sale_items(*)').order('created_at', { ascending: false }).limit(50);
+      const { data: products } = await supabase.from('products').select('*, product_variants(*)');
+      const { data: expenses } = await supabase.from('expenses').select('*').order('date', { ascending: false }).limit(20);
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: {
+          parts: [
+            { text: `Analyze this business data and provide a strategic forecast.
+            Sales Data: ${JSON.stringify(sales)}
+            Inventory Data: ${JSON.stringify(products)}
+            Expenses Data: ${JSON.stringify(expenses)}
+            
+            Return a JSON object with:
+            - strategic_advice: A paragraph of actionable advice.
+            - forecasted_revenue: A number representing expected revenue for next month.
+            - restock_suggestions: Array of { product_name: string, suggested_quantity: number } for items running low or selling fast.
+            ` }
+          ]
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              strategic_advice: { type: Type.STRING },
+              forecasted_revenue: { type: Type.NUMBER },
+              restock_suggestions: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    product_name: { type: Type.STRING },
+                    suggested_quantity: { type: Type.NUMBER }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      res.json(JSON.parse(response.text || '{}'));
+    } catch (error: any) {
+      console.error('[AI] Forecast error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/diag", async (req, res) => {
     let dbStatus = "Not tested";
     let settingsSchema = null;
@@ -340,7 +394,7 @@ async function createServer() {
   });
 
   app.get("/api/test", (req, res) => {
-    res.json({ message: "API is working", version: "2.4.2", env: process.env.NODE_ENV });
+    res.json({ message: "API is working", version: "2.4.3", env: process.env.NODE_ENV });
   });
 
   // Categories (Moved to top)

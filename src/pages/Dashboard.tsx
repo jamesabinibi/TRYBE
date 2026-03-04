@@ -31,6 +31,7 @@ import {
 import { formatCurrency } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any) => (
   <motion.div 
@@ -136,9 +137,15 @@ export default function Dashboard() {
     try {
       const res = await fetch('/api/ai/forecast', { method: 'POST' });
       const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
       setForecast(data);
+      toast.success('Business intelligence forecast generated');
     } catch (err) {
       console.error('Forecast failed');
+      toast.error('Failed to generate forecast. Please try again.');
     } finally {
       setIsForecasting(false);
     }
@@ -262,14 +269,18 @@ export default function Dashboard() {
                 <div className="bg-white/5 rounded-3xl p-6 border border-white/10">
                   <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4">Restock Suggestions</h4>
                   <div className="space-y-3">
-                    {forecast.restock_suggestions.map((item: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-zinc-300">{item.product_name}</span>
-                        <span className="px-3 py-1 bg-amber-400/10 text-amber-400 rounded-full text-[10px] font-black uppercase">
-                          Buy {item.suggested_quantity}
-                        </span>
-                      </div>
-                    ))}
+                    {forecast.restock_suggestions && forecast.restock_suggestions.length > 0 ? (
+                      forecast.restock_suggestions.map((item: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-zinc-300">{item.product_name}</span>
+                          <span className="px-3 py-1 bg-amber-400/10 text-amber-400 rounded-full text-[10px] font-black uppercase">
+                            Buy {item.suggested_quantity}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-zinc-500">No restock suggestions at this time.</p>
+                    )}
                   </div>
                 </div>
               </div>
