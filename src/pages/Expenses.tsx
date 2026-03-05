@@ -30,6 +30,8 @@ export default function Expenses() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('All');
+  const [filterDuration, setFilterDuration] = useState('All Time');
   
   const [newExpense, setNewExpense] = useState({
     category: 'General',
@@ -196,12 +198,32 @@ export default function Expenses() {
     }
   };
 
-  const filteredExpenses = expenses.filter(e => 
-    e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    e.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredExpenses = expenses.filter(e => {
+    const matchesSearch = 
+      e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.category.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = filterCategory === 'All' || e.category === filterCategory;
+    
+    let matchesDuration = true;
+    if (filterDuration !== 'All Time') {
+      const expenseDate = new Date(e.date);
+      const now = new Date();
+      if (filterDuration === 'Today') {
+        matchesDuration = expenseDate.toDateString() === now.toDateString();
+      } else if (filterDuration === 'This Week') {
+        const weekAgo = new Date();
+        weekAgo.setDate(now.getDate() - 7);
+        matchesDuration = expenseDate >= weekAgo;
+      } else if (filterDuration === 'This Month') {
+        matchesDuration = expenseDate.getMonth() === now.getMonth() && expenseDate.getFullYear() === now.getFullYear();
+      }
+    }
+    
+    return matchesSearch && matchesCategory && matchesDuration;
+  });
 
-  const totalExpenses = expenses.reduce((acc, e) => acc + e.amount, 0);
+  const totalExpenses = filteredExpenses.reduce((acc, e) => acc + Number(e.amount), 0);
 
   return (
     <div className="space-y-8 pb-20">
@@ -244,6 +266,26 @@ export default function Expenses() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-transparent rounded-2xl text-sm font-medium focus:bg-white dark:focus:bg-zinc-800 transition-all outline-none border border-zinc-200 dark:border-zinc-700 focus:border-brand"
             />
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-medium focus:border-brand outline-none transition-all"
+            >
+              <option value="All">All Categories</option>
+              {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+            <select
+              value={filterDuration}
+              onChange={(e) => setFilterDuration(e.target.value)}
+              className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-medium focus:border-brand outline-none transition-all"
+            >
+              <option value="All Time">All Time</option>
+              <option value="Today">Today</option>
+              <option value="This Week">This Week</option>
+              <option value="This Month">This Month</option>
+            </select>
           </div>
         </div>
 

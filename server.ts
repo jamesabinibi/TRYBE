@@ -255,13 +255,15 @@ async function createServer() {
   app.get("/api/expenses", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
-      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
-      if (error) {
-        if (error.code === 'PGRST116' || error.message.includes('relation "expenses" does not exist')) {
-          return res.json([]);
-        }
-        throw error;
-      }
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.json([]);
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('account_id', userInfo.account_id)
+        .order('date', { ascending: false });
+      if (error) throw error;
       res.json(data || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -271,15 +273,21 @@ async function createServer() {
   app.post("/api/expenses", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+
       const { category, amount, description, date } = req.body;
-      const { data, error } = await supabase.from('expenses').insert([{ category, amount, description, date: date || new Date().toISOString() }]).select().single();
-      if (error) {
-        console.error('[DB] Expense save error:', error);
-        return res.status(400).json({ error: error.message });
-      }
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert([{ 
+          account_id: userInfo.account_id,
+          category, amount, description, date: date || new Date().toISOString() 
+        }])
+        .select()
+        .single();
+      if (error) throw error;
       res.json(data);
     } catch (error: any) {
-      console.error('[SERVER] Expense save error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -299,13 +307,15 @@ async function createServer() {
   app.get("/api/customers", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
-      const { data, error } = await supabase.from('customers').select('*').order('name', { ascending: true });
-      if (error) {
-        if (error.code === 'PGRST116' || error.message.includes('relation "customers" does not exist')) {
-          return res.json([]);
-        }
-        throw error;
-      }
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.json([]);
+
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('account_id', userInfo.account_id)
+        .order('name', { ascending: true });
+      if (error) throw error;
       res.json(data || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -315,15 +325,26 @@ async function createServer() {
   app.post("/api/customers", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
       const { name, phone, email } = req.body;
-      const { data, error } = await supabase.from('customers').insert([{ name, phone, email, loyalty_points: 0 }]).select().single();
-      if (error) {
-        console.error('[DB] Customer save error:', error);
-        return res.status(400).json({ error: error.message });
+      const customerData: any = { 
+        account_id: userInfo.account_id,
+        name, phone, email
+      };
+      
+      // Try with loyalty_points first, fallback if it fails
+      let result = await supabase.from('customers').insert([customerData]).select().single();
+      
+      if (result.error && result.error.message.includes('loyalty_points')) {
+        console.warn('[CUSTOMERS] loyalty_points column missing, retrying without it');
+        result = await supabase.from('customers').insert([{ account_id: userInfo.account_id, name, phone, email }]).select().single();
       }
-      res.json(data);
+
+      if (result.error) throw result.error;
+      res.json(result.data);
     } catch (error: any) {
-      console.error('[SERVER] Customer save error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -484,7 +505,14 @@ async function createServer() {
   app.get("/api/categories", async (req, res) => {
     if (!supabase) return res.json([]);
     try {
-      const { data, error } = await supabase.from('categories').select('*').order('name');
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.json([]);
+
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('account_id', userInfo.account_id)
+        .order('name');
       if (error) throw error;
       res.json(data);
     } catch (error: any) {
@@ -496,7 +524,14 @@ async function createServer() {
     const { name } = req.body;
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
-      const { data, error } = await supabase.from('categories').insert([{ name }]).select().single();
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{ account_id: userInfo.account_id, name }])
+        .select()
+        .single();
       if (error) throw error;
       res.json(data);
     } catch (e: any) {
@@ -555,7 +590,7 @@ async function createServer() {
       // Support login via username or email
       const { data: user, error: supabaseError } = await supabase
         .from('users')
-        .select('id, username, email, role, name, password')
+        .select('id, username, email, role, name, password, account_id')
         .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
         .maybeSingle();
 
@@ -613,13 +648,24 @@ async function createServer() {
         return res.status(400).json({ error: "Username or email already exists" });
       }
 
+      // 1. Create Account first
+      const { data: account, error: accountError } = await supabase
+        .from('accounts')
+        .insert([{ name: `${name || trimmedUsername}'s Business` }])
+        .select()
+        .single();
+
+      if (accountError) throw accountError;
+
+      // 2. Create User linked to Account
       const { data: newUser, error } = await supabase
         .from('users')
         .insert([{ 
+          account_id: account.id,
           username: trimmedUsername, 
           email: trimmedEmail, 
           password, 
-          role, 
+          role: role === 'super_admin' ? 'super_admin' : 'admin', // First user is admin
           name: name?.trim() 
         }])
         .select()
@@ -627,8 +673,19 @@ async function createServer() {
 
       if (error) throw error;
 
+      // 3. Update Account with owner_id
+      await supabase.from('accounts').update({ owner_id: newUser.id }).eq('id', account.id);
+
+      // 4. Create default settings for this account
+      await supabase.from('settings').insert([{
+        account_id: account.id,
+        business_name: name ? `${name}'s Business` : 'StockFlow Pro',
+        currency: 'NGN',
+        brand_color: '#10b981'
+      }]);
+
       const userId = newUser.id;
-      console.log(`[AUTH] Register success: "${trimmedUsername}" (ID: ${userId}).`);
+      console.log(`[AUTH] Register success: "${trimmedUsername}" (ID: ${userId}, Account: ${account.id}).`);
 
       // Send confirmation email
       sendEmail(
@@ -754,53 +811,32 @@ async function createServer() {
   app.get("/api/products", async (req, res) => {
     if (!supabase) return res.json([]);
     try {
-      // Optimize: Only fetch necessary fields and limit images to avoid huge payloads
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.json([]);
+
       const { data: products, error } = await supabase
         .from('products')
         .select(`
           id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, created_at,
           categories(name),
           product_variants(*),
-          product_images(id)
+          product_images(image_data)
         `)
+        .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        if (error.message?.includes('relation "products" does not exist')) {
-          console.warn('[PRODUCTS] Table "products" missing, returning empty array');
-          return res.json([]);
-        }
-        throw error;
-      }
+      if (error) throw error;
 
-      // Fetch only the first image for each product to keep payload small
-      const processedProducts = await Promise.all((products || []).map(async (p: any) => {
-        let firstImage = null;
-        try {
-          if (p.product_images && p.product_images.length > 0) {
-            const { data: imgData } = await supabase
-              .from('product_images')
-              .select('image_data')
-              .eq('id', p.product_images[0].id)
-              .single();
-            firstImage = imgData?.image_data;
-          }
-        } catch (e) {
-          console.error(`[PRODUCTS] Image fetch failed for product ${p.id}:`, e);
-        }
-
-        return {
-          ...p,
-          category_name: p.categories?.name,
-          variants: p.product_variants,
-          total_stock: p.product_variants?.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0) || 0,
-          images: firstImage ? [firstImage] : []
-        };
+      const processedProducts = (products || []).map((p: any) => ({
+        ...p,
+        category_name: p.categories?.name,
+        variants: p.product_variants,
+        total_stock: p.product_variants?.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0) || 0,
+        images: p.product_images?.map((img: any) => img.image_data) || []
       }));
 
       res.json(processedProducts);
     } catch (error: any) {
-      console.error('[PRODUCTS] Fetch error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -808,53 +844,26 @@ async function createServer() {
   app.post("/api/products", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+
       const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
       
-      let product;
-      let productError;
-
-      try {
-        const result = await supabase
-          .from('products')
-          .insert([{ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type }])
-          .select()
-          .single();
-        product = result.data;
-        productError = result.error;
-      } catch (err: any) {
-        if (err.message?.includes('column') || err.message?.includes('pieces_per_unit') || err.message?.includes('unit')) {
-          console.log("[SERVER] Products schema missing new columns, falling back to core fields");
-          const result = await supabase
-            .from('products')
-            .insert([{ name, category_id, description, cost_price, selling_price, supplier_name }])
-            .select()
-            .single();
-          product = result.data;
-          productError = result.error;
-        } else {
-          throw err;
-        }
-      }
-
-      if (productError) {
-        if (productError.message?.includes('column') || productError.message?.includes('pieces_per_unit') || productError.message?.includes('unit')) {
-          console.log("[SERVER] Products schema missing new columns (via error), falling back to core fields");
-          const result = await supabase
-            .from('products')
-            .insert([{ name, category_id, description, cost_price, selling_price, supplier_name }])
-            .select()
-            .single();
-          product = result.data;
-          productError = result.error;
-        }
-      }
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .insert([{ 
+          account_id: userInfo.account_id,
+          name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type 
+        }])
+        .select()
+        .single();
 
       if (productError) throw productError;
-
       const productId = product.id;
 
       if (variants && Array.isArray(variants)) {
         const variantsToInsert = variants.map(v => ({
+          account_id: userInfo.account_id,
           product_id: productId,
           size: v.size,
           color: v.color,
@@ -868,14 +877,13 @@ async function createServer() {
       if (images && Array.isArray(images) && images.length > 0) {
         const imagesToInsert = await Promise.all(images.map(async (img) => {
           const finalUrl = await uploadToCloudinary(img);
-          return { product_id: productId, image_data: finalUrl };
+          return { account_id: userInfo.account_id, product_id: productId, image_data: finalUrl };
         }));
         await supabase.from('product_images').insert(imagesToInsert);
       }
 
       res.json({ id: productId });
     } catch (error: any) {
-      console.error("[SERVER] Product save error:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1031,32 +1039,29 @@ async function createServer() {
     }
   });
 
+  // Helper to get account_id from headers or user_id
+  const getAccountId = async (req: any) => {
+    const userId = req.headers['x-user-id'];
+    if (!userId) return null;
+    
+    try {
+      const { data: user } = await supabase.from('users').select('account_id, role').eq('id', userId).single();
+      return user;
+    } catch (e) {
+      return null;
+    }
+  };
+
   app.get("/api/settings", async (req, res) => {
     if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
     try {
-      const { data, error } = await supabase.from('settings').select('*');
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
+
+      const { data, error } = await supabase.from('settings').select('*').eq('account_id', userInfo.account_id);
       if (error) throw error;
       
-      // Find main settings (not a logo record)
-      let mainSettings = data.find(s => !s.business_name.startsWith('__LOGO__')) || data[0];
-      // Find logo record
-      const logoRecord = data.find(s => s.business_name.startsWith('__LOGO__'));
-      
-      let settings = mainSettings || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' };
-      
-      // 1. Decode branding from business_name
-      if (settings.business_name && settings.business_name.startsWith('[')) {
-        const match = settings.business_name.match(/^\[(#?[a-fA-F0-9]{3,6})\]\s*(.*)/);
-        if (match) {
-          settings.brand_color = match[1];
-          settings.business_name = match[2];
-        }
-      }
-      
-      // 2. Get logo from logo record if available
-      if (logoRecord) {
-        settings.logo_url = logoRecord.business_name.replace('__LOGO__', '');
-      }
+      let settings = data[0] || { account_id: userInfo.account_id, business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' };
       
       res.json(settings);
     } catch (error) {
@@ -1067,76 +1072,25 @@ async function createServer() {
   app.post(["/api/settings", "/api/settings/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color } = req.body;
-    console.log(`[SETTINGS] Update request:`, JSON.stringify(req.body));
     try {
-      const { data: existing, error: fetchError } = await supabase.from('settings').select('id').limit(1).maybeSingle();
-      
-      if (fetchError) {
-        console.error(`[SETTINGS] Fetch error:`, fetchError);
-        throw fetchError;
+      const userInfo = await getAccountId(req);
+      if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'owner' && userInfo.role !== 'super_admin')) {
+        return res.status(403).json({ error: "Forbidden" });
       }
 
+      const { data: existing } = await supabase.from('settings').select('id').eq('account_id', userInfo.account_id).maybeSingle();
+      
       let result;
-      try {
-        if (existing) {
-          console.log(`[SETTINGS] Updating existing record ID: ${existing.id}`);
-          result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }).eq('id', existing.id).select().single();
-        } else {
-          console.log(`[SETTINGS] Inserting new record`);
-          result = await supabase.from('settings').insert([{ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }]).select().single();
-        }
-        
-        if (result.error) throw result.error;
-      } catch (err: any) {
-        const errMsg = err.message || (typeof err === 'string' ? err : '');
-        console.log(`[SETTINGS] Primary update failed, checking for schema issues: ${errMsg}`);
-        
-        if (errMsg.includes('column') || errMsg.includes('brand_color') || errMsg.includes('logo_url') || err.code === 'PGRST204') {
-          console.log(`[SETTINGS] Schema missing columns, using multi-record fallback`);
-          
-          // 1. Encode color in business_name
-          const encodedName = `[${brand_color}] ${business_name}`;
-
-          if (existing) {
-            result = await supabase.from('settings').update({ business_name: encodedName, currency, vat_enabled, low_stock_threshold }).eq('id', existing.id).select().single();
-          } else {
-            result = await supabase.from('settings').insert([{ business_name: encodedName, currency, vat_enabled, low_stock_threshold }]).select().single();
-          }
-          if (result.error) throw result.error;
-          
-          // 2. Store logo in a separate settings record
-          if (logo_url) {
-            try {
-              // Check if logo record exists
-              const { data: logoRecords } = await supabase.from('settings').select('id').like('business_name', '__LOGO__%');
-              const logoId = logoRecords?.[0]?.id;
-              
-              if (logoId) {
-                await supabase.from('settings').update({ business_name: `__LOGO__${logo_url}` }).eq('id', logoId);
-              } else {
-                await supabase.from('settings').insert([{ business_name: `__LOGO__${logo_url}`, currency: 'SYSTEM', vat_enabled: false, low_stock_threshold: 0 }]);
-              }
-            } catch (logoErr) {
-              console.error('[SETTINGS] Failed to save logo to fallback storage:', logoErr);
-            }
-          }
-          
-          // Return the data with the requested fields decoded
-          result.data = { 
-            ...result.data, 
-            business_name: business_name,
-            logo_url: logo_url, 
-            brand_color: brand_color 
-          };
-        } else {
-          throw err;
-        }
+      if (existing) {
+        result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }).eq('id', existing.id).select().single();
+      } else {
+        result = await supabase.from('settings').insert([{ account_id: userInfo.account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }]).select().single();
       }
       
+      if (result.error) throw result.error;
       res.json(result.data);
-    } catch (error: any) {
-      console.error(`[SETTINGS] Exception:`, error);
-      res.status(500).json({ error: error.message || "Internal server error" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 
@@ -1190,38 +1144,37 @@ async function createServer() {
   // Sales
   app.post("/api/sales", async (req, res) => {
     const { items, payment_method, staff_id, customer_id, customer_name, customer_phone } = req.body;
-    console.log(`[SALES] New sale request:`, JSON.stringify({ itemsCount: items?.length, payment_method, staff_id, customer_id }));
     
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "No items in sale" });
     }
 
-    const invoice_number = "INV-" + Date.now();
-    let total_amount = 0;
-    let total_profit = 0;
-    
     try {
-      // Ensure staff_id is a valid number or null
-      const validStaffId = (staff_id && !isNaN(Number(staff_id))) ? Number(staff_id) : null;
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      const invoice_number = "INV-" + Date.now();
+      let total_amount = 0;
+      let total_profit = 0;
       
+      const validStaffId = (staff_id && !isNaN(Number(staff_id))) ? Number(staff_id) : null;
       let finalCustomerId = customer_id;
 
       // Automatic Customer Creation
       if (!finalCustomerId && customer_name && customer_phone) {
-        // Check if customer already exists by phone
         const { data: existingCustomer } = await supabase
           .from('customers')
           .select('id')
+          .eq('account_id', userInfo.account_id)
           .eq('phone', customer_phone)
-          .single();
+          .maybeSingle();
         
         if (existingCustomer) {
           finalCustomerId = existingCustomer.id;
         } else {
-          // Create new customer
           const { data: newCustomer, error: cError } = await supabase
             .from('customers')
-            .insert([{ name: customer_name, phone: customer_phone, loyalty_points: 0 }])
+            .insert([{ account_id: userInfo.account_id, name: customer_name, phone: customer_phone, loyalty_points: 0 }])
             .select()
             .single();
           
@@ -1235,6 +1188,7 @@ async function createServer() {
       const { data: sale, error: saleError } = await supabase
         .from('sales')
         .insert([{ 
+          account_id: userInfo.account_id,
           invoice_number, 
           total_amount: 0, 
           total_profit: 0, 
@@ -1245,14 +1199,10 @@ async function createServer() {
         .select()
         .single();
 
-      if (saleError) {
-        console.error(`[SALES] Sale creation error:`, saleError);
-        throw new Error(saleError.message);
-      }
+      if (saleError) throw saleError;
       const saleId = sale.id;
 
       for (const item of items) {
-        // Get variant and product info
         const { data: variant, error: vError } = await supabase
           .from('product_variants')
           .select('*, products(*)')
@@ -1269,26 +1219,25 @@ async function createServer() {
         total_amount += sellingPrice * item.quantity;
         total_profit += profit;
         
-        // Update stock
         await supabase
           .from('product_variants')
           .update({ quantity: variant.quantity - item.quantity })
           .eq('id', item.variant_id);
 
-        // Record sale item
         await supabase
           .from('sale_items')
           .insert([{
+            account_id: userInfo.account_id,
             sale_id: saleId,
             variant_id: item.variant_id,
             quantity: item.quantity,
-            selling_price: sellingPrice,
+            unit_price: sellingPrice,
             cost_price: costPrice,
+            total_price: sellingPrice * item.quantity,
             profit: profit
           }]);
       }
       
-      // Update final sale totals
       await supabase
         .from('sales')
         .update({ total_amount, total_profit })
@@ -1304,18 +1253,16 @@ async function createServer() {
   app.get("/api/sales", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.json([]);
+
       const { data, error } = await supabase
         .from('sales')
         .select('*, users(name)')
+        .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        if (error.code === 'PGRST116' || error.message.includes('relation "sales" does not exist')) {
-          console.warn('[SALES] Table "sales" not found. Returning empty array.');
-          return res.json([]);
-        }
-        throw error;
-      }
+      if (error) throw error;
       
       const salesWithStaff = (data || []).map(s => ({
         ...s,
@@ -1323,7 +1270,6 @@ async function createServer() {
       }));
       res.json(salesWithStaff);
     } catch (error: any) {
-      console.error('[SALES] Fetch error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1385,7 +1331,45 @@ async function createServer() {
     }
   });
 
-  // Notifications
+  // Super Admin Routes
+  app.get("/api/admin/stats", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'super_admin') return res.status(403).json({ error: "Forbidden" });
+
+      const { count: accountsCount } = await supabase.from('accounts').select('*', { count: 'exact', head: true });
+      const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      const { count: salesCount } = await supabase.from('sales').select('*', { count: 'exact', head: true });
+      const { count: productsCount } = await supabase.from('products').select('*', { count: 'exact', head: true });
+
+      res.json({
+        accounts: accountsCount,
+        users: usersCount,
+        sales: salesCount,
+        products: productsCount
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/accounts", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'super_admin') return res.status(403).json({ error: "Forbidden" });
+
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('*, users!owner_id(name, email)')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const checkLowStock = async (userId: string) => {
     if (!supabase) return;
     
@@ -1487,21 +1471,23 @@ async function createServer() {
   // Analytics
   app.get("/api/analytics/summary", async (req, res) => {
     try {
-      // Use a slightly wider range for "today" to account for timezone differences
-      // or just stick to UTC if that's what the client uses.
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
       const now = new Date();
       const today = now.toISOString().split('T')[0];
       
-      const { count: totalProducts } = await supabase.from('products').select('*', { count: 'exact', head: true });
-      const { count: totalSalesCount } = await supabase.from('sales').select('*', { count: 'exact', head: true });
+      const { count: totalProducts } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('account_id', userInfo.account_id);
+      const { count: totalSalesCount } = await supabase.from('sales').select('*', { count: 'exact', head: true }).eq('account_id', userInfo.account_id);
       
-      const { data: variants } = await supabase.from('product_variants').select('quantity, low_stock_threshold');
+      const { data: variants } = await supabase.from('product_variants').select('quantity, low_stock_threshold').eq('account_id', userInfo.account_id);
       const totalStock = variants?.reduce((acc, v) => acc + (v.quantity || 0), 0) || 0;
       const lowStockCount = variants?.filter(v => v.quantity <= (v.low_stock_threshold || 0)).length || 0;
 
       const { data: todaySalesData } = await supabase
         .from('sales')
         .select('total_amount, total_profit')
+        .eq('account_id', userInfo.account_id)
         .gte('created_at', today);
 
       const todaySales = todaySalesData?.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0) || 0;
@@ -1510,6 +1496,7 @@ async function createServer() {
       const { data: todayExpensesData } = await supabase
         .from('expenses')
         .select('amount')
+        .eq('account_id', userInfo.account_id)
         .gte('date', today);
       const todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (Number(e.amount) || 0), 0) || 0;
 
@@ -1524,16 +1511,19 @@ async function createServer() {
         today_expenses: todayExpenses
       });
     } catch (error: any) {
-      console.error('[ANALYTICS] Summary error:', error);
       res.status(500).json({ error: error.message });
     }
   });
 
   app.get("/api/analytics/trends", async (req, res) => {
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
       const { data, error } = await supabase
         .from('sales')
         .select('created_at, total_amount, total_profit')
+        .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -1563,10 +1553,14 @@ async function createServer() {
   app.get("/api/analytics/top-sales", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
       const { data, error } = await supabase
         .from('sale_items')
-        .select('quantity, selling_price, product_variants(products(name))')
-        .limit(50);
+        .select('quantity, unit_price, product_variants(products(name))')
+        .eq('account_id', userInfo.account_id)
+        .limit(100);
       
       if (error) throw error;
       
@@ -1594,9 +1588,13 @@ async function createServer() {
   app.get("/api/analytics/top-expenses", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
       const { data, error } = await supabase
         .from('expenses')
         .select('category, amount')
+        .eq('account_id', userInfo.account_id)
         .order('amount', { ascending: false })
         .limit(5);
         
@@ -1614,13 +1612,17 @@ async function createServer() {
   app.get("/api/analytics/staff-performance", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
       const { data, error } = await supabase
         .from('sales')
-        .select('staff_id, total_amount, total_profit');
+        .select('staff_id, total_amount, total_profit')
+        .eq('account_id', userInfo.account_id);
       
       if (error) throw error;
 
-      const { data: users } = await supabase.from('users').select('id, name');
+      const { data: users } = await supabase.from('users').select('id, name').eq('account_id', userInfo.account_id);
       const userMap = new Map(users?.map(u => [u.id, u.name]));
 
       const performanceMap = new Map();
@@ -1662,6 +1664,39 @@ async function createServer() {
         }
       }
       res.json({ success: true, migratedCount });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Super Admin Stats
+  app.get("/api/admin/stats", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'super_admin') {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const { count: accountCount } = await supabase.from('accounts').select('*', { count: 'exact', head: true });
+      const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      const { count: productCount } = await supabase.from('products').select('*', { count: 'exact', head: true });
+      const { count: saleCount } = await supabase.from('sales').select('*', { count: 'exact', head: true });
+      
+      // Get recent accounts
+      const { data: recentAccounts } = await supabase
+        .from('accounts')
+        .select('*, users(name, email)')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      res.json({
+        accounts: accountCount || 0,
+        users: userCount || 0,
+        products: productCount || 0,
+        sales: saleCount || 0,
+        recentAccounts: recentAccounts || []
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1726,11 +1761,6 @@ async function createServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server is listening on http://0.0.0.0:${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  });
-
   // Global error handler
   app.use((err: any, req: any, res: any, next: any) => {
     console.error("Global error:", err);
@@ -1739,6 +1769,35 @@ async function createServer() {
     } else {
       next(err);
     }
+  });
+
+  try {
+    // Ensure at least one super admin exists
+    if (supabase) {
+      const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'super_admin');
+      if (count === 0) {
+        console.log('[INIT] No super admin found. Creating default super admin...');
+        const { data: account } = await supabase.from('accounts').insert([{ name: 'System Administration' }]).select().single();
+        if (account) {
+          await supabase.from('users').insert([{
+            account_id: account.id,
+            username: 'superadmin',
+            email: 'admin@stockflow.pro',
+            password: 'superpassword123',
+            role: 'super_admin',
+            name: 'System Admin'
+          }]);
+          console.log('[INIT] Default super admin created: superadmin / superpassword123');
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[INIT] Failed to ensure super admin:', e);
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server is listening on http://0.0.0.0:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 
   return app;

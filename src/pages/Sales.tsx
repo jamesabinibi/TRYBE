@@ -43,7 +43,7 @@ interface CartItem {
 }
 
 export default function Sales() {
-  const { user } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const { searchQuery } = useSearch();
   const [activeTab, setActiveTab] = useState<'pos' | 'history'>('pos');
   const [products, setProducts] = useState<Product[]>([]);
@@ -69,7 +69,7 @@ export default function Sales() {
 
   const fetchCustomers = async () => {
     try {
-      const res = await fetch('/api/customers');
+      const res = await fetchWithAuth('/api/customers');
       const data = await res.json();
       if (Array.isArray(data)) {
         setCustomers(data);
@@ -84,7 +84,7 @@ export default function Sales() {
   };
 
   const fetchProducts = () => {
-    fetch('/api/products')
+    fetchWithAuth('/api/products')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -101,7 +101,7 @@ export default function Sales() {
   };
 
   const fetchSales = () => {
-    fetch('/api/sales')
+    fetchWithAuth('/api/sales')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -169,7 +169,7 @@ export default function Sales() {
     
     const checkoutPromise = new Promise(async (resolve, reject) => {
       try {
-        const response = await fetch('/api/sales', {
+        const response = await fetchWithAuth('/api/sales', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -245,7 +245,7 @@ export default function Sales() {
     reader.onloadend = async () => {
       const base64 = reader.result as string;
       try {
-        const response = await fetch('/api/ai/process-transaction', {
+        const response = await fetchWithAuth('/api/ai/process-transaction', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: base64 })

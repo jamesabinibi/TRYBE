@@ -28,10 +28,11 @@ import {
   Bar,
   Cell
 } from 'recharts';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useAuth } from '../App';
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any) => (
   <motion.div 
@@ -49,12 +50,11 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any)
   </motion.div>
 );
 
-import { cn } from '../lib/utils';
 import { Plus, ChevronRight, CheckCircle2, Circle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { fetchWithAuth } = useAuth();
   const [brandColor, setBrandColor] = useState('#10b981');
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function Dashboard() {
   const [isForecasting, setIsForecasting] = useState(false);
 
   useEffect(() => {
-    fetch('/api/analytics/summary')
+    fetchWithAuth('/api/analytics/summary')
       .then(res => res.json())
       .then(data => {
         if (data && !data.error) setSummary(data);
@@ -83,7 +83,7 @@ export default function Dashboard() {
       })
       .catch(() => setSummary({}));
     
-    fetch('/api/analytics/trends')
+    fetchWithAuth('/api/analytics/trends')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setTrends(data);
@@ -91,7 +91,7 @@ export default function Dashboard() {
       })
       .catch(() => setTrends([]));
 
-    fetch('/api/sales')
+    fetchWithAuth('/api/sales')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setRecentSales(data.slice(0, 5));
@@ -99,7 +99,7 @@ export default function Dashboard() {
       })
       .catch(() => setRecentSales([]));
 
-    fetch('/api/settings')
+    fetchWithAuth('/api/settings')
       .then(res => res.json())
       .then(data => {
         if (data && !data.error) setSettings(data);
@@ -107,7 +107,7 @@ export default function Dashboard() {
       })
       .catch(() => setSettings(null));
 
-    fetch('/api/analytics/staff-performance')
+    fetchWithAuth('/api/analytics/staff-performance')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setStaffPerformance(data);
@@ -115,7 +115,7 @@ export default function Dashboard() {
       })
       .catch(() => setStaffPerformance([]));
 
-    fetch('/api/analytics/top-sales')
+    fetchWithAuth('/api/analytics/top-sales')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setTopSales(data);
@@ -123,7 +123,7 @@ export default function Dashboard() {
       })
       .catch(() => setTopSales([]));
 
-    fetch('/api/analytics/top-expenses')
+    fetchWithAuth('/api/analytics/top-expenses')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setTopExpenses(data);
@@ -135,7 +135,7 @@ export default function Dashboard() {
   const generateForecast = async () => {
     setIsForecasting(true);
     try {
-      const res = await fetch('/api/ai/forecast', { method: 'POST' });
+      const res = await fetchWithAuth('/api/ai/forecast', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
         if (data.error?.includes('API key not valid')) {

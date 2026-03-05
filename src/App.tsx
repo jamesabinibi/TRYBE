@@ -18,7 +18,8 @@ import {
   Users,
   Briefcase,
   Moon,
-  Sun
+  Sun,
+  ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
@@ -28,6 +29,7 @@ import Products from './pages/Products';
 import Services from './pages/Services';
 import Sales from './pages/Sales';
 import UsersPage from './pages/Users';
+import SuperAdmin from './pages/SuperAdmin';
 import Settings from './pages/Settings';
 import Expenses from './pages/Expenses';
 import Customers from './pages/Customers';
@@ -43,6 +45,7 @@ interface AuthContextType {
   user: User | null;
   login: (user: User) => void;
   logout: () => void;
+  fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
 }
 
 interface Settings {
@@ -99,7 +102,8 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     { icon: ShoppingCart, label: 'Sales & Analytics', path: '/sales' },
     { icon: Wallet, label: 'Expenses', path: '/expenses' },
     { icon: Users, label: 'Customers', path: '/customers' },
-    ...(user?.role === 'admin' ? [{ icon: UsersIcon, label: 'Team', path: '/users' }] : []),
+    ...(user?.role === 'admin' || user?.role === 'owner' ? [{ icon: UsersIcon, label: 'Team', path: '/users' }] : []),
+    ...(user?.role === 'super_admin' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
     { icon: SettingsIcon, label: 'Settings', path: '/settings' },
   ];
 
@@ -350,7 +354,11 @@ export default function App() {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/settings');
+      const res = await fetch('/api/settings', {
+        headers: {
+          'x-user-id': user?.id?.toString() || ''
+        }
+      });
       if (res.ok) {
         let data = await res.json();
         
@@ -392,7 +400,7 @@ export default function App() {
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (settings?.brand_color) {
@@ -415,8 +423,16 @@ export default function App() {
     localStorage.removeItem('user');
   };
 
+  const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+    const headers = {
+      ...options.headers,
+      'x-user-id': user?.id?.toString() || '',
+    };
+    return fetch(url, { ...options, headers });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, fetchWithAuth }}>
       <SettingsContext.Provider value={{ settings, refreshSettings: fetchSettings }}>
         <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
           <SearchProvider>
@@ -439,6 +455,7 @@ export default function App() {
                           <Route path="/expenses" element={<Expenses />} />
                           <Route path="/customers" element={<Customers />} />
                           <Route path="/users" element={<UsersPage />} />
+                          <Route path="/super-admin" element={<SuperAdmin />} />
                           <Route path="/settings" element={<Settings />} />
                           <Route path="*" element={<Navigate to="/" />} />
                         </Routes>
