@@ -271,20 +271,20 @@ export default function Expenses() {
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-medium focus:border-brand outline-none transition-all"
+              className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:border-brand outline-none transition-all dark:text-white"
             >
-              <option value="All">All Categories</option>
-              {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              <option value="All" className="dark:bg-zinc-900">All Categories</option>
+              {categories.map(cat => <option key={cat} value={cat} className="dark:bg-zinc-900">{cat}</option>)}
             </select>
             <select
               value={filterDuration}
               onChange={(e) => setFilterDuration(e.target.value)}
-              className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-medium focus:border-brand outline-none transition-all"
+              className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:border-brand outline-none transition-all dark:text-white"
             >
-              <option value="All Time">All Time</option>
-              <option value="Today">Today</option>
-              <option value="This Week">This Week</option>
-              <option value="This Month">This Month</option>
+              <option value="All Time" className="dark:bg-zinc-900">All Time</option>
+              <option value="Today" className="dark:bg-zinc-900">Today</option>
+              <option value="This Week" className="dark:bg-zinc-900">This Week</option>
+              <option value="This Month" className="dark:bg-zinc-900">This Month</option>
             </select>
           </div>
         </div>

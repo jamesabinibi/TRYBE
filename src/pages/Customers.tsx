@@ -11,6 +11,7 @@ import {
   X,
   UserPlus
 } from 'lucide-react';
+import { useAuth } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -25,6 +26,7 @@ interface Customer {
 }
 
 export default function Customers() {
+  const { fetchWithAuth } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,10 +44,15 @@ export default function Customers() {
 
   const fetchCustomers = async () => {
     try {
-      const res = await fetch('/api/customers');
+      const res = await fetchWithAuth('/api/customers');
       const data = await res.json();
       if (Array.isArray(data)) {
-        setCustomers(data);
+        // Ensure loyalty_points exists for frontend
+        const normalized = data.map(c => ({
+          ...c,
+          loyalty_points: c.loyalty_points || 0
+        }));
+        setCustomers(normalized);
       } else {
         console.error('Customers data is not an array:', data);
         setCustomers([]);
@@ -60,7 +67,7 @@ export default function Customers() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const response = await fetch('/api/customers', {
+      const response = await fetchWithAuth('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCustomer)

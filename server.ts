@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import fs from 'fs';
 import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcryptjs';
 import { GoogleGenAI, Type } from "@google/genai";
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -588,6 +589,7 @@ async function createServer() {
 
     try {
       // Support login via username or email
+      console.log(`[AUTH] Querying Supabase for: "${trimmedUsername}"`);
       const { data: user, error: supabaseError } = await supabase
         .from('users')
         .select('id, username, email, role, name, password, account_id')
@@ -600,8 +602,18 @@ async function createServer() {
       }
 
       if (user) {
-        console.log(`[AUTH] User found: "${user.username}" (ID: ${user.id}, Email: ${user.email})`);
-        if (user.password === password) {
+        console.log(`[AUTH] User found: "${user.username}" (ID: ${user.id}, Role: ${user.role})`);
+        
+        // Verify password
+        let isPasswordValid = false;
+        if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+          isPasswordValid = await bcrypt.compare(password, user.password);
+        } else {
+          // Fallback for plain text passwords (legacy)
+          isPasswordValid = user.password === password;
+        }
+
+        if (isPasswordValid) {
           console.log(`[AUTH] Login success: "${trimmedUsername}" (ID: ${user.id})`);
           // Don't send password back to client
           const { password: _, ...userWithoutPassword } = user;
@@ -648,6 +660,9 @@ async function createServer() {
         return res.status(400).json({ error: "Username or email already exists" });
       }
 
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       // 1. Create Account first
       const { data: account, error: accountError } = await supabase
         .from('accounts')
@@ -664,7 +679,7 @@ async function createServer() {
           account_id: account.id,
           username: trimmedUsername, 
           email: trimmedEmail, 
-          password, 
+          password: hashedPassword, 
           role: role === 'super_admin' ? 'super_admin' : 'admin', // First user is admin
           name: name?.trim() 
         }])
@@ -738,15 +753,19 @@ async function createServer() {
   app.get("/api/users", async (req, res) => {
     if (!supabase) return res.json([]);
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
       // Try selecting specific columns first
       let { data, error } = await supabase
         .from('users')
-        .select('id, username, email, role, name');
+        .select('id, username, email, role, name')
+        .eq('account_id', userInfo.account_id);
       
       if (error) {
         console.error('[SERVER] Users fetch error (specific columns):', error);
         // Fallback to select all if specific columns fail
-        const fallback = await supabase.from('users').select('*');
+        const fallback = await supabase.from('users').select('*').eq('account_id', userInfo.account_id);
         if (fallback.error) throw fallback.error;
         data = fallback.data;
       }
@@ -1042,12 +1061,20 @@ async function createServer() {
   // Helper to get account_id from headers or user_id
   const getAccountId = async (req: any) => {
     const userId = req.headers['x-user-id'];
-    if (!userId) return null;
+    if (!userId) {
+      console.log(`[AUTH] Missing x-user-id header for ${req.method} ${req.url}`);
+      return null;
+    }
     
     try {
-      const { data: user } = await supabase.from('users').select('account_id, role').eq('id', userId).single();
+      const { data: user, error } = await supabase.from('users').select('account_id, role').eq('id', userId).single();
+      if (error || !user) {
+        console.error(`[AUTH] Failed to find user for ID ${userId}:`, error);
+        return null;
+      }
       return user;
     } catch (e) {
+      console.error(`[AUTH] Exception in getAccountId for ID ${userId}:`, e);
       return null;
     }
   };
@@ -1174,7 +1201,7 @@ async function createServer() {
         } else {
           const { data: newCustomer, error: cError } = await supabase
             .from('customers')
-            .insert([{ account_id: userInfo.account_id, name: customer_name, phone: customer_phone, loyalty_points: 0 }])
+            .insert([{ account_id: userInfo.account_id, name: customer_name, phone: customer_phone }])
             .select()
             .single();
           
@@ -1258,18 +1285,35 @@ async function createServer() {
 
       const { data, error } = await supabase
         .from('sales')
-        .select('*, users(name)')
+        .select(`
+          *,
+          customers (name),
+          users (name)
+        `)
         .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[SALES] Fetch error:', error);
+        // Fallback to simple select if join fails
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('sales')
+          .select('*')
+          .eq('account_id', userInfo.account_id)
+          .order('created_at', { ascending: false });
+        
+        if (simpleError) throw simpleError;
+        return res.json(simpleData || []);
+      }
       
-      const salesWithStaff = (data || []).map(s => ({
+      const flattened = (data || []).map((s: any) => ({
         ...s,
-        staff_name: s.users?.name
+        customer_name: s.customers?.name || 'Walk-in',
+        staff_name: s.users?.name || 'System'
       }));
-      res.json(salesWithStaff);
+      res.json(flattened);
     } catch (error: any) {
+      console.error('[SALES] API Error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1774,20 +1818,35 @@ async function createServer() {
   try {
     // Ensure at least one super admin exists
     if (supabase) {
-      const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'super_admin');
-      if (count === 0) {
+      const { data: existingAdmin } = await supabase.from('users').select('id, password').eq('username', 'superadmin').maybeSingle();
+      if (!existingAdmin) {
         console.log('[INIT] No super admin found. Creating default super admin...');
-        const { data: account } = await supabase.from('accounts').insert([{ name: 'System Administration' }]).select().single();
-        if (account) {
-          await supabase.from('users').insert([{
+        const { data: account, error: accErr } = await supabase.from('accounts').insert([{ name: 'System Administration' }]).select().single();
+        if (accErr) {
+          console.error('[INIT] Failed to create system account:', accErr);
+        } else if (account) {
+          const hashedPassword = await bcrypt.hash('superpassword123', 10);
+          const { error: userErr } = await supabase.from('users').insert([{
             account_id: account.id,
             username: 'superadmin',
             email: 'admin@stockflow.pro',
-            password: 'superpassword123',
+            password: hashedPassword,
             role: 'super_admin',
             name: 'System Admin'
           }]);
-          console.log('[INIT] Default super admin created: superadmin / superpassword123');
+          if (userErr) {
+            console.error('[INIT] Failed to create super admin user:', userErr);
+          } else {
+            console.log('[INIT] Default super admin created: superadmin / superpassword123');
+          }
+        }
+      } else {
+        console.log('[INIT] Super admin "superadmin" already exists.');
+        // Update to hashed password if it's still plain text
+        if (existingAdmin.password === 'superpassword123') {
+          console.log('[INIT] Updating superadmin password to hashed version...');
+          const hashedPassword = await bcrypt.hash('superpassword123', 10);
+          await supabase.from('users').update({ password: hashedPassword }).eq('id', existingAdmin.id);
         }
       }
     }
