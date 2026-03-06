@@ -18,6 +18,7 @@ import {
 import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
 import { toast } from 'sonner';
 
@@ -36,6 +37,7 @@ const getInitialProductState = () => ({
 });
 
 export default function Products() {
+  const { fetchWithAuth } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -89,7 +91,7 @@ export default function Products() {
   }, []);
 
   const fetchProducts = () => {
-    fetch('/api/products')
+    fetchWithAuth('/api/products')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -106,7 +108,7 @@ export default function Products() {
   };
 
   const fetchCategories = () => {
-    fetch('/api/categories')
+    fetchWithAuth('/api/categories')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -147,7 +149,7 @@ export default function Products() {
         images: newProduct.images
       };
 
-      const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -207,7 +209,7 @@ export default function Products() {
             onClick={async () => {
               toast.dismiss(t);
               try {
-                const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                const response = await fetchWithAuth(`/api/products/${id}`, { method: 'DELETE' });
                 if (response.ok) {
                   fetchProducts();
                   toast.success('Product deleted');

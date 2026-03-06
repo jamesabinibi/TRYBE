@@ -14,7 +14,7 @@ import {
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useSettings } from '../App';
+import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
@@ -30,6 +30,7 @@ interface Service {
 }
 
 const Services = () => {
+  const { fetchWithAuth } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -44,7 +45,7 @@ const Services = () => {
 
   const fetchServices = async () => {
     try {
-      const res = await fetch('/api/services');
+      const res = await fetchWithAuth('/api/services');
       const data = await res.json();
       if (res.ok) {
         setServices(data || []);
@@ -62,7 +63,7 @@ const Services = () => {
     if (!confirm('Are you sure you want to delete this service?')) return;
     
     try {
-      const res = await fetch(`/api/services/${id}`, {
+      const res = await fetchWithAuth(`/api/services/${id}`, {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -95,7 +96,7 @@ const Services = () => {
       const url = editingService ? `/api/services/${editingService.id}` : '/api/services';
       const method = editingService ? 'PUT' : 'POST';
       
-      const res = await fetch(url, {
+      const res = await fetchWithAuth(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(serviceData)

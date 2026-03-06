@@ -197,22 +197,26 @@ async function createServer() {
 
   // --- NEW FEATURES: EXPENSES, CUSTOMERS, SERVICES, AI (MOVED TO TOP OF API) ---
 
-  // Services API
   app.get("/api/services", async (req, res) => {
-    console.log('[API] GET /api/services called');
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
-      const { data, error } = await supabase.from('services').select('*').order('name', { ascending: true });
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.json([]);
+
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('account_id', userInfo.account_id)
+        .order('name', { ascending: true });
+
       if (error) {
         if (error.code === 'PGRST116' || error.message.includes('relation "services" does not exist')) {
-          console.warn('[SERVICES] Table "services" not found. Returning empty array.');
           return res.json([]);
         }
         throw error;
       }
       res.json(data || []);
     } catch (error: any) {
-      console.error('[SERVICES] Fetch error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -220,8 +224,18 @@ async function createServer() {
   app.post("/api/services", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+
       const { name, description, price, duration_minutes, category } = req.body;
-      const { data, error } = await supabase.from('services').insert([{ name, description, price, duration_minutes, category }]).select().single();
+      const { data, error } = await supabase
+        .from('services')
+        .insert([{ 
+          account_id: userInfo.account_id,
+          name, description, price, duration_minutes, category 
+        }])
+        .select()
+        .single();
       if (error) throw error;
       res.json(data);
     } catch (error: any) {
@@ -232,8 +246,17 @@ async function createServer() {
   app.put("/api/services/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+
       const { name, description, price, duration_minutes, category } = req.body;
-      const { data, error } = await supabase.from('services').update({ name, description, price, duration_minutes, category }).eq('id', req.params.id).select().single();
+      const { data, error } = await supabase
+        .from('services')
+        .update({ name, description, price, duration_minutes, category })
+        .eq('id', req.params.id)
+        .eq('account_id', userInfo.account_id)
+        .select()
+        .single();
       if (error) throw error;
       res.json(data);
     } catch (error: any) {
@@ -244,7 +267,14 @@ async function createServer() {
   app.delete("/api/services/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
-      const { error } = await supabase.from('services').delete().eq('id', req.params.id);
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', req.params.id)
+        .eq('account_id', userInfo.account_id);
       if (error) throw error;
       res.json({ success: true });
     } catch (error: any) {
@@ -296,7 +326,14 @@ async function createServer() {
   app.delete("/api/expenses/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
-      const { error } = await supabase.from('expenses').delete().eq('id', req.params.id);
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', req.params.id)
+        .eq('account_id', userInfo.account_id);
       if (error) throw error;
       res.json({ success: true });
     } catch (error: any) {
@@ -545,7 +582,16 @@ async function createServer() {
     const { id } = req.params;
     const { name } = req.body;
     try {
-      const { data, error } = await supabase.from('categories').update({ name }).eq('id', id).select().single();
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+
+      const { data, error } = await supabase
+        .from('categories')
+        .update({ name })
+        .eq('id', id)
+        .eq('account_id', userInfo.account_id)
+        .select()
+        .single();
       if (error) throw error;
       res.json(data);
     } catch (error: any) {
@@ -557,11 +603,24 @@ async function createServer() {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
-      const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('category_id', id);
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+
+      const { count } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('category_id', id)
+        .eq('account_id', userInfo.account_id);
+      
       if (count && count > 0) {
         return res.status(400).json({ error: "Cannot delete category with associated products" });
       }
-      const { error } = await supabase.from('categories').delete().eq('id', id);
+
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id)
+        .eq('account_id', userInfo.account_id);
       if (error) throw error;
       res.json({ success: true });
     } catch (error: any) {
@@ -602,15 +661,16 @@ async function createServer() {
       }
 
       if (user) {
-        console.log(`[AUTH] User found: "${user.username}" (ID: ${user.id}, Role: ${user.role})`);
+        console.log(`[AUTH] User found: "${user.username}" (ID: ${user.id}, Role: ${user.role}, Account: ${user.account_id})`);
         
         // Verify password
         let isPasswordValid = false;
-        if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
-          isPasswordValid = await bcrypt.compare(password, user.password);
+        const storedPassword = user.password || '';
+        if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$')) {
+          isPasswordValid = await bcrypt.compare(password, storedPassword);
         } else {
           // Fallback for plain text passwords (legacy)
-          isPasswordValid = user.password === password;
+          isPasswordValid = storedPassword === password;
         }
 
         if (isPasswordValid) {
@@ -781,9 +841,20 @@ async function createServer() {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { username, password, name, role, email } = req.body;
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'admin' && userInfo.role !== 'super_admin') return res.status(403).json({ error: "Forbidden" });
+
+      // Hash password if provided
+      const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+
       const { data, error } = await supabase
         .from('users')
-        .insert([{ username, password, name, role, email }])
+        .insert([{ 
+          account_id: userInfo.account_id,
+          username, 
+          password: hashedPassword, 
+          name, role, email 
+        }])
         .select('id, username, email, role, name')
         .single();
       if (error) throw error;
@@ -798,13 +869,19 @@ async function createServer() {
     const { id } = req.params;
     const { username, password, name, role, email } = req.body;
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'admin' && userInfo.role !== 'super_admin') return res.status(403).json({ error: "Forbidden" });
+
       const updateData: any = { username, name, role, email };
-      if (password) updateData.password = password;
+      if (password) {
+        updateData.password = await bcrypt.hash(password, 10);
+      }
       
       const { data, error } = await supabase
         .from('users')
         .update(updateData)
         .eq('id', id)
+        .eq('account_id', userInfo.account_id)
         .select('id, username, email, role, name')
         .single();
       if (error) throw error;
@@ -818,7 +895,14 @@ async function createServer() {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
-      const { error } = await supabase.from('users').delete().eq('id', id);
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'admin' && userInfo.role !== 'super_admin') return res.status(403).json({ error: "Forbidden" });
+
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', id)
+        .eq('account_id', userInfo.account_id);
       if (error) throw error;
       res.json({ success: true });
     } catch (error: any) {
@@ -949,7 +1033,8 @@ async function createServer() {
       const { data: existingVariants, error: fetchError } = await supabase
         .from('product_variants')
         .select('*')
-        .eq('product_id', id);
+        .eq('product_id', id)
+        .eq('account_id', userInfo.account_id);
       
       if (fetchError) throw fetchError;
 
@@ -960,11 +1045,7 @@ async function createServer() {
         );
 
         for (const ev of variantsToDelete) {
-          const { error: delErr } = await supabase.from('product_variants').delete().eq('id', ev.id);
-          if (delErr) {
-            console.warn(`[PRODUCTS] Could not delete variant ${ev.id}, likely has sales history:`, delErr);
-            // We don't throw here because we want to allow the rest of the update to proceed
-          }
+          await supabase.from('product_variants').delete().eq('id', ev.id).eq('account_id', userInfo.account_id);
         }
 
         // 2. Update existing or Insert new ones
@@ -979,11 +1060,13 @@ async function createServer() {
                 low_stock_threshold: v.low_stock_threshold, 
                 price_override: v.price_override 
               })
-              .eq('id', existing.id);
+              .eq('id', existing.id)
+              .eq('account_id', userInfo.account_id);
             if (updErr) throw updErr;
           } else {
             // Insert new variant
             const { error: insErr } = await supabase.from('product_variants').insert([{
+              account_id: userInfo.account_id,
               product_id: id,
               size: v.size,
               color: v.color,
@@ -1015,45 +1098,51 @@ async function createServer() {
   app.delete("/api/products/:id", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
-    console.log(`[PRODUCTS] Attempting to delete product: ${id}`);
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+
       // 1. Get all variant IDs for this product
-      const { data: variants, error: vError } = await supabase.from('product_variants').select('id').eq('product_id', id);
+      const { data: variants, error: vError } = await supabase
+        .from('product_variants')
+        .select('id')
+        .eq('product_id', id)
+        .eq('account_id', userInfo.account_id);
       if (vError) throw vError;
 
       if (variants && variants.length > 0) {
         const variantIds = variants.map(v => v.id);
-        console.log(`[PRODUCTS] Checking sales for variants: ${variantIds.join(', ')}`);
         
         // 2. Check if any of these variants are in sale_items
         const { count, error: sError } = await supabase
           .from('sale_items')
           .select('*', { count: 'exact', head: true })
-          .in('variant_id', variantIds);
+          .in('variant_id', variantIds)
+          .eq('account_id', userInfo.account_id);
         
         if (sError) throw sError;
         
         if (count && count > 0) {
-          console.log(`[PRODUCTS] Cannot delete product ${id}: found ${count} sale items`);
           return res.status(400).json({ 
-            error: "Cannot delete product with sales history. This product has been sold and its records must be preserved for accounting. Try marking it as inactive or out of stock instead." 
+            error: "Cannot delete product with sales history. Try marking it as inactive or out of stock instead." 
           });
         }
       }
 
       // 3. Delete variants and images first (cascade-like)
-      console.log(`[PRODUCTS] Deleting variants and images for product ${id}`);
-      await supabase.from('product_variants').delete().eq('product_id', id);
-      await supabase.from('product_images').delete().eq('product_id', id);
+      await supabase.from('product_variants').delete().eq('product_id', id).eq('account_id', userInfo.account_id);
+      await supabase.from('product_images').delete().eq('product_id', id).eq('account_id', userInfo.account_id);
       
       // 4. Delete product
-      const { error: pError } = await supabase.from('products').delete().eq('id', id);
+      const { error: pError } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id)
+        .eq('account_id', userInfo.account_id);
       if (pError) throw pError;
       
-      console.log(`[PRODUCTS] Successfully deleted product ${id}`);
       res.json({ success: true });
     } catch (error: any) {
-      console.error(`[PRODUCTS] Delete failed for product ${id}:`, error);
       res.status(500).json({ error: error.message || "Failed to delete product" });
     }
   });
@@ -1281,14 +1370,18 @@ async function createServer() {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo) return res.json([]);
+      if (!userInfo) {
+        console.log('[SALES] No user info found for sales fetch');
+        return res.json([]);
+      }
 
+      console.log(`[SALES] Fetching sales for account: ${userInfo.account_id}`);
       const { data, error } = await supabase
         .from('sales')
         .select(`
           *,
-          customers (name),
-          users (name)
+          customers!left (name),
+          users!left (name)
         `)
         .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });
@@ -1311,6 +1404,7 @@ async function createServer() {
         customer_name: s.customers?.name || 'Walk-in',
         staff_name: s.users?.name || 'System'
       }));
+      console.log(`[SALES] Returning ${flattened.length} sales`);
       res.json(flattened);
     } catch (error: any) {
       console.error('[SALES] API Error:', error);
@@ -1321,10 +1415,12 @@ async function createServer() {
   app.delete("/api/sales", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
-      // This is a dangerous operation, usually we'd check for admin role
-      // For this app, we'll allow it if requested
-      await supabase.from('sale_items').delete().neq('id', 0); // Delete all
-      const { error } = await supabase.from('sales').delete().neq('id', 0); // Delete all
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      // Delete only for this account
+      await supabase.from('sale_items').delete().eq('account_id', userInfo.account_id);
+      const { error } = await supabase.from('sales').delete().eq('account_id', userInfo.account_id);
       if (error) throw error;
       res.json({ success: true });
     } catch (e: any) {
@@ -1337,13 +1433,22 @@ async function createServer() {
     const { id } = req.params;
 
     try {
-      // 1. Get sale items to revert stock
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      // 1. Get sale items to revert stock (ensure it belongs to this account)
       const { data: items, error: itemsError } = await supabase
         .from('sale_items')
         .select('*')
-        .eq('sale_id', id);
+        .eq('sale_id', id)
+        .eq('account_id', userInfo.account_id);
 
       if (itemsError) throw itemsError;
+      if (!items || items.length === 0) {
+        // Check if sale exists but has no items
+        const { data: sale } = await supabase.from('sales').select('id').eq('id', id).eq('account_id', userInfo.account_id).maybeSingle();
+        if (!sale) return res.status(404).json({ error: "Sale not found" });
+      }
 
       // 2. Revert stock for each item
       for (const item of items) {
@@ -1351,21 +1456,23 @@ async function createServer() {
           .from('product_variants')
           .select('quantity')
           .eq('id', item.variant_id)
+          .eq('account_id', userInfo.account_id)
           .single();
 
         if (variant) {
           await supabase
             .from('product_variants')
             .update({ quantity: variant.quantity + item.quantity })
-            .eq('id', item.variant_id);
+            .eq('id', item.variant_id)
+            .eq('account_id', userInfo.account_id);
         }
       }
 
-      // 3. Delete sale items (Supabase might handle this with cascade, but let's be safe)
-      await supabase.from('sale_items').delete().eq('sale_id', id);
+      // 3. Delete sale items
+      await supabase.from('sale_items').delete().eq('sale_id', id).eq('account_id', userInfo.account_id);
 
       // 4. Delete the sale record
-      const { error: saleError } = await supabase.from('sales').delete().eq('id', id);
+      const { error: saleError } = await supabase.from('sales').delete().eq('id', id).eq('account_id', userInfo.account_id);
       if (saleError) throw saleError;
 
       res.json({ success: true });

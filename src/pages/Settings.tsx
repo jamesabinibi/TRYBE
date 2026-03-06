@@ -102,7 +102,7 @@ export default function Settings() {
     
     setIsMigrating(true);
     try {
-      const res = await fetch('/api/admin/migrate-images', { method: 'POST' });
+      const res = await fetchWithAuth('/api/admin/migrate-images', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         toast.success(`Successfully migrated ${data.migratedCount} images!`);
@@ -191,7 +191,7 @@ export default function Settings() {
     if (!newCategory) return;
     
     try {
-      const response = await fetch('/api/categories', {
+      const response = await fetchWithAuth('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newCategory })
@@ -213,7 +213,7 @@ export default function Settings() {
   const handleUpdateCategory = async (id: number) => {
     if (!editCategoryName) return;
     try {
-      const response = await fetch(`/api/categories/${id}`, {
+      const response = await fetchWithAuth(`/api/categories/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: editCategoryName })
@@ -245,7 +245,7 @@ export default function Settings() {
               toast.dismiss(t);
               const deletePromise = new Promise(async (resolve, reject) => {
                 try {
-                  const response = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+                  const response = await fetchWithAuth(`/api/categories/${id}`, { method: 'DELETE' });
                   if (response.ok) {
                     fetchCategories();
                     resolve(true);
@@ -282,7 +282,7 @@ export default function Settings() {
   const runDiagnostics = async () => {
     setIsCheckingDiag(true);
     try {
-      const res = await fetch('/api/diag');
+      const res = await fetchWithAuth('/api/diag');
       const data = await res.json();
       setDiagResults(data);
       if (res.ok) {
@@ -667,13 +667,13 @@ NOTIFY pgrst, 'reload schema';
             {categories.map(c => (
               <div key={c.id} className="group relative">
                 {editingCategory === c.id ? (
-                  <div className="flex items-center gap-1 bg-white border border-brand rounded-xl px-2 py-1 shadow-sm">
+                  <div className="flex items-center gap-1 bg-white dark:bg-zinc-800 border border-brand rounded-xl px-2 py-1 shadow-sm">
                     <input 
                       autoFocus
                       type="text" 
                       value={editCategoryName}
                       onChange={(e) => setEditCategoryName(e.target.value)}
-                      className="w-24 text-xs font-bold outline-none"
+                      className="w-24 text-xs font-bold outline-none bg-transparent text-zinc-900 dark:text-white"
                     />
                     <button onClick={() => handleUpdateCategory(c.id)} className="p-1 text-brand hover:bg-brand/5 rounded-lg">
                       <Check className="w-3 h-3" />
