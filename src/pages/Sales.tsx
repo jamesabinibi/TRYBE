@@ -286,7 +286,7 @@ export default function Sales() {
               toast.dismiss(t);
               const deletePromise = new Promise(async (resolve, reject) => {
                 try {
-                  const res = await fetch(`/api/sales/${id}`, { method: 'DELETE' });
+                  const res = await fetchWithAuth(`/api/sales/${id}`, { method: 'DELETE' });
                   if (res.ok) {
                     fetchSales();
                     fetchProducts();

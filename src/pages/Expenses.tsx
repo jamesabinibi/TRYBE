@@ -13,6 +13,7 @@ import {
   Loader2,
   Sparkles
 } from 'lucide-react';
+import { useAuth } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -26,6 +27,7 @@ interface Expense {
 }
 
 export default function Expenses() {
+  const { fetchWithAuth } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -58,7 +60,7 @@ export default function Expenses() {
 
   const fetchExpenses = async () => {
     try {
-      const res = await fetch('/api/expenses');
+      const res = await fetchWithAuth('/api/expenses');
       const data = await res.json();
       if (Array.isArray(data)) {
         setExpenses(data);
@@ -83,7 +85,7 @@ export default function Expenses() {
       const base64 = reader.result as string;
       console.log('AI Screenshot: Image loaded, calling API...');
       try {
-        const response = await fetch('/api/ai/process-transaction', {
+        const response = await fetchWithAuth('/api/ai/process-transaction', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: base64 })
@@ -155,7 +157,7 @@ export default function Expenses() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const response = await fetch('/api/expenses', {
+      const response = await fetchWithAuth('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -188,7 +190,7 @@ export default function Expenses() {
   const handleDeleteExpense = async (id: number) => {
     if (!confirm('Are you sure you want to delete this expense?')) return;
     try {
-      const response = await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
+      const response = await fetchWithAuth(`/api/expenses/${id}`, { method: 'DELETE' });
       if (response.ok) {
         fetchExpenses();
         toast.success('Expense deleted');

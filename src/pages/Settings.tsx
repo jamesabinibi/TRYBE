@@ -534,7 +534,7 @@ NOTIFY pgrst, 'reload schema';
     if (!user) return;
     
     try {
-      const response = await fetch(`/api/profile/${user.id}`, {
+      const response = await fetchWithAuth(`/api/profile/${user.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profileForm)
@@ -565,7 +565,7 @@ NOTIFY pgrst, 'reload schema';
     }
     
     try {
-      const response = await fetch(`/api/change-password/${user.id}`, {
+      const response = await fetchWithAuth(`/api/change-password/${user.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -601,7 +601,7 @@ NOTIFY pgrst, 'reload schema';
               toast.dismiss(t);
               const clearPromise = new Promise(async (resolve, reject) => {
                 try {
-                  const response = await fetch('/api/sales', { method: 'DELETE' });
+                  const response = await fetchWithAuth('/api/sales', { method: 'DELETE' });
                   if (response.ok) {
                     resolve(true);
                   } else {
@@ -1130,7 +1130,7 @@ NOTIFY pgrst, 'reload schema';
             <button 
               onClick={async () => {
                 try {
-                  const res = await fetch('/api/diag');
+                  const res = await fetchWithAuth('/api/diag');
                   const data = await res.json();
                   setDiagResults(data);
                   console.log('System Diagnostics:', data);
