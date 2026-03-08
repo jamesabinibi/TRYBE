@@ -274,11 +274,7 @@ export default function Settings() {
       const data = await res.json();
       setDiagResults(data);
       if (res.ok) {
-        if (data.version && data.version !== "2.4.9-stable") {
-          toast.error(`CRITICAL: Version mismatch! Your server is running ${data.version} but needs 2.4.9-stable. recorded sales and expenses will NOT work correctly until you redeploy to Vercel.`, { duration: 10000 });
-        } else {
-          toast.success('Diagnostics complete');
-        }
+        toast.success('Diagnostics complete');
       } else {
         toast.error('Diagnostics failed to run');
       }
@@ -286,6 +282,25 @@ export default function Settings() {
       toast.error('Network error during diagnostics');
     } finally {
       setIsCheckingDiag(false);
+    }
+  };
+
+  const [isInitializing, setIsInitializing] = useState(false);
+  const handleInitializeDb = async () => {
+    if (!confirm('This will create all necessary tables. Existing data will be preserved. Continue?')) return;
+    setIsInitializing(true);
+    try {
+      const res = await fetchWithAuth('/api/diag/setup', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Database initialized successfully');
+      } else {
+        toast.error(data.error || 'Failed to initialize database');
+      }
+    } catch (err) {
+      toast.error('Network error during database initialization');
+    } finally {
+      setIsInitializing(false);
     }
   };
 
@@ -1101,6 +1116,36 @@ NOTIFY pgrst, 'reload schema';
           <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Dangerous operations. Use with extreme caution.</p>
         </div>
         <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+          <div className="flex items-center justify-between p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-zinc-700">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account ID</p>
+              <p className="text-sm font-black text-zinc-900 dark:text-white">{user?.account_id || 'N/A'}</p>
+            </div>
+            <div className="space-y-1 text-right">
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">User ID</p>
+              <p className="text-sm font-black text-zinc-900 dark:text-white">{user?.id || 'N/A'}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button 
+              onClick={runDiagnostics}
+              disabled={isCheckingDiag}
+              className="flex items-center justify-center gap-2 p-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-2xl font-bold transition-all disabled:opacity-50"
+            >
+              {isCheckingDiag ? <Loader2 className="w-5 h-5 animate-spin" /> : <Database className="w-5 h-5" />}
+              Run Diagnostics
+            </button>
+            <button 
+              onClick={handleInitializeDb}
+              disabled={isInitializing}
+              className="flex items-center justify-center gap-2 p-4 bg-brand/10 hover:bg-brand/20 text-brand rounded-2xl font-bold transition-all disabled:opacity-50"
+            >
+              {isInitializing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+              Initialize Database
+            </button>
+          </div>
+
           <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-red-50 dark:bg-red-500/10 rounded-2xl sm:rounded-[2rem] border border-red-100 dark:border-red-500/20 gap-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-red-600 shadow-sm shrink-0">
@@ -1139,23 +1184,6 @@ NOTIFY pgrst, 'reload schema';
           </div>
 
           <div className="pt-6 border-t border-zinc-100 space-y-4">
-            <button 
-              onClick={async () => {
-                try {
-                  const res = await fetchWithAuth('/api/diag');
-                  const data = await res.json();
-                  setDiagResults(data);
-                  console.log('System Diagnostics:', data);
-                  toast.info('Diagnostic info retrieved');
-                } catch (e) {
-                  toast.error('Failed to fetch diagnostics');
-                }
-              }}
-              className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.2em] hover:text-zinc-500 transition-colors"
-            >
-              Run System Diagnostics
-            </button>
-
             {diagResults && (
               <div className="p-4 bg-zinc-900 rounded-2xl overflow-hidden">
                 <div className="flex items-center justify-between mb-2">

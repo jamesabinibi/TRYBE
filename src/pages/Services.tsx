@@ -215,7 +215,7 @@ const Services = () => {
                     <Clock className="w-4 h-4" />
                     <span className="text-xs font-bold">{service.duration_minutes} mins</span>
                   </div>
-                  <span className="text-lg font-black text-brand">{formatCurrency(service.price)}</span>
+                  <span className="text-lg font-black text-brand">{formatCurrency(service.price, settings?.currency || 'NGN')}</span>
                 </div>
               </motion.div>
             ))}

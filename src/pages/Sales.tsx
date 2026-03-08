@@ -44,6 +44,8 @@ interface CartItem {
 
 export default function Sales() {
   const { user, fetchWithAuth } = useAuth();
+  const { settings } = useSettings();
+  const currency = settings?.currency || 'NGN';
   const { searchQuery } = useSearch();
   const [activeTab, setActiveTab] = useState<'pos' | 'history'>('pos');
   const [products, setProducts] = useState<Product[]>([]);
@@ -253,7 +255,7 @@ export default function Sales() {
         
         if (response.ok) {
           const data = await response.json();
-          toast.success(`AI Extracted: ${formatCurrency(data.amount)}`);
+          toast.success(`AI Extracted: ${formatCurrency(data.amount, currency)}`);
           // For now, we just show the data. In a real app, we'd add a generic "AI Sale" item to cart
           // or pre-fill the checkout amount.
           if (data.amount > 0) {
@@ -334,8 +336,8 @@ export default function Sales() {
       s.created_at ? new Date(s.created_at).toLocaleDateString() : 'N/A',
       s.staff_name || 'N/A',
       s.payment_method || 'N/A',
-      formatCurrency(s.total_amount || 0),
-      formatCurrency(s.total_profit || 0)
+      formatCurrency(s.total_amount || 0, currency),
+      formatCurrency(s.total_profit || 0, currency)
     ]);
 
     (doc as any).autoTable({
@@ -504,7 +506,7 @@ export default function Sales() {
                             <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{selectedProduct.category_name}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(selectedProduct.selling_price)}</p>
+                            <p className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(selectedProduct.selling_price, currency)}</p>
                             <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Base Price</p>
                           </div>
                         </div>
@@ -567,7 +569,7 @@ export default function Sales() {
                               <h4 className="font-black text-zinc-900 dark:text-white truncate tracking-tight group-hover:text-brand transition-colors">{product.name}</h4>
                               <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{product.category_name}</p>
                             </div>
-                            <span className="text-sm font-black text-brand whitespace-nowrap">{formatCurrency(product.selling_price)}</span>
+                            <span className="text-sm font-black text-brand whitespace-nowrap">{formatCurrency(product.selling_price, currency)}</span>
                           </div>
                           <div className="flex items-center justify-between mt-auto">
                             <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{(product.variants || []).length} variants</span>
@@ -633,7 +635,7 @@ export default function Sales() {
                             </div>
                             <div className="text-right min-w-[80px]">
                               <p className="text-sm font-black text-zinc-900 dark:text-white tracking-tight">
-                                {formatCurrency(((item.price_override || item.variant.price_override || item.product.selling_price) || 0) * item.quantity)}
+                                {formatCurrency(((item.price_override || item.variant.price_override || item.product.selling_price) || 0) * item.quantity, currency)}
                               </p>
                             </div>
                             <button 
@@ -662,7 +664,7 @@ export default function Sales() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
                       <span className="text-xs font-bold uppercase tracking-widest">Subtotal</span>
-                      <span className="text-sm font-black tracking-tight">{formatCurrency(subtotal)}</span>
+                      <span className="text-sm font-black tracking-tight">{formatCurrency(subtotal, currency)}</span>
                     </div>
                     <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
                       <span className="text-xs font-bold uppercase tracking-widest">Tax (VAT 0%)</span>
@@ -670,7 +672,7 @@ export default function Sales() {
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-zinc-700">
                       <span className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Total Amount</span>
-                      <span className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(subtotal)}</span>
+                      <span className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(subtotal, currency)}</span>
                     </div>
                   </div>
 
@@ -764,7 +766,7 @@ export default function Sales() {
                   <div className="relative z-10">
                     <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Revenue</p>
                     <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">
-                      {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0))}
+                      {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0), currency)}
                     </h3>
                   </div>
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-zinc-50 dark:bg-zinc-800 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
@@ -773,7 +775,7 @@ export default function Sales() {
                   <div className="relative z-10">
                     <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Profit</p>
                     <h3 className="text-2xl sm:text-3xl font-black text-brand tracking-tight">
-                      {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0))}
+                      {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0), currency)}
                     </h3>
                   </div>
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-brand/5 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
@@ -829,10 +831,10 @@ export default function Sales() {
                             </span>
                           </td>
                           <td className="px-8 py-5 text-sm font-black text-zinc-900 dark:text-white text-right tracking-tight">
-                            {formatCurrency(sale.total_amount)}
+                            {formatCurrency(sale.total_amount, currency)}
                           </td>
                           <td className="px-8 py-5 text-sm font-black text-brand text-right tracking-tight">
-                            {formatCurrency(sale.total_profit)}
+                            {formatCurrency(sale.total_profit, currency)}
                           </td>
                           <td className="px-8 py-5 text-right">
                             <button 
@@ -867,11 +869,11 @@ export default function Sales() {
                       <div className="flex items-center justify-between pt-2">
                         <div className="space-y-1">
                           <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Total Amount</p>
-                          <p className="text-base font-black text-zinc-900 dark:text-white tracking-tight">{formatCurrency(sale.total_amount)}</p>
+                          <p className="text-base font-black text-zinc-900 dark:text-white tracking-tight">{formatCurrency(sale.total_amount, currency)}</p>
                         </div>
                         <div className="text-right space-y-1">
                           <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Profit</p>
-                          <p className="text-base font-black text-brand tracking-tight">{formatCurrency(sale.total_profit)}</p>
+                          <p className="text-base font-black text-brand tracking-tight">{formatCurrency(sale.total_profit, currency)}</p>
                         </div>
                       </div>
 

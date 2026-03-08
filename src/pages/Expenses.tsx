@@ -28,6 +28,8 @@ interface Expense {
 
 export default function Expenses() {
   const { fetchWithAuth } = useAuth();
+  const { settings } = useSettings();
+  const currency = settings?.currency || 'NGN';
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -251,7 +253,7 @@ export default function Expenses() {
             </div>
             <div>
               <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Total Expenses</p>
-              <h3 className="text-2xl font-black text-zinc-900 dark:text-white">{formatCurrency(totalExpenses)}</h3>
+              <h3 className="text-2xl font-black text-zinc-900 dark:text-white">{formatCurrency(totalExpenses, currency)}</h3>
             </div>
           </div>
         </div>
@@ -321,7 +323,7 @@ export default function Expenses() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <span className="text-sm font-black text-red-600">
-                      -{formatCurrency(expense.amount)}
+                      -{formatCurrency(expense.amount, currency)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">

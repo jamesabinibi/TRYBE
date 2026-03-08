@@ -55,15 +55,9 @@ import { Plus, ChevronRight, CheckCircle2, Circle } from 'lucide-react';
 export default function Dashboard() {
   const navigate = useNavigate();
   const { fetchWithAuth } = useAuth();
-  const [brandColor, setBrandColor] = useState('#10b981');
-
-  useEffect(() => {
-    // Get brand color from CSS variable
-    const color = getComputedStyle(document.documentElement).getPropertyValue('--brand-color').trim();
-    if (color) {
-      setBrandColor(color);
-    }
-  }, []);
+  const { settings } = useSettings();
+  const brandColor = settings?.brand_color || '#10b981';
+  const currency = settings?.currency || 'NGN';
   const [summary, setSummary] = useState<any>(null);
   const [trends, setTrends] = useState<any[]>([]);
   const [recentSales, setRecentSales] = useState<any[]>([]);
@@ -231,17 +225,17 @@ export default function Dashboard() {
         )}
         <StatCard 
           title="Money In today" 
-          value={formatCurrency(summary.today_sales || 0)} 
+          value={formatCurrency(summary.today_sales || 0, currency)} 
           color="text-brand"
         />
         <StatCard 
           title="Money Out today" 
-          value={formatCurrency(summary.today_expenses || 0)} 
+          value={formatCurrency(summary.today_expenses || 0, currency)} 
           color="text-red-500"
         />
         <StatCard 
           title="Today's Balance" 
-          value={formatCurrency((summary.today_sales || 0) - (summary.today_expenses || 0))} 
+          value={formatCurrency((summary.today_sales || 0) - (summary.today_expenses || 0), currency)} 
           color="text-zinc-900 dark:text-white"
           className="sm:col-span-2 lg:col-span-1"
         />
@@ -274,7 +268,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-4">
                     <div>
                       <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Forecasted Revenue</p>
-                      <p className="text-2xl font-black text-amber-400">{formatCurrency(forecast.forecasted_revenue)}</p>
+                      <p className="text-2xl font-black text-amber-400">{formatCurrency(forecast.forecasted_revenue, currency)}</p>
                     </div>
                   </div>
                 </div>
@@ -398,7 +392,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-brand">{formatCurrency(staff.total_sales)}</p>
+                    <p className="text-sm font-black text-brand">{formatCurrency(staff.total_sales, currency)}</p>
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Revenue</p>
                   </div>
                 </div>
@@ -433,7 +427,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-brand">{formatCurrency(sale.revenue)}</p>
+                    <p className="text-sm font-black text-brand">{formatCurrency(sale.revenue, currency)}</p>
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Revenue</p>
                   </div>
                 </div>
@@ -468,7 +462,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-red-500">{formatCurrency(expense.amount)}</p>
+                    <p className="text-sm font-black text-red-500">{formatCurrency(expense.amount, currency)}</p>
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Amount</p>
                   </div>
                 </div>
