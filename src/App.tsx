@@ -378,19 +378,7 @@ export default function App() {
           } catch (e) {}
         }
 
-        // 2. Fallback for branding from localStorage if missing in DB
-        const localBranding = localStorage.getItem('branding_settings');
-        if (localBranding) {
-          try {
-            const parsed = JSON.parse(localBranding);
-            data = {
-              ...data,
-              logo_url: data.logo_url || parsed.logo_url,
-              brand_color: data.brand_color || parsed.brand_color
-            };
-          } catch (e) {}
-        }
-        
+        // 2. No fallback for branding from localStorage to prevent cross-account leaks
         setSettings(data);
       }
     } catch (err) {
@@ -448,7 +436,7 @@ export default function App() {
                     user ? (
                       <Layout>
                         <Routes>
-                          <Route path="/" element={<Dashboard />} />
+                          <Route path="/" element={user?.role === 'super_admin' ? <Navigate to="/super-admin" /> : <Dashboard />} />
                           <Route path="/products" element={<Products />} />
                           <Route path="/services" element={<Services />} />
                           <Route path="/sales" element={<Sales />} />

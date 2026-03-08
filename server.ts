@@ -141,6 +141,62 @@ async function createServer() {
     res.json({ status: "ok", version: "2.4.9-stable", time: new Date().toISOString() });
   });
 
+  // Helper to get account_id from headers or user_id
+  const getAccountId = async (req: any) => {
+    const userId = req.headers['x-user-id'];
+    if (!userId) {
+      console.log(`[AUTH] Missing x-user-id header for ${req.method} ${req.url}`);
+      return null;
+    }
+
+    // Handle virtual superadmin
+    if (userId === '0') {
+      console.log(`[AUTH] Virtual superadmin detected`);
+      let { data: systemAccount } = await supabase.from('accounts').select('id').eq('name', 'System Admin').maybeSingle();
+      if (!systemAccount) {
+        const { data: newAcc } = await supabase.from('accounts').insert([{ name: 'System Admin' }]).select().single();
+        systemAccount = newAcc;
+      }
+      return { account_id: systemAccount?.id || 0, role: 'super_admin' };
+    }
+    
+    try {
+      let { data: user, error } = await supabase.from('users').select('account_id, role').eq('id', userId).single();
+      if (error || !user) {
+        // If table doesn't exist, don't log as error
+        if (error?.message?.includes('relation "users" does not exist') || error?.code === '42P01') {
+          console.warn(`[AUTH] Table "users" not found. Supabase might not be initialized.`);
+          return null;
+        }
+        
+        // If user not found (PGRST116), just return null without error log if it's a common ID like '1'
+        if (error?.code === 'PGRST116' || !user) {
+          if (userId === '1') {
+            console.log(`[AUTH] Default user ID 1 not found in users table.`);
+          } else {
+            console.log(`[AUTH] User ID ${userId} not found in users table.`);
+          }
+          return null;
+        }
+
+        console.error(`[AUTH] Failed to find user for ID ${userId} (specific columns):`, error);
+        // Fallback to select all if specific columns fail
+        const fallback = await supabase.from('users').select('*').eq('id', userId).single();
+        if (fallback.error || !fallback.data) {
+          if (!fallback.error?.message?.includes('relation "users" does not exist') && fallback.error?.code !== '42P01') {
+            console.error(`[AUTH] Failed to find user for ID ${userId} (fallback):`, fallback.error);
+          }
+          return null;
+        }
+        user = fallback.data;
+      }
+      return user;
+    } catch (e) {
+      console.error(`[AUTH] Exception in getAccountId for ID ${userId}:`, e);
+      return null;
+    }
+  };
+
   // Diagnostics
   app.get("/api/diag", async (req, res) => {
     const supabase_status = {
@@ -289,12 +345,27 @@ async function createServer() {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('expenses')
-        .select('*')
+        .select('id, amount, category, date, description, payment_method, account_id')
         .eq('account_id', userInfo.account_id)
         .order('date', { ascending: false });
-      if (error) throw error;
+
+      if (error) {
+        console.error('[EXPENSES] Fetch error (specific columns):', error);
+        // Fallback to select all if specific columns fail
+        const fallback = await supabase
+          .from('expenses')
+          .select('*')
+          .eq('account_id', userInfo.account_id)
+          .order('date', { ascending: false });
+        
+        if (fallback.error) {
+          console.error('[EXPENSES] Fetch error (fallback):', fallback.error);
+          return res.status(500).json({ error: fallback.error.message });
+        }
+        data = fallback.data;
+      }
       res.json(data || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -348,12 +419,36 @@ async function createServer() {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('customers')
-        .select('*')
+        .select('id, name, email, phone, address, loyalty_points, account_id')
         .eq('account_id', userInfo.account_id)
         .order('name', { ascending: true });
-      if (error) throw error;
+
+      if (error) {
+        if (error.message?.includes('relation "customers" does not exist') || error.code === '42P01') {
+          console.warn('[CUSTOMERS] Table "customers" not found. Returning empty array.');
+          return res.json([]);
+        }
+        
+        console.error('[CUSTOMERS] Fetch error (specific columns):', error);
+        // Fallback to select all if specific columns fail
+        const fallback = await supabase
+          .from('customers')
+          .select('*')
+          .eq('account_id', userInfo.account_id)
+          .order('name', { ascending: true });
+        
+        if (fallback.error) {
+          if (fallback.error.message?.includes('relation "customers" does not exist') || fallback.error.code === '42P01') {
+            console.warn('[CUSTOMERS] Table "customers" not found in fallback. Returning empty array.');
+            return res.json([]);
+          }
+          console.error('[CUSTOMERS] Fetch error (fallback):', fallback.error);
+          return res.status(500).json({ error: fallback.error.message });
+        }
+        data = fallback.data;
+      }
       res.json(data || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -505,35 +600,6 @@ async function createServer() {
     }
   });
 
-  app.get("/api/diag", async (req, res) => {
-    let dbStatus = "Not tested";
-    let settingsSchema = null;
-    if (supabase) {
-      try {
-        const { error } = await supabase.from('users').select('id').limit(1);
-        dbStatus = error ? `Error: ${error.message}` : "Connected";
-        
-        const { data: settingsData } = await supabase.from('settings').select('*').limit(1);
-        settingsSchema = settingsData && settingsData.length > 0 ? Object.keys(settingsData[0]) : [];
-
-        const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
-        (res as any).userCount = userCount;
-      } catch (e: any) {
-        dbStatus = `Exception: ${e.message}`;
-      }
-    }
-
-    res.json({
-      supabaseUrl: supabaseUrl ? `${supabaseUrl.substring(0, 10)}...` : 'MISSING',
-      supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING',
-      supabaseInitialized: !!supabase,
-      dbStatus,
-      settingsSchema,
-      userCount: (res as any).userCount,
-      nodeEnv: process.env.NODE_ENV,
-      currentTime: new Date().toISOString()
-    });
-  });
 
   app.get("/api/test", (req, res) => {
     res.json({ message: "API is working", version: "2.4.3", env: process.env.NODE_ENV });
@@ -546,13 +612,28 @@ async function createServer() {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('categories')
-        .select('*')
+        .select('id, name, account_id')
         .eq('account_id', userInfo.account_id)
         .order('name');
-      if (error) throw error;
-      res.json(data);
+
+      if (error) {
+        console.error('[CATEGORIES] Fetch error (specific columns):', error);
+        // Fallback to select all if specific columns fail
+        const fallback = await supabase
+          .from('categories')
+          .select('*')
+          .eq('account_id', userInfo.account_id)
+          .order('name');
+        
+        if (fallback.error) {
+          console.error('[CATEGORIES] Fetch error (fallback):', fallback.error);
+          return res.status(500).json({ error: fallback.error.message });
+        }
+        data = fallback.data;
+      }
+      res.json(data || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -647,17 +728,49 @@ async function createServer() {
     }
 
     try {
+      // Special case for superadmin if configured via env
+      const superAdminPass = process.env.SUPERADMIN_PASSWORD;
+      if (superAdminPass && trimmedUsername.toLowerCase() === 'superadmin' && password === superAdminPass) {
+        console.log(`[AUTH] Superadmin login via environment variable`);
+        // Find or create a system account for superadmin
+        let { data: systemAccount } = await supabase.from('accounts').select('id').eq('name', 'System Admin').maybeSingle();
+        if (!systemAccount) {
+          const { data: newAcc } = await supabase.from('accounts').insert([{ name: 'System Admin' }]).select().single();
+          systemAccount = newAcc;
+        }
+        
+        return res.json({
+          id: '0',
+          username: 'superadmin',
+          email: 'admin@stockflow.pro',
+          role: 'super_admin',
+          name: 'System Super Admin',
+          account_id: systemAccount?.id || 0
+        });
+      }
+
       // Support login via username or email
       console.log(`[AUTH] Querying Supabase for: "${trimmedUsername}"`);
-      const { data: user, error: supabaseError } = await supabase
+      let { data: user, error: supabaseError } = await supabase
         .from('users')
         .select('id, username, email, role, name, password, account_id')
         .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
         .maybeSingle();
 
       if (supabaseError) {
-        console.error(`[AUTH] Supabase query error:`, supabaseError);
-        return res.status(500).json({ error: `Database error: ${supabaseError.message}` });
+        console.error(`[AUTH] Supabase query error (specific columns):`, supabaseError);
+        // Fallback to select all if specific columns fail
+        const fallback = await supabase
+          .from('users')
+          .select('*')
+          .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
+          .maybeSingle();
+        
+        if (fallback.error) {
+          console.error(`[AUTH] Supabase query error (fallback):`, fallback.error);
+          return res.status(500).json({ error: `Database error: ${fallback.error.message}` });
+        }
+        user = fallback.data;
       }
 
       if (user) {
@@ -917,7 +1030,7 @@ async function createServer() {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
-      const { data: products, error } = await supabase
+      let { data: products, error } = await supabase
         .from('products')
         .select(`
           id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, created_at,
@@ -928,12 +1041,35 @@ async function createServer() {
         .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('relation "products" does not exist') || error.code === '42P01') {
+          console.warn('[PRODUCTS] Table "products" not found. Returning empty array.');
+          return res.json([]);
+        }
+        
+        console.error('[PRODUCTS] Fetch error (with joins):', error);
+        // Fallback to simple select if join fails
+        const fallback = await supabase
+          .from('products')
+          .select('*')
+          .eq('account_id', userInfo.account_id)
+          .order('created_at', { ascending: false });
+        
+        if (fallback.error) {
+          if (fallback.error.message?.includes('relation "products" does not exist') || fallback.error.code === '42P01') {
+            console.warn('[PRODUCTS] Table "products" not found in fallback. Returning empty array.');
+            return res.json([]);
+          }
+          console.error('[PRODUCTS] Fetch error (fallback):', fallback.error);
+          return res.status(500).json({ error: fallback.error.message });
+        }
+        products = fallback.data;
+      }
 
       const processedProducts = (products || []).map((p: any) => ({
         ...p,
-        category_name: p.categories?.name,
-        variants: p.product_variants,
+        category_name: p.categories?.name || (Array.isArray(p.categories) ? p.categories[0]?.name : null),
+        variants: p.product_variants || [],
         total_stock: p.product_variants?.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0) || 0,
         images: p.product_images?.map((img: any) => img.image_data) || []
       }));
@@ -997,6 +1133,9 @@ async function createServer() {
     const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
     
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
       let productError;
       try {
         const result = await supabase
@@ -1148,25 +1287,7 @@ async function createServer() {
   });
 
   // Helper to get account_id from headers or user_id
-  const getAccountId = async (req: any) => {
-    const userId = req.headers['x-user-id'];
-    if (!userId) {
-      console.log(`[AUTH] Missing x-user-id header for ${req.method} ${req.url}`);
-      return null;
-    }
-    
-    try {
-      const { data: user, error } = await supabase.from('users').select('account_id, role').eq('id', userId).single();
-      if (error || !user) {
-        console.error(`[AUTH] Failed to find user for ID ${userId}:`, error);
-        return null;
-      }
-      return user;
-    } catch (e) {
-      console.error(`[AUTH] Exception in getAccountId for ID ${userId}:`, e);
-      return null;
-    }
-  };
+  // (Moved to top)
 
   app.get("/api/settings", async (req, res) => {
     if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
@@ -1376,33 +1497,45 @@ async function createServer() {
       }
 
       console.log(`[SALES] Fetching sales for account: ${userInfo.account_id}`);
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('sales')
         .select(`
           *,
-          customers!left (name),
-          users!left (name)
+          customers (name),
+          users (name)
         `)
         .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('[SALES] Fetch error:', error);
+        if (error.message?.includes('relation "sales" does not exist') || error.code === '42P01') {
+          console.warn('[SALES] Table "sales" not found. Returning empty array.');
+          return res.json([]);
+        }
+        
+        console.error('[SALES] Fetch error (with joins):', error);
         // Fallback to simple select if join fails
-        const { data: simpleData, error: simpleError } = await supabase
+        const fallback = await supabase
           .from('sales')
           .select('*')
           .eq('account_id', userInfo.account_id)
           .order('created_at', { ascending: false });
         
-        if (simpleError) throw simpleError;
-        return res.json(simpleData || []);
+        if (fallback.error) {
+          if (fallback.error.message?.includes('relation "sales" does not exist') || fallback.error.code === '42P01') {
+            console.warn('[SALES] Table "sales" not found in fallback. Returning empty array.');
+            return res.json([]);
+          }
+          console.error('[SALES] Fetch error (fallback):', fallback.error);
+          return res.status(500).json({ error: fallback.error.message });
+        }
+        data = fallback.data;
       }
       
       const flattened = (data || []).map((s: any) => ({
         ...s,
-        customer_name: s.customers?.name || 'Walk-in',
-        staff_name: s.users?.name || 'System'
+        customer_name: s.customers?.name || (Array.isArray(s.customers) ? s.customers[0]?.name : null) || 'Walk-in',
+        staff_name: s.users?.name || (Array.isArray(s.users) ? s.users[0]?.name : null) || 'System'
       }));
       console.log(`[SALES] Returning ${flattened.length} sales`);
       res.json(flattened);
@@ -1483,26 +1616,6 @@ async function createServer() {
   });
 
   // Super Admin Routes
-  app.get("/api/admin/stats", async (req, res) => {
-    try {
-      const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role !== 'super_admin') return res.status(403).json({ error: "Forbidden" });
-
-      const { count: accountsCount } = await supabase.from('accounts').select('*', { count: 'exact', head: true });
-      const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
-      const { count: salesCount } = await supabase.from('sales').select('*', { count: 'exact', head: true });
-      const { count: productsCount } = await supabase.from('products').select('*', { count: 'exact', head: true });
-
-      res.json({
-        accounts: accountsCount,
-        users: usersCount,
-        sales: salesCount,
-        products: productsCount
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
 
   app.get("/api/admin/accounts", async (req, res) => {
     try {
