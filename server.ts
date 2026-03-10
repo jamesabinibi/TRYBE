@@ -1349,13 +1349,18 @@ CREATE TABLE IF NOT EXISTS notifications (
         products = fallback.data;
       }
 
-      const processedProducts = (products || []).map((p: any) => ({
-        ...p,
-        category_name: p.categories?.name || (Array.isArray(p.categories) ? p.categories[0]?.name : null),
-        variants: p.product_variants || [],
-        total_stock: p.product_variants?.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0) || 0,
-        images: p.product_images?.map((img: any) => img.image_data) || []
-      }));
+      const processedProducts = (products || []).map((p: any) => {
+        const variants = p.product_variants || [];
+        const totalStock = variants.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0);
+        
+        return {
+          ...p,
+          category_name: p.categories?.name || (Array.isArray(p.categories) ? p.categories[0]?.name : null),
+          variants: variants,
+          total_stock: totalStock,
+          images: p.product_images?.map((img: any) => img.image_data) || []
+        };
+      });
 
       res.json(processedProducts);
     } catch (error: any) {
