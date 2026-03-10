@@ -241,8 +241,14 @@ CREATE TABLE IF NOT EXISTS users (
 -- Migrations for existing tables
 DO $$ 
 BEGIN 
+  -- Add account_id to users
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='account_id') THEN
     ALTER TABLE users ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+  END IF;
+  
+  -- Add created_at to users if missing
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='created_at') THEN
+    ALTER TABLE users ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW();
   END IF;
 END $$;
 
@@ -2246,19 +2252,17 @@ CREATE TABLE IF NOT EXISTS notifications (
 
       console.log(`[ADMIN] Fetching all users...`);
 
-      // Try simple select first to see if it's the join causing issues
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('*, accounts(name)')
-        .order('created_at', { ascending: false });
+      // Try simple select first to see if it's the join or order by causing issues
+      let query = supabase.from('users').select('*, accounts(name)');
+      
+      const { data: users, error } = await query;
 
       if (error) {
         console.error('[ADMIN] Failed to fetch users with accounts:', error);
-        // Fallback to simple select
+        // Fallback to simple select without join or order
         const { data: simpleUsers, error: simpleError } = await supabase
           .from('users')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .select('*');
         
         if (simpleError) {
           console.error('[ADMIN] Fallback fetch users failed:', simpleError);
@@ -2267,7 +2271,14 @@ CREATE TABLE IF NOT EXISTS notifications (
         return res.json(simpleUsers);
       }
       
-      res.json(users);
+      // Sort in memory if created_at might be missing or causing issues in SQL
+      const sortedUsers = [...(users || [])].sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      res.json(sortedUsers);
     } catch (error: any) {
       console.error('[ADMIN] List users failed:', error);
       res.status(500).json({ error: error.message });
