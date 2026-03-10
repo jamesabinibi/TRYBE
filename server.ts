@@ -301,6 +301,43 @@ BEGIN
     UPDATE settings SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
   END IF;
 
+  -- Product Variants
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='product_variants') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='account_id') THEN
+      ALTER TABLE product_variants ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    END IF;
+    -- Link to account of the parent product
+    UPDATE product_variants pv SET account_id = (SELECT account_id FROM products p WHERE p.id = pv.product_id) WHERE account_id IS NULL;
+    -- Fallback for orphaned variants
+    UPDATE product_variants SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  END IF;
+
+  -- Product Images
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='product_images') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_images' AND column_name='account_id') THEN
+      ALTER TABLE product_images ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    END IF;
+    UPDATE product_images pi SET account_id = (SELECT account_id FROM products p WHERE p.id = pi.product_id) WHERE account_id IS NULL;
+    UPDATE product_images SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  END IF;
+
+  -- Services
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='services') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='services' AND column_name='account_id') THEN
+      ALTER TABLE services ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    END IF;
+    UPDATE services SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  END IF;
+
+  -- Sale Items
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='sale_items') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sale_items' AND column_name='account_id') THEN
+      ALTER TABLE sale_items ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    END IF;
+    UPDATE sale_items si SET account_id = (SELECT account_id FROM sales s WHERE s.id = si.sale_id) WHERE account_id IS NULL;
+    UPDATE sale_items SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  END IF;
+
   -- Notifications
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='notifications') THEN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='notifications' AND column_name='account_id') THEN
