@@ -65,6 +65,12 @@ export default function SuperAdmin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'accounts' | 'users'>('accounts');
   
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -95,7 +101,34 @@ export default function SuperAdmin() {
       const data = await res.json();
       setUsers(data);
     } catch (err) {
+      toast.error('Failed to load system users');
       console.error('Failed to fetch users:', err);
+    }
+  };
+
+  const handleBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastMessage.trim()) return;
+    
+    setIsBroadcasting(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: broadcastMessage })
+      });
+      
+      if (res.ok) {
+        toast.success('Broadcast message sent to all users');
+        setIsBroadcastModalOpen(false);
+        setBroadcastMessage('');
+      } else {
+        toast.error('Failed to send broadcast');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    } finally {
+      setIsBroadcasting(false);
     }
   };
 
@@ -136,6 +169,16 @@ export default function SuperAdmin() {
       </div>
     );
   }
+
+  const filteredAccounts = stats?.recentAccounts.filter(acc => 
+    acc.name.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
+  const filteredUsers = users.filter(u => 
+    u.username.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-8 pb-20">
@@ -243,9 +286,7 @@ export default function SuperAdmin() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {stats?.recentAccounts.filter(acc => 
-                      acc.name.toLowerCase().includes(searchQuery.toLowerCase())
-                    ).map((account) => (
+                    {filteredAccounts.map((account) => (
                       <tr key={account.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-3">
@@ -280,10 +321,13 @@ export default function SuperAdmin() {
                         </td>
                       </tr>
                     ))}
-                    {(!stats?.recentAccounts || stats.recentAccounts.length === 0) && (
+                    {filteredAccounts.length === 0 && (
                       <tr>
                         <td colSpan={4} className="px-8 py-12 text-center">
-                          <p className="text-sm text-zinc-500 font-medium italic">No accounts found in the system.</p>
+                          <div className="flex flex-col items-center gap-2">
+                            <Building2 className="w-8 h-8 text-zinc-200 dark:text-zinc-800" />
+                            <p className="text-sm text-zinc-500 font-medium italic">No accounts found in the system.</p>
+                          </div>
                         </td>
                       </tr>
                     )}
@@ -300,11 +344,7 @@ export default function SuperAdmin() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {users.filter(u => 
-                      u.username.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      u.name?.toLowerCase().includes(searchQuery.toLowerCase())
-                    ).map((user) => (
+                    {filteredUsers.map((user) => (
                       <tr key={user.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-3">
@@ -341,6 +381,16 @@ export default function SuperAdmin() {
                         </td>
                       </tr>
                     ))}
+                    {filteredUsers.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-8 py-12 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <Users className="w-8 h-8 text-zinc-200 dark:text-zinc-800" />
+                            <p className="text-sm text-zinc-500 font-medium italic">No users found in the system.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               )}
@@ -378,19 +428,28 @@ export default function SuperAdmin() {
           <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <h3 className="text-xl font-black text-zinc-900 dark:text-white mb-6">Admin Actions</h3>
             <div className="space-y-3">
-              <button className="w-full flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all group">
+              <button 
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="w-full flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all group"
+              >
                 <div className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm group-hover:text-emerald-500 transition-colors">
                   <SettingsIcon className="w-5 h-5" />
                 </div>
                 System Settings
               </button>
-              <button className="w-full flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all group">
+              <button 
+                onClick={() => setIsBroadcastModalOpen(true)}
+                className="w-full flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all group"
+              >
                 <div className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm group-hover:text-emerald-500 transition-colors">
                   <Mail className="w-5 h-5" />
                 </div>
                 Broadcast Message
               </button>
-              <button className="w-full flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all group">
+              <button 
+                onClick={() => toast.info('Growth analytics dashboard is coming soon!')}
+                className="w-full flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all group"
+              >
                 <div className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm group-hover:text-emerald-500 transition-colors">
                   <TrendingUp className="w-5 h-5" />
                 </div>
@@ -400,6 +459,113 @@ export default function SuperAdmin() {
           </div>
         </div>
       </div>
+
+      {/* Broadcast Modal */}
+      <AnimatePresence>
+        {isBroadcastModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsBroadcastModalOpen(false)}
+              className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Broadcast Message</h3>
+                <button onClick={() => setIsBroadcastModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleBroadcast} className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Message Content</label>
+                  <textarea 
+                    required
+                    value={broadcastMessage}
+                    onChange={(e) => setBroadcastMessage(e.target.value)}
+                    className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all min-h-[120px] resize-none"
+                    placeholder="Enter message to send to all users..."
+                  />
+                </div>
+
+                <button 
+                  type="submit"
+                  disabled={isBroadcasting}
+                  className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                >
+                  {isBroadcasting ? 'Sending...' : 'Send Broadcast'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* System Settings Modal */}
+      <AnimatePresence>
+        {isSettingsModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSettingsModalOpen(false)}
+              className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">System Settings</h3>
+                <button onClick={() => setIsSettingsModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                    <div>
+                      <p className="text-sm font-black text-zinc-900 dark:text-white">Maintenance Mode</p>
+                      <p className="text-[10px] text-zinc-500 font-medium">Disable access for all users</p>
+                    </div>
+                    <div className="w-12 h-6 bg-zinc-200 dark:bg-zinc-700 rounded-full relative cursor-not-allowed">
+                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                    <div>
+                      <p className="text-sm font-black text-zinc-900 dark:text-white">New Registrations</p>
+                      <p className="text-[10px] text-zinc-500 font-medium">Allow new users to sign up</p>
+                    </div>
+                    <div className="w-12 h-6 bg-emerald-500 rounded-full relative cursor-not-allowed">
+                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setIsSettingsModalOpen(false)}
+                  className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all"
+                >
+                  Close Settings
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Reset Password Modal */}
       <AnimatePresence>

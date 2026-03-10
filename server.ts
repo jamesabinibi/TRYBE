@@ -2141,6 +2141,42 @@ CREATE TABLE IF NOT EXISTS notifications (
     }
   });
 
+  // Super Admin Broadcast
+  app.post("/api/admin/broadcast", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'super_admin') {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const { message, title = "System Broadcast" } = req.body;
+      if (!message) return res.status(400).json({ error: "Message is required" });
+
+      // Get all accounts
+      const { data: accounts, error: accError } = await supabase.from('accounts').select('id');
+      if (accError) throw accError;
+
+      if (accounts && accounts.length > 0) {
+        const notifications = accounts.map(acc => ({
+          account_id: acc.id,
+          title,
+          message,
+          type: 'info',
+          is_read: false
+        }));
+
+        const { error: notifyError } = await supabase.from('notifications').insert(notifications);
+        if (notifyError) throw notifyError;
+      }
+
+      res.json({ success: true, count: accounts?.length || 0 });
+    } catch (error: any) {
+      console.error('[ADMIN] Broadcast failed:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Super Admin Stats
   app.get("/api/admin/stats", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
