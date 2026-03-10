@@ -16,7 +16,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
-import { cn } from '../lib/utils';
+import { formatCurrency, cn } from '../lib/utils';
 import { toast } from 'sonner';
 
 interface Service {
@@ -116,13 +116,6 @@ const Services = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-    }).format(amount);
   };
 
   const filteredServices = services.filter(s => 

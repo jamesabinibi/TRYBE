@@ -13,7 +13,7 @@ import {
   Loader2,
   Sparkles
 } from 'lucide-react';
-import { useAuth } from '../App';
+import { useAuth, useSettings } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';

@@ -32,7 +32,7 @@ import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAuth } from '../App';
+import { useAuth, useSettings } from '../App';
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any) => (
   <motion.div 
@@ -55,13 +55,13 @@ import { Plus, ChevronRight, CheckCircle2, Circle } from 'lucide-react';
 export default function Dashboard() {
   const navigate = useNavigate();
   const { fetchWithAuth } = useAuth();
-  const { settings } = useSettings();
-  const brandColor = settings?.brand_color || '#10b981';
-  const currency = settings?.currency || 'NGN';
+  const { settings: globalSettings } = useSettings();
+  const brandColor = globalSettings?.brand_color || '#10b981';
+  const currency = globalSettings?.currency || 'NGN';
   const [summary, setSummary] = useState<any>(null);
   const [trends, setTrends] = useState<any[]>([]);
   const [recentSales, setRecentSales] = useState<any[]>([]);
-  const [settings, setSettings] = useState<any>(null);
+  const [dashboardSettings, setDashboardSettings] = useState<any>(null);
   const [staffPerformance, setStaffPerformance] = useState<any[]>([]);
   const [topSales, setTopSales] = useState<any[]>([]);
   const [topExpenses, setTopExpenses] = useState<any[]>([]);
@@ -96,10 +96,10 @@ export default function Dashboard() {
     fetchWithAuth('/api/settings')
       .then(res => res.json())
       .then(data => {
-        if (data && !data.error) setSettings(data);
-        else setSettings(null);
+        if (data && !data.error) setDashboardSettings(data);
+        else setDashboardSettings(null);
       })
-      .catch(() => setSettings(null));
+      .catch(() => setDashboardSettings(null));
 
     fetchWithAuth('/api/analytics/staff-performance')
       .then(res => res.json())
@@ -156,19 +156,19 @@ export default function Dashboard() {
       id: 'logo',
       label: "Add your business logo to stand out.",
       path: '/settings?section=logo',
-      isCompleted: !!settings?.logo_url
+      isCompleted: !!globalSettings?.logo_url
     },
     {
       id: 'colors',
       label: "Customise your invoices with your brand colours",
       path: '/settings?section=brand',
-      isCompleted: !!settings?.brand_color && settings?.brand_color !== '#10b981'
+      isCompleted: !!globalSettings?.brand_color && globalSettings?.brand_color !== '#10b981'
     },
     {
       id: 'tax',
       label: "Add your tax & payment details to start collecting payments.",
       path: '/settings?section=tax',
-      isCompleted: settings?.vat_enabled
+      isCompleted: globalSettings?.vat_enabled
     },
     {
       id: 'product',

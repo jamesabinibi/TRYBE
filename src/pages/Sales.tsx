@@ -26,7 +26,7 @@ import {
 import { Product, Variant, Sale, Customer } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAuth } from '../App';
+import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
