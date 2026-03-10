@@ -84,11 +84,14 @@ export default function SuperAdmin() {
   const fetchStats = async () => {
     try {
       const res = await fetchWithAuth('/api/admin/stats');
-      if (!res.ok) throw new Error('Failed to fetch admin stats');
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to fetch admin stats');
+      }
       const data = await res.json();
       setStats(data);
-    } catch (err) {
-      toast.error('Failed to load system statistics');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load system statistics');
     } finally {
       setIsLoading(false);
     }
@@ -97,11 +100,14 @@ export default function SuperAdmin() {
   const fetchUsers = async () => {
     try {
       const res = await fetchWithAuth('/api/admin/users');
-      if (!res.ok) throw new Error('Failed to fetch users');
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to fetch users');
+      }
       const data = await res.json();
       setUsers(data);
-    } catch (err) {
-      toast.error('Failed to load system users');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load system users');
       console.error('Failed to fetch users:', err);
     }
   };
@@ -123,12 +129,33 @@ export default function SuperAdmin() {
         setIsBroadcastModalOpen(false);
         setBroadcastMessage('');
       } else {
-        toast.error('Failed to send broadcast');
+        const data = await res.json();
+        toast.error(data.error || 'Failed to send broadcast');
       }
-    } catch (err) {
-      toast.error('Network error');
+    } catch (err: any) {
+      toast.error(err.message || 'Network error');
     } finally {
       setIsBroadcasting(false);
+    }
+  };
+
+  const handleSystemSetup = async () => {
+    const confirm = window.confirm("This will attempt to create missing database tables. Continue?");
+    if (!confirm) return;
+
+    toast.loading('Running system setup...', { id: 'setup' });
+    try {
+      const res = await fetchWithAuth('/api/diag/setup', { method: 'POST' });
+      if (res.ok) {
+        toast.success('System setup completed successfully', { id: 'setup' });
+        fetchStats();
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Setup failed', { id: 'setup' });
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Network error during setup', { id: 'setup' });
     }
   };
 
@@ -428,6 +455,15 @@ export default function SuperAdmin() {
           <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <h3 className="text-xl font-black text-zinc-900 dark:text-white mb-6">Admin Actions</h3>
             <div className="space-y-3">
+              <button 
+                onClick={handleSystemSetup}
+                className="w-full flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl text-sm font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all group border border-emerald-100 dark:border-emerald-900/30"
+              >
+                <div className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <Database className="w-5 h-5" />
+                </div>
+                Run System Setup
+              </button>
               <button 
                 onClick={() => setIsSettingsModalOpen(true)}
                 className="w-full flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all group"
