@@ -196,8 +196,7 @@ async function createServer() {
       }
 
       if (!user.account_id && user.role !== 'super_admin') {
-        console.error(`[AUTH] User ${userId} has no account_id!`);
-        return null;
+        console.warn(`[AUTH] User ${userId} has no account_id! Proceeding with caution.`);
       }
 
       return user;
@@ -250,6 +249,58 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='created_at') THEN
     ALTER TABLE users ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW();
   END IF;
+
+  -- Ensure at least one account exists for orphaned data
+  IF NOT EXISTS (SELECT 1 FROM accounts) THEN
+    INSERT INTO accounts (name) VALUES ('Default Business');
+  END IF;
+
+  -- Link orphaned users to the first account
+  UPDATE users SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL AND role != 'super_admin';
+
+  -- Add account_id to other tables if they exist but are missing it
+  -- Categories
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='categories') AND 
+     NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='account_id') THEN
+    ALTER TABLE categories ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    UPDATE categories SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  END IF;
+
+  -- Products
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='products') AND 
+     NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='account_id') THEN
+    ALTER TABLE products ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    UPDATE products SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  END IF;
+
+  -- Sales
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='sales') AND 
+     NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='account_id') THEN
+    ALTER TABLE sales ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    UPDATE sales SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  END IF;
+
+  -- Expenses
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='expenses') AND 
+     NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='expenses' AND column_name='account_id') THEN
+    ALTER TABLE expenses ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    UPDATE expenses SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  END IF;
+
+  -- Customers
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='customers') AND 
+     NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='customers' AND column_name='account_id') THEN
+    ALTER TABLE customers ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    UPDATE customers SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  END IF;
+
+  -- Settings
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='settings') AND 
+     NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='settings' AND column_name='account_id') THEN
+    ALTER TABLE settings ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    UPDATE settings SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  END IF;
+
 END $$;
 
 -- 1. Categories
@@ -994,6 +1045,17 @@ CREATE TABLE IF NOT EXISTS notifications (
       if (user) {
         console.log(`[AUTH] User found: "${user.username}" (ID: ${user.id}, Role: ${user.role}, Account: ${user.account_id})`);
         
+        // Auto-fix orphaned users if possible
+        if (!user.account_id && user.role !== 'super_admin') {
+          console.log(`[AUTH] Orphaned user detected, attempting to assign default account...`);
+          const { data: firstAcc } = await supabase.from('accounts').select('id').limit(1).maybeSingle();
+          if (firstAcc) {
+            await supabase.from('users').update({ account_id: firstAcc.id }).eq('id', user.id);
+            user.account_id = firstAcc.id;
+            console.log(`[AUTH] Assigned user ${user.id} to account ${firstAcc.id}`);
+          }
+        }
+
         // Verify password
         let isPasswordValid = false;
         const storedPassword = user.password || '';
