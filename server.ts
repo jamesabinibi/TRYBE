@@ -2174,6 +2174,55 @@ CREATE TABLE IF NOT EXISTS notifications (
     }
   });
 
+  // Super Admin List All Users
+  app.get("/api/admin/users", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'super_admin') {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('*, accounts(name)')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Super Admin Reset User Password
+  app.post("/api/admin/reset-user-password", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'super_admin') {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const { userId, newPassword } = req.body;
+      if (!userId || !newPassword) {
+        return res.status(400).json({ error: "Missing userId or newPassword" });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const { error } = await supabase
+        .from('users')
+        .update({ password: hashedPassword })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // API 404 handler
   app.all("/api/*", (req, res) => {
     console.log(`[API 404] ${req.method} ${req.url} - No route matched`);

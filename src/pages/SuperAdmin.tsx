@@ -13,11 +13,15 @@ import {
   Calendar,
   ExternalLink,
   Settings as SettingsIcon,
-  Database
+  Database,
+  Lock,
+  X,
+  Shield,
+  User as UserIcon
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
 interface AdminStats {
@@ -56,11 +60,19 @@ const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
 export default function SuperAdmin() {
   const { fetchWithAuth } = useAuth();
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'users'>('accounts');
+  
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     fetchStats();
+    fetchUsers();
   }, []);
 
   const fetchStats = async () => {
@@ -73,6 +85,44 @@ export default function SuperAdmin() {
       toast.error('Failed to load system statistics');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetchWithAuth('/api/admin/users');
+      if (!res.ok) throw new Error('Failed to fetch users');
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser || !newPassword) return;
+    
+    setIsResetting(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/reset-user-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedUser.id, newPassword })
+      });
+      
+      if (res.ok) {
+        toast.success(`Password reset for ${selectedUser.username}`);
+        setIsResetModalOpen(false);
+        setNewPassword('');
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to reset password');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -101,7 +151,7 @@ export default function SuperAdmin() {
         
         <div className="flex items-center gap-3">
           <button 
-            onClick={fetchStats}
+            onClick={() => { fetchStats(); fetchUsers(); }}
             className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-emerald-500 transition-colors shadow-sm"
           >
             <Activity className="w-5 h-5" />
@@ -149,72 +199,151 @@ export default function SuperAdmin() {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
             <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-black text-zinc-900 dark:text-white">Recent Registrations</h3>
-                <p className="text-sm text-zinc-500 font-medium">Latest businesses joined the platform</p>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setActiveTab('accounts')}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all",
+                    activeTab === 'accounts' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-zinc-600"
+                  )}
+                >
+                  Accounts
+                </button>
+                <button 
+                  onClick={() => setActiveTab('users')}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all",
+                    activeTab === 'users' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-zinc-600"
+                  )}
+                >
+                  Users
+                </button>
               </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input 
                   type="text"
-                  placeholder="Search accounts..."
+                  placeholder={activeTab === 'accounts' ? "Search accounts..." : "Search users..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm outline-none focus:border-emerald-500 transition-all"
+                  className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white outline-none focus:border-emerald-500 transition-all"
                 />
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
-                    <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Name</th>
-                    <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Owner</th>
-                    <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Joined Date</th>
-                    <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {stats?.recentAccounts.filter(acc => 
-                    acc.name.toLowerCase().includes(searchQuery.toLowerCase())
-                  ).map((account) => (
-                    <tr key={account.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
-                            {account.name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="text-sm font-black text-zinc-900 dark:text-white">{account.name}</p>
-                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">ID: #{account.id}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">{account.users?.[0]?.name || 'N/A'}</span>
-                          <span className="text-xs text-zinc-400 flex items-center gap-1">
-                            <Mail className="w-3 h-3" />
-                            {account.users?.[0]?.email || 'N/A'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
-                          <Calendar className="w-4 h-4 opacity-50" />
-                          {new Date(account.created_at).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <button className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors">
-                          <ExternalLink className="w-4 h-4" />
-                        </button>
-                      </td>
+              {activeTab === 'accounts' ? (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
+                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Name</th>
+                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Owner</th>
+                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Joined Date</th>
+                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {stats?.recentAccounts.filter(acc => 
+                      acc.name.toLowerCase().includes(searchQuery.toLowerCase())
+                    ).map((account) => (
+                      <tr key={account.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
+                              {account.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-zinc-900 dark:text-white">{account.name}</p>
+                              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">ID: #{account.id}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">{account.users?.[0]?.name || 'N/A'}</span>
+                            <span className="text-xs text-zinc-400 flex items-center gap-1">
+                              <Mail className="w-3 h-3" />
+                              {account.users?.[0]?.email || 'N/A'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
+                            <Calendar className="w-4 h-4 opacity-50" />
+                            {new Date(account.created_at).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <button className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors">
+                            <ExternalLink className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {(!stats?.recentAccounts || stats.recentAccounts.length === 0) && (
+                      <tr>
+                        <td colSpan={4} className="px-8 py-12 text-center">
+                          <p className="text-sm text-zinc-500 font-medium italic">No accounts found in the system.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
+                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">User</th>
+                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account</th>
+                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</th>
+                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {users.filter(u => 
+                      u.username.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      u.name?.toLowerCase().includes(searchQuery.toLowerCase())
+                    ).map((user) => (
+                      <tr key={user.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
+                              <UserIcon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-zinc-900 dark:text-white">{user.name || 'N/A'}</p>
+                              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">@{user.username}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">{user.accounts?.name || 'System'}</span>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-2">
+                            <Shield className={cn(
+                              "w-4 h-4",
+                              user.role === 'super_admin' ? "text-emerald-500" : 
+                              user.role === 'admin' ? "text-purple-500" : "text-zinc-400"
+                            )} />
+                            <span className="text-xs font-black uppercase tracking-widest text-zinc-500">{user.role}</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <button 
+                            onClick={() => { setSelectedUser(user); setIsResetModalOpen(true); }}
+                            className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors"
+                            title="Reset Password"
+                          >
+                            <Lock className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
@@ -271,6 +400,62 @@ export default function SuperAdmin() {
           </div>
         </div>
       </div>
+
+      {/* Reset Password Modal */}
+      <AnimatePresence>
+        {isResetModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsResetModalOpen(false)}
+              className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Reset Password</h3>
+                <button onClick={() => setIsResetModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleResetPassword} className="p-8 space-y-6">
+                <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                  <p className="text-xs text-zinc-500 font-medium">Resetting password for:</p>
+                  <p className="text-sm font-black text-zinc-900 dark:text-white mt-1">@{selectedUser?.username}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">New Password</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
+                    placeholder="Enter new password"
+                  />
+                </div>
+
+                <button 
+                  type="submit"
+                  disabled={isResetting}
+                  className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                >
+                  {isResetting ? 'Resetting...' : 'Update Password'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
