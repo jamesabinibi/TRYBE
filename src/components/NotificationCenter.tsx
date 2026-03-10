@@ -65,6 +65,31 @@ export default function NotificationCenter({ userId }: { userId: number }) {
     }
   };
 
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch('/api/notifications/all/read', { method: 'POST' });
+      if (response.ok) {
+        setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
+  };
+
+  const clearAll = async () => {
+    if (!confirm('Are you sure you want to clear all notifications?')) return;
+    try {
+      const response = await fetch(`/api/notifications/${userId}`, { method: 'DELETE' });
+      if (response.ok) {
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
+    }
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'warning': return <AlertTriangle className="w-4 h-4 text-amber-500" />;
@@ -101,10 +126,34 @@ export default function NotificationCenter({ userId }: { userId: number }) {
               className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-[2rem] shadow-2xl shadow-zinc-200/50 border border-zinc-200 overflow-hidden z-50"
             >
               <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-                <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest">Notifications</h3>
-                <span className="px-2 py-1 bg-brand/10 text-brand rounded-lg text-[10px] font-black">
-                  {unreadCount} New
-                </span>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span className="px-2 py-1 bg-brand/10 text-brand rounded-lg text-[10px] font-black">
+                      {unreadCount} New
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {notifications.length > 0 && (
+                    <>
+                      <button 
+                        onClick={markAllAsRead}
+                        className="text-[10px] font-black text-brand uppercase tracking-widest hover:opacity-70 transition-opacity"
+                        title="Mark all as read"
+                      >
+                        Read All
+                      </button>
+                      <button 
+                        onClick={clearAll}
+                        className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:opacity-70 transition-opacity"
+                        title="Clear all"
+                      >
+                        Clear
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
@@ -152,7 +201,14 @@ export default function NotificationCenter({ userId }: { userId: number }) {
               </div>
 
               <div className="p-4 bg-zinc-50/50 border-t border-zinc-100 text-center">
-                <button className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-brand transition-colors">
+                <button 
+                  onClick={() => {
+                    // Just a simple toggle for now since we don't have a separate page
+                    // In a real app, this might navigate to /notifications
+                    alert("You are viewing the most recent 50 notifications.");
+                  }}
+                  className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-brand transition-colors"
+                >
                   View All Notifications
                 </button>
               </div>
