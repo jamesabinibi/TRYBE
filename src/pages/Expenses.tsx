@@ -253,7 +253,7 @@ export default function Expenses() {
             </div>
             <div>
               <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Total Expenses</p>
-              <h3 className="text-2xl font-black text-zinc-900 dark:text-white">{formatCurrency(totalExpenses, currency)}</h3>
+              <h3 className="text-2xl font-black text-zinc-950 dark:text-white">{formatCurrency(totalExpenses, currency)}</h3>
             </div>
           </div>
         </div>
@@ -268,7 +268,7 @@ export default function Expenses() {
               placeholder="Search expenses..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-transparent rounded-2xl text-sm font-medium text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 transition-all outline-none border border-zinc-200 dark:border-zinc-700 focus:border-brand"
+              className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-transparent rounded-2xl text-sm font-medium text-zinc-950 dark:text-white focus:bg-white dark:focus:bg-zinc-800 transition-all outline-none border border-zinc-200 dark:border-zinc-700 focus:border-brand"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -308,7 +308,7 @@ export default function Expenses() {
               {filteredExpenses.map((expense) => (
                 <tr key={expense.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
+                    <div className="flex items-center gap-2 text-sm font-bold text-zinc-950 dark:text-white">
                       <Calendar className="w-3 h-3 text-zinc-400" />
                       {new Date(expense.date).toLocaleDateString()}
                     </div>
@@ -374,7 +374,7 @@ export default function Expenses() {
                   <div className="w-10 h-10 bg-brand/10 rounded-2xl flex items-center justify-center text-brand">
                     <Wallet className="w-5 h-5" />
                   </div>
-                  <h2 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">Record Expense</h2>
+                  <h2 className="text-xl font-black text-zinc-950 dark:text-white tracking-tight">Record Expense</h2>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="relative">
@@ -407,7 +407,7 @@ export default function Expenses() {
                     <select 
                       value={newExpense.category}
                       onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     >
                       {categories.map(c => <option key={c} value={c} className="dark:bg-zinc-900">{c}</option>)}
                     </select>
@@ -420,7 +420,7 @@ export default function Expenses() {
                       value={newExpense.amount}
                       onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
                       placeholder="0.00"
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     />
                   </div>
                 </div>
@@ -431,7 +431,7 @@ export default function Expenses() {
                     type="date" 
                     value={newExpense.date}
                     onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                   />
                 </div>
 
@@ -443,7 +443,7 @@ export default function Expenses() {
                     onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
                     placeholder="What was this expense for?"
                     rows={3}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all resize-none"
+                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all resize-none"
                   />
                 </div>
 

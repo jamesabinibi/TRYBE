@@ -163,7 +163,7 @@ const TaxReport = () => {
                 </div>
                 <span className="text-xs font-black uppercase tracking-widest">Total Turnover</span>
               </div>
-              <div className="text-3xl font-black text-zinc-900 dark:text-white">{formatCurrency(taxData.turnover, settings?.currency)}</div>
+              <div className="text-3xl font-black text-zinc-950 dark:text-white">{formatCurrency(taxData.turnover, settings?.currency)}</div>
               <div className="mt-4">
                 {taxData.vat_exempt ? (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -191,7 +191,7 @@ const TaxReport = () => {
               </div>
               <div className={cn(
                 "text-3xl font-black",
-                taxData.net_profit >= 0 ? "text-zinc-900 dark:text-white" : "text-red-600 dark:text-red-400"
+                taxData.net_profit >= 0 ? "text-zinc-950 dark:text-white" : "text-red-600 dark:text-red-400"
               )}>
                 {formatCurrency(taxData.net_profit, settings?.currency)}
               </div>
@@ -230,7 +230,7 @@ const TaxReport = () => {
           {/* Detailed Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-6">
-              <h2 className="text-xl font-black text-zinc-900 dark:text-white flex items-center gap-3">
+              <h2 className="text-xl font-black text-zinc-950 dark:text-white flex items-center gap-3">
                 <FileText className="w-6 h-6 text-brand" />
                 Financial Performance
               </h2>
@@ -239,15 +239,15 @@ const TaxReport = () => {
                 <div className="p-8 space-y-6">
                   <div className="flex justify-between items-center">
                     <div className="space-y-1">
-                      <div className="text-sm font-bold text-zinc-900 dark:text-white">Total Turnover</div>
+                      <div className="text-sm font-bold text-zinc-950 dark:text-white">Total Turnover</div>
                       <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">All Sales Revenue</div>
                     </div>
-                    <div className="text-lg font-black text-zinc-900 dark:text-white">{formatCurrency(taxData.turnover, settings?.currency)}</div>
+                    <div className="text-lg font-black text-zinc-950 dark:text-white">{formatCurrency(taxData.turnover, settings?.currency)}</div>
                   </div>
                   
                   <div className="flex justify-between items-center">
                     <div className="space-y-1">
-                      <div className="text-sm font-bold text-zinc-900 dark:text-white">Total Expenses</div>
+                      <div className="text-sm font-bold text-zinc-950 dark:text-white">Total Expenses</div>
                       <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Operational Costs</div>
                     </div>
                     <div className="text-lg font-black text-red-600 dark:text-red-400">-{formatCurrency(taxData.total_expenses, settings?.currency)}</div>
@@ -255,7 +255,7 @@ const TaxReport = () => {
 
                   <div className="flex justify-between items-center">
                     <div className="space-y-1">
-                      <div className="text-sm font-bold text-zinc-900 dark:text-white">Other Inflows</div>
+                      <div className="text-sm font-bold text-zinc-950 dark:text-white">Other Inflows</div>
                       <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Loans, Investments, etc.</div>
                     </div>
                     <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">+{formatCurrency(taxData.total_inflows, settings?.currency)}</div>
@@ -263,7 +263,7 @@ const TaxReport = () => {
 
                   <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
                     <div className="space-y-1">
-                      <div className="text-lg font-black text-zinc-900 dark:text-white">Net Cash Flow</div>
+                      <div className="text-lg font-black text-zinc-950 dark:text-white">Net Cash Flow</div>
                       <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Real Money in Bank</div>
                     </div>
                     <div className={cn(
@@ -286,7 +286,7 @@ const TaxReport = () => {
             </div>
 
             <div className="space-y-6">
-              <h2 className="text-xl font-black text-zinc-900 dark:text-white flex items-center gap-3">
+              <h2 className="text-xl font-black text-zinc-950 dark:text-white flex items-center gap-3">
                 <ShieldCheck className="w-6 h-6 text-brand" />
                 Tax Compliance Guide
               </h2>
@@ -298,7 +298,7 @@ const TaxReport = () => {
                       <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                     </div>
                     <div>
-                      <h4 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">Small Business Exemption</h4>
+                      <h4 className="font-black text-zinc-950 dark:text-white uppercase tracking-widest text-xs mb-1">Small Business Exemption</h4>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                         Companies with turnover &lt; N25m are exempt from CIT and VAT. However, you are still required to file annual returns.
                       </p>
@@ -312,7 +312,7 @@ const TaxReport = () => {
                       <AlertCircle className="w-6 h-6 text-amber-600" />
                     </div>
                     <div>
-                      <h4 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">VAT Compliance (7.5%)</h4>
+                      <h4 className="font-black text-zinc-950 dark:text-white uppercase tracking-widest text-xs mb-1">VAT Compliance (7.5%)</h4>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                         Once turnover hits N25m, you must register for VAT and remit collections by the 21st of every month.
                       </p>

@@ -53,7 +53,8 @@ export default function Sales() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [paymentMethod, setPaymentMethod] = useState('Transfer');
+  const [discountPercent, setDiscountPercent] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
@@ -164,6 +165,9 @@ export default function Sales() {
     acc + (item.price_override || item.variant.price_override || item.product.selling_price) * item.quantity, 0
   );
 
+  const discountAmount = (subtotal * discountPercent) / 100;
+  const total = subtotal - discountAmount;
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setIsProcessing(true);
@@ -184,7 +188,8 @@ export default function Sales() {
             staff_id: user?.id,
             customer_id: selectedCustomer?.id,
             customer_name: customerName,
-            customer_phone: customerPhone
+            customer_phone: customerPhone,
+            discount_percent: discountPercent
           })
         });
 
@@ -666,52 +671,43 @@ export default function Sales() {
                       <span className="text-xs font-bold uppercase tracking-widest">Subtotal</span>
                       <span className="text-sm font-black tracking-tight">{formatCurrency(subtotal, currency)}</span>
                     </div>
-                    <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
-                      <span className="text-xs font-bold uppercase tracking-widest">Tax (VAT 0%)</span>
-                      <span className="text-sm font-black tracking-tight">₦0.00</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Discount (%)</label>
+                        <input 
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={discountPercent}
+                          onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                          className="w-20 px-2 py-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-black text-right outline-none focus:border-brand"
+                        />
+                      </div>
+                      {discountAmount > 0 && (
+                        <div className="flex items-center justify-between text-emerald-500">
+                          <span className="text-[10px] font-black uppercase tracking-widest">Discount Amount</span>
+                          <span className="text-xs font-black">-{formatCurrency(discountAmount, currency)}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-zinc-700">
-                      <span className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Total Amount</span>
-                      <span className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(subtotal, currency)}</span>
+                      <span className="text-sm font-black text-zinc-950 dark:text-white uppercase tracking-widest">Total Amount</span>
+                      <span className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(total, currency)}</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <button 
-                      onClick={() => setPaymentMethod('Cash')}
-                      className={cn(
-                        "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95",
-                        paymentMethod === 'Cash' 
-                          ? "bg-white dark:bg-zinc-800 border-brand text-brand shadow-lg shadow-brand/10" 
-                          : "bg-transparent border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:bg-white dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600"
-                      )}
-                    >
-                      <Banknote className="w-6 h-6" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Cash</span>
-                    </button>
-                    <button 
-                      onClick={() => setPaymentMethod('POS')}
-                      className={cn(
-                        "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95",
-                        paymentMethod === 'POS' 
-                          ? "bg-white dark:bg-zinc-800 border-brand text-brand shadow-lg shadow-brand/10" 
-                          : "bg-transparent border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:bg-white dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600"
-                      )}
-                    >
-                      <CreditCard className="w-6 h-6" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">POS</span>
-                    </button>
+                  <div className="grid grid-cols-1 gap-4">
                     <button 
                       onClick={() => setPaymentMethod('Transfer')}
                       className={cn(
-                        "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95",
+                        "flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all active:scale-95",
                         paymentMethod === 'Transfer' 
                           ? "bg-white dark:bg-zinc-800 border-brand text-brand shadow-lg shadow-brand/10" 
                           : "bg-transparent border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:bg-white dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600"
                       )}
                     >
                       <History className="w-6 h-6" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Transfer</span>
+                      <span className="text-xs font-black uppercase tracking-widest">Bank Transfer</span>
                     </button>
                   </div>
 
