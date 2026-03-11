@@ -13,7 +13,8 @@ import {
   AlertCircle,
   Image as ImageIcon,
   X,
-  Check
+  Check,
+  Briefcase
 } from 'lucide-react';
 import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
@@ -42,8 +43,18 @@ export default function Products() {
   const currency = settings?.currency || 'NGN';
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
+  const [services, setServices] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [editingService, setEditingService] = useState<any>(null);
+  const [newService, setNewService] = useState({
+    name: '',
+    description: '',
+    price: '',
+    duration_minutes: '30',
+    category: ''
+  });
 
   const closeModal = useCallback(() => {
     setIsAddModalOpen(false);
@@ -89,8 +100,22 @@ export default function Products() {
 
   useEffect(() => {
     fetchProducts();
+    fetchServices();
     fetchCategories();
   }, []);
+
+  const fetchServices = () => {
+    fetchWithAuth('/api/services')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setServices(data);
+        } else {
+          setServices([]);
+        }
+      })
+      .catch(() => setServices([]));
+  };
 
   const fetchProducts = () => {
     fetchWithAuth('/api/products')
@@ -198,6 +223,63 @@ export default function Products() {
     setIsAddModalOpen(true);
   };
 
+  const handleDeleteService = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this service?')) return;
+    try {
+      const response = await fetchWithAuth(`/api/services/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        toast.success('Service deleted');
+        fetchServices();
+      } else {
+        toast.error('Failed to delete service');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('An error occurred');
+    }
+  };
+
+  const handleEditService = (service: any) => {
+    setEditingService(service);
+    setNewService({
+      name: service.name,
+      description: service.description || '',
+      price: service.price.toString(),
+      duration_minutes: service.duration_minutes.toString(),
+      category: service.category || ''
+    });
+    setIsServiceModalOpen(true);
+  };
+
+  const handleSaveService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const url = editingService ? `/api/services/${editingService.id}` : '/api/services';
+      const method = editingService ? 'PUT' : 'POST';
+      const response = await fetchWithAuth(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newService,
+          price: parseFloat(newService.price),
+          duration_minutes: parseInt(newService.duration_minutes)
+        })
+      });
+      if (response.ok) {
+        toast.success(editingService ? 'Service updated' : 'Service added');
+        setIsServiceModalOpen(false);
+        setEditingService(null);
+        setNewService({ name: '', description: '', price: '', duration_minutes: '30', category: '' });
+        fetchServices();
+      } else {
+        toast.error('Failed to save service');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('An error occurred');
+    }
+  };
+
   const handleDeleteProduct = async (id: number) => {
     toast.custom((t) => (
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
@@ -283,11 +365,19 @@ export default function Products() {
       (p.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
     
     const catFilter = searchParams.get('category');
-    // Ensure we compare strings to strings
     const matchesCategory = !catFilter || catFilter === 'all' || p.category_id?.toString() === catFilter;
     
     return matchesSearch && matchesCategory;
   });
+
+  const filteredServices = services.filter(s => {
+    const matchesSearch = (s.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (s.description?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (s.category?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
+  const displayItems = activeSubTab === 'products' ? filteredProducts : filteredServices;
 
   const totalCostValue = filteredProducts.reduce((acc, p) => acc + ((p.cost_price || 0) * (p.total_stock || 0)), 0);
   const totalSellingValue = filteredProducts.reduce((acc, p) => acc + ((p.selling_price || 0) * (p.total_stock || 0)), 0);
@@ -379,73 +469,99 @@ export default function Products() {
           </div>
         </div>
 
-        {filteredProducts.length > 0 ? (
+        {displayItems.length > 0 ? (
           <div className="space-y-4">
             {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Product</th>
+                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                      {activeSubTab === 'products' ? 'Product' : 'Service'}
+                    </th>
                     <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</th>
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Stock</th>
+                    {activeSubTab === 'products' && (
+                      <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Stock</th>
+                    )}
                     <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Price</th>
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Total Value</th>
+                    {activeSubTab === 'products' && (
+                      <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Total Value</th>
+                    )}
+                    {activeSubTab === 'services' && (
+                      <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Duration</th>
+                    )}
                     <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
-                  {filteredProducts.map((product) => (
-                    <tr key={product.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
+                  {displayItems.map((item: any) => (
+                    <tr key={item.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
                       <td className="py-5">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
-                            {product.images && product.images.length > 0 ? (
-                              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            {activeSubTab === 'products' ? (
+                              item.images && item.images.length > 0 ? (
+                                <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              ) : (
+                                <ImageIcon className="w-4 h-4" />
+                              )
                             ) : (
-                              <ImageIcon className="w-4 h-4" />
+                              <Briefcase className="w-4 h-4" />
                             )}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">{product.name}</p>
-                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{product.supplier_name}</p>
+                            <p className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">{item.name}</p>
+                            {activeSubTab === 'products' && (
+                              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{item.supplier_name}</p>
+                            )}
                           </div>
                         </div>
                       </td>
                       <td className="py-5">
-                        <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{product.category_name}</span>
+                        <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                          {activeSubTab === 'products' ? item.category_name : item.category}
+                        </span>
                       </td>
-                      <td className="py-5">
-                        <div className="space-y-1">
-                          <p className={cn(
-                            "text-sm font-bold tracking-tight",
-                            product.total_stock <= 5 ? "text-red-600" : "text-zinc-900 dark:text-white"
-                          )}>
-                            {product.total_stock} units
-                          </p>
-                          {product.variants && product.variants.length > 1 && (
-                            <div className="flex flex-wrap gap-1">
-                              {product.variants.map((v, i) => v.quantity > 0 && (
-                                <span key={i} className="text-[9px] font-black px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-md uppercase tracking-tighter">
-                                  {v.size}: {v.quantity}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </td>
+                      {activeSubTab === 'products' && (
+                        <td className="py-5">
+                          <div className="space-y-1">
+                            <p className={cn(
+                              "text-sm font-bold tracking-tight",
+                              (item.total_stock || 0) <= 5 ? "text-red-600" : "text-zinc-900 dark:text-white"
+                            )}>
+                              {item.total_stock || 0} units
+                            </p>
+                            {item.variants && item.variants.length > 1 && (
+                              <div className="flex flex-wrap gap-1">
+                                {item.variants.map((v: any, i: number) => v.quantity > 0 && (
+                                  <span key={i} className="text-[9px] font-black px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-md uppercase tracking-tighter">
+                                    {v.size}: {v.quantity}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      )}
                       <td className="py-5 text-sm text-zinc-900 dark:text-white font-black tracking-tight">
-                        {formatCurrency(product.selling_price, currency)}
+                        {formatCurrency(activeSubTab === 'products' ? item.selling_price : item.price, currency)}
                       </td>
-                      <td className="py-5 text-sm text-zinc-900 dark:text-white font-black tracking-tight">
-                        {formatCurrency(product.selling_price * product.total_stock, currency)}
-                      </td>
+                      {activeSubTab === 'products' && (
+                        <td className="py-5 text-sm text-zinc-900 dark:text-white font-black tracking-tight">
+                          {formatCurrency((item.selling_price || 0) * (item.total_stock || 0), currency)}
+                        </td>
+                      )}
+                      {activeSubTab === 'services' && (
+                        <td className="py-5">
+                          <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{item.duration_minutes} mins</span>
+                        </td>
+                      )}
                       <td className="py-5 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => handleEditClick(product)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
+                          <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
+                          <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -533,15 +649,104 @@ export default function Products() {
               <h3 className="text-xl font-black text-zinc-900 mb-2">Add all your products</h3>
               <p className="text-zinc-400 font-medium mb-8">Start by adding your first product in seconds</p>
               <button 
-                onClick={openAddModal}
+                onClick={() => activeSubTab === 'products' ? openAddModal() : setIsServiceModalOpen(true)}
                 className="inline-flex items-center gap-2 px-8 py-3 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
               >
                 <Plus className="w-4 h-4" />
-                Add product
+                Add {activeSubTab === 'products' ? 'product' : 'service'}
               </button>
             </div>
         )}
       </div>
+
+      {/* Add/Edit Service Modal */}
+      <AnimatePresence>
+        {isServiceModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsServiceModalOpen(false)}
+              className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-black text-zinc-900 tracking-tight">
+                    {editingService ? 'Edit Service' : 'Add Service'}
+                  </h3>
+                  <button onClick={() => setIsServiceModalOpen(false)} className="p-2 hover:bg-zinc-100 rounded-xl transition-colors">
+                    <X className="w-5 h-5 text-zinc-400" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveService} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Service Name</label>
+                    <input 
+                      required
+                      value={newService.name}
+                      onChange={(e) => setNewService({...newService, name: e.target.value})}
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Price (₦)</label>
+                      <input 
+                        required
+                        type="number"
+                        value={newService.price}
+                        onChange={(e) => setNewService({...newService, price: e.target.value})}
+                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Duration (mins)</label>
+                      <input 
+                        required
+                        type="number"
+                        value={newService.duration_minutes}
+                        onChange={(e) => setNewService({...newService, duration_minutes: e.target.value})}
+                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</label>
+                    <input 
+                      value={newService.category}
+                      onChange={(e) => setNewService({...newService, category: e.target.value})}
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Description</label>
+                    <textarea 
+                      value={newService.description}
+                      onChange={(e) => setNewService({...newService, description: e.target.value})}
+                      rows={3}
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none resize-none"
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    className="w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
+                  >
+                    {editingService ? 'Update Service' : 'Add Service'}
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Add/Edit Product Modal */}
       <AnimatePresence>

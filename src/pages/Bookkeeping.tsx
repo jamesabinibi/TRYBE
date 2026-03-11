@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 interface Record {
   id: number;
   type: 'loan' | 'debt_recovery' | 'investment' | 'other';
+  nature: 'income' | 'expense' | 'other';
   amount: number;
   description: string;
   date: string;
@@ -39,6 +40,7 @@ export default function Bookkeeping() {
   
   const [newRecord, setNewRecord] = useState({
     type: 'loan',
+    nature: 'other' as 'income' | 'expense' | 'other',
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0]
@@ -48,7 +50,13 @@ export default function Bookkeeping() {
     { value: 'loan', label: 'Loan' },
     { value: 'debt_recovery', label: 'Debt Recovery' },
     { value: 'investment', label: 'Investment' },
-    { value: 'other', label: 'Other Inflow' }
+    { value: 'other', label: 'Other' }
+  ];
+
+  const natures = [
+    { value: 'income', label: 'Income' },
+    { value: 'expense', label: 'Expense' },
+    { value: 'other', label: 'Other Inflow/Outflow' }
   ];
 
   useEffect(() => {
@@ -90,6 +98,7 @@ export default function Bookkeeping() {
         setIsAddModalOpen(false);
         setNewRecord({
           type: 'loan',
+          nature: 'other',
           amount: '',
           description: '',
           date: new Date().toISOString().split('T')[0]
@@ -331,6 +340,21 @@ export default function Bookkeeping() {
                     </select>
                   </div>
                   <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Nature</label>
+                    <select 
+                      value={newRecord.nature}
+                      onChange={(e) => setNewRecord({...newRecord, nature: e.target.value as any})}
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none transition-all"
+                    >
+                      {natures.map(n => (
+                        <option key={n.value} value={n.value}>{n.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Date</label>
                     <input 
                       type="date" 
@@ -339,17 +363,16 @@ export default function Bookkeeping() {
                       className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none transition-all"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Amount ({currency})</label>
-                  <input 
-                    type="number" 
-                    placeholder="0.00"
-                    value={newRecord.amount}
-                    onChange={(e) => setNewRecord({...newRecord, amount: e.target.value})}
-                    className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none transition-all"
-                  />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Amount ({currency})</label>
+                    <input 
+                      type="number" 
+                      placeholder="0.00"
+                      value={newRecord.amount}
+                      onChange={(e) => setNewRecord({...newRecord, amount: e.target.value})}
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none transition-all"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">

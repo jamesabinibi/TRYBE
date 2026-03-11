@@ -101,7 +101,6 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   const navItems = [
     { icon: LayoutDashboard, label: 'Home', path: '/' },
     { icon: Package, label: 'Inventory', path: '/products' },
-    { icon: Briefcase, label: 'Services', path: '/services' },
     { icon: ShoppingCart, label: 'Sales & Analytics', path: '/sales' },
     { icon: Wallet, label: 'Expenses', path: '/expenses' },
     { icon: Briefcase, label: 'Bookkeeping', path: '/bookkeeping' },

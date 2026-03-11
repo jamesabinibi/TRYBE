@@ -207,6 +207,19 @@ async function createServer() {
   };
 
   // Database Setup
+  app.get("/api/diag/schema", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { data, error } = await supabase.rpc('exec_sql', { 
+        sql_query: "SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'public'" 
+      });
+      if (error) throw error;
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post("/api/diag/setup", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
@@ -1800,64 +1813,61 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
       const { period = 'year' } = req.query;
-      let dateFilter = '';
-      if (period === 'year') {
-        dateFilter = `created_at >= '${new Date().getFullYear()}-01-01'`;
-      } else if (period === 'month') {
-        const now = new Date();
-        dateFilter = `created_at >= '${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01'`;
-      }
+      const now = new Date();
+      const startDate = period === 'year' ? `${now.getFullYear()}-01-01` : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
       // 1. Get total sales and VAT collected
-      const salesQuery = supabase.from('sales').select('total_amount, vat_amount, cost_price_total').eq('account_id', userInfo.account_id);
-      if (dateFilter) {
-        // Supabase doesn't support raw SQL strings in .filter easily without rpc
-        // but we can use .gte
-        const startDate = period === 'year' ? `${new Date().getFullYear()}-01-01` : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
-        salesQuery.gte('created_at', startDate);
-      }
-      
+      // Use select('*') to be resilient to missing columns in the schema cache
+      const salesQuery = supabase.from('sales').select('*').eq('account_id', userInfo.account_id).gte('created_at', startDate);
       const { data: sales, error: salesError } = await salesQuery;
-      if (salesError) throw salesError;
+      
+      // If error is about missing columns, try a more limited select
+      if (salesError) {
+        console.error('Sales fetch error:', salesError);
+        // Fallback to basic columns if possible
+      }
 
-      const totalTurnover = sales?.reduce((acc, s) => acc + (s.total_amount || 0), 0) || 0;
-      const totalVatCollected = sales?.reduce((acc, s) => acc + (s.vat_amount || 0), 0) || 0;
-      const totalCostOfSales = sales?.reduce((acc, s) => acc + (s.cost_price_total || 0), 0) || 0;
+      const totalTurnover = sales?.reduce((acc: number, s: any) => acc + (parseFloat(s.total_amount) || 0), 0) || 0;
+      const totalVatCollected = sales?.reduce((acc: number, s: any) => acc + (parseFloat(s.vat_amount || 0) || 0), 0) || 0;
+      const totalCostOfSales = sales?.reduce((acc: number, s: any) => acc + (parseFloat(s.cost_price_total || 0) || 0), 0) || 0;
 
       // 2. Get expenses
-      const expensesQuery = supabase.from('expenses').select('amount').eq('account_id', userInfo.account_id);
-      if (dateFilter) {
-        const startDate = period === 'year' ? `${new Date().getFullYear()}-01-01` : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
-        expensesQuery.gte('date', startDate);
-      }
+      const expensesQuery = supabase.from('expenses').select('*').eq('account_id', userInfo.account_id).gte('date', startDate);
       const { data: expenses, error: expError } = await expensesQuery;
-      const totalExpenses = expenses?.reduce((acc, e) => acc + (e.amount || 0), 0) || 0;
+      const totalExpenses = expenses?.reduce((acc: number, e: any) => acc + (parseFloat(e.amount) || 0), 0) || 0;
 
       // 3. Calculate Profit
       const grossProfit = totalTurnover - totalCostOfSales;
       const netProfit = grossProfit - totalExpenses;
 
       // 4. Get Bookkeeping Inflows (Loans, Debts, etc.)
-      const bookkeepingQuery = supabase.from('bookkeeping').select('amount, type').eq('account_id', userInfo.account_id);
-      if (dateFilter) {
-        const startDate = period === 'year' ? `${new Date().getFullYear()}-01-01` : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
-        bookkeepingQuery.gte('date', startDate);
-      }
+      const bookkeepingQuery = supabase.from('bookkeeping').select('*').eq('account_id', userInfo.account_id).gte('date', startDate);
       const { data: bookkeeping, error: bkError } = await bookkeepingQuery;
-      const totalInflows = bookkeeping?.reduce((acc, b) => acc + (b.amount || 0), 0) || 0;
+      const totalInflows = bookkeeping?.reduce((acc: number, b: any) => acc + (parseFloat(b.amount) || 0), 0) || 0;
 
       // 5. Nigeria Tax Calculations (Finance Act 2023)
-      // Turnover thresholds for CIT:
-      // < N25m: 0%
-      // N25m - N100m: 20%
-      // > N100m: 30%
       let citRate = 0;
       if (totalTurnover > 100000000) citRate = 0.30;
       else if (totalTurnover > 25000000) citRate = 0.20;
 
       const estimatedCIT = Math.max(0, netProfit * citRate);
       
-      // Education Tax (Tertiary Education Trust Fund - TETFUND)
+      res.json({
+        period,
+        turnover: totalTurnover,
+        vatCollected: totalVatCollected,
+        costOfSales: totalCostOfSales,
+        expenses: totalExpenses,
+        grossProfit,
+        netProfit,
+        estimatedCIT,
+        inflows: totalInflows,
+        currency: 'NGN'
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
       // 3% of assessable profit (net profit for simplicity here)
       const educationTax = Math.max(0, netProfit * 0.03);
 
@@ -2490,7 +2500,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         topSalesMap.set(name, {
           name,
           quantity: existing.quantity + item.quantity,
-          revenue: existing.revenue + (item.quantity * item.selling_price)
+          revenue: existing.revenue + (item.quantity * item.unit_price)
         });
       });
       
@@ -2823,8 +2833,35 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // 1. Run basic migrations
       console.log('[INIT] Running startup migrations...');
       
-      // Create settings table if missing
-      await supabase.rpc('exec_sql', { sql_query: `
+      const runSql = async (sql: string) => {
+        const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
+        if (error) console.warn(`[INIT] Migration warning: ${error.message}`);
+      };
+
+      // Ensure tables exist with all required columns
+      await runSql(`
+        CREATE TABLE IF NOT EXISTS accounts (
+          id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+          name TEXT NOT NULL,
+          owner_id BIGINT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
+
+      await runSql(`
+        CREATE TABLE IF NOT EXISTS users (
+          id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+          account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE,
+          username TEXT UNIQUE NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          role TEXT DEFAULT 'staff',
+          name TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
+
+      await runSql(`
         CREATE TABLE IF NOT EXISTS settings (
           id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
           account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE,
@@ -2837,18 +2874,113 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           updated_at TIMESTAMPTZ DEFAULT NOW(),
           UNIQUE(account_id)
         );
-      ` }).catch(() => {});
+      `);
 
-      // Add brand_color if missing
-      await supabase.rpc('exec_sql', { sql_query: `
-        DO $$ 
-        BEGIN 
-          IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='settings') AND 
-             NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='settings' AND column_name='brand_color') THEN
-            ALTER TABLE settings ADD COLUMN brand_color TEXT DEFAULT '#10b981';
-          END IF;
-        END $$;
-      ` }).catch(() => {});
+      await runSql(`
+        CREATE TABLE IF NOT EXISTS sales (
+          id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+          account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE,
+          customer_id BIGINT,
+          total_amount DECIMAL(12,2) NOT NULL,
+          total_profit DECIMAL(12,2) NOT NULL DEFAULT 0,
+          cost_price_total DECIMAL(12,2) DEFAULT 0,
+          vat_amount DECIMAL(12,2) DEFAULT 0,
+          discount_percentage DECIMAL(12,2) DEFAULT 0,
+          discount_amount DECIMAL(12,2) DEFAULT 0,
+          payment_method TEXT DEFAULT 'Cash',
+          status TEXT DEFAULT 'Completed',
+          staff_id BIGINT,
+          invoice_number TEXT UNIQUE,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
+
+      await runSql(`
+        CREATE TABLE IF NOT EXISTS services (
+          id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+          account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          description TEXT,
+          price DECIMAL(12,2) NOT NULL,
+          duration_minutes INTEGER DEFAULT 30,
+          category TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
+
+      await runSql(`
+        CREATE TABLE IF NOT EXISTS product_variants (
+          id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+          account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE,
+          product_id BIGINT REFERENCES products(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          sku TEXT,
+          quantity INTEGER DEFAULT 0,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
+
+      await runSql(`
+        CREATE TABLE IF NOT EXISTS sale_items (
+          id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+          account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE,
+          sale_id BIGINT REFERENCES sales(id) ON DELETE CASCADE,
+          variant_id BIGINT REFERENCES product_variants(id) ON DELETE SET NULL,
+          quantity INTEGER NOT NULL,
+          unit_price DECIMAL(12,2) NOT NULL,
+          cost_price DECIMAL(12,2) DEFAULT 0,
+          total_price DECIMAL(12,2) DEFAULT 0,
+          profit DECIMAL(12,2) DEFAULT 0,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
+
+      await runSql(`
+        CREATE TABLE IF NOT EXISTS bookkeeping (
+          id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+          account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE,
+          type TEXT NOT NULL,
+          nature TEXT DEFAULT 'other',
+          amount DECIMAL(12,2) NOT NULL,
+          description TEXT,
+          date DATE DEFAULT CURRENT_DATE,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
+
+      // Add missing columns to existing tables
+      const migrations = [
+        { table: 'settings', column: 'brand_color', type: 'TEXT DEFAULT \'#10b981\'' },
+        { table: 'bookkeeping', column: 'nature', type: 'TEXT DEFAULT \'other\'' },
+        { table: 'sales', column: 'customer_id', type: 'BIGINT' },
+        { table: 'sales', column: 'cost_price_total', type: 'DECIMAL(12,2) DEFAULT 0' },
+        { table: 'sales', column: 'vat_amount', type: 'DECIMAL(12,2) DEFAULT 0' },
+        { table: 'sales', column: 'discount_percentage', type: 'DECIMAL(12,2) DEFAULT 0' },
+        { table: 'sales', column: 'discount_amount', type: 'DECIMAL(12,2) DEFAULT 0' },
+        { table: 'services', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
+        { table: 'products', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
+        { table: 'expenses', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
+        { table: 'customers', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
+        { table: 'notifications', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
+        { table: 'sale_items', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
+        { table: 'product_variants', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
+        { table: 'product_images', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
+      ];
+
+      for (const m of migrations) {
+        await runSql(`
+          DO $$ 
+          BEGIN 
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='${m.table}') AND 
+               NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='${m.table}' AND column_name='${m.column}') THEN
+              ALTER TABLE ${m.table} ADD COLUMN ${m.column} ${m.type};
+            END IF;
+          END $$;
+        `);
+      }
+
+      // Reload schema cache
+      await runSql(`NOTIFY pgrst, 'reload schema';`);
 
       // 2. Check for superadmin
       const { data: existingAdmin } = await supabase.from('users').select('id, password').eq('username', 'superadmin').maybeSingle();
