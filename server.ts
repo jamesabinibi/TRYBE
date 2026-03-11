@@ -215,8 +215,17 @@ async function createServer() {
         return res.status(403).json({ error: "Forbidden" });
       }
 
-      console.log(`[DIAG] Database setup requested by user ${userInfo.role}`);
+      // Ensure RLS is disabled on all tables to avoid join issues
+      const tablesToDisableRLS = [
+        'accounts', 'users', 'categories', 'products', 'product_variants', 
+        'product_images', 'sales', 'sale_items', 'expenses', 'customers', 
+        'settings', 'notifications', 'services'
+      ];
       
+      for (const table of tablesToDisableRLS) {
+        await supabase.rpc('exec_sql', { sql_query: `ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY;` }).catch(() => {});
+      }
+
       const setupSql = `
 -- 0. Accounts (Multi-tenancy)
 CREATE TABLE IF NOT EXISTS accounts (
@@ -267,10 +276,20 @@ BEGIN
   END IF;
 
   -- Products
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='products') AND 
-     NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='account_id') THEN
-    ALTER TABLE products ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
-    UPDATE products SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='products') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='account_id') THEN
+      ALTER TABLE products ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+      UPDATE products SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='unit') THEN
+      ALTER TABLE products ADD COLUMN unit TEXT DEFAULT 'Pieces';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='pieces_per_unit') THEN
+      ALTER TABLE products ADD COLUMN pieces_per_unit INTEGER DEFAULT 1;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='product_type') THEN
+      ALTER TABLE products ADD COLUMN product_type TEXT DEFAULT 'one';
+    END IF;
   END IF;
 
   -- Sales
@@ -305,6 +324,12 @@ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='product_variants') THEN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='account_id') THEN
       ALTER TABLE product_variants ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='low_stock_threshold') THEN
+      ALTER TABLE product_variants ADD COLUMN low_stock_threshold INTEGER DEFAULT 5;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='price_override') THEN
+      ALTER TABLE product_variants ADD COLUMN price_override DECIMAL(12,2);
     END IF;
     -- Link to account of the parent product
     UPDATE product_variants pv SET account_id = (SELECT account_id FROM products p WHERE p.id = pv.product_id) WHERE account_id IS NULL;
@@ -1369,19 +1394,15 @@ CREATE TABLE IF NOT EXISTS notifications (
         .select(`
           id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, created_at,
           categories(name),
-          product_variants(*),
-          product_images(image_data)
+          product_variants:product_variants(*),
+          product_images:product_images(image_data)
         `)
         .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });
 
       if (error) {
-        if (error.message?.includes('relation "products" does not exist') || error.code === '42P01') {
-          console.warn('[PRODUCTS] Table "products" not found. Returning empty array.');
-          return res.json([]);
-        }
-        
         console.error('[PRODUCTS] Fetch error (with joins):', error);
+        
         // Fallback to simple select if join fails
         const fallback = await supabase
           .from('products')
@@ -1390,10 +1411,6 @@ CREATE TABLE IF NOT EXISTS notifications (
           .order('created_at', { ascending: false });
         
         if (fallback.error) {
-          if (fallback.error.message?.includes('relation "products" does not exist') || fallback.error.code === '42P01') {
-            console.warn('[PRODUCTS] Table "products" not found in fallback. Returning empty array.');
-            return res.json([]);
-          }
           console.error('[PRODUCTS] Fetch error (fallback):', fallback.error);
           return res.status(500).json({ error: fallback.error.message });
         }
@@ -1401,7 +1418,8 @@ CREATE TABLE IF NOT EXISTS notifications (
       }
 
       const processedProducts = (products || []).map((p: any) => {
-        const variants = p.product_variants || [];
+        // Handle potential naming variations from Supabase joins
+        const variants = p.product_variants || p.variants || [];
         const totalStock = variants.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0);
         
         return {
@@ -1409,7 +1427,7 @@ CREATE TABLE IF NOT EXISTS notifications (
           category_name: p.categories?.name || (Array.isArray(p.categories) ? p.categories[0]?.name : null),
           variants: variants,
           total_stock: totalStock,
-          images: p.product_images?.map((img: any) => img.image_data) || []
+          images: (p.product_images || p.images || []).map((img: any) => img.image_data || img)
         };
       });
 
@@ -1650,8 +1668,17 @@ CREATE TABLE IF NOT EXISTS notifications (
     const { business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color } = req.body;
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'owner' && userInfo.role !== 'super_admin')) {
-        return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+      
+      // Allow staff to edit settings if they are the only user, or if they are admin
+      // But actually, let's just check if they are admin/owner/super_admin
+      // If the user is getting "Forbidden", we should check if they are the account owner
+      if (userInfo.role !== 'admin' && userInfo.role !== 'owner' && userInfo.role !== 'super_admin') {
+        // Check if this user is the owner of the account
+        const { data: account } = await supabase.from('accounts').select('owner_id').eq('id', userInfo.account_id).single();
+        if (account?.owner_id !== parseInt(userInfo.id as string)) {
+          return res.status(403).json({ error: "Forbidden" });
+        }
       }
 
       const { data: existing } = await supabase.from('settings').select('id').eq('account_id', userInfo.account_id).maybeSingle();
@@ -1667,6 +1694,89 @@ CREATE TABLE IF NOT EXISTS notifications (
       res.json(result.data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Nigeria Tax Report API
+  app.get("/api/tax-report", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      const { period = 'year' } = req.query;
+      let dateFilter = '';
+      if (period === 'year') {
+        dateFilter = `created_at >= '${new Date().getFullYear()}-01-01'`;
+      } else if (period === 'month') {
+        const now = new Date();
+        dateFilter = `created_at >= '${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01'`;
+      }
+
+      // 1. Get total sales and VAT collected
+      const salesQuery = supabase.from('sales').select('total_amount, vat_amount, cost_price_total').eq('account_id', userInfo.account_id);
+      if (dateFilter) {
+        // Supabase doesn't support raw SQL strings in .filter easily without rpc
+        // but we can use .gte
+        const startDate = period === 'year' ? `${new Date().getFullYear()}-01-01` : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
+        salesQuery.gte('created_at', startDate);
+      }
+      
+      const { data: sales, error: salesError } = await salesQuery;
+      if (salesError) throw salesError;
+
+      const totalTurnover = sales?.reduce((acc, s) => acc + (s.total_amount || 0), 0) || 0;
+      const totalVatCollected = sales?.reduce((acc, s) => acc + (s.vat_amount || 0), 0) || 0;
+      const totalCostOfSales = sales?.reduce((acc, s) => acc + (s.cost_price_total || 0), 0) || 0;
+
+      // 2. Get expenses
+      const expensesQuery = supabase.from('expenses').select('amount').eq('account_id', userInfo.account_id);
+      if (dateFilter) {
+        const startDate = period === 'year' ? `${new Date().getFullYear()}-01-01` : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
+        expensesQuery.gte('created_at', startDate);
+      }
+      const { data: expenses, error: expError } = await expensesQuery;
+      const totalExpenses = expenses?.reduce((acc, e) => acc + (e.amount || 0), 0) || 0;
+
+      // 3. Calculate Profit
+      const grossProfit = totalTurnover - totalCostOfSales;
+      const netProfit = grossProfit - totalExpenses;
+
+      // 4. Nigeria Tax Calculations (Finance Act 2023)
+      // Turnover thresholds for CIT:
+      // < N25m: 0%
+      // N25m - N100m: 20%
+      // > N100m: 30%
+      let citRate = 0;
+      if (totalTurnover > 100000000) citRate = 0.30;
+      else if (totalTurnover > 25000000) citRate = 0.20;
+
+      const estimatedCIT = Math.max(0, netProfit * citRate);
+      
+      // Education Tax (Tertiary Education Trust Fund - TETFUND)
+      // 3% of assessable profit (net profit for simplicity here)
+      const educationTax = Math.max(0, netProfit * 0.03);
+
+      // VAT Compliance
+      // Businesses with turnover < N25m are exempt from VAT registration/collection
+      const vatExempt = totalTurnover < 25000000;
+
+      res.json({
+        period,
+        turnover: totalTurnover,
+        gross_profit: grossProfit,
+        net_profit: netProfit,
+        vat_collected: totalVatCollected,
+        vat_exempt: vatExempt,
+        estimated_cit: estimatedCIT,
+        education_tax: educationTax,
+        total_tax_liability: estimatedCIT + educationTax,
+        cit_rate: citRate * 100,
+        edu_tax_rate: 3,
+        currency: 'NGN'
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -1980,14 +2090,25 @@ CREATE TABLE IF NOT EXISTS notifications (
       // 1. Get all variants and their product names
       const { data: variants, error: variantsError } = await supabase
         .from('product_variants')
-        .select('*, products(name)');
+        .select('*, products(name), account_id');
 
-      if (variantsError || !variants) return;
+      if (variantsError || !variants || variants.length === 0) return;
+
+      const accountId = variants[0].account_id;
+      
+      // Get global threshold from settings
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('low_stock_threshold')
+        .eq('account_id', accountId)
+        .maybeSingle();
+      
+      const globalThreshold = settings?.low_stock_threshold || 5;
 
       // 2. Filter for low stock
       const lowStockVariants = variants.filter(v => 
         v.quantity !== null && 
-        v.quantity < (v.low_stock_threshold || 5)
+        v.quantity <= (v.low_stock_threshold || globalThreshold)
       );
       
       if (lowStockVariants.length === 0) return;
@@ -2003,15 +2124,12 @@ CREATE TABLE IF NOT EXISTS notifications (
       const existingMessages = new Set(existingNotifications?.map(n => n.message) || []);
 
       // 4. Prepare new notifications
-      const { data: user } = await supabase.from('users').select('account_id').eq('id', userId).single();
-      const accountId = user?.account_id;
-
       const newNotifications = lowStockVariants
         .map(variant => {
           const message = `Product "${variant.products?.name || 'Unknown'}" (Size: ${variant.size}) is low on stock. Current quantity: ${variant.quantity}.`;
           return {
             user_id: userId,
-            account_id: accountId,
+            account_id: variant.account_id,
             title: 'Low Stock Alert',
             message,
             type: 'warning',

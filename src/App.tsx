@@ -19,7 +19,8 @@ import {
   Briefcase,
   Moon,
   Sun,
-  ShieldCheck
+  ShieldCheck,
+  FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
@@ -33,6 +34,7 @@ import SuperAdmin from './pages/SuperAdmin';
 import Settings from './pages/Settings';
 import Expenses from './pages/Expenses';
 import Customers from './pages/Customers';
+import TaxReport from './pages/TaxReport';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -101,6 +103,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     { icon: Briefcase, label: 'Services', path: '/services' },
     { icon: ShoppingCart, label: 'Sales & Analytics', path: '/sales' },
     { icon: Wallet, label: 'Expenses', path: '/expenses' },
+    { icon: FileText, label: 'Tax Report', path: '/tax' },
     { icon: Users, label: 'Customers', path: '/customers' },
     ...(user?.role === 'admin' || user?.role === 'owner' ? [{ icon: UsersIcon, label: 'Team', path: '/users' }] : []),
     ...(user?.role === 'super_admin' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
@@ -448,6 +451,7 @@ export default function App() {
                           <Route path="/services" element={<Services />} />
                           <Route path="/sales" element={<Sales />} />
                           <Route path="/expenses" element={<Expenses />} />
+                          <Route path="/tax" element={<TaxReport />} />
                           <Route path="/customers" element={<Customers />} />
                           <Route path="/users" element={<UsersPage />} />
                           <Route path="/super-admin" element={<SuperAdmin />} />

@@ -538,6 +538,10 @@ NOTIFY pgrst, 'reload schema';
         await refreshSettings();
         toast.success('Settings saved successfully');
       } else {
+        if (response.status === 403) {
+          toast.error('Forbidden: Only the business owner or an admin can change these settings.');
+          return;
+        }
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
           const errorData = await response.json();
@@ -868,32 +872,42 @@ NOTIFY pgrst, 'reload schema';
             </div>
           </div>
 
-          <div id="tax" className="flex flex-col sm:flex-row sm:items-center justify-between p-5 sm:p-6 bg-brand/5 dark:bg-brand/10 rounded-2xl sm:rounded-[2rem] border border-brand/10 gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-brand shadow-sm">
-                <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div id="tax" className="flex flex-col p-5 sm:p-6 bg-brand/5 dark:bg-brand/10 rounded-2xl sm:rounded-[2rem] border border-brand/10 gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-brand shadow-sm">
+                  <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] sm:text-sm font-black text-brand uppercase tracking-widest">VAT Enabled</p>
+                  <p className="text-[10px] sm:text-xs text-brand/70 dark:text-brand/80 font-medium">Apply 7.5% tax to all sales by default (Nigeria Finance Act 2023).</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] sm:text-sm font-black text-brand uppercase tracking-widest">VAT Enabled</p>
-                <p className="text-[10px] sm:text-xs text-brand/70 dark:text-brand/80 font-medium">Apply 7.5% tax to all sales by default.</p>
-              </div>
+              <button 
+                onClick={() => {
+                  const newSettings = {...settings, vat_enabled: !settings.vat_enabled};
+                  setSettings(newSettings);
+                  saveSettings(newSettings);
+                }}
+                className={cn(
+                  "w-12 h-7 sm:w-14 sm:h-8 rounded-full relative transition-all shadow-inner self-end sm:self-auto",
+                  settings.vat_enabled ? "bg-brand" : "bg-zinc-200 dark:bg-zinc-700"
+                )}
+              >
+                <div className={cn(
+                  "absolute top-1 w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full shadow-md transition-all",
+                  settings.vat_enabled ? "right-1" : "left-1"
+                )}></div>
+              </button>
             </div>
-            <button 
-              onClick={() => {
-                const newSettings = {...settings, vat_enabled: !settings.vat_enabled};
-                setSettings(newSettings);
-                saveSettings(newSettings);
-              }}
-              className={cn(
-                "w-12 h-7 sm:w-14 sm:h-8 rounded-full relative transition-all shadow-inner self-end sm:self-auto",
-                settings.vat_enabled ? "bg-brand" : "bg-zinc-200 dark:bg-zinc-700"
-              )}
-            >
-              <div className={cn(
-                "absolute top-1 w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full shadow-md transition-all",
-                settings.vat_enabled ? "right-1" : "left-1"
-              )}></div>
-            </button>
+            
+            <div className="p-4 bg-white/50 dark:bg-black/20 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-4 h-4 text-brand mt-0.5 shrink-0" />
+              <p className="text-[10px] text-brand/80 leading-relaxed font-medium">
+                <strong>Note for Nigerian Businesses:</strong> Companies with turnover &lt; N25m are exempt from VAT. 
+                If you enable this, ensure you are registered with FIRS. Visit the <strong>Tax Report</strong> page for more details.
+              </p>
+            </div>
           </div>
         </div>
       </section>
