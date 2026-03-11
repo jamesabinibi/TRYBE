@@ -665,7 +665,7 @@ NOTIFY pgrst, 'reload schema';
   return (
     <div className="max-w-4xl space-y-8 sm:space-y-12 pb-20">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Settings</h1>
         <p className="text-sm sm:text-base text-zinc-500 dark:text-zinc-400 font-medium">Configure your business preferences and system settings.</p>
       </div>
 
@@ -674,7 +674,7 @@ NOTIFY pgrst, 'reload schema';
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Categories</h3>
+            <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Categories</h3>
           </div>
           <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage the categories used to organize your inventory.</p>
         </div>
@@ -746,7 +746,7 @@ NOTIFY pgrst, 'reload schema';
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Business Profile</h3>
+            <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Business Profile</h3>
           </div>
           <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Update your business information and tax settings.</p>
         </div>

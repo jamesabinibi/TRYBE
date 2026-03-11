@@ -1742,7 +1742,16 @@ CREATE TABLE IF NOT EXISTS notifications (
       const grossProfit = totalTurnover - totalCostOfSales;
       const netProfit = grossProfit - totalExpenses;
 
-      // 4. Nigeria Tax Calculations (Finance Act 2023)
+      // 4. Get Bookkeeping Inflows (Loans, Debts, etc.)
+      const bookkeepingQuery = supabase.from('bookkeeping').select('amount, type').eq('account_id', userInfo.account_id);
+      if (dateFilter) {
+        const startDate = period === 'year' ? `${new Date().getFullYear()}-01-01` : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
+        bookkeepingQuery.gte('created_at', startDate);
+      }
+      const { data: bookkeeping, error: bkError } = await bookkeepingQuery;
+      const totalInflows = bookkeeping?.reduce((acc, b) => acc + (b.amount || 0), 0) || 0;
+
+      // 5. Nigeria Tax Calculations (Finance Act 2023)
       // Turnover thresholds for CIT:
       // < N25m: 0%
       // N25m - N100m: 20%
@@ -1766,6 +1775,9 @@ CREATE TABLE IF NOT EXISTS notifications (
         turnover: totalTurnover,
         gross_profit: grossProfit,
         net_profit: netProfit,
+        total_expenses: totalExpenses,
+        total_inflows: totalInflows,
+        net_cash_flow: totalTurnover + totalInflows - totalExpenses,
         vat_collected: totalVatCollected,
         vat_exempt: vatExempt,
         estimated_cit: estimatedCIT,
@@ -1777,6 +1789,72 @@ CREATE TABLE IF NOT EXISTS notifications (
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Bookkeeping API
+  app.get("/api/bookkeeping", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data, error } = await supabase
+        .from('bookkeeping')
+        .select('*')
+        .eq('account_id', userInfo.account_id)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      res.json(data || []);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/bookkeeping", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { type, amount, description, date } = req.body;
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data, error } = await supabase
+        .from('bookkeeping')
+        .insert([{
+          account_id: userInfo.account_id,
+          type,
+          amount: parseFloat(amount),
+          description,
+          date: date || new Date().toISOString().split('T')[0]
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/bookkeeping/:id", async (req, res) => {
+    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      const { error } = await supabase
+        .from('bookkeeping')
+        .delete()
+        .eq('id', id)
+        .eq('account_id', userInfo.account_id);
+
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 

@@ -191,7 +191,7 @@ export default function Dashboard() {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Home</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Home</h1>
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">Overview of your business performance</p>
         </div>
         <div className="flex gap-3">
@@ -236,7 +236,7 @@ export default function Dashboard() {
         <StatCard 
           title="Today's Balance" 
           value={formatCurrency((summary.today_sales || 0) - (summary.today_expenses || 0), currency)} 
-          color="text-zinc-900 dark:text-white"
+          color="text-zinc-950 dark:text-white"
           className="sm:col-span-2 lg:col-span-1"
         />
       </div>

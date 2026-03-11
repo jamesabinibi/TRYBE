@@ -233,7 +233,7 @@ export default function Expenses() {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Business Expenses</h1>
+          <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Business Expenses</h1>
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">Track your operational costs and overheads</p>
         </div>
         <button 

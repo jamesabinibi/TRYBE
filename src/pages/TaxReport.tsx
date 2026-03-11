@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth, useSettings } from '../App';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, cn } from '../lib/utils';
 import { toast } from 'sonner';
 
 interface TaxData {
@@ -21,6 +21,9 @@ interface TaxData {
   turnover: number;
   gross_profit: number;
   net_profit: number;
+  total_expenses: number;
+  total_inflows: number;
+  net_cash_flow: number;
   vat_collected: number;
   vat_exempt: boolean;
   estimated_cit: number;
@@ -59,45 +62,90 @@ const TaxReport = () => {
 
   const currentYear = new Date().getFullYear();
 
+  const exportToCSV = () => {
+    if (!taxData) return;
+    const headers = ['Metric', 'Value'];
+    const rows = [
+      ['Period', taxData.period.toUpperCase()],
+      ['Total Turnover', taxData.turnover],
+      ['Gross Profit', taxData.gross_profit],
+      ['Total Expenses', taxData.total_expenses],
+      ['Net Profit/Loss', taxData.net_profit],
+      ['Total Other Inflows', taxData.total_inflows],
+      ['Net Cash Flow', taxData.net_cash_flow],
+      ['VAT Collected', taxData.vat_collected],
+      ['Estimated CIT', taxData.estimated_cit],
+      ['Education Tax', taxData.education_tax],
+      ['Total Tax Liability', taxData.total_tax_liability]
+    ];
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `tax_report_${taxData.period}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Nigeria Tax Report</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Nigeria Tax Report</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1 font-medium">
             Estimated tax assessment based on Finance Act 2023 and Nigerian tax laws.
           </p>
         </div>
         
-        <div className="flex items-center gap-3 bg-card border rounded-xl p-1 shadow-sm">
-          <button
-            onClick={() => setPeriod('month')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              period === 'month' 
-                ? 'bg-primary text-primary-foreground shadow-sm' 
-                : 'hover:bg-muted'
-            }`}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={exportToCSV}
+            disabled={!taxData}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95 disabled:opacity-50"
           >
-            This Month
+            <Download className="w-4 h-4" />
+            Export CSV
           </button>
-          <button
-            onClick={() => setPeriod('year')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              period === 'year' 
-                ? 'bg-primary text-primary-foreground shadow-sm' 
-                : 'hover:bg-muted'
-            }`}
-          >
-            Year {currentYear}
-          </button>
+          <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-1 shadow-sm">
+            <button
+              onClick={() => setPeriod('month')}
+              className={cn(
+                "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                period === 'month' 
+                  ? "bg-brand text-white shadow-lg" 
+                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+              )}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setPeriod('year')}
+              className={cn(
+                "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                period === 'year' 
+                  ? "bg-brand text-white shadow-lg" 
+                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+              )}
+            >
+              Year {currentYear}
+            </button>
+          </div>
         </div>
       </div>
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-32 bg-muted rounded-2xl" />
+            <div key={i} className="h-40 bg-zinc-100 dark:bg-zinc-800 rounded-[2.5rem]" />
           ))}
         </div>
       ) : taxData ? (
@@ -107,22 +155,24 @@ const TaxReport = () => {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card border rounded-2xl p-6 shadow-sm"
+              className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-8 shadow-sm"
             >
-              <div className="flex items-center gap-3 text-muted-foreground mb-4">
-                <TrendingUp className="w-5 h-5" />
-                <span className="text-sm font-medium uppercase tracking-wider">Total Turnover</span>
+              <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400 mb-6">
+                <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-2xl">
+                  <TrendingUp className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-black uppercase tracking-widest">Total Turnover</span>
               </div>
-              <div className="text-3xl font-bold">{formatCurrency(taxData.turnover, settings?.currency)}</div>
-              <div className="mt-2 text-xs text-muted-foreground">
+              <div className="text-3xl font-black text-zinc-900 dark:text-white">{formatCurrency(taxData.turnover, settings?.currency)}</div>
+              <div className="mt-4">
                 {taxData.vat_exempt ? (
-                  <span className="text-emerald-500 font-medium flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> VAT Exempt (Turnover &lt; N25m)
-                  </span>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    <CheckCircle2 className="w-3 h-3" /> Zero Tax Bracket
+                  </div>
                 ) : (
-                  <span className="text-amber-500 font-medium flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> VAT Registrable (Turnover &gt; N25m)
-                  </span>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    <AlertCircle className="w-3 h-3" /> VAT Registrable
+                  </div>
                 )}
               </div>
             </motion.div>
@@ -131,15 +181,30 @@ const TaxReport = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-card border rounded-2xl p-6 shadow-sm"
+              className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-8 shadow-sm"
             >
-              <div className="flex items-center gap-3 text-muted-foreground mb-4">
-                <FileText className="w-5 h-5" />
-                <span className="text-sm font-medium uppercase tracking-wider">Net Profit (Assessable)</span>
+              <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400 mb-6">
+                <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-2xl">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-black uppercase tracking-widest">Net Profit / Loss</span>
               </div>
-              <div className="text-3xl font-bold">{formatCurrency(taxData.net_profit, settings?.currency)}</div>
-              <div className="mt-2 text-xs text-muted-foreground">
-                Used for CIT and Education Tax calculations.
+              <div className={cn(
+                "text-3xl font-black",
+                taxData.net_profit >= 0 ? "text-zinc-900 dark:text-white" : "text-red-600 dark:text-red-400"
+              )}>
+                {formatCurrency(taxData.net_profit, settings?.currency)}
+              </div>
+              <div className="mt-4">
+                {taxData.net_profit >= 0 ? (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    Making Money
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    Operating at Deficit
+                  </div>
+                )}
               </div>
             </motion.div>
 
@@ -147,167 +212,135 @@ const TaxReport = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-primary text-primary-foreground rounded-2xl p-6 shadow-lg"
+              className="bg-brand text-white rounded-[2.5rem] p-8 shadow-xl shadow-brand/20"
             >
-              <div className="flex items-center gap-3 opacity-80 mb-4">
-                <ShieldCheck className="w-5 h-5" />
-                <span className="text-sm font-medium uppercase tracking-wider">Est. Tax Liability</span>
+              <div className="flex items-center gap-4 opacity-80 mb-6">
+                <div className="p-3 bg-white/20 rounded-2xl">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-black uppercase tracking-widest">Est. Tax Liability</span>
               </div>
-              <div className="text-3xl font-bold">{formatCurrency(taxData.total_tax_liability, settings?.currency)}</div>
-              <div className="mt-2 text-xs opacity-80">
-                CIT ({taxData.cit_rate}%) + Education Tax ({taxData.edu_tax_rate}%)
-              </div>
+              <div className="text-3xl font-black">{formatCurrency(taxData.total_tax_liability, settings?.currency)}</div>
+              <p className="mt-4 text-[10px] font-black uppercase tracking-widest opacity-70">
+                CIT ({taxData.cit_rate}%) + EDU TAX ({taxData.edu_tax_rate}%)
+              </p>
             </motion.div>
           </div>
 
           {/* Detailed Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                Tax Breakdown
+              <h2 className="text-xl font-black text-zinc-900 dark:text-white flex items-center gap-3">
+                <FileText className="w-6 h-6 text-brand" />
+                Financial Performance
               </h2>
               
-              <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
-                <div className="p-6 space-y-4">
-                  <div className="flex justify-between items-center pb-4 border-bottom">
-                    <div className="space-y-0.5">
-                      <div className="font-medium">Company Income Tax (CIT)</div>
-                      <div className="text-xs text-muted-foreground">Rate: {taxData.cit_rate}% (Based on turnover)</div>
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] overflow-hidden shadow-sm">
+                <div className="p-8 space-y-6">
+                  <div className="flex justify-between items-center">
+                    <div className="space-y-1">
+                      <div className="text-sm font-bold text-zinc-900 dark:text-white">Total Turnover</div>
+                      <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">All Sales Revenue</div>
                     </div>
-                    <div className="font-semibold">{formatCurrency(taxData.estimated_cit, settings?.currency)}</div>
+                    <div className="text-lg font-black text-zinc-900 dark:text-white">{formatCurrency(taxData.turnover, settings?.currency)}</div>
                   </div>
                   
-                  <div className="flex justify-between items-center pb-4 border-bottom">
-                    <div className="space-y-0.5">
-                      <div className="font-medium">Tertiary Education Tax (EDT)</div>
-                      <div className="text-xs text-muted-foreground">Rate: {taxData.edu_tax_rate}% of assessable profit</div>
+                  <div className="flex justify-between items-center">
+                    <div className="space-y-1">
+                      <div className="text-sm font-bold text-zinc-900 dark:text-white">Total Expenses</div>
+                      <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Operational Costs</div>
                     </div>
-                    <div className="font-semibold">{formatCurrency(taxData.education_tax, settings?.currency)}</div>
+                    <div className="text-lg font-black text-red-600 dark:text-red-400">-{formatCurrency(taxData.total_expenses, settings?.currency)}</div>
                   </div>
 
-                  <div className="flex justify-between items-center pb-4 border-bottom">
-                    <div className="space-y-0.5">
-                      <div className="font-medium">VAT Collected</div>
-                      <div className="text-xs text-muted-foreground">7.5% on taxable sales</div>
+                  <div className="flex justify-between items-center">
+                    <div className="space-y-1">
+                      <div className="text-sm font-bold text-zinc-900 dark:text-white">Other Inflows</div>
+                      <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Loans, Investments, etc.</div>
                     </div>
-                    <div className="font-semibold">{formatCurrency(taxData.vat_collected, settings?.currency)}</div>
+                    <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">+{formatCurrency(taxData.total_inflows, settings?.currency)}</div>
                   </div>
 
-                  <div className="pt-2 flex justify-between items-center">
-                    <div className="font-bold text-lg">Total Estimated Payable</div>
-                    <div className="font-bold text-lg text-primary">{formatCurrency(taxData.total_tax_liability, settings?.currency)}</div>
+                  <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+                    <div className="space-y-1">
+                      <div className="text-lg font-black text-zinc-900 dark:text-white">Net Cash Flow</div>
+                      <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Real Money in Bank</div>
+                    </div>
+                    <div className={cn(
+                      "text-2xl font-black",
+                      taxData.net_cash_flow >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                    )}>
+                      {formatCurrency(taxData.net_cash_flow, settings?.currency)}
+                    </div>
                   </div>
                 </div>
                 
-                <div className="bg-muted/50 p-4 border-top flex items-start gap-3">
-                  <Info className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Note: This is an automated estimate. Actual tax liability may vary based on capital allowances, 
-                    exempted incomes, and other deductible expenses not captured here.
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 p-6 border-t border-zinc-100 dark:border-zinc-800 flex items-start gap-4">
+                  <Info className="w-6 h-6 text-brand mt-0.5 shrink-0" />
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                    This report indicates that your brand is <strong>{taxData.net_profit >= 0 ? 'profitable' : 'operating at a loss'}</strong> for this period. 
+                    {taxData.vat_exempt && ' As your turnover is below N25 million, you are currently in the zero-tax bracket for CIT and VAT.'}
                   </p>
                 </div>
-              </div>
-
-              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  Filing Deadlines
-                </h3>
-                <ul className="space-y-3">
-                  <li className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">CIT Returns</span>
-                    <span className="font-medium">6 months after year-end</span>
-                  </li>
-                  <li className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">VAT Returns</span>
-                    <span className="font-medium">21st of every month</span>
-                  </li>
-                  <li className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">WHT Returns</span>
-                    <span className="font-medium">21st of every month</span>
-                  </li>
-                </ul>
               </div>
             </div>
 
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-primary" />
-                Nigeria Tax Compliance Guide
+              <h2 className="text-xl font-black text-zinc-900 dark:text-white flex items-center gap-3">
+                <ShieldCheck className="w-6 h-6 text-brand" />
+                Tax Compliance Guide
               </h2>
 
               <div className="grid grid-cols-1 gap-4">
-                <div className="bg-card border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
                       <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium mb-1">Small Business Exemption</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        Under the Finance Act, companies with an annual turnover of less than <strong>N25 million</strong> are 
-                        exempt from Company Income Tax (CIT) and VAT registration.
+                      <h4 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">Small Business Exemption</h4>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                        Companies with turnover &lt; N25m are exempt from CIT and VAT. However, you are still required to file annual returns.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-card border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
                       <AlertCircle className="w-6 h-6 text-amber-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium mb-1">VAT Compliance (7.5%)</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        If your turnover exceeds N25m, you MUST register for VAT, include 7.5% on all invoices, 
-                        and remit to the FIRS by the 21st of the following month.
+                      <h4 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">VAT Compliance (7.5%)</h4>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                        Once turnover hits N25m, you must register for VAT and remit collections by the 21st of every month.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-card border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                      <HelpCircle className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-1">Education Tax (3%)</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        The Finance Act 2023 increased the Tertiary Education Tax rate from 2.5% to <strong>3%</strong> of 
-                        assessable profit for all Nigerian companies.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-muted rounded-2xl p-6 flex flex-col items-center text-center space-y-4">
-                  <div className="w-12 h-12 rounded-full bg-card flex items-center justify-center shadow-sm">
-                    <Download className="w-6 h-6 text-primary" />
+                <div className="bg-zinc-900 dark:bg-brand rounded-[2rem] p-8 text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mx-auto">
+                    <HelpCircle className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-semibold">Need a formal Tax Audit?</h4>
-                    <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
-                      Export your full transaction history and bookkeeping records for your accountant or tax consultant.
+                    <h4 className="font-black text-white uppercase tracking-widest text-sm">Need Help?</h4>
+                    <p className="text-xs text-white/70 mt-2 leading-relaxed font-medium">
+                      Consult with a certified Nigerian tax professional for a formal audit and filing.
                     </p>
                   </div>
-                  <button className="w-full py-2.5 bg-card border hover:bg-muted rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                    Export Bookkeeping Records
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             </div>
           </div>
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 bg-card border rounded-3xl text-center">
-          <FileText className="w-16 h-16 text-muted mb-4" />
-          <h3 className="text-xl font-semibold">No tax data available</h3>
-          <p className="text-muted-foreground max-w-xs mt-2">
-            We couldn't generate a tax report. Make sure you have recorded sales and expenses for this period.
+        <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[3rem] text-center">
+          <FileText className="w-20 h-20 text-zinc-200 dark:text-zinc-800 mb-6" />
+          <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">No tax data available</h3>
+          <p className="text-zinc-500 dark:text-zinc-400 max-w-xs mt-2 font-medium">
+            Record some sales and expenses to see your tax assessment.
           </p>
         </div>
       )}

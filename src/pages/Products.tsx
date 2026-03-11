@@ -312,11 +312,11 @@ export default function Products() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
           <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-4">Stock value @ cost price</p>
-          <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{formatCurrency(totalCostValue, currency)}</h3>
+          <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">{formatCurrency(totalCostValue, currency)}</h3>
         </div>
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
           <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-4">Stock value @ selling price</p>
-          <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{formatCurrency(totalSellingValue, currency)}</h3>
+          <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">{formatCurrency(totalSellingValue, currency)}</h3>
         </div>
       </div>
 

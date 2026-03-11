@@ -35,6 +35,7 @@ import Settings from './pages/Settings';
 import Expenses from './pages/Expenses';
 import Customers from './pages/Customers';
 import TaxReport from './pages/TaxReport';
+import Bookkeeping from './pages/Bookkeeping';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -103,6 +104,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     { icon: Briefcase, label: 'Services', path: '/services' },
     { icon: ShoppingCart, label: 'Sales & Analytics', path: '/sales' },
     { icon: Wallet, label: 'Expenses', path: '/expenses' },
+    { icon: Briefcase, label: 'Bookkeeping', path: '/bookkeeping' },
     { icon: FileText, label: 'Tax Report', path: '/tax' },
     { icon: Users, label: 'Customers', path: '/customers' },
     ...(user?.role === 'admin' || user?.role === 'owner' ? [{ icon: UsersIcon, label: 'Team', path: '/users' }] : []),
@@ -451,6 +453,7 @@ export default function App() {
                           <Route path="/services" element={<Services />} />
                           <Route path="/sales" element={<Sales />} />
                           <Route path="/expenses" element={<Expenses />} />
+                          <Route path="/bookkeeping" element={<Bookkeeping />} />
                           <Route path="/tax" element={<TaxReport />} />
                           <Route path="/customers" element={<Customers />} />
                           <Route path="/users" element={<UsersPage />} />
