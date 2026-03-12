@@ -928,7 +928,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           *,
           sale_items (
             *,
-            products (name)
+            product_variants (
+              *,
+              products (name)
+            )
           )
         `)
         .eq('customer_id', req.params.id)
@@ -2020,7 +2023,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Sales
   app.post("/api/sales", async (req, res) => {
-    const { items, payment_method, staff_id, customer_id, customer_name, customer_phone } = req.body;
+    const { 
+      items, 
+      payment_method, 
+      staff_id, 
+      customer_id, 
+      customer_name, 
+      customer_phone,
+      discount_amount = 0,
+      discount_percentage = 0,
+      vat_amount = 0
+    } = req.body;
     
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "No items in sale" });
@@ -2033,6 +2046,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const invoice_number = "INV-" + Date.now();
       let total_amount = 0;
       let total_profit = 0;
+      let cost_price_total = 0;
       
       const validStaffId = (staff_id && !isNaN(Number(staff_id))) ? Number(staff_id) : null;
       let finalCustomerId = customer_id;
@@ -2069,6 +2083,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           invoice_number, 
           total_amount: 0, 
           total_profit: 0, 
+          cost_price_total: 0,
+          discount_amount,
+          discount_percentage,
+          vat_amount,
           payment_method, 
           staff_id: validStaffId,
           customer_id: finalCustomerId
@@ -2090,11 +2108,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         
         const product = variant.products;
         const sellingPrice = item.price_override || variant.price_override || product.selling_price;
-        const costPrice = product.cost_price;
+        const costPrice = product.cost_price || 0;
         const profit = (sellingPrice - costPrice) * item.quantity;
         
         total_amount += sellingPrice * item.quantity;
         total_profit += profit;
+        cost_price_total += costPrice * item.quantity;
         
         await supabase
           .from('product_variants')
@@ -2136,19 +2155,27 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }
       }
       
+      // Apply discounts to final totals
+      const final_total_amount = total_amount - discount_amount + vat_amount;
+      const final_total_profit = total_profit - discount_amount;
+
       // Add to bookkeeping
       await supabase.from('bookkeeping').insert([{
         account_id: userInfo.account_id,
-        type: 'Sale',
-        nature: 'income',
-        amount: total_amount,
+        type: 'Income',
+        nature: 'sale',
+        amount: final_total_amount,
         description: `Sale - Invoice #${invoice_number}`,
         date: new Date().toISOString().split('T')[0]
       }]);
       
       await supabase
         .from('sales')
-        .update({ total_amount, total_profit })
+        .update({ 
+          total_amount: final_total_amount, 
+          total_profit: final_total_profit,
+          cost_price_total: cost_price_total
+        })
         .eq('id', saleId);
 
       res.json({ saleId, invoice_number });
@@ -2562,7 +2589,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   function processTopSales(data: any[]) {
     const topSalesMap = new Map();
     data.forEach((item: any) => {
-      const name = item.product_variants?.products?.name || 'Unknown Product';
+      // Handle both object and array formats for relations
+      const variant = Array.isArray(item.product_variants) ? item.product_variants[0] : item.product_variants;
+      const product = Array.isArray(variant?.products) ? variant.products[0] : variant?.products;
+      const name = product?.name || 'Unknown Product';
+      
       const existing = topSalesMap.get(name) || { name, quantity: 0, revenue: 0 };
       const price = parseFloat(item.unit_price) || (parseFloat(item.total_price) / item.quantity) || 0;
       topSalesMap.set(name, {

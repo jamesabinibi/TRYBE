@@ -537,9 +537,13 @@ export default function Customers() {
                                 <span className="w-6 h-6 bg-white dark:bg-zinc-800 rounded flex items-center justify-center text-[10px] font-black text-zinc-400 border border-zinc-100 dark:border-zinc-700">
                                   {item.quantity}x
                                 </span>
-                                <span className="font-bold text-zinc-700 dark:text-zinc-300">{item.products?.name}</span>
+                                <span className="font-bold text-zinc-700 dark:text-zinc-300">
+                                  {item.product_variants?.products?.name || 'Unknown Product'}
+                                </span>
                               </div>
-                              <span className="font-black text-zinc-950 dark:text-white">{formatCurrency(item.price * item.quantity, currency)}</span>
+                              <span className="font-black text-zinc-950 dark:text-white">
+                                {formatCurrency((item.unit_price || item.price || 0) * item.quantity, currency)}
+                              </span>
                             </div>
                           ))}
                         </div>

@@ -25,22 +25,36 @@ import { useAuth, useSettings } from '../App';
 
 export default function Settings() {
   const { user, fetchWithAuth } = useAuth();
-  const { refreshSettings } = useSettings();
+  const { settings: globalSettings, refreshSettings } = useSettings();
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState('');
   const [editingCategory, setEditingCategory] = useState<number | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
   
   const [settings, setSettings] = useState({
-    business_name: 'StockFlow Pro',
-    currency: 'NGN',
-    vat_enabled: false,
-    low_stock_threshold: '5',
-    logo_url: '',
-    brand_color: '#10b981'
+    business_name: globalSettings?.business_name || 'StockFlow Pro',
+    currency: globalSettings?.currency || 'NGN',
+    vat_enabled: globalSettings?.vat_enabled || false,
+    low_stock_threshold: (globalSettings?.low_stock_threshold || 5).toString(),
+    logo_url: globalSettings?.logo_url || '',
+    brand_color: globalSettings?.brand_color || '#10b981'
   });
   const [isSaving, setIsSaving] = useState(false);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(globalSettings?.logo_url || null);
+
+  useEffect(() => {
+    if (globalSettings) {
+      setSettings({
+        business_name: globalSettings.business_name || 'StockFlow Pro',
+        currency: globalSettings.currency || 'NGN',
+        vat_enabled: globalSettings.vat_enabled || false,
+        low_stock_threshold: (globalSettings.low_stock_threshold || 5).toString(),
+        logo_url: globalSettings.logo_url || '',
+        brand_color: globalSettings.brand_color || '#10b981'
+      });
+      setLogoPreview(globalSettings.logo_url || null);
+    }
+  }, [globalSettings]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -92,7 +106,6 @@ export default function Settings() {
 
   useEffect(() => {
     fetchCategories();
-    fetchSettings();
   }, []);
 
   const [isMigrating, setIsMigrating] = useState(false);
@@ -128,49 +141,6 @@ export default function Settings() {
       setCategories(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Categories fetch network error:', err);
-    }
-  };
-
-  const fetchSettings = async () => {
-    try {
-      const res = await fetchWithAuth('/api/settings');
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Settings fetch error:', errorData);
-        return;
-      }
-      const data = await res.json();
-      if (data && !data.error) {
-        // 1. Decode branding from business_name if it's encoded (Server-side fallback)
-        if (data.business_name && data.business_name.startsWith('[')) {
-          const match = data.business_name.match(/^\[(#?[a-fA-F0-9]{3,6})\]\s*(.*)/);
-          if (match) {
-            data.brand_color = match[1];
-            data.business_name = match[2];
-          }
-        } else if (data.business_name && data.business_name.startsWith('{"')) {
-          try {
-            const branding = JSON.parse(data.business_name);
-            data.business_name = branding.name;
-            data.brand_color = data.brand_color || branding.color;
-            data.logo_url = data.logo_url || branding.logo;
-          } catch (e) {}
-        }
-
-        // 2. No fallback for branding from localStorage to prevent cross-account leaks
-        const fetchedSettings = {
-          business_name: data.business_name || 'StockFlow Pro',
-          currency: data.currency || 'NGN',
-          vat_enabled: data.vat_enabled || false,
-          low_stock_threshold: (data.low_stock_threshold || 5).toString(),
-          logo_url: data.logo_url || '',
-          brand_color: data.brand_color || '#10b981'
-        };
-        setSettings(fetchedSettings);
-        setLogoPreview(data.logo_url || null);
-      }
-    } catch (err) {
-      console.error('Settings fetch network error:', err);
     }
   };
 

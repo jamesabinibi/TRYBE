@@ -189,7 +189,8 @@ export default function Sales() {
             customer_id: selectedCustomer?.id,
             customer_name: customerName,
             customer_phone: customerPhone,
-            discount_percent: discountPercent
+            discount_percentage: discountPercent,
+            discount_amount: discountAmount
           })
         });
 
