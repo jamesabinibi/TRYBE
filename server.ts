@@ -766,7 +766,23 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }])
         .select()
         .single();
+
       if (error) throw error;
+
+      // Add to bookkeeping
+      try {
+        await supabase.from('bookkeeping').insert([{
+          account_id: userInfo.account_id,
+          type: 'Expense',
+          nature: 'expense',
+          amount: parseFloat(amount),
+          description: `Expense - ${category}: ${description}`,
+          date: date || new Date().toISOString().split('T')[0]
+        }]);
+      } catch (e) {
+        console.error('[EXPENSES] Failed to add bookkeeping entry:', e);
+      }
+
       res.json(data);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2102,19 +2118,33 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           console.error(`[SALES] Failed to insert sale item:`, itemError);
           // If sale_items table is missing columns, try fallback
           if (itemError.message?.includes('column') || itemError.code === '42703') {
-             await supabase.from('sale_items').insert([{
-               account_id: userInfo.account_id,
-               sale_id: saleId,
-               variant_id: item.variant_id,
-               quantity: item.quantity,
-               price_at_sale: sellingPrice, // Old column name fallback
-               cost_at_sale: costPrice
-             }]).catch(e => console.error('[SALES] Fallback insert also failed:', e));
+             try {
+               await supabase.from('sale_items').insert([{
+                 account_id: userInfo.account_id,
+                 sale_id: saleId,
+                 variant_id: item.variant_id,
+                 quantity: item.quantity,
+                 price_at_sale: sellingPrice, // Old column name fallback
+                 cost_at_sale: costPrice
+               }]);
+             } catch (e) {
+               console.error('[SALES] Fallback insert also failed:', e);
+             }
           } else {
             throw itemError;
           }
         }
       }
+      
+      // Add to bookkeeping
+      await supabase.from('bookkeeping').insert([{
+        account_id: userInfo.account_id,
+        type: 'Sale',
+        nature: 'income',
+        amount: total_amount,
+        description: `Sale - Invoice #${invoice_number}`,
+        date: new Date().toISOString().split('T')[0]
+      }]);
       
       await supabase
         .from('sales')
@@ -2494,34 +2524,58 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      // Fetch sale items with product info
+      // We use a more robust approach by fetching variants separately if needed, 
+      // but let's try to fix the join first by ensuring the query is correct.
       const { data, error } = await supabase
         .from('sale_items')
-        .select('quantity, unit_price, product_variants(products(name))')
+        .select(`
+          quantity, 
+          unit_price, 
+          total_price,
+          product_variants!inner(
+            products!inner(name)
+          )
+        `)
         .eq('account_id', userInfo.account_id)
-        .limit(100);
+        .limit(200);
       
-      if (error) throw error;
+      if (error) {
+        console.error('[ANALYTICS] Top sales fetch error:', error);
+        // Fallback: try without !inner
+        const fallback = await supabase
+          .from('sale_items')
+          .select('quantity, unit_price, total_price, product_variants(products(name))')
+          .eq('account_id', userInfo.account_id)
+          .limit(200);
+        if (fallback.error) throw fallback.error;
+        return res.json(processTopSales(fallback.data));
+      }
       
-      const topSalesMap = new Map();
-      data.forEach((item: any) => {
-        const name = item.product_variants?.products?.name || 'Unknown';
-        const existing = topSalesMap.get(name) || { name, quantity: 0, revenue: 0 };
-        topSalesMap.set(name, {
-          name,
-          quantity: existing.quantity + item.quantity,
-          revenue: existing.revenue + (item.quantity * item.unit_price)
-        });
-      });
-      
-      const topSales = Array.from(topSalesMap.values())
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5);
-        
-      res.json(topSales);
+      res.json(processTopSales(data));
     } catch (error: any) {
+      console.error('[ANALYTICS] Top sales exception:', error);
       res.status(500).json({ error: error.message });
     }
   });
+
+  function processTopSales(data: any[]) {
+    const topSalesMap = new Map();
+    data.forEach((item: any) => {
+      const name = item.product_variants?.products?.name || 'Unknown Product';
+      const existing = topSalesMap.get(name) || { name, quantity: 0, revenue: 0 };
+      const price = parseFloat(item.unit_price) || (parseFloat(item.total_price) / item.quantity) || 0;
+      topSalesMap.set(name, {
+        name,
+        quantity: existing.quantity + item.quantity,
+        revenue: existing.revenue + (item.quantity * price)
+      });
+    });
+    
+    return Array.from(topSalesMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  }
 
   app.get("/api/analytics/top-expenses", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
@@ -2960,6 +3014,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // Add missing columns to existing tables
       const migrations = [
         { table: 'settings', column: 'brand_color', type: 'TEXT DEFAULT \'#10b981\'' },
+        { table: 'settings', column: 'logo_url', type: 'TEXT' },
         { table: 'bookkeeping', column: 'nature', type: 'TEXT DEFAULT \'other\'' },
         { table: 'sales', column: 'customer_id', type: 'BIGINT' },
         { table: 'sales', column: 'cost_price_total', type: 'DECIMAL(12,2) DEFAULT 0' },
@@ -2995,6 +3050,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       // Reload schema cache
       await runSql(`NOTIFY pgrst, 'reload schema';`);
+
+      // Data migrations for consistency
+      await runSql(`
+        UPDATE sale_items si 
+        SET account_id = s.account_id 
+        FROM sales s 
+        WHERE si.sale_id = s.id AND si.account_id IS NULL;
+      `);
+      
+      await runSql(`
+        UPDATE product_variants pv
+        SET account_id = p.account_id
+        FROM products p
+        WHERE pv.product_id = p.id AND pv.account_id IS NULL;
+      `);
 
       // 2. Check for superadmin
       const { data: existingAdmin } = await supabase.from('users').select('id, password').eq('username', 'superadmin').maybeSingle();
