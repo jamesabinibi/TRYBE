@@ -449,7 +449,6 @@ export default function App() {
                         <Routes>
                           <Route path="/" element={user?.role === 'super_admin' ? <Navigate to="/super-admin" /> : <Dashboard />} />
                           <Route path="/products" element={<Products />} />
-                          <Route path="/services" element={<Services />} />
                           <Route path="/sales" element={<Sales />} />
                           <Route path="/expenses" element={<Expenses />} />
                           <Route path="/bookkeeping" element={<Bookkeeping />} />

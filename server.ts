@@ -1778,11 +1778,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
       
-      // Allow staff to edit settings if they are the only user, or if they are admin
-      // But actually, let's just check if they are admin/owner/super_admin
-      // If the user is getting "Forbidden", we should check if they are the account owner
       if (userInfo.role !== 'admin' && userInfo.role !== 'owner' && userInfo.role !== 'super_admin') {
-        // Check if this user is the owner of the account
         const { data: account } = await supabase.from('accounts').select('owner_id').eq('id', userInfo.account_id).single();
         if (account?.owner_id !== parseInt(userInfo.id as string)) {
           return res.status(403).json({ error: "Forbidden" });
@@ -1792,13 +1788,29 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const { data: existing } = await supabase.from('settings').select('id').eq('account_id', userInfo.account_id).maybeSingle();
       
       let result;
+      const settingsData = { business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color };
+      
       if (existing) {
-        result = await supabase.from('settings').update({ business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }).eq('id', existing.id).select().single();
+        result = await supabase.from('settings').update(settingsData).eq('id', existing.id).select().single();
       } else {
-        result = await supabase.from('settings').insert([{ account_id: userInfo.account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color }]).select().single();
+        result = await supabase.from('settings').insert([{ account_id: userInfo.account_id, ...settingsData }]).select().single();
       }
       
-      if (result.error) throw result.error;
+      if (result.error) {
+        console.error('[SETTINGS] Save error:', result.error);
+        // Fallback: If brand_color column is missing, try to save without it but encode it in business_name
+        if (result.error.message?.includes('column "brand_color" does not exist')) {
+          const fallbackName = `{"name":"${business_name}","color":"${brand_color}","logo":"${logo_url}"}`;
+          const fallbackData = { business_name: fallbackName, currency, vat_enabled, low_stock_threshold };
+          if (existing) {
+            result = await supabase.from('settings').update(fallbackData).eq('id', existing.id).select().single();
+          } else {
+            result = await supabase.from('settings').insert([{ account_id: userInfo.account_id, ...fallbackData }]).select().single();
+          }
+        } else {
+          throw result.error;
+        }
+      }
       res.json(result.data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -1851,28 +1863,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       else if (totalTurnover > 25000000) citRate = 0.20;
 
       const estimatedCIT = Math.max(0, netProfit * citRate);
-      
-      res.json({
-        period,
-        turnover: totalTurnover,
-        vatCollected: totalVatCollected,
-        costOfSales: totalCostOfSales,
-        expenses: totalExpenses,
-        grossProfit,
-        netProfit,
-        estimatedCIT,
-        inflows: totalInflows,
-        currency: 'NGN'
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-      // 3% of assessable profit (net profit for simplicity here)
       const educationTax = Math.max(0, netProfit * 0.03);
-
-      // VAT Compliance
-      // Businesses with turnover < N25m are exempt from VAT registration/collection
       const vatExempt = totalTurnover < 25000000;
 
       res.json({
@@ -1892,8 +1883,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         edu_tax_rate: 3,
         currency: 'NGN'
       });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 
@@ -1919,7 +1910,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   app.post("/api/bookkeeping", async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
-    const { type, amount, description, date } = req.body;
+    const { type, nature, amount, description, date } = req.body;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
@@ -1929,6 +1920,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .insert([{
           account_id: userInfo.account_id,
           type,
+          nature: nature || 'other',
           amount: parseFloat(amount),
           description,
           date: date || new Date().toISOString().split('T')[0]
@@ -2093,7 +2085,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           .update({ quantity: variant.quantity - item.quantity })
           .eq('id', item.variant_id);
 
-        await supabase
+        const { error: itemError } = await supabase
           .from('sale_items')
           .insert([{
             account_id: userInfo.account_id,
@@ -2105,6 +2097,23 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             total_price: sellingPrice * item.quantity,
             profit: profit
           }]);
+
+        if (itemError) {
+          console.error(`[SALES] Failed to insert sale item:`, itemError);
+          // If sale_items table is missing columns, try fallback
+          if (itemError.message?.includes('column') || itemError.code === '42703') {
+             await supabase.from('sale_items').insert([{
+               account_id: userInfo.account_id,
+               sale_id: saleId,
+               variant_id: item.variant_id,
+               quantity: item.quantity,
+               price_at_sale: sellingPrice, // Old column name fallback
+               cost_at_sale: costPrice
+             }]).catch(e => console.error('[SALES] Fallback insert also failed:', e));
+          } else {
+            throw itemError;
+          }
+        }
       }
       
       await supabase
@@ -2957,12 +2966,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         { table: 'sales', column: 'vat_amount', type: 'DECIMAL(12,2) DEFAULT 0' },
         { table: 'sales', column: 'discount_percentage', type: 'DECIMAL(12,2) DEFAULT 0' },
         { table: 'sales', column: 'discount_amount', type: 'DECIMAL(12,2) DEFAULT 0' },
+        { table: 'sales', column: 'created_by', type: 'BIGINT' },
         { table: 'services', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
         { table: 'products', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
         { table: 'expenses', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
         { table: 'customers', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
         { table: 'notifications', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
         { table: 'sale_items', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
+        { table: 'sale_items', column: 'unit_price', type: 'DECIMAL(12,2) DEFAULT 0' },
+        { table: 'sale_items', column: 'cost_price', type: 'DECIMAL(12,2) DEFAULT 0' },
+        { table: 'sale_items', column: 'total_price', type: 'DECIMAL(12,2) DEFAULT 0' },
+        { table: 'sale_items', column: 'profit', type: 'DECIMAL(12,2) DEFAULT 0' },
         { table: 'product_variants', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
         { table: 'product_images', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
       ];

@@ -73,6 +73,13 @@ export default function Products() {
   }, []);
 
   useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'services') {
+      setActiveSubTab('services');
+    } else if (tab === 'products') {
+      setActiveSubTab('products');
+    }
+
     const action = searchParams.get('action');
     if (action === 'add') {
       // Clear the action immediately to prevent re-triggering

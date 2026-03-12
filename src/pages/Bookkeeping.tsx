@@ -236,6 +236,7 @@ export default function Bookkeeping() {
               <tr className="bg-zinc-50/50 dark:bg-zinc-800/30">
                 <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Date</th>
                 <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Type</th>
+                <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Nature</th>
                 <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Description</th>
                 <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Amount</th>
                 <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Actions</th>
@@ -264,11 +265,26 @@ export default function Bookkeeping() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                      record.nature === 'income' ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                      record.nature === 'expense' ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" :
+                      "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                    )}>
+                      {record.nature || 'other'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
                     <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">{record.description}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                      +{formatCurrency(record.amount, currency)}
+                    <span className={cn(
+                      "text-sm font-black",
+                      record.nature === 'income' ? "text-emerald-600 dark:text-emerald-400" :
+                      record.nature === 'expense' ? "text-red-600 dark:text-red-400" :
+                      "text-zinc-950 dark:text-white"
+                    )}>
+                      {record.nature === 'expense' ? '-' : '+'}{formatCurrency(record.amount, currency)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
