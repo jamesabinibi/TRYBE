@@ -32,6 +32,7 @@ import Sales from './pages/Sales';
 import UsersPage from './pages/Users';
 import SuperAdmin from './pages/SuperAdmin';
 import Settings from './pages/Settings';
+import Invoices from './pages/Invoices';
 import Expenses from './pages/Expenses';
 import Customers from './pages/Customers';
 import TaxReport from './pages/TaxReport';
@@ -105,6 +106,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     { icon: Wallet, label: 'Expenses', path: '/expenses' },
     { icon: Briefcase, label: 'Bookkeeping', path: '/bookkeeping' },
     { icon: FileText, label: 'Tax Report', path: '/tax' },
+    { icon: FileText, label: 'Invoices', path: '/invoices' },
     { icon: Users, label: 'Customers', path: '/customers' },
     ...(user?.role === 'admin' || user?.role === 'owner' ? [{ icon: UsersIcon, label: 'Team', path: '/users' }] : []),
     ...(user?.role === 'super_admin' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
@@ -140,7 +142,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
             ) : (
               <div 
                 className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl rotate-3"
-                style={{ backgroundColor: brandColor, shadowColor: `${brandColor}33` }}
+                style={{ backgroundColor: brandColor, boxShadow: `0 10px 20px ${brandColor}33` }}
               >
                 {settings?.business_name?.charAt(0) || 'S'}
               </div>
@@ -357,12 +359,9 @@ export default function App() {
   });
 
   const fetchSettings = async () => {
+    if (!user) return;
     try {
-      const res = await fetch('/api/settings', {
-        headers: {
-          'x-user-id': user?.id?.toString() || ''
-        }
-      });
+      const res = await fetchWithAuth('/api/settings');
       if (res.ok) {
         let data = await res.json();
         
@@ -382,7 +381,7 @@ export default function App() {
           } catch (e) {}
         }
 
-        // 2. No fallback for branding from localStorage to prevent cross-account leaks
+        // 2. Update settings state
         setSettings(data);
       }
     } catch (err) {
@@ -453,6 +452,7 @@ export default function App() {
                           <Route path="/expenses" element={<Expenses />} />
                           <Route path="/bookkeeping" element={<Bookkeeping />} />
                           <Route path="/tax" element={<TaxReport />} />
+                          <Route path="/invoices" element={<Invoices />} />
                           <Route path="/customers" element={<Customers />} />
                           <Route path="/users" element={<UsersPage />} />
                           <Route path="/super-admin" element={<SuperAdmin />} />

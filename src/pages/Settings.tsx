@@ -497,6 +497,22 @@ NOTIFY pgrst, 'reload schema';
           brand_color: updatedSettings.brand_color
         }));
 
+        // Decode branding from business_name if it's encoded (Server-side fallback)
+        if (data.business_name && data.business_name.startsWith('[')) {
+          const match = data.business_name.match(/^\[(#?[a-fA-F0-9]{3,6})\]\s*(.*)/);
+          if (match) {
+            data.brand_color = match[1];
+            data.business_name = match[2];
+          }
+        } else if (data.business_name && data.business_name.startsWith('{"')) {
+          try {
+            const branding = JSON.parse(data.business_name);
+            data.business_name = branding.name;
+            data.brand_color = data.brand_color || branding.color;
+            data.logo_url = data.logo_url || branding.logo;
+          } catch (e) {}
+        }
+
         setSettings({
           business_name: data.business_name,
           currency: data.currency,
@@ -1000,190 +1016,196 @@ NOTIFY pgrst, 'reload schema';
         </div>
       </section>
 
-      {/* System Diagnostics Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-500" />
-            <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">System Health</h3>
-          </div>
-          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Check database connectivity and table status.</p>
-        </div>
-        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className={cn(
-                "w-3 h-3 rounded-full",
-                diagResults?.supabase_connected ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-red-500"
-              )} />
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                  {diagResults?.supabase_connected ? 'Supabase Connected' : 'Supabase Disconnected'}
-                </span>
-                {diagResults?.supabase_status?.error && (
-                  <span className="text-[10px] text-red-500 font-black uppercase tracking-widest">{diagResults.supabase_status.error}</span>
-                )}
-              </div>
+      {/* System Diagnostics Section - Superadmin only */}
+      {user?.role === 'super_admin' && (
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+              <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">System Health</h3>
             </div>
-            <button 
-              onClick={runDiagnostics}
-              disabled={isCheckingDiag}
-              className="px-6 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex items-center gap-2"
-            >
-              {isCheckingDiag ? <Loader2 className="w-3 h-3 animate-spin" /> : <History className="w-3 h-3" />}
-              Run Check
-            </button>
+            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Check database connectivity and table status.</p>
           </div>
-
-          {diagResults?.tables && Object.keys(diagResults.tables || {}).length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {Object.entries(diagResults.tables || {}).map(([name, status]: [string, any]) => (
-                <div key={name} className={cn(
-                  "p-3 rounded-xl border flex items-center justify-between",
-                  status.exists ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20" : "bg-red-50/50 dark:bg-red-500/5 border-red-100 dark:border-red-500/20"
-                )}>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">{name}</span>
-                  {status.exists ? (
-                    <Check className="w-3 h-3 text-emerald-500" />
-                  ) : (
-                    <X className="w-3 h-3 text-red-500" />
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "w-3 h-3 rounded-full",
+                  diagResults?.supabase_connected ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-red-500"
+                )} />
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                    {diagResults?.supabase_connected ? 'Supabase Connected' : 'Supabase Disconnected'}
+                  </span>
+                  {diagResults?.supabase_status?.error && (
+                    <span className="text-[10px] text-red-500 font-black uppercase tracking-widest">{diagResults.supabase_status.error}</span>
                   )}
                 </div>
-              ))}
-            </div>
-          )}
-
-          <div className="p-6 bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/20 rounded-2xl space-y-4">
-            <div className="flex items-center gap-3 text-amber-600">
-              <Database className="w-5 h-5" />
-              <h4 className="text-sm font-black uppercase tracking-widest">Database Setup</h4>
-            </div>
-            <p className="text-xs text-amber-700 dark:text-amber-400/80 font-medium leading-relaxed">
-              If any tables are missing (marked with <X className="inline w-3 h-3" />), you need to create them in your Supabase SQL Editor.
-            </p>
-            <button 
-              onClick={copySql}
-              className="w-full py-3 bg-amber-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all shadow-lg shadow-amber-600/20"
-            >
-              Copy Setup SQL Script
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
-            <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-              <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Cloudinary</p>
-              <p className={cn("text-xs font-bold", diagResults?.env?.cloudinary ? "text-emerald-500" : "text-red-500")}>
-                {diagResults?.env?.cloudinary ? 'Configured' : 'Missing'}
-              </p>
-            </div>
-            <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-              <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Gemini AI</p>
-              <p className={cn("text-xs font-bold", diagResults?.env?.gemini ? "text-emerald-500" : "text-red-500")}>
-                {diagResults?.env?.gemini ? 'Configured' : 'Missing'}
-              </p>
-            </div>
-            <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-              <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Email (SMTP)</p>
-              <p className={cn("text-xs font-bold", diagResults?.env?.smtp ? "text-emerald-500" : "text-zinc-400")}>
-                {diagResults?.env?.smtp ? 'Configured' : 'Mock Mode'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Database className="w-4 h-4 text-red-600" />
-            <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Data Management</h3>
-          </div>
-          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Dangerous operations. Use with extreme caution.</p>
-        </div>
-        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
-          <div className="flex items-center justify-between p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-zinc-700">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account ID</p>
-              <p className="text-sm font-black text-zinc-900 dark:text-white">{user?.account_id || 'N/A'}</p>
-            </div>
-            <div className="space-y-1 text-right">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">User ID</p>
-              <p className="text-sm font-black text-zinc-900 dark:text-white">{user?.id || 'N/A'}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button 
-              onClick={runDiagnostics}
-              disabled={isCheckingDiag}
-              className="flex items-center justify-center gap-2 p-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-2xl font-bold transition-all disabled:opacity-50"
-            >
-              {isCheckingDiag ? <Loader2 className="w-5 h-5 animate-spin" /> : <Database className="w-5 h-5" />}
-              Run Diagnostics
-            </button>
-            <button 
-              onClick={handleInitializeDb}
-              disabled={isInitializing}
-              className="flex items-center justify-center gap-2 p-4 bg-brand/10 hover:bg-brand/20 text-brand rounded-2xl font-bold transition-all disabled:opacity-50"
-            >
-              {isInitializing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
-              Initialize Database
-            </button>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-red-50 dark:bg-red-500/10 rounded-2xl sm:rounded-[2rem] border border-red-100 dark:border-red-500/20 gap-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-red-600 shadow-sm shrink-0">
-                <History className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <p className="text-[10px] sm:text-sm font-black text-red-900 dark:text-red-500 uppercase tracking-widest">Clear Sales History</p>
-                <p className="text-[10px] sm:text-xs text-red-700 dark:text-red-400 font-medium">Delete all transaction logs and profit data.</p>
-              </div>
+              <button 
+                onClick={runDiagnostics}
+                disabled={isCheckingDiag}
+                className="px-6 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex items-center gap-2"
+              >
+                {isCheckingDiag ? <Loader2 className="w-3 h-3 animate-spin" /> : <History className="w-3 h-3" />}
+                Run Check
+              </button>
             </div>
-            <button 
-              onClick={handleClearSales}
-              className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 active:scale-95"
-            >
-              Clear Data
-            </button>
-          </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-brand/5 dark:bg-brand/10 rounded-2xl sm:rounded-[2rem] border border-brand/10 dark:border-brand/20 gap-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-brand shadow-sm shrink-0">
-                <Globe className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <p className="text-[10px] sm:text-sm font-black text-brand uppercase tracking-widest">Cloudinary Migration</p>
-                <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Move existing product images to Cloudinary for faster loading.</p>
-              </div>
-            </div>
-            <button 
-              onClick={handleMigrateImages}
-              disabled={isMigrating}
-              className="w-full sm:w-auto px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 disabled:opacity-50"
-            >
-              {isMigrating ? 'Migrating...' : 'Start Migration'}
-            </button>
-          </div>
-
-          <div className="pt-6 border-t border-zinc-100 space-y-4">
-            {diagResults && (
-              <div className="p-4 bg-zinc-900 rounded-2xl overflow-hidden">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black text-brand uppercase tracking-widest">Diagnostic Results</p>
-                  <button onClick={() => setDiagResults(null)} className="text-zinc-500 hover:text-white">
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-                <pre className="text-[10px] font-mono text-zinc-400 overflow-x-auto whitespace-pre-wrap leading-relaxed">
-                  {JSON.stringify(diagResults, null, 2)}
-                </pre>
+            {diagResults?.tables && Object.keys(diagResults.tables || {}).length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {Object.entries(diagResults.tables || {}).map(([name, status]: [string, any]) => (
+                  <div key={name} className={cn(
+                    "p-3 rounded-xl border flex items-center justify-between",
+                    status.exists ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20" : "bg-red-50/50 dark:bg-red-500/5 border-red-100 dark:border-red-500/20"
+                  )}>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">{name}</span>
+                    {status.exists ? (
+                      <Check className="w-3 h-3 text-emerald-500" />
+                    ) : (
+                      <X className="w-3 h-3 text-red-500" />
+                    )}
+                  </div>
+                ))}
               </div>
             )}
+
+            <div className="p-6 bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/20 rounded-2xl space-y-4">
+              <div className="flex items-center gap-3 text-amber-600">
+                <Database className="w-5 h-5" />
+                <h4 className="text-sm font-black uppercase tracking-widest">Database Setup</h4>
+              </div>
+              <p className="text-xs text-amber-700 dark:text-amber-400/80 font-medium leading-relaxed">
+                If any tables are missing (marked with <X className="inline w-3 h-3" />), you need to create them in your Supabase SQL Editor.
+              </p>
+              <button 
+                onClick={copySql}
+                className="w-full py-3 bg-amber-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all shadow-lg shadow-amber-600/20"
+              >
+                Copy Setup SQL Script
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+              <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Cloudinary</p>
+                <p className={cn("text-xs font-bold", diagResults?.env?.cloudinary ? "text-emerald-500" : "text-red-500")}>
+                  {diagResults?.env?.cloudinary ? 'Configured' : 'Missing'}
+                </p>
+              </div>
+              <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Gemini AI</p>
+                <p className={cn("text-xs font-bold", diagResults?.env?.gemini ? "text-emerald-500" : "text-red-500")}>
+                  {diagResults?.env?.gemini ? 'Configured' : 'Missing'}
+                </p>
+              </div>
+              <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Email (SMTP)</p>
+                <p className={cn("text-xs font-bold", diagResults?.env?.smtp ? "text-emerald-500" : "text-zinc-400")}>
+                  {diagResults?.env?.smtp ? 'Configured' : 'Mock Mode'}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Data Management Section - Superadmin only */}
+      {user?.role === 'super_admin' && (
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-red-600" />
+              <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Data Management</h3>
+            </div>
+            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Dangerous operations. Use with extreme caution.</p>
+          </div>
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+            <div className="flex items-center justify-between p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-zinc-700">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account ID</p>
+                <p className="text-sm font-black text-zinc-900 dark:text-white">{user?.account_id || 'N/A'}</p>
+              </div>
+              <div className="space-y-1 text-right">
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">User ID</p>
+                <p className="text-sm font-black text-zinc-900 dark:text-white">{user?.id || 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button 
+                onClick={runDiagnostics}
+                disabled={isCheckingDiag}
+                className="flex items-center justify-center gap-2 p-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-2xl font-bold transition-all disabled:opacity-50"
+              >
+                {isCheckingDiag ? <Loader2 className="w-5 h-5 animate-spin" /> : <Database className="w-5 h-5" />}
+                Run Diagnostics
+              </button>
+              <button 
+                onClick={handleInitializeDb}
+                disabled={isInitializing}
+                className="flex items-center justify-center gap-2 p-4 bg-brand/10 hover:bg-brand/20 text-brand rounded-2xl font-bold transition-all disabled:opacity-50"
+              >
+                {isInitializing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+                Initialize Database
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-red-50 dark:bg-red-500/10 rounded-2xl sm:rounded-[2rem] border border-red-100 dark:border-red-500/20 gap-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-red-600 shadow-sm shrink-0">
+                  <History className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] sm:text-sm font-black text-red-900 dark:text-red-500 uppercase tracking-widest">Clear Sales History</p>
+                  <p className="text-[10px] sm:text-xs text-red-700 dark:text-red-400 font-medium">Delete all transaction logs and profit data.</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleClearSales}
+                className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 active:scale-95"
+              >
+                Clear Data
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-brand/5 dark:bg-brand/10 rounded-2xl sm:rounded-[2rem] border border-brand/10 dark:border-brand/20 gap-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-brand shadow-sm shrink-0">
+                  <Globe className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] sm:text-sm font-black text-brand uppercase tracking-widest">Cloudinary Migration</p>
+                  <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Move existing product images to Cloudinary for faster loading.</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleMigrateImages}
+                disabled={isMigrating}
+                className="w-full sm:w-auto px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 disabled:opacity-50"
+              >
+                {isMigrating ? 'Migrating...' : 'Start Migration'}
+              </button>
+            </div>
+
+            <div className="pt-6 border-t border-zinc-100 space-y-4">
+              {diagResults && (
+                <div className="p-4 bg-zinc-900 rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-black text-brand uppercase tracking-widest">Diagnostic Results</p>
+                    <button onClick={() => setDiagResults(null)} className="text-zinc-500 hover:text-white">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <pre className="text-[10px] font-mono text-zinc-400 overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                    {JSON.stringify(diagResults, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
