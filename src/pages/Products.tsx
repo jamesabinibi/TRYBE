@@ -700,7 +700,7 @@ export default function Products() {
                       required
                       value={newService.name}
                       onChange={(e) => setNewService({...newService, name: e.target.value})}
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -711,7 +711,7 @@ export default function Products() {
                         type="number"
                         value={newService.price}
                         onChange={(e) => setNewService({...newService, price: e.target.value})}
-                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
+                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900"
                       />
                     </div>
                     <div className="space-y-2">
@@ -721,7 +721,7 @@ export default function Products() {
                         type="number"
                         value={newService.duration_minutes}
                         onChange={(e) => setNewService({...newService, duration_minutes: e.target.value})}
-                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
+                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900"
                       />
                     </div>
                   </div>
@@ -730,7 +730,7 @@ export default function Products() {
                     <input 
                       value={newService.category}
                       onChange={(e) => setNewService({...newService, category: e.target.value})}
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900"
                     />
                   </div>
                   <div className="space-y-2">
@@ -739,7 +739,7 @@ export default function Products() {
                       value={newService.description}
                       onChange={(e) => setNewService({...newService, description: e.target.value})}
                       rows={3}
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none resize-none"
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none resize-none text-zinc-900"
                     />
                   </div>
                   <button 

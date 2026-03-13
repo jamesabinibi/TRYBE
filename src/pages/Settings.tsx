@@ -807,7 +807,7 @@ NOTIFY pgrst, 'reload schema';
                   type="text" 
                   value={settings.business_name} 
                   onChange={(e) => setSettings({...settings, business_name: e.target.value})}
-                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white" 
+                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
                 />
                 <button 
                   onClick={() => saveSettings()}
@@ -827,7 +827,7 @@ NOTIFY pgrst, 'reload schema';
                   setSettings(newSettings);
                   saveSettings(newSettings);
                 }}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none dark:text-white"
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none dark:text-white text-zinc-900"
               >
                 <option value="NGN">NGN (₦)</option>
                 <option value="USD">USD ($)</option>
@@ -845,7 +845,7 @@ NOTIFY pgrst, 'reload schema';
                   type="number" 
                   value={settings.low_stock_threshold} 
                   onChange={(e) => setSettings({...settings, low_stock_threshold: e.target.value})}
-                  className="w-24 px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white" 
+                  className="w-24 px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
                 />
                 <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">units</span>
                 <button 

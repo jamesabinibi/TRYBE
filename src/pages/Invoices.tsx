@@ -54,6 +54,7 @@ const Invoices: React.FC = () => {
   });
   const [invoiceNumber, setInvoiceNumber] = useState(`INV-${Date.now().toString().slice(-6)}`);
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [discount, setDiscount] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showItemDropdown, setShowItemDropdown] = useState(false);
@@ -115,16 +116,21 @@ const Invoices: React.FC = () => {
     return invoiceItems.reduce((sum, item) => sum + item.total, 0);
   };
 
+  const calculateDiscountAmount = () => {
+    return (calculateSubtotal() * discount) / 100;
+  };
+
   const calculateVAT = () => {
     if (!settings?.vat_enabled) return 0;
-    return calculateSubtotal() * 0.075; // 7.5% VAT
+    const afterDiscount = calculateSubtotal() - calculateDiscountAmount();
+    return afterDiscount * 0.075; // 7.5% VAT
   };
 
   const calculateTotal = () => {
-    return calculateSubtotal() + calculateVAT();
+    return calculateSubtotal() - calculateDiscountAmount() + calculateVAT();
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     if (invoiceItems.length === 0) {
       toast.error('Please add at least one item to the invoice');
       return;
@@ -143,10 +149,30 @@ const Invoices: React.FC = () => {
       doc.setFillColor(brandColor);
       doc.rect(0, 0, pageWidth, 40, 'F');
       
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(24);
-      doc.setFont('helvetica', 'bold');
-      doc.text(settings?.business_name || 'StockFlow', 15, 25);
+      // Logo if available
+      if (settings?.logo_url) {
+        try {
+          // Attempt to add logo
+          // Note: Adding base64 images to jsPDF
+          const imgType = settings.logo_url.split(';')[0].split(':')[1].split('/')[1].toUpperCase();
+          doc.addImage(settings.logo_url, imgType === 'SVG+XML' ? 'PNG' : imgType, 15, 8, 24, 24);
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(24);
+          doc.setFont('helvetica', 'bold');
+          doc.text(settings?.business_name || 'StockFlow', 45, 25);
+        } catch (e) {
+          console.warn('Failed to add logo to PDF:', e);
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(24);
+          doc.setFont('helvetica', 'bold');
+          doc.text(settings?.business_name || 'StockFlow', 15, 25);
+        }
+      } else {
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text(settings?.business_name || 'StockFlow', 15, 25);
+      }
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
@@ -197,6 +223,7 @@ const Invoices: React.FC = () => {
         headStyles: { fillColor: brandColor, textColor: 255 },
         foot: [
           ['', '', '', 'Subtotal', `${settings?.currency || '₦'}${calculateSubtotal().toLocaleString()}`],
+          ['', '', '', `Discount (${discount}%)`, `-${settings?.currency || '₦'}${calculateDiscountAmount().toLocaleString()}`],
           ['', '', '', 'VAT (7.5%)', `${settings?.currency || '₦'}${calculateVAT().toLocaleString()}`],
           ['', '', '', 'Total', `${settings?.currency || '₦'}${calculateTotal().toLocaleString()}`]
         ],
@@ -213,7 +240,7 @@ const Invoices: React.FC = () => {
       toast.success('Invoice generated successfully');
     } catch (error) {
       console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDF');
+      toast.error('Failed to generate PDF. Check console for details.');
     } finally {
       setIsGenerating(false);
     }
@@ -228,9 +255,15 @@ const Invoices: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white shadow-sm border border-slate-100">
-              <FileText className="w-6 h-6" style={{ color: brandColor }} />
-            </div>
+            {settings?.logo_url ? (
+              <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm border border-slate-100 bg-white">
+                <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
+              </div>
+            ) : (
+              <div className="p-2 rounded-xl bg-white shadow-sm border border-slate-100">
+                <FileText className="w-6 h-6" style={{ color: brandColor }} />
+              </div>
+            )}
             Create Invoice
           </h1>
           <p className="text-slate-500 mt-1">Generate professional invoices for your clients</p>
@@ -265,7 +298,7 @@ const Invoices: React.FC = () => {
                   type="text"
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
                 />
               </div>
             </div>
@@ -277,7 +310,7 @@ const Invoices: React.FC = () => {
                   type="date"
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
                 />
               </div>
             </div>
@@ -313,7 +346,7 @@ const Invoices: React.FC = () => {
                             placeholder="Search inventory..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20"
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
                             autoFocus
                           />
                         </div>
@@ -381,7 +414,7 @@ const Invoices: React.FC = () => {
                             type="number"
                             value={item.quantity}
                             onChange={(e) => updateQuantity(index, parseInt(e.target.value))}
-                            className="w-20 px-3 py-2 bg-slate-50 border-none rounded-lg text-sm font-bold focus:ring-2 focus:ring-emerald-500/20"
+                            className="w-20 px-3 py-2 bg-slate-50 border-none rounded-lg text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
                           />
                         </td>
                         <td className="py-4">
@@ -391,7 +424,7 @@ const Invoices: React.FC = () => {
                               type="number"
                               value={item.price}
                               onChange={(e) => updatePrice(index, parseFloat(e.target.value))}
-                              className="w-28 pl-7 pr-3 py-2 bg-slate-50 border-none rounded-lg text-sm font-bold focus:ring-2 focus:ring-emerald-500/20"
+                              className="w-28 pl-7 pr-3 py-2 bg-slate-50 border-none rounded-lg text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
                             />
                           </div>
                         </td>
@@ -445,7 +478,7 @@ const Invoices: React.FC = () => {
                     placeholder="John Doe"
                     value={recipient.name}
                     onChange={(e) => setRecipient({ ...recipient, name: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
                   />
                 </div>
               </div>
@@ -458,7 +491,7 @@ const Invoices: React.FC = () => {
                     placeholder="john@example.com"
                     value={recipient.email}
                     onChange={(e) => setRecipient({ ...recipient, email: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
                   />
                 </div>
               </div>
@@ -471,7 +504,7 @@ const Invoices: React.FC = () => {
                     placeholder="+234..."
                     value={recipient.phone}
                     onChange={(e) => setRecipient({ ...recipient, phone: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
                   />
                 </div>
               </div>
@@ -484,7 +517,7 @@ const Invoices: React.FC = () => {
                     value={recipient.address}
                     onChange={(e) => setRecipient({ ...recipient, address: e.target.value })}
                     rows={3}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium resize-none"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium resize-none text-slate-900"
                   />
                 </div>
               </div>
@@ -499,6 +532,19 @@ const Invoices: React.FC = () => {
                 <span>Subtotal</span>
                 <span className="font-bold">{settings?.currency || '₦'}{calculateSubtotal().toLocaleString()}</span>
               </div>
+              
+              <div className="flex items-center justify-between text-slate-400">
+                <span>Discount (%)</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={discount}
+                    onChange={(e) => setDiscount(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    className="w-16 px-2 py-1 bg-white/10 border-none rounded-lg text-xs font-bold text-white text-right focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+              </div>
+
               {settings?.vat_enabled && (
                 <div className="flex justify-between text-slate-400">
                   <span>VAT (7.5%)</span>

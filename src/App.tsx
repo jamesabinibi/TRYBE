@@ -130,7 +130,8 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       </AnimatePresence>
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 w-72 bg-zinc-950 text-zinc-400 flex flex-col border-r border-zinc-800/50 z-50 transition-transform duration-500 ease-in-out lg:translate-x-0 lg:static",
+        "fixed inset-y-0 left-0 w-72 flex flex-col border-r z-50 transition-all duration-500 ease-in-out lg:translate-x-0 lg:static",
+        isDarkMode ? "bg-zinc-950 text-zinc-400 border-zinc-800/50" : "bg-white text-zinc-500 border-zinc-200",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="p-8 flex items-center justify-between">
@@ -148,7 +149,10 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               </div>
             )}
             <div>
-              <span className="text-white font-black text-xl tracking-tight block leading-none">
+              <span className={cn(
+                "font-black text-xl tracking-tight block leading-none",
+                isDarkMode ? "text-white" : "text-zinc-900"
+              )}>
                 {settings?.business_name || 'StockFlow'}
               </span>
               <span 
@@ -159,7 +163,10 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               </span>
             </div>
           </div>
-          <button onClick={onClose} className="lg:hidden p-2 text-zinc-500 hover:text-white bg-zinc-900 rounded-xl">
+          <button onClick={onClose} className={cn(
+            "lg:hidden p-2 rounded-xl transition-colors",
+            isDarkMode ? "text-zinc-500 hover:text-white bg-zinc-900" : "text-zinc-400 hover:text-zinc-900 bg-zinc-100"
+          )}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -401,6 +408,12 @@ export default function App() {
       root.style.setProperty('--brand-color-hover', `${settings.brand_color}dd`);
       root.style.setProperty('--brand-color-muted', `${settings.brand_color}1a`);
       root.style.setProperty('--brand-color-light', `${settings.brand_color}33`);
+    }
+  }, [settings]);
+
+  useEffect(() => {
+    if (settings?.business_name) {
+      document.title = `${settings.business_name} | StockFlow Pro`;
     }
   }, [settings]);
 
