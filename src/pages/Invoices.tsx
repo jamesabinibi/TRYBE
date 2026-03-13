@@ -100,11 +100,11 @@ const Invoices: React.FC = () => {
     if (invoice.sale_items && Array.isArray(invoice.sale_items)) {
       const items: InvoiceItem[] = invoice.sale_items.map((si: any) => ({
         id: si.variant_id || si.service_id || Math.random().toString(),
-        name: si.product_name || si.service_name || 'Item',
+        name: si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || 'Item',
         type: si.service_id ? 'service' : 'product',
         quantity: si.quantity,
-        price: si.unit_price,
-        total: si.total_price
+        price: si.unit_price || si.price_at_sale || 0,
+        total: si.total_price || (si.quantity * (si.unit_price || si.price_at_sale || 0))
       }));
       setInvoiceItems(items);
     } else {

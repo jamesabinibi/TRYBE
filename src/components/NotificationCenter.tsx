@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, Check, Info, AlertTriangle, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../App';
 
 interface Notification {
   id: number;
@@ -13,26 +14,43 @@ interface Notification {
 }
 
 export default function NotificationCenter({ userId }: { userId: number }) {
+  const { fetchWithAuth } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   const fetchNotifications = async () => {
     if (!userId || typeof userId !== 'number') return;
     try {
-      const response = await fetch(`/api/notifications/${userId}`);
+      const response = await fetchWithAuth(`/api/notifications/${userId}`);
       
       if (!response.ok) {
         return;
       }
 
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setNotifications(data);
-          setUnreadCount(data.filter((n: Notification) => !n.is_read).length);
-        }
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setNotifications(data);
+        setUnreadCount(data.filter((n: Notification) => !n.is_read).length);
       }
     } catch (error) {
       // Silently fail for transient network errors (common during server restarts or sleep)
@@ -55,7 +73,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
 
   const markAsRead = async (id: number) => {
     try {
-      const response = await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+      const response = await fetchWithAuth(`/api/notifications/${id}/read`, { method: 'POST' });
       if (response.ok) {
         setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
         setUnreadCount(prev => Math.max(0, prev - 1));
@@ -67,7 +85,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch('/api/notifications/all/read', { method: 'POST' });
+      const response = await fetchWithAuth('/api/notifications/all/read', { method: 'POST' });
       if (response.ok) {
         setNotifications(notifications.map(n => ({ ...n, is_read: true })));
         setUnreadCount(0);
@@ -80,7 +98,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
   const clearAll = async () => {
     if (!confirm('Are you sure you want to clear all notifications?')) return;
     try {
-      const response = await fetch(`/api/notifications/${userId}`, { method: 'DELETE' });
+      const response = await fetchWithAuth(`/api/notifications/${userId}`, { method: 'DELETE' });
       if (response.ok) {
         setNotifications([]);
         setUnreadCount(0);
@@ -101,7 +119,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="p-3 text-zinc-500 hover:bg-zinc-100 rounded-2xl relative transition-all active:scale-95 group"
@@ -114,17 +132,12 @@ export default function NotificationCenter({ userId }: { userId: number }) {
 
       <AnimatePresence>
         {isOpen && (
-          <>
-            <div 
-              className="fixed inset-0 z-40 bg-transparent" 
-              onClick={() => setIsOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-zinc-900 rounded-[2rem] shadow-2xl shadow-zinc-200/50 dark:shadow-none border border-zinc-200 dark:border-zinc-800 overflow-hidden z-50"
-            >
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-zinc-900 rounded-[2rem] shadow-2xl shadow-zinc-200/50 dark:shadow-none border border-zinc-200 dark:border-zinc-800 overflow-hidden z-50"
+          >
               <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
                 <div className="flex items-center gap-3">
                   <h3 className="text-sm font-black text-zinc-950 dark:text-white uppercase tracking-widest">Notifications</h3>
@@ -211,7 +224,6 @@ export default function NotificationCenter({ userId }: { userId: number }) {
                 </button>
               </div>
             </motion.div>
-          </>
         )}
       </AnimatePresence>
     </div>

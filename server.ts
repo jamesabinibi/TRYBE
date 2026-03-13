@@ -2099,60 +2099,92 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const saleId = sale.id;
 
       for (const item of items) {
-        const { data: variant, error: vError } = await supabase
-          .from('product_variants')
-          .select('*, products(*)')
-          .eq('id', item.variant_id)
-          .single();
+        let sellingPrice = 0;
+        let costPrice = 0;
+        let profit = 0;
 
-        if (vError || !variant) throw new Error(`Variant not found: ${item.variant_id}`);
-        
-        const product = variant.products;
-        const sellingPrice = item.price_override || variant.price_override || product.selling_price;
-        const costPrice = product.cost_price || 0;
-        const profit = (sellingPrice - costPrice) * item.quantity;
-        
-        total_amount += sellingPrice * item.quantity;
-        total_profit += profit;
-        cost_price_total += costPrice * item.quantity;
-        
-        await supabase
-          .from('product_variants')
-          .update({ quantity: variant.quantity - item.quantity })
-          .eq('id', item.variant_id);
+        if (item.variant_id) {
+          const { data: variant, error: vError } = await supabase
+            .from('product_variants')
+            .select('*, products(*)')
+            .eq('id', item.variant_id)
+            .single();
 
-        const { error: itemError } = await supabase
-          .from('sale_items')
-          .insert([{
-            account_id: userInfo.account_id,
-            sale_id: saleId,
-            variant_id: item.variant_id,
-            quantity: item.quantity,
-            unit_price: sellingPrice,
-            cost_price: costPrice,
-            total_price: sellingPrice * item.quantity,
-            profit: profit
-          }]);
+          if (vError || !variant) throw new Error(`Variant not found: ${item.variant_id}`);
+          
+          const product = variant.products;
+          sellingPrice = item.price_override || variant.price_override || product.selling_price;
+          costPrice = product.cost_price || 0;
+          profit = (sellingPrice - costPrice) * item.quantity;
+          
+          total_amount += sellingPrice * item.quantity;
+          total_profit += profit;
+          cost_price_total += costPrice * item.quantity;
+          
+          await supabase
+            .from('product_variants')
+            .update({ quantity: variant.quantity - item.quantity })
+            .eq('id', item.variant_id);
 
-        if (itemError) {
-          console.error(`[SALES] Failed to insert sale item:`, itemError);
-          // If sale_items table is missing columns, try fallback
-          if (itemError.message?.includes('column') || itemError.code === '42703') {
-             try {
+          const { error: itemError } = await supabase
+            .from('sale_items')
+            .insert([{
+              account_id: userInfo.account_id,
+              sale_id: saleId,
+              variant_id: item.variant_id,
+              quantity: item.quantity,
+              unit_price: sellingPrice,
+              cost_price: costPrice,
+              total_price: sellingPrice * item.quantity,
+              profit: profit
+            }]);
+
+          if (itemError) {
+            console.error(`[SALES] Failed to insert sale item:`, itemError);
+            // Fallback for older schemas
+            if (itemError.message?.includes('column') || itemError.code === '42703') {
                await supabase.from('sale_items').insert([{
                  account_id: userInfo.account_id,
                  sale_id: saleId,
                  variant_id: item.variant_id,
                  quantity: item.quantity,
-                 price_at_sale: sellingPrice, // Old column name fallback
+                 price_at_sale: sellingPrice,
                  cost_at_sale: costPrice
                }]);
-             } catch (e) {
-               console.error('[SALES] Fallback insert also failed:', e);
-             }
-          } else {
-            throw itemError;
+            } else {
+              throw itemError;
+            }
           }
+        } else if (item.service_id) {
+          const { data: service, error: sError } = await supabase
+            .from('services')
+            .select('*')
+            .eq('id', item.service_id)
+            .single();
+
+          if (sError || !service) throw new Error(`Service not found: ${item.service_id}`);
+
+          sellingPrice = item.price_override || service.price;
+          costPrice = 0; // Services usually don't have a direct cost price in this schema
+          profit = sellingPrice * item.quantity;
+
+          total_amount += sellingPrice * item.quantity;
+          total_profit += profit;
+
+          const { error: itemError } = await supabase
+            .from('sale_items')
+            .insert([{
+              account_id: userInfo.account_id,
+              sale_id: saleId,
+              service_id: item.service_id,
+              quantity: item.quantity,
+              unit_price: sellingPrice,
+              cost_price: costPrice,
+              total_price: sellingPrice * item.quantity,
+              profit: profit
+            }]);
+
+          if (itemError) throw itemError;
         }
       }
       
@@ -2202,7 +2234,14 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           *,
           customers (name),
           users (name),
-          sale_items (*)
+          sale_items (
+            *,
+            product_variants (
+              *,
+              products (name)
+            ),
+            services (name)
+          )
         `)
         .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });
@@ -3022,6 +3061,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE,
           sale_id BIGINT REFERENCES sales(id) ON DELETE CASCADE,
           variant_id BIGINT REFERENCES product_variants(id) ON DELETE SET NULL,
+          service_id BIGINT REFERENCES services(id) ON DELETE SET NULL,
           quantity INTEGER NOT NULL,
           unit_price DECIMAL(12,2) NOT NULL,
           cost_price DECIMAL(12,2) DEFAULT 0,
@@ -3029,6 +3069,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           profit DECIMAL(12,2) DEFAULT 0,
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
+        ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS service_id BIGINT REFERENCES services(id) ON DELETE SET NULL;
       `);
 
       await runSql(`
