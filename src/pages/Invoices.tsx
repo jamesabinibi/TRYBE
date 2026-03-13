@@ -18,7 +18,8 @@ import {
   Save,
   Loader2,
   Edit2,
-  History
+  History,
+  X
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { useSettings } from '../App';
@@ -65,6 +66,7 @@ const Invoices: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
   const [searchTerm, setSearchTerm] = useState('');
   const [showItemDropdown, setShowItemDropdown] = useState(false);
+  const [previewInvoice, setPreviewInvoice] = useState<any>(null);
 
   const brandColor = settings?.brand_color || '#10b981';
 
@@ -87,32 +89,66 @@ const Invoices: React.FC = () => {
   };
 
   const loadInvoice = (invoice: any) => {
-    setInvoiceNumber(invoice.invoice_number || `INV-${Date.now()}`);
-    setInvoiceDate(new Date(invoice.created_at).toISOString().split('T')[0]);
-    setDiscount(invoice.discount_percentage || 0);
-    setRecipient({
-      name: invoice.customer_name || (invoice.customers?.name) || '',
-      email: '', 
-      phone: invoice.customer_phone || '',
-      address: ''
-    });
-    
-    if (invoice.sale_items && Array.isArray(invoice.sale_items)) {
-      const items: InvoiceItem[] = invoice.sale_items.map((si: any) => ({
-        id: si.variant_id || si.service_id || Math.random().toString(),
-        name: si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || 'Item',
-        type: si.service_id ? 'service' : 'product',
-        quantity: si.quantity,
-        price: si.unit_price || si.price_at_sale || 0,
-        total: si.total_price || (si.quantity * (si.unit_price || si.price_at_sale || 0))
-      }));
-      setInvoiceItems(items);
-    } else {
-      setInvoiceItems([]);
-    }
+    try {
+      setInvoiceNumber(invoice.invoice_number || `INV-${Date.now().toString().slice(-6)}`);
+      setInvoiceDate(invoice.created_at ? new Date(invoice.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+      setDiscount(invoice.discount_percentage || 0);
+      setRecipient({
+        name: invoice.customer_name || (invoice.customers?.name) || '',
+        email: invoice.customer_email || '', 
+        phone: invoice.customer_phone || '',
+        address: invoice.customer_address || ''
+      });
+      
+      if (invoice.sale_items && Array.isArray(invoice.sale_items)) {
+        const items: InvoiceItem[] = invoice.sale_items.map((si: any) => ({
+          id: si.variant_id || si.service_id || Math.random().toString(),
+          name: si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || 'Item',
+          type: si.service_id ? 'service' : 'product',
+          quantity: si.quantity || 0,
+          price: si.unit_price || si.price_at_sale || 0,
+          total: si.total_price || (si.quantity * (si.unit_price || si.price_at_sale || 0))
+        }));
+        setInvoiceItems(items);
+      } else {
+        setInvoiceItems([]);
+      }
 
-    setActiveTab('create');
-    toast.success('Invoice loaded successfully');
+      setActiveTab('create');
+      toast.success('Invoice loaded successfully');
+    } catch (error) {
+      console.error('Error loading invoice:', error);
+      toast.error('Failed to load invoice details');
+    }
+  };
+
+  const handleDownload = (inv: any) => {
+    const mappedItems = inv.sale_items.map((si: any) => ({
+      name: si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || 'Item',
+      type: si.service_id ? 'service' : 'product',
+      quantity: si.quantity || 0,
+      price: si.unit_price || si.price_at_sale || 0,
+      total: si.total_price || (si.quantity * (si.unit_price || si.price_at_sale || 0))
+    }));
+
+    const mappedData = {
+      items: mappedItems,
+      recipient: {
+        name: inv.customer_name || inv.customers?.name || 'N/A',
+        email: inv.customer_email || '',
+        phone: inv.customer_phone || '',
+        address: inv.customer_address || ''
+      },
+      invoiceNumber: inv.invoice_number,
+      invoiceDate: new Date(inv.created_at).toLocaleDateString(),
+      discount: inv.discount_percentage || 0
+    };
+
+    generatePDF(mappedData);
+  };
+
+  const handlePreview = (inv: any) => {
+    setPreviewInvoice(inv);
   };
 
   const saveInvoice = async () => {
@@ -232,12 +268,19 @@ const Invoices: React.FC = () => {
     return calculateSubtotal() - calculateDiscountAmount() + calculateVAT();
   };
 
-  const generatePDF = async () => {
-    if (invoiceItems.length === 0) {
+  const generatePDF = async (externalData?: any) => {
+    const isExternal = !!externalData;
+    const items = isExternal ? externalData.items : invoiceItems;
+    const rec = isExternal ? externalData.recipient : recipient;
+    const num = isExternal ? externalData.invoiceNumber : invoiceNumber;
+    const date = isExternal ? externalData.invoiceDate : invoiceDate;
+    const disc = isExternal ? externalData.discount : discount;
+
+    if (items.length === 0) {
       toast.error('Please add at least one item to the invoice');
       return;
     }
-    if (!recipient.name) {
+    if (!rec.name) {
       toast.error('Please add recipient name');
       return;
     }
@@ -283,7 +326,7 @@ const Invoices: React.FC = () => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.text('INVOICE', pageWidth - 15, 25, { align: 'right' });
-      doc.text(`#${invoiceNumber}`, pageWidth - 15, 32, { align: 'right' });
+      doc.text(`#${num}`, pageWidth - 15, 32, { align: 'right' });
 
       // Business Info & Recipient Info
       doc.setTextColor(0, 0, 0);
@@ -299,11 +342,11 @@ const Invoices: React.FC = () => {
       doc.text('Bill To:', 120, 55);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.text(recipient.name, 120, 62);
-      if (recipient.email) doc.text(recipient.email, 120, 67);
-      if (recipient.phone) doc.text(recipient.phone, 120, 72);
-      if (recipient.address) {
-        const splitAddress = doc.splitTextToSize(recipient.address, 75);
+      doc.text(rec.name, 120, 62);
+      if (rec.email) doc.text(rec.email, 120, 67);
+      if (rec.phone) doc.text(rec.phone, 120, 72);
+      if (rec.address) {
+        const splitAddress = doc.splitTextToSize(rec.address, 75);
         doc.text(splitAddress, 120, 77);
       }
 
@@ -311,10 +354,10 @@ const Invoices: React.FC = () => {
       doc.setFont('helvetica', 'bold');
       doc.text('Date:', 15, 85);
       doc.setFont('helvetica', 'normal');
-      doc.text(invoiceDate, 35, 85);
+      doc.text(date, 35, 85);
 
       // Table
-      const tableData = invoiceItems.map(item => [
+      const tableData = items.map((item: any) => [
         item.name,
         item.type.toUpperCase(),
         item.quantity.toString(),
@@ -322,16 +365,21 @@ const Invoices: React.FC = () => {
         `${settings?.currency || '₦'}${item.total.toLocaleString()}`
       ]);
 
+      const subtotal = items.reduce((sum: number, item: any) => sum + item.total, 0);
+      const discountAmount = (subtotal * disc) / 100;
+      const vatAmount = settings?.vat_enabled ? (subtotal - discountAmount) * 0.075 : 0;
+      const total = subtotal - discountAmount + vatAmount;
+
       (doc as any).autoTable({
         startY: 100,
         head: [['Description', 'Type', 'Qty', 'Unit Price', 'Amount']],
         body: tableData,
         headStyles: { fillColor: brandColor, textColor: 255 },
         foot: [
-          ['', '', '', 'Subtotal', `${settings?.currency || '₦'}${calculateSubtotal().toLocaleString()}`],
-          ['', '', '', `Discount (${discount}%)`, `-${settings?.currency || '₦'}${calculateDiscountAmount().toLocaleString()}`],
-          ['', '', '', 'VAT (7.5%)', `${settings?.currency || '₦'}${calculateVAT().toLocaleString()}`],
-          ['', '', '', 'Total', `${settings?.currency || '₦'}${calculateTotal().toLocaleString()}`]
+          ['', '', '', 'Subtotal', `${settings?.currency || '₦'}${subtotal.toLocaleString()}`],
+          ['', '', '', `Discount (${disc}%)`, `-${settings?.currency || '₦'}${discountAmount.toLocaleString()}`],
+          ['', '', '', 'VAT (7.5%)', `${settings?.currency || '₦'}${vatAmount.toLocaleString()}`],
+          ['', '', '', 'Total', `${settings?.currency || '₦'}${total.toLocaleString()}`]
         ],
         footStyles: { fillColor: [245, 245, 245], textColor: 0, fontStyle: 'bold' }
       });
@@ -342,7 +390,7 @@ const Invoices: React.FC = () => {
       doc.setTextColor(150, 150, 150);
       doc.text('Thank you for your business!', pageWidth / 2, finalY, { align: 'center' });
 
-      doc.save(`${invoiceNumber}.pdf`);
+      doc.save(`${num}.pdf`);
       toast.success('Invoice generated successfully');
     } catch (error) {
       console.error('PDF generation error:', error);
@@ -470,13 +518,29 @@ const Invoices: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => loadInvoice(inv)}
-                          className="p-2 text-slate-400 hover:text-brand hover:bg-brand/5 rounded-lg transition-all"
-                          title="Edit / Load"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handlePreview(inv)}
+                            className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                            title="Preview"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDownload(inv)}
+                            className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all"
+                            title="Download PDF"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => loadInvoice(inv)}
+                            className="p-2 text-slate-400 hover:text-brand hover:bg-brand/5 rounded-lg transition-all"
+                            title="Edit / Load"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -763,6 +827,124 @@ const Invoices: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+    )}
+    {previewInvoice && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+        >
+          <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+              <h2 className="text-2xl font-black text-slate-900">Invoice Preview</h2>
+              <p className="text-slate-500 text-sm">#{previewInvoice.invoice_number}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleDownload(previewInvoice)}
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-bold shadow-lg transition-all hover:scale-105 active:scale-95"
+                style={{ backgroundColor: brandColor }}
+              >
+                <Download className="w-5 h-5" />
+                Download PDF
+              </button>
+              <button
+                onClick={() => setPreviewInvoice(null)}
+                className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-2xl transition-all"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
+            {/* Invoice Content Preview */}
+            <div className="flex justify-between items-start">
+              <div className="space-y-4">
+                {settings?.logo_url ? (
+                  <img src={settings.logo_url} alt="Logo" className="h-16 object-contain" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black text-2xl" style={{ backgroundColor: brandColor }}>
+                    {settings?.business_name?.charAt(0) || 'S'}
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-black text-xl text-slate-900">{settings?.business_name || 'StockFlow'}</h3>
+                  <p className="text-slate-500 text-sm">Official Invoice</p>
+                </div>
+              </div>
+              <div className="text-right space-y-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Invoice Date</p>
+                <p className="font-bold text-slate-900">{new Date(previewInvoice.created_at).toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-10 pt-10 border-t border-slate-100">
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bill To</p>
+                <h4 className="font-black text-lg text-slate-900">{previewInvoice.customer_name || previewInvoice.customers?.name || 'Walk-in Customer'}</h4>
+                <p className="text-slate-500 text-sm">{previewInvoice.customer_phone || 'No phone provided'}</p>
+              </div>
+              <div className="space-y-2 text-right">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment Method</p>
+                <p className="font-bold text-slate-900">{previewInvoice.payment_method || 'Invoice'}</p>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-100 overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Qty</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Price</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {previewInvoice.sale_items?.map((item: any, idx: number) => (
+                    <tr key={idx}>
+                      <td className="px-6 py-4">
+                        <p className="font-bold text-slate-900">{item.product_variants?.products?.name || item.services?.name || item.product_name || item.service_name || 'Item'}</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-black">{item.service_id ? 'Service' : 'Product'}</p>
+                      </td>
+                      <td className="px-6 py-4 text-center font-bold text-slate-600">{item.quantity}</td>
+                      <td className="px-6 py-4 text-right font-bold text-slate-600">{settings?.currency || '₦'}{(item.unit_price || item.price_at_sale || 0).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-right font-black text-slate-900">{settings?.currency || '₦'}{(item.total_price || (item.quantity * (item.unit_price || item.price_at_sale || 0))).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-6">
+              <div className="w-full max-w-xs space-y-3">
+                <div className="flex justify-between text-slate-500 text-sm">
+                  <span>Subtotal</span>
+                  <span className="font-bold text-slate-900">{settings?.currency || '₦'}{(previewInvoice.total_amount + (previewInvoice.discount_amount || 0) - (previewInvoice.vat_amount || 0)).toLocaleString()}</span>
+                </div>
+                {previewInvoice.discount_amount > 0 && (
+                  <div className="flex justify-between text-rose-500 text-sm">
+                    <span>Discount ({previewInvoice.discount_percentage}%)</span>
+                    <span className="font-bold">-{settings?.currency || '₦'}{previewInvoice.discount_amount.toLocaleString()}</span>
+                  </div>
+                )}
+                {previewInvoice.vat_amount > 0 && (
+                  <div className="flex justify-between text-slate-500 text-sm">
+                    <span>VAT (7.5%)</span>
+                    <span className="font-bold text-slate-900">{settings?.currency || '₦'}{previewInvoice.vat_amount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
+                  <span className="text-lg font-black text-slate-900">Total</span>
+                  <span className="text-2xl font-black" style={{ color: brandColor }}>{settings?.currency || '₦'}{previewInvoice.total_amount.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </div>
     )}
     </div>
