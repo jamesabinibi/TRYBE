@@ -2032,7 +2032,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       customer_phone,
       discount_amount = 0,
       discount_percentage = 0,
-      vat_amount = 0
+      vat_amount = 0,
+      invoice_number: custom_invoice_number
     } = req.body;
     
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -2043,7 +2044,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
-      const invoice_number = "INV-" + Date.now();
+      const invoice_number = custom_invoice_number || ("INV-" + Date.now());
       let total_amount = 0;
       let total_profit = 0;
       let cost_price_total = 0;
@@ -2200,7 +2201,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .select(`
           *,
           customers (name),
-          users (name)
+          users (name),
+          sale_items (*)
         `)
         .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });

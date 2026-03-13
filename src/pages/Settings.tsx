@@ -478,8 +478,16 @@ NOTIFY pgrst, 'reload schema';
   const saveSettings = async (updatedSettings = settings) => {
     setIsSaving(true);
     try {
+      // Encode branding into business_name for robust persistence
+      const encodedBusinessName = JSON.stringify({
+        name: updatedSettings.business_name,
+        color: updatedSettings.brand_color,
+        logo: updatedSettings.logo_url
+      });
+
       const payload = {
         ...updatedSettings,
+        business_name: encodedBusinessName,
         low_stock_threshold: parseInt(updatedSettings.low_stock_threshold as any) || 0
       };
       const response = await fetchWithAuth('/api/settings', {
@@ -498,28 +506,32 @@ NOTIFY pgrst, 'reload schema';
         }));
 
         // Decode branding from business_name if it's encoded (Server-side fallback)
-        if (data.business_name && data.business_name.startsWith('[')) {
-          const match = data.business_name.match(/^\[(#?[a-fA-F0-9]{3,6})\]\s*(.*)/);
+        let decodedName = data.business_name;
+        let decodedColor = data.brand_color;
+        let decodedLogo = data.logo_url;
+
+        if (decodedName && decodedName.startsWith('[')) {
+          const match = decodedName.match(/^\[(#?[a-fA-F0-9]{3,6})\]\s*(.*)/);
           if (match) {
-            data.brand_color = match[1];
-            data.business_name = match[2];
+            decodedColor = match[1];
+            decodedName = match[2];
           }
-        } else if (data.business_name && data.business_name.startsWith('{"')) {
+        } else if (decodedName && decodedName.startsWith('{"')) {
           try {
-            const branding = JSON.parse(data.business_name);
-            data.business_name = branding.name;
-            data.brand_color = data.brand_color || branding.color;
-            data.logo_url = data.logo_url || branding.logo;
+            const branding = JSON.parse(decodedName);
+            decodedName = branding.name;
+            decodedColor = decodedColor || branding.color;
+            decodedLogo = decodedLogo || branding.logo;
           } catch (e) {}
         }
 
         setSettings({
-          business_name: data.business_name,
+          business_name: decodedName,
           currency: data.currency,
           vat_enabled: data.vat_enabled,
           low_stock_threshold: (data.low_stock_threshold || 0).toString(),
-          logo_url: data.logo_url,
-          brand_color: data.brand_color
+          logo_url: decodedLogo,
+          brand_color: decodedColor
         });
         await refreshSettings();
         toast.success('Settings saved successfully');

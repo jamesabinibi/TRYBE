@@ -15,10 +15,14 @@ import {
   Wrench,
   ChevronDown,
   Printer,
-  Save
+  Save,
+  Loader2,
+  Edit2,
+  History
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { useSettings } from '../App';
+import { cn } from '../lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import jsPDF from 'jspdf';
@@ -56,6 +60,9 @@ const Invoices: React.FC = () => {
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [discount, setDiscount] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pastInvoices, setPastInvoices] = useState<any[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
   const [searchTerm, setSearchTerm] = useState('');
   const [showItemDropdown, setShowItemDropdown] = useState(false);
 
@@ -63,7 +70,102 @@ const Invoices: React.FC = () => {
 
   useEffect(() => {
     fetchInventory();
+    fetchPastInvoices();
   }, []);
+
+  const fetchPastInvoices = async () => {
+    try {
+      const res = await fetchWithAuth('/api/sales');
+      if (res.ok) {
+        const data = await res.json();
+        // Filter only those with invoice numbers
+        setPastInvoices(data.filter((s: any) => s.invoice_number));
+      }
+    } catch (error) {
+      console.error('Error fetching past invoices:', error);
+    }
+  };
+
+  const loadInvoice = (invoice: any) => {
+    setInvoiceNumber(invoice.invoice_number || `INV-${Date.now()}`);
+    setInvoiceDate(new Date(invoice.created_at).toISOString().split('T')[0]);
+    setDiscount(invoice.discount_percentage || 0);
+    setRecipient({
+      name: invoice.customer_name || (invoice.customers?.name) || '',
+      email: '', 
+      phone: invoice.customer_phone || '',
+      address: ''
+    });
+    
+    if (invoice.sale_items && Array.isArray(invoice.sale_items)) {
+      const items: InvoiceItem[] = invoice.sale_items.map((si: any) => ({
+        id: si.variant_id || si.service_id || Math.random().toString(),
+        name: si.product_name || si.service_name || 'Item',
+        type: si.service_id ? 'service' : 'product',
+        quantity: si.quantity,
+        price: si.unit_price,
+        total: si.total_price
+      }));
+      setInvoiceItems(items);
+    } else {
+      setInvoiceItems([]);
+    }
+
+    setActiveTab('create');
+    toast.success('Invoice loaded successfully');
+  };
+
+  const saveInvoice = async () => {
+    if (invoiceItems.length === 0) {
+      toast.error('Please add at least one item');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const subtotal = calculateSubtotal();
+      const discountAmount = calculateDiscountAmount();
+      const vatAmount = calculateVAT();
+      const total = subtotal - discountAmount + vatAmount;
+
+      const payload = {
+        items: invoiceItems.map(item => ({
+          variant_id: item.type === 'product' ? item.id : undefined,
+          service_id: item.type === 'service' ? item.id : undefined,
+          quantity: item.quantity,
+          price_override: item.price
+        })),
+        customer_name: recipient.name,
+        customer_phone: recipient.phone,
+        invoice_number: invoiceNumber,
+        discount_percentage: discount,
+        discount_amount: discountAmount,
+        vat_amount: vatAmount,
+        total_amount: total,
+        payment_method: 'Invoice',
+        status: 'Pending'
+      };
+
+      const res = await fetchWithAuth('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        toast.success('Invoice saved successfully');
+        fetchPastInvoices();
+        setActiveTab('history');
+      } else {
+        const err = await res.json();
+        toast.error(err.error || 'Failed to save invoice');
+      }
+    } catch (error) {
+      toast.error('An error occurred while saving');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const fetchInventory = async () => {
     try {
@@ -149,19 +251,23 @@ const Invoices: React.FC = () => {
       doc.setFillColor(brandColor);
       doc.rect(0, 0, pageWidth, 40, 'F');
       
-      // Logo if available
+      // Logo handling
       if (settings?.logo_url) {
         try {
-          // Attempt to add logo
-          // Note: Adding base64 images to jsPDF
-          const imgType = settings.logo_url.split(';')[0].split(':')[1].split('/')[1].toUpperCase();
-          doc.addImage(settings.logo_url, imgType === 'SVG+XML' ? 'PNG' : imgType, 15, 8, 24, 24);
+          const imgData = settings.logo_url;
+          if (imgData.startsWith('data:image')) {
+            doc.addImage(imgData, 'PNG', 15, 8, 24, 24);
+          } else {
+            // Attempt to add URL directly (might fail due to CORS)
+            doc.addImage(imgData, 'JPEG', 15, 8, 24, 24);
+          }
+          
           doc.setTextColor(255, 255, 255);
           doc.setFontSize(24);
           doc.setFont('helvetica', 'bold');
           doc.text(settings?.business_name || 'StockFlow', 45, 25);
         } catch (e) {
-          console.warn('Failed to add logo to PDF:', e);
+          console.warn('Could not add logo to PDF:', e);
           doc.setTextColor(255, 255, 255);
           doc.setFontSize(24);
           doc.setFont('helvetica', 'bold');
@@ -264,28 +370,123 @@ const Invoices: React.FC = () => {
                 <FileText className="w-6 h-6" style={{ color: brandColor }} />
               </div>
             )}
-            Create Invoice
+            {activeTab === 'create' ? 'Create Invoice' : 'Invoice History'}
           </h1>
-          <p className="text-slate-500 mt-1">Generate professional invoices for your clients</p>
+          <p className="text-slate-500 mt-1">
+            {activeTab === 'create' ? 'Generate professional invoices for your clients' : 'View and manage your past invoices'}
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={generatePDF}
-            disabled={isGenerating}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold shadow-lg shadow-emerald-200 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
-            style={{ backgroundColor: brandColor }}
-          >
-            {isGenerating ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Download className="w-5 h-5" />
-            )}
-            {isGenerating ? 'Generating...' : 'Download PDF'}
-          </button>
+          <div className="flex bg-slate-100 p-1 rounded-xl mr-2">
+            <button
+              onClick={() => setActiveTab('create')}
+              className={cn(
+                "px-4 py-2 rounded-lg text-xs font-bold transition-all",
+                activeTab === 'create' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              Create
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={cn(
+                "px-4 py-2 rounded-lg text-xs font-bold transition-all",
+                activeTab === 'history' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              History
+            </button>
+          </div>
+
+          {activeTab === 'create' && (
+            <>
+              <button
+                onClick={saveInvoice}
+                disabled={isSaving || invoiceItems.length === 0}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-all disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                Save
+              </button>
+              <button
+                onClick={generatePDF}
+                disabled={isGenerating}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold shadow-lg shadow-emerald-200 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
+                style={{ backgroundColor: brandColor }}
+              >
+                {isGenerating ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Download className="w-5 h-5" />
+                )}
+                {isGenerating ? 'Generating...' : 'Download PDF'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {activeTab === 'history' ? (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/50">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Invoice #</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Client</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pastInvoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center gap-2 text-slate-400">
+                        <History className="w-12 h-12 opacity-10" />
+                        <p className="font-medium">No saved invoices found</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  pastInvoices.map((inv) => (
+                    <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-slate-900">#{inv.invoice_number}</span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-500">
+                        {new Date(inv.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900">{inv.customer_name || 'N/A'}</span>
+                          <span className="text-xs text-slate-500">{inv.customer_phone}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-slate-900">
+                          {settings?.currency || '₦'}{inv.total_amount?.toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => loadInvoice(inv)}
+                          className="p-2 text-slate-400 hover:text-brand hover:bg-brand/5 rounded-lg transition-all"
+                          title="Edit / Load"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Invoice Details & Items */}
         <div className="lg:col-span-2 space-y-6">
           {/* Invoice Header Info */}
@@ -563,6 +764,7 @@ const Invoices: React.FC = () => {
           </div>
         </div>
       </div>
+    )}
     </div>
   );
 };
