@@ -292,8 +292,13 @@ const Invoices: React.FC = () => {
     }
 
     setIsGenerating(true);
+    console.log('Starting PDF generation...', { num, date, itemsCount: items.length });
     try {
-      const doc = new jsPDF('p', 'mm', 'letter');
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'letter'
+      });
       const pageWidth = doc.internal.pageSize.getWidth();
       const brandColor = settings?.brand_color || '#10b981';
       
@@ -413,7 +418,8 @@ const Invoices: React.FC = () => {
       doc.setTextColor(150, 150, 150);
       doc.text('Thank you for your business!', pageWidth / 2, finalY, { align: 'center' });
 
-      doc.save(`${num}.pdf`);
+      const fileName = `invoice-${num.toString().replace(/[^a-z0-9]/gi, '-')}.pdf`;
+      doc.save(fileName);
       toast.success('Invoice generated successfully');
     } catch (error) {
       console.error('PDF generation error:', error);
@@ -431,19 +437,19 @@ const Invoices: React.FC = () => {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3">
             {settings?.logo_url ? (
-              <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm border border-slate-100 bg-white">
+              <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-zinc-800 bg-white">
                 <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
               </div>
             ) : (
-              <div className="p-2 rounded-xl bg-white shadow-sm border border-slate-100">
+              <div className="p-2 rounded-xl bg-white dark:bg-zinc-800 shadow-sm border border-slate-100 dark:border-zinc-700">
                 <FileText className="w-6 h-6" style={{ color: brandColor }} />
               </div>
             )}
             {activeTab === 'create' ? 'Create Invoice' : 'Invoice History'}
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="text-slate-500 dark:text-zinc-400 mt-1">
             {activeTab === 'create' ? 'Generate professional invoices for your clients' : 'View and manage your past invoices'}
           </p>
         </div>
@@ -503,11 +509,11 @@ const Invoices: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 dark:bg-zinc-800/50">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Invoice #</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Client</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-zinc-300 uppercase tracking-widest">Invoice #</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-zinc-300 uppercase tracking-widest">Date</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-zinc-300 uppercase tracking-widest">Client</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-zinc-300 uppercase tracking-widest">Amount</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-zinc-300 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
@@ -935,11 +941,11 @@ const Invoices: React.FC = () => {
             <div className="rounded-3xl border border-slate-100 dark:border-zinc-800 overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 dark:bg-zinc-800/50">
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Qty</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Price</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total</th>
+                  <tr className="bg-slate-50 dark:bg-zinc-800/80">
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-zinc-300 uppercase tracking-widest">Description</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-zinc-300 uppercase tracking-widest text-center">Qty</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-zinc-300 uppercase tracking-widest text-right">Price</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-zinc-300 uppercase tracking-widest text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
