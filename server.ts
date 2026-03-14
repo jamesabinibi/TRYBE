@@ -2075,7 +2075,25 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
-      const invoice_number = custom_invoice_number || ("INV-" + Date.now());
+      let invoice_number = custom_invoice_number || ("INV-" + Date.now());
+      
+      // Check if invoice number exists to prevent duplicate key errors
+      const { data: existingSale } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('account_id', userInfo.account_id)
+        .eq('invoice_number', invoice_number)
+        .maybeSingle();
+        
+      if (existingSale) {
+        if (custom_invoice_number) {
+          return res.status(400).json({ error: "Invoice number already exists. Please use a different one." });
+        } else {
+          // If it was auto-generated and somehow collided, add more randomness
+          invoice_number = "INV-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+        }
+      }
+
       let total_amount = 0;
       let total_profit = 0;
       let cost_price_total = 0;

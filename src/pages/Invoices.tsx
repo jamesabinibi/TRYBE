@@ -57,7 +57,8 @@ const Invoices: React.FC = () => {
     phone: '',
     address: ''
   });
-  const [invoiceNumber, setInvoiceNumber] = useState(`INV-${Date.now().toString().slice(-6)}`);
+  const generateInvoiceNumber = () => `INV-${Math.floor(100000 + Math.random() * 900000)}`;
+  const [invoiceNumber, setInvoiceNumber] = useState(generateInvoiceNumber());
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [discount, setDiscount] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -74,6 +75,20 @@ const Invoices: React.FC = () => {
     fetchInventory();
     fetchPastInvoices();
   }, []);
+
+  const resetForm = () => {
+    setInvoiceNumber(generateInvoiceNumber());
+    setInvoiceDate(new Date().toISOString().split('T')[0]);
+    setInvoiceItems([]);
+    setRecipient({
+      name: '',
+      email: '',
+      phone: '',
+      address: ''
+    });
+    setDiscount(0);
+    setSearchTerm('');
+  };
 
   const fetchPastInvoices = async () => {
     try {
@@ -196,6 +211,7 @@ const Invoices: React.FC = () => {
 
       if (res.ok) {
         toast.success('Invoice saved successfully');
+        resetForm();
         fetchPastInvoices();
         setActiveTab('history');
       } else {
@@ -478,9 +494,17 @@ const Invoices: React.FC = () => {
           {activeTab === 'create' && (
             <>
               <button
+                onClick={resetForm}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 font-bold hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all"
+                title="Reset Form"
+              >
+                <Plus className="w-5 h-5" />
+                New
+              </button>
+              <button
                 onClick={saveInvoice}
                 disabled={isSaving || invoiceItems.length === 0}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 font-bold hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
               >
                 {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                 Save
