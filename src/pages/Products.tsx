@@ -896,6 +896,19 @@ export default function Products() {
                               </div>
                             </div>
                             <div className="space-y-2">
+                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Supplier Name</label>
+                              <input 
+                                type="text" 
+                                value={newProduct.supplier_name}
+                                onChange={(e) => setNewProduct({...newProduct, supplier_name: e.target.value})}
+                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
+                                placeholder="e.g. Global Supplies Ltd"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
+                            <div className="space-y-2">
                               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">How many pieces in 1 unit?</label>
                               <div className="relative">
                                 <input 
@@ -906,6 +919,16 @@ export default function Products() {
                                 />
                                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
                               </div>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Description</label>
+                              <input 
+                                type="text" 
+                                value={newProduct.description}
+                                onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
+                                placeholder="Short description of the product"
+                              />
                             </div>
                           </div>
                         </div>
@@ -932,16 +955,16 @@ export default function Products() {
                           <button 
                             type="button"
                             onClick={() => {
-                              const defaultVariants = ['M', 'L', 'XL', '2X', '3X'].map(size => ({
-                                size,
-                                color: '',
-                                quantity: '0',
-                                low_stock_threshold: '5'
-                              }));
+                              if (newProduct.product_type === 'multiple') return;
                               setNewProduct({
                                 ...newProduct, 
                                 product_type: 'multiple',
-                                variants: defaultVariants
+                                variants: newProduct.variants.length > 1 ? newProduct.variants : ['M', 'L', 'XL', '2X', '3X'].map(size => ({
+                                  size,
+                                  color: '',
+                                  quantity: '0',
+                                  low_stock_threshold: '5'
+                                }))
                               });
                               setIsBulkEditing(true);
                             }}
@@ -957,6 +980,47 @@ export default function Products() {
                           </button>
                         </div>
                       </div>
+
+                      {newProduct.product_type === 'one' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Initial Stock Quantity</label>
+                            <input 
+                              type="number" 
+                              value={newProduct.variants[0]?.quantity || '0'}
+                              onChange={(e) => {
+                                const updated = [...newProduct.variants];
+                                if (updated.length === 0) {
+                                  updated.push({ size: '', color: '', quantity: e.target.value, low_stock_threshold: '5' });
+                                } else {
+                                  updated[0].quantity = e.target.value;
+                                }
+                                setNewProduct({...newProduct, variants: updated});
+                              }}
+                              className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-base sm:text-lg font-bold focus:border-brand outline-none transition-all"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Low Stock Alert at</label>
+                            <input 
+                              type="number" 
+                              value={newProduct.variants[0]?.low_stock_threshold || '5'}
+                              onChange={(e) => {
+                                const updated = [...newProduct.variants];
+                                if (updated.length === 0) {
+                                  updated.push({ size: '', color: '', quantity: '0', low_stock_threshold: e.target.value });
+                                } else {
+                                  updated[0].low_stock_threshold = e.target.value;
+                                }
+                                setNewProduct({...newProduct, variants: updated});
+                              }}
+                              className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-base sm:text-lg font-bold focus:border-brand outline-none transition-all"
+                              placeholder="5"
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       {newProduct.product_type === 'multiple' && (
                         <div className="space-y-6 sm:space-y-8">
@@ -1073,7 +1137,7 @@ export default function Products() {
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs sm:text-sm font-bold text-zinc-400">Qty:</span>
-                          <span className="text-xs sm:text-sm font-black text-zinc-900">{totalQuantity || '-'}</span>
+                          <span className="text-xs sm:text-sm font-black text-zinc-900">{totalQuantity}</span>
                         </div>
                       </div>
                     </div>

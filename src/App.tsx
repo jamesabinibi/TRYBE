@@ -161,10 +161,10 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                 {settings?.business_name || 'StockFlow'}
               </span>
               <span 
-                className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 block"
+                className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 block truncate max-w-[150px]"
                 style={{ color: brandColor }}
               >
-                Pro Edition
+                {settings?.slogan || 'Pro Edition'}
               </span>
             </div>
           </div>
