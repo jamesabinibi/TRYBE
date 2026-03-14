@@ -12,6 +12,9 @@
 }
 
 @layer base {
+  html, body {
+    @apply overflow-hidden h-full;
+  }
   body {
     @apply font-sans text-zinc-900 dark:text-zinc-100 antialiased;
   }

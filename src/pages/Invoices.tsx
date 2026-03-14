@@ -123,13 +123,17 @@ const Invoices: React.FC = () => {
   };
 
   const handleDownload = (inv: any) => {
-    const mappedItems = inv.sale_items.map((si: any) => ({
-      name: si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || 'Item',
-      type: si.service_id ? 'service' : 'product',
-      quantity: si.quantity || 0,
-      price: si.unit_price || si.price_at_sale || 0,
-      total: si.total_price || (si.quantity * (si.unit_price || si.price_at_sale || 0))
-    }));
+    const mappedItems = inv.sale_items.map((si: any) => {
+      const name = si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || 'Item';
+      const variant = si.product_variants ? ` (${si.product_variants.size || ''}${si.product_variants.color ? ' - ' + si.product_variants.color : ''})` : '';
+      return {
+        name: name + variant,
+        type: si.service_id ? 'service' : 'product',
+        quantity: si.quantity || 0,
+        price: si.unit_price || si.price_at_sale || 0,
+        total: si.total_price || (si.quantity * (si.unit_price || si.price_at_sale || 0))
+      };
+    });
 
     const mappedData = {
       items: mappedItems,
@@ -289,8 +293,9 @@ const Invoices: React.FC = () => {
 
     setIsGenerating(true);
     try {
-      const doc = new jsPDF();
+      const doc = new jsPDF('p', 'mm', 'letter');
       const pageWidth = doc.internal.pageSize.getWidth();
+      const brandColor = settings?.brand_color || '#10b981';
       
       // Header
       doc.setFillColor(brandColor);
@@ -299,31 +304,23 @@ const Invoices: React.FC = () => {
       // Logo handling
       if (settings?.logo_url) {
         try {
-          const imgData = settings.logo_url;
-          if (imgData.startsWith('data:image')) {
-            doc.addImage(imgData, 'PNG', 15, 8, 24, 24);
-          } else {
-            // Attempt to add URL directly (might fail due to CORS)
-            doc.addImage(imgData, 'JPEG', 15, 8, 24, 24);
-          }
-          
-          doc.setTextColor(255, 255, 255);
-          doc.setFontSize(24);
-          doc.setFont('helvetica', 'bold');
-          doc.text(settings?.business_name || 'StockFlow', 45, 25);
+          const img = new Image();
+          img.src = settings.logo_url;
+          img.crossOrigin = "anonymous";
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          doc.addImage(img, 'PNG', 15, 8, 24, 24);
         } catch (e) {
           console.warn('Could not add logo to PDF:', e);
-          doc.setTextColor(255, 255, 255);
-          doc.setFontSize(24);
-          doc.setFont('helvetica', 'bold');
-          doc.text(settings?.business_name || 'StockFlow', 15, 25);
         }
-      } else {
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(24);
-        doc.setFont('helvetica', 'bold');
-        doc.text(settings?.business_name || 'StockFlow', 15, 25);
       }
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text(settings?.business_name || 'StockFlow', 45, 25);
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
@@ -340,22 +337,12 @@ const Invoices: React.FC = () => {
       let fromY = 62;
       doc.text(settings?.business_name || 'StockFlow', 15, fromY);
       fromY += 5;
-      if (settings?.slogan) {
-        doc.setFont('helvetica', 'italic');
-        doc.text(settings.slogan, 15, fromY);
-        doc.setFont('helvetica', 'normal');
-        fromY += 5;
-      }
       if (settings?.email) {
         doc.text(`Email: ${settings.email}`, 15, fromY);
         fromY += 5;
       }
       if (settings?.phone_number) {
         doc.text(`Phone: ${settings.phone_number}`, 15, fromY);
-        fromY += 5;
-      }
-      if (settings?.website) {
-        doc.text(`Web: ${settings.website}`, 15, fromY);
         fromY += 5;
       }
       if (settings?.address) {
@@ -511,11 +498,11 @@ const Invoices: React.FC = () => {
       </div>
 
       {activeTab === 'history' ? (
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-slate-100 dark:border-zinc-800 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/50">
+                <tr className="bg-slate-50/50 dark:bg-zinc-800/50">
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Invoice #</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Client</th>
@@ -523,7 +510,7 @@ const Invoices: React.FC = () => {
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
                 {pastInvoices.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center">
@@ -535,21 +522,21 @@ const Invoices: React.FC = () => {
                   </tr>
                 ) : (
                   pastInvoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <tr key={inv.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
                       <td className="px-6 py-4">
-                        <span className="font-bold text-slate-900">#{inv.invoice_number}</span>
+                        <span className="font-bold text-slate-900 dark:text-white">#{inv.invoice_number}</span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-500">
+                      <td className="px-6 py-4 text-sm text-slate-500 dark:text-zinc-400">
                         {new Date(inv.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <span className="font-bold text-slate-900">{inv.customer_name || 'N/A'}</span>
-                          <span className="text-xs text-slate-500">{inv.customer_phone}</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{inv.customer_name || 'N/A'}</span>
+                          <span className="text-xs text-slate-500 dark:text-zinc-400">{inv.customer_phone}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="font-bold text-slate-900">
+                        <span className="font-bold text-slate-900 dark:text-white">
                           {settings?.currency || '₦'}{inv.total_amount?.toLocaleString()}
                         </span>
                       </td>
@@ -557,14 +544,14 @@ const Invoices: React.FC = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handlePreview(inv)}
-                            className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                            className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
                             title="Preview"
                           >
                             <FileText className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDownload(inv)}
-                            className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all"
+                            className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
                             title="Download PDF"
                           >
                             <Download className="w-4 h-4" />
@@ -590,7 +577,7 @@ const Invoices: React.FC = () => {
         {/* Left Column: Invoice Details & Items */}
         <div className="lg:col-span-2 space-y-6">
           {/* Invoice Header Info */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-zinc-800 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Invoice Number</label>
               <div className="relative">
@@ -599,7 +586,7 @@ const Invoices: React.FC = () => {
                   type="text"
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-zinc-800 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900 dark:text-white"
                 />
               </div>
             </div>
@@ -611,20 +598,20 @@ const Invoices: React.FC = () => {
                   type="date"
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-zinc-800 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900 dark:text-white"
                 />
               </div>
             </div>
           </div>
 
           {/* Item Selection */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-zinc-800">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-slate-900">Invoice Items</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Invoice Items</h2>
               <div className="relative">
                 <button
                   onClick={() => setShowItemDropdown(!showItemDropdown)}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-sm font-bold text-slate-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-xl text-sm font-bold text-slate-600 dark:text-zinc-400 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   Add Item
@@ -637,9 +624,9 @@ const Invoices: React.FC = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden"
+                      className="absolute right-0 mt-2 w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-zinc-800 z-50 overflow-hidden"
                     >
-                      <div className="p-3 border-bottom border-slate-50">
+                      <div className="p-3 border-bottom border-slate-50 dark:border-zinc-800">
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                           <input
@@ -647,7 +634,7 @@ const Invoices: React.FC = () => {
                             placeholder="Search inventory..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-zinc-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 text-slate-900 dark:text-white"
                             autoFocus
                           />
                         </div>
@@ -658,18 +645,18 @@ const Invoices: React.FC = () => {
                             <button
                               key={`${item.id}-${item.price ? 'service' : 'product'}`}
                               onClick={() => addItem(item, item.price ? 'service' : 'product')}
-                              className="w-full flex items-center justify-between p-3 hover:bg-slate-50 transition-colors text-left"
+                              className="w-full flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors text-left"
                             >
                               <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-lg ${item.price ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                                <div className={`p-2 rounded-lg ${item.price ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'bg-orange-50 dark:bg-orange-900/20 text-orange-600'}`}>
                                   {item.price ? <Wrench className="w-4 h-4" /> : <Package className="w-4 h-4" />}
                                 </div>
                                 <div>
-                                  <p className="text-sm font-bold text-slate-900">{item.name}</p>
-                                  <p className="text-xs text-slate-500">{item.price ? 'Service' : 'Product'}</p>
+                                  <p className="text-sm font-bold text-slate-900 dark:text-white">{item.name}</p>
+                                  <p className="text-xs text-slate-500 dark:text-zinc-400">{item.price ? 'Service' : 'Product'}</p>
                                 </div>
                               </div>
-                              <p className="text-sm font-black text-slate-900">
+                              <p className="text-sm font-black text-slate-900 dark:text-white">
                                 {settings?.currency || '₦'}{(item.price || item.selling_price || 0).toLocaleString()}
                               </p>
                             </button>
@@ -690,7 +677,7 @@ const Invoices: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-left border-b border-slate-50">
+                  <tr className="text-left border-b border-slate-50 dark:border-zinc-800">
                     <th className="pb-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Description</th>
                     <th className="pb-4 text-xs font-bold text-slate-400 uppercase tracking-wider w-24">Qty</th>
                     <th className="pb-4 text-xs font-bold text-slate-400 uppercase tracking-wider w-32">Price</th>
@@ -698,16 +685,16 @@ const Invoices: React.FC = () => {
                     <th className="pb-4 w-10"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-50 dark:divide-zinc-800">
                   {invoiceItems.length > 0 ? (
                     invoiceItems.map((item, index) => (
                       <tr key={index} className="group">
                         <td className="py-4">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${item.type === 'service' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                            <div className={`p-2 rounded-lg ${item.type === 'service' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'bg-orange-50 dark:bg-orange-900/20 text-orange-600'}`}>
                               {item.type === 'service' ? <Wrench className="w-4 h-4" /> : <Package className="w-4 h-4" />}
                             </div>
-                            <span className="font-bold text-slate-700">{item.name}</span>
+                            <span className="font-bold text-slate-700 dark:text-zinc-300">{item.name}</span>
                           </div>
                         </td>
                         <td className="py-4">
@@ -715,7 +702,7 @@ const Invoices: React.FC = () => {
                             type="number"
                             value={item.quantity}
                             onChange={(e) => updateQuantity(index, parseInt(e.target.value))}
-                            className="w-20 px-3 py-2 bg-slate-50 border-none rounded-lg text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
+                            className="w-20 px-3 py-2 bg-slate-50 dark:bg-zinc-800 border-none rounded-lg text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 text-slate-900 dark:text-white"
                           />
                         </td>
                         <td className="py-4">
@@ -725,12 +712,12 @@ const Invoices: React.FC = () => {
                               type="number"
                               value={item.price}
                               onChange={(e) => updatePrice(index, parseFloat(e.target.value))}
-                              className="w-28 pl-7 pr-3 py-2 bg-slate-50 border-none rounded-lg text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 text-slate-900"
+                              className="w-28 pl-7 pr-3 py-2 bg-slate-50 dark:bg-zinc-800 border-none rounded-lg text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 text-slate-900 dark:text-white"
                             />
                           </div>
                         </td>
                         <td className="py-4">
-                          <span className="font-black text-slate-900">
+                          <span className="font-black text-slate-900 dark:text-white">
                             {settings?.currency || '₦'}{item.total.toLocaleString()}
                           </span>
                         </td>
@@ -764,8 +751,8 @@ const Invoices: React.FC = () => {
         {/* Right Column: Recipient & Totals */}
         <div className="space-y-6">
           {/* Recipient Info */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-            <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-zinc-800">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
               <User className="w-5 h-5 text-slate-400" />
               Recipient Details
             </h2>
@@ -779,7 +766,7 @@ const Invoices: React.FC = () => {
                     placeholder="John Doe"
                     value={recipient.name}
                     onChange={(e) => setRecipient({ ...recipient, name: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-zinc-800 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -792,7 +779,7 @@ const Invoices: React.FC = () => {
                     placeholder="john@example.com"
                     value={recipient.email}
                     onChange={(e) => setRecipient({ ...recipient, email: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-zinc-800 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -805,7 +792,7 @@ const Invoices: React.FC = () => {
                     placeholder="+234..."
                     value={recipient.phone}
                     onChange={(e) => setRecipient({ ...recipient, phone: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-zinc-800 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -818,7 +805,7 @@ const Invoices: React.FC = () => {
                     value={recipient.address}
                     onChange={(e) => setRecipient({ ...recipient, address: e.target.value })}
                     rows={3}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium resize-none text-slate-900"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-zinc-800 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium resize-none text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -870,12 +857,12 @@ const Invoices: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+          className="bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
         >
-          <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="p-8 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-800/50">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">Invoice Preview</h2>
-              <p className="text-slate-500 text-sm">#{previewInvoice.invoice_number}</p>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white">Invoice Preview</h2>
+              <p className="text-slate-500 dark:text-zinc-400 text-sm">#{previewInvoice.invoice_number}</p>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -888,7 +875,7 @@ const Invoices: React.FC = () => {
               </button>
               <button
                 onClick={() => setPreviewInvoice(null)}
-                className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-2xl transition-all"
+                className="p-3 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-500 dark:text-zinc-400 rounded-2xl transition-all"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -907,75 +894,79 @@ const Invoices: React.FC = () => {
                   </div>
                 )}
                 <div>
-                  <h3 className="font-black text-xl text-slate-900">{settings?.business_name || 'StockFlow'}</h3>
+                  <h3 className="font-black text-xl text-slate-900 dark:text-white">{settings?.business_name || 'StockFlow'}</h3>
                   {settings?.slogan && <p className="text-slate-400 text-[10px] font-bold italic">{settings.slogan}</p>}
                   <div className="mt-2 space-y-0.5">
-                    {settings?.email && <p className="text-slate-500 text-[10px] font-medium">Email: {settings.email}</p>}
-                    {settings?.phone_number && <p className="text-slate-500 text-[10px] font-medium">Phone: {settings.phone_number}</p>}
-                    {settings?.website && <p className="text-slate-500 text-[10px] font-medium">Web: {settings.website}</p>}
-                    {settings?.address && <p className="text-slate-500 text-[10px] font-medium max-w-[200px]">{settings.address}</p>}
+                    {settings?.email && <p className="text-slate-500 dark:text-zinc-400 text-[10px] font-medium">Email: {settings.email}</p>}
+                    {settings?.phone_number && <p className="text-slate-500 dark:text-zinc-400 text-[10px] font-medium">Phone: {settings.phone_number}</p>}
+                    {settings?.website && <p className="text-slate-500 dark:text-zinc-400 text-[10px] font-medium">Web: {settings.website}</p>}
+                    {settings?.address && <p className="text-slate-500 dark:text-zinc-400 text-[10px] font-medium max-w-[200px]">{settings.address}</p>}
                   </div>
                 </div>
               </div>
               <div className="text-right space-y-1">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Invoice Date</p>
-                <p className="font-bold text-slate-900">{new Date(previewInvoice.created_at).toLocaleDateString()}</p>
+                <p className="font-bold text-slate-900 dark:text-white">{new Date(previewInvoice.created_at).toLocaleDateString()}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-10 pt-10 border-t border-slate-100">
+            <div className="grid grid-cols-2 gap-10 pt-10 border-t border-slate-100 dark:border-zinc-800">
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bill To</p>
-                <h4 className="font-black text-lg text-slate-900">{previewInvoice.customer_name || previewInvoice.customers?.name || 'Walk-in Customer'}</h4>
+                <h4 className="font-black text-lg text-slate-900 dark:text-white">{previewInvoice.customer_name || previewInvoice.customers?.name || 'Walk-in Customer'}</h4>
                 <div className="space-y-0.5">
                   {(previewInvoice.customer_email || previewInvoice.customers?.email) && (
-                    <p className="text-slate-500 text-xs">{previewInvoice.customer_email || previewInvoice.customers?.email}</p>
+                    <p className="text-slate-500 dark:text-zinc-400 text-xs">{previewInvoice.customer_email || previewInvoice.customers?.email}</p>
                   )}
                   {(previewInvoice.customer_phone || previewInvoice.customers?.phone) && (
-                    <p className="text-slate-500 text-xs">{previewInvoice.customer_phone || previewInvoice.customers?.phone}</p>
+                    <p className="text-slate-500 dark:text-zinc-400 text-xs">{previewInvoice.customer_phone || previewInvoice.customers?.phone}</p>
                   )}
                   {(previewInvoice.customer_address || previewInvoice.customers?.address) && (
-                    <p className="text-slate-500 text-xs max-w-[200px]">{previewInvoice.customer_address || previewInvoice.customers?.address}</p>
+                    <p className="text-slate-500 dark:text-zinc-400 text-xs max-w-[200px]">{previewInvoice.customer_address || previewInvoice.customers?.address}</p>
                   )}
                 </div>
               </div>
               <div className="space-y-2 text-right">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment Method</p>
-                <p className="font-bold text-slate-900">{previewInvoice.payment_method || 'Invoice'}</p>
+                <p className="font-bold text-slate-900 dark:text-white">{previewInvoice.payment_method || 'Invoice'}</p>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-slate-100 overflow-hidden">
+            <div className="rounded-3xl border border-slate-100 dark:border-zinc-800 overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50">
+                  <tr className="bg-slate-50 dark:bg-zinc-800/50">
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Qty</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Price</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {previewInvoice.sale_items?.map((item: any, idx: number) => (
-                    <tr key={idx}>
-                      <td className="px-6 py-4">
-                        <p className="font-bold text-slate-900">{item.product_variants?.products?.name || item.services?.name || item.product_name || item.service_name || 'Item'}</p>
-                        <p className="text-[10px] text-slate-400 uppercase font-black">{item.service_id ? 'Service' : 'Product'}</p>
-                      </td>
-                      <td className="px-6 py-4 text-center font-bold text-slate-600">{item.quantity}</td>
-                      <td className="px-6 py-4 text-right font-bold text-slate-600">{settings?.currency || '₦'}{(item.unit_price || item.price_at_sale || 0).toLocaleString()}</td>
-                      <td className="px-6 py-4 text-right font-black text-slate-900">{settings?.currency || '₦'}{(item.total_price || (item.quantity * (item.unit_price || item.price_at_sale || 0))).toLocaleString()}</td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                  {previewInvoice.sale_items?.map((item: any, idx: number) => {
+                    const name = item.product_variants?.products?.name || item.services?.name || item.product_name || item.service_name || 'Item';
+                    const variant = item.product_variants ? ` (${item.product_variants.size || ''}${item.product_variants.color ? ' - ' + item.product_variants.color : ''})` : '';
+                    return (
+                      <tr key={idx}>
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-slate-900 dark:text-white">{name}{variant}</p>
+                          <p className="text-[10px] text-slate-400 uppercase font-black">{item.service_id ? 'Service' : 'Product'}</p>
+                        </td>
+                        <td className="px-6 py-4 text-center font-bold text-slate-600 dark:text-zinc-400">{item.quantity}</td>
+                        <td className="px-6 py-4 text-right font-bold text-slate-600 dark:text-zinc-400">{settings?.currency || '₦'}{(item.unit_price || item.price_at_sale || 0).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">{settings?.currency || '₦'}{(item.total_price || (item.quantity * (item.unit_price || item.price_at_sale || 0))).toLocaleString()}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             <div className="flex justify-end pt-6">
               <div className="w-full max-w-xs space-y-3">
-                <div className="flex justify-between text-slate-500 text-sm">
+                <div className="flex justify-between text-slate-500 dark:text-zinc-400 text-sm">
                   <span>Subtotal</span>
-                  <span className="font-bold text-slate-900">{settings?.currency || '₦'}{(previewInvoice.total_amount + (previewInvoice.discount_amount || 0) - (previewInvoice.vat_amount || 0)).toLocaleString()}</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{settings?.currency || '₦'}{(previewInvoice.total_amount + (previewInvoice.discount_amount || 0) - (previewInvoice.vat_amount || 0)).toLocaleString()}</span>
                 </div>
                 {previewInvoice.discount_amount > 0 && (
                   <div className="flex justify-between text-rose-500 text-sm">
@@ -984,13 +975,13 @@ const Invoices: React.FC = () => {
                   </div>
                 )}
                 {previewInvoice.vat_amount > 0 && (
-                  <div className="flex justify-between text-slate-500 text-sm">
+                  <div className="flex justify-between text-slate-500 dark:text-zinc-400 text-sm">
                     <span>VAT (7.5%)</span>
-                    <span className="font-bold text-slate-900">{settings?.currency || '₦'}{previewInvoice.vat_amount.toLocaleString()}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{settings?.currency || '₦'}{previewInvoice.vat_amount.toLocaleString()}</span>
                   </div>
                 )}
-                <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
-                  <span className="text-lg font-black text-slate-900">Total</span>
+                <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex justify-between items-center">
+                  <span className="text-lg font-black text-slate-900 dark:text-white">Total</span>
                   <span className="text-2xl font-black" style={{ color: brandColor }}>{settings?.currency || '₦'}{previewInvoice.total_amount.toLocaleString()}</span>
                 </div>
               </div>

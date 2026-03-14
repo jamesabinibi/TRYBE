@@ -947,7 +947,7 @@ export default function Products() {
                               "flex-1 sm:flex-none px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all border",
                               newProduct.product_type === 'one' 
                                 ? "bg-brand text-white border-brand shadow-lg shadow-brand/20" 
-                                : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                                : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:border-zinc-300 dark:hover:border-zinc-600"
                             )}
                           >
                             One type
@@ -972,7 +972,7 @@ export default function Products() {
                               "flex-1 sm:flex-none px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all border flex items-center justify-center gap-2",
                               newProduct.product_type === 'multiple' 
                                 ? "bg-brand text-white border-brand shadow-lg shadow-brand/20" 
-                                : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                                : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:border-zinc-300 dark:hover:border-zinc-600"
                             )}
                           >
                             {newProduct.product_type === 'multiple' && <Check className="w-4 h-4" />}
@@ -1118,26 +1118,26 @@ export default function Products() {
                 {/* Summary Sidebar */}
                 <div className="w-full lg:w-80 bg-zinc-50/50 lg:bg-white dark:bg-zinc-900/50 border-b lg:border-b-0 lg:border-l border-zinc-100 dark:border-zinc-800 p-6 sm:p-8 flex flex-col order-1 lg:order-2 shrink-0">
                   <div className="flex-1 space-y-6 sm:space-y-8">
-                    <h3 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">Summary</h3>
+                    <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white tracking-tight">Summary</h3>
                     
                     <div className="grid grid-cols-2 lg:grid-cols-1 gap-6">
                       {imagePreviews.length > 0 && (
-                        <div className="hidden lg:block w-full aspect-video rounded-xl overflow-hidden border border-zinc-100 mb-6">
+                        <div className="w-full aspect-video rounded-xl overflow-hidden border border-zinc-100 dark:border-zinc-800 mb-6">
                           <img src={imagePreviews[0]} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         </div>
                       )}
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs sm:text-sm font-bold text-zinc-400">Product:</span>
-                          <span className="text-xs sm:text-sm font-black text-zinc-900 truncate max-w-[100px] sm:max-w-[150px]">{newProduct.name || '-'}</span>
+                          <span className="text-xs sm:text-sm font-bold text-zinc-400 dark:text-zinc-500">Product:</span>
+                          <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white truncate max-w-[100px] sm:max-w-[150px]">{newProduct.name || '-'}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs sm:text-sm font-bold text-zinc-400">Unit:</span>
-                          <span className="text-xs sm:text-sm font-black text-zinc-900">{newProduct.unit}</span>
+                          <span className="text-xs sm:text-sm font-bold text-zinc-400 dark:text-zinc-500">Unit:</span>
+                          <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white">{newProduct.unit}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs sm:text-sm font-bold text-zinc-400">Qty:</span>
-                          <span className="text-xs sm:text-sm font-black text-zinc-900">{totalQuantity}</span>
+                          <span className="text-xs sm:text-sm font-bold text-zinc-400 dark:text-zinc-500">Qty:</span>
+                          <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white">{totalQuantity}</span>
                         </div>
                       </div>
                     </div>
@@ -1155,7 +1155,7 @@ export default function Products() {
                     <button 
                       type="button"
                       onClick={closeModal}
-                      className="w-full py-3.5 sm:py-4 bg-zinc-50 text-zinc-600 rounded-xl text-xs sm:text-sm font-bold hover:bg-zinc-100 transition-all active:scale-95 border border-zinc-200"
+                      className="w-full py-3.5 sm:py-4 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-xs sm:text-sm font-bold hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all active:scale-95 border border-zinc-200 dark:border-zinc-700"
                     >
                       Cancel
                     </button>
