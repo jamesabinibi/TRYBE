@@ -774,7 +774,7 @@ export default function Products() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full max-w-6xl h-full sm:h-auto sm:max-h-[90vh] bg-white sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative z-10"
+              className="w-full max-w-6xl h-full sm:h-auto sm:max-h-[90vh] bg-white dark:bg-zinc-900 sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative z-10"
             >
               {/* Header */}
               <div className="p-4 sm:p-8 bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 z-20">
@@ -936,7 +936,7 @@ export default function Products() {
                     </div>
 
                     {/* Product Type Section */}
-                    <div className="bg-white p-6 sm:p-8 rounded-xl border border-zinc-100 shadow-sm space-y-6 sm:space-y-8">
+                    <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
                       <div className="space-y-4">
                         <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select product type:</label>
                         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
@@ -997,7 +997,7 @@ export default function Products() {
                                 }
                                 setNewProduct({...newProduct, variants: updated});
                               }}
-                              className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-base sm:text-lg font-bold focus:border-brand outline-none transition-all"
+                              className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all"
                               placeholder="0"
                             />
                           </div>
@@ -1015,7 +1015,7 @@ export default function Products() {
                                 }
                                 setNewProduct({...newProduct, variants: updated});
                               }}
-                              className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-base sm:text-lg font-bold focus:border-brand outline-none transition-all"
+                              className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all"
                               placeholder="5"
                             />
                           </div>
@@ -1028,7 +1028,7 @@ export default function Products() {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 bg-brand rounded-full"></span>
-                                <h4 className="text-sm font-black text-zinc-900 tracking-tight">Size & Stock</h4>
+                                <h4 className="text-sm font-black text-zinc-900 dark:text-white tracking-tight">Size & Stock</h4>
                               </div>
                               <button 
                                 type="button"
@@ -1047,7 +1047,7 @@ export default function Products() {
                             
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                               {newProduct.variants.map((v, i) => (
-                                <div key={i} className="bg-zinc-50 p-3 sm:p-4 rounded-2xl border border-zinc-100 space-y-3 relative group">
+                                <div key={i} className="bg-zinc-50 dark:bg-zinc-800/50 p-3 sm:p-4 rounded-2xl border border-zinc-100 dark:border-zinc-700 space-y-3 relative group">
                                   <input 
                                     placeholder="Size"
                                     value={v.size}
@@ -1056,7 +1056,7 @@ export default function Products() {
                                       updated[i].size = e.target.value;
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
-                                    className="w-full bg-transparent border-b border-zinc-200 text-xs font-black uppercase tracking-widest outline-none focus:border-brand"
+                                    className="w-full bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-white outline-none focus:border-brand"
                                   />
                                   <input 
                                     type="number"
@@ -1067,7 +1067,7 @@ export default function Products() {
                                       updated[i].quantity = e.target.value;
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
-                                    className="bg-transparent border-b border-zinc-200 text-xs font-bold outline-none focus:border-brand"
+                                    className="bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none focus:border-brand"
                                   />
                                   <button 
                                     type="button"
@@ -1088,7 +1088,7 @@ export default function Products() {
                     </div>
 
                     {/* Pricing Section */}
-                    <div className="bg-white p-6 sm:p-8 rounded-xl border border-zinc-100 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
+                    <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Cost Price (₦)</label>
                         <input 
@@ -1097,7 +1097,7 @@ export default function Products() {
                           step="0.01"
                           value={newProduct.cost_price}
                           onChange={(e) => setNewProduct({...newProduct, cost_price: e.target.value})}
-                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-base sm:text-lg font-bold focus:border-brand outline-none transition-all"
+                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1108,7 +1108,7 @@ export default function Products() {
                           step="0.01"
                           value={newProduct.selling_price}
                           onChange={(e) => setNewProduct({...newProduct, selling_price: e.target.value})}
-                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 text-base sm:text-lg font-bold focus:border-brand outline-none transition-all"
+                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -1116,7 +1116,7 @@ export default function Products() {
                 </div>
 
                 {/* Summary Sidebar */}
-                <div className="w-full lg:w-80 bg-zinc-50/50 lg:bg-white border-b lg:border-b-0 lg:border-l border-zinc-100 p-6 sm:p-8 flex flex-col order-1 lg:order-2 shrink-0">
+                <div className="w-full lg:w-80 bg-zinc-50/50 lg:bg-white dark:bg-zinc-900/50 border-b lg:border-b-0 lg:border-l border-zinc-100 dark:border-zinc-800 p-6 sm:p-8 flex flex-col order-1 lg:order-2 shrink-0">
                   <div className="flex-1 space-y-6 sm:space-y-8">
                     <h3 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">Summary</h3>
                     
