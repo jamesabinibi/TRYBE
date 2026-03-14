@@ -1774,25 +1774,41 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   // (Moved to top)
 
   app.get("/api/settings", async (req, res) => {
-    if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
+    const defaultSettings = { 
+      business_name: 'StockFlow Pro', 
+      currency: 'NGN', 
+      vat_enabled: false, 
+      low_stock_threshold: 5, 
+      logo_url: null, 
+      brand_color: '#10b981',
+      slogan: '',
+      address: '',
+      email: '',
+      website: '',
+      phone_number: ''
+    };
+    if (!supabase) return res.json(defaultSettings);
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
+      if (!userInfo) return res.json(defaultSettings);
 
       const { data, error } = await supabase.from('settings').select('*').eq('account_id', userInfo.account_id);
       if (error) throw error;
       
-      let settings = data[0] || { account_id: userInfo.account_id, business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' };
+      let settings = data[0] || { account_id: userInfo.account_id, ...defaultSettings };
       
       res.json(settings);
     } catch (error) {
-      res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
+      res.json(defaultSettings);
     }
   });
 
   app.post(["/api/settings", "/api/settings/"], async (req, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
-    const { business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color } = req.body;
+    const { 
+      business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
+      slogan, address, email, website, phone_number 
+    } = req.body;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
@@ -1807,7 +1823,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const { data: existing } = await supabase.from('settings').select('id').eq('account_id', userInfo.account_id).maybeSingle();
       
       let result;
-      const settingsData = { business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color };
+      const settingsData = { 
+        business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
+        slogan, address, email, website, phone_number 
+      };
       
       if (existing) {
         result = await supabase.from('settings').update(settingsData).eq('id', existing.id).select().single();
@@ -1817,9 +1836,19 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       
       if (result.error) {
         console.error('[SETTINGS] Save error:', result.error);
-        // Fallback: If brand_color column is missing, try to save without it but encode it in business_name
-        if (result.error.message?.includes('column "brand_color" does not exist')) {
-          const fallbackName = `{"name":"${business_name}","color":"${brand_color}","logo":"${logo_url}"}`;
+        // Fallback: If columns are missing, try to save without them but encode them in business_name
+        if (result.error.message?.includes('column') || result.error.code === '42703') {
+          const brandingData = {
+            name: business_name,
+            color: brand_color,
+            logo: logo_url,
+            slogan,
+            address,
+            email,
+            website,
+            phone: phone_number
+          };
+          const fallbackName = JSON.stringify(brandingData);
           const fallbackData = { business_name: fallbackName, currency, vat_enabled, low_stock_threshold };
           if (existing) {
             result = await supabase.from('settings').update(fallbackData).eq('id', existing.id).select().single();
@@ -2030,6 +2059,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       customer_id, 
       customer_name, 
       customer_phone,
+      customer_email,
+      customer_address,
       discount_amount = 0,
       discount_percentage = 0,
       vat_amount = 0,
@@ -2066,7 +2097,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         } else {
           const { data: newCustomer, error: cError } = await supabase
             .from('customers')
-            .insert([{ account_id: userInfo.account_id, name: customer_name, phone: customer_phone }])
+            .insert([{ 
+              account_id: userInfo.account_id, 
+              name: customer_name, 
+              phone: customer_phone,
+              email: customer_email,
+              address: customer_address
+            }])
             .select()
             .single();
           
@@ -2082,6 +2119,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .insert([{ 
           account_id: userInfo.account_id,
           invoice_number, 
+          customer_name,
+          customer_phone,
+          customer_email,
+          customer_address,
           total_amount: 0, 
           total_profit: 0, 
           cost_price_total: 0,
@@ -3006,16 +3047,38 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           low_stock_threshold INTEGER DEFAULT 5,
           logo_url TEXT,
           brand_color TEXT DEFAULT '#10b981',
+          slogan TEXT,
+          address TEXT,
+          email TEXT,
+          website TEXT,
+          phone_number TEXT,
           updated_at TIMESTAMPTZ DEFAULT NOW(),
           UNIQUE(account_id)
         );
       `);
+
+      // Add missing columns to settings if they don't exist
+      const settingsCols = ['slogan', 'address', 'email', 'website', 'phone_number'];
+      for (const col of settingsCols) {
+        await runSql(`
+          DO $$ 
+          BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='settings' AND column_name='${col}') THEN
+              ALTER TABLE settings ADD COLUMN ${col} TEXT;
+            END IF;
+          END $$;
+        `);
+      }
 
       await runSql(`
         CREATE TABLE IF NOT EXISTS sales (
           id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
           account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE,
           customer_id BIGINT,
+          customer_name TEXT,
+          customer_phone TEXT,
+          customer_email TEXT,
+          customer_address TEXT,
           total_amount DECIMAL(12,2) NOT NULL,
           total_profit DECIMAL(12,2) NOT NULL DEFAULT 0,
           cost_price_total DECIMAL(12,2) DEFAULT 0,
@@ -3029,6 +3092,19 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
       `);
+
+      // Add missing columns to sales if they don't exist
+      const salesCols = ['customer_name', 'customer_phone', 'customer_email', 'customer_address'];
+      for (const col of salesCols) {
+        await runSql(`
+          DO $$ 
+          BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='${col}') THEN
+              ALTER TABLE sales ADD COLUMN ${col} TEXT;
+            END IF;
+          END $$;
+        `);
+      }
 
       await runSql(`
         CREATE TABLE IF NOT EXISTS services (

@@ -59,6 +59,11 @@ interface Settings {
   low_stock_threshold: number;
   logo_url: string | null;
   brand_color: string;
+  slogan: string;
+  address: string;
+  email: string;
+  website: string;
+  phone_number: string;
 }
 
 interface SettingsContextType {

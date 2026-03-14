@@ -37,7 +37,12 @@ export default function Settings() {
     vat_enabled: globalSettings?.vat_enabled || false,
     low_stock_threshold: (globalSettings?.low_stock_threshold || 5).toString(),
     logo_url: globalSettings?.logo_url || '',
-    brand_color: globalSettings?.brand_color || '#10b981'
+    brand_color: globalSettings?.brand_color || '#10b981',
+    slogan: globalSettings?.slogan || '',
+    address: globalSettings?.address || '',
+    email: globalSettings?.email || '',
+    website: globalSettings?.website || '',
+    phone_number: globalSettings?.phone_number || ''
   });
   const [isSaving, setIsSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(globalSettings?.logo_url || null);
@@ -50,7 +55,12 @@ export default function Settings() {
         vat_enabled: globalSettings.vat_enabled || false,
         low_stock_threshold: (globalSettings.low_stock_threshold || 5).toString(),
         logo_url: globalSettings.logo_url || '',
-        brand_color: globalSettings.brand_color || '#10b981'
+        brand_color: globalSettings.brand_color || '#10b981',
+        slogan: globalSettings.slogan || '',
+        address: globalSettings.address || '',
+        email: globalSettings.email || '',
+        website: globalSettings.website || '',
+        phone_number: globalSettings.phone_number || ''
       });
       setLogoPreview(globalSettings.logo_url || null);
     }
@@ -482,7 +492,12 @@ NOTIFY pgrst, 'reload schema';
       const encodedBusinessName = JSON.stringify({
         name: updatedSettings.business_name,
         color: updatedSettings.brand_color,
-        logo: updatedSettings.logo_url
+        logo: updatedSettings.logo_url,
+        slogan: updatedSettings.slogan,
+        address: updatedSettings.address,
+        email: updatedSettings.email,
+        website: updatedSettings.website,
+        phone: updatedSettings.phone_number
       });
 
       const payload = {
@@ -522,6 +537,11 @@ NOTIFY pgrst, 'reload schema';
             decodedName = branding.name;
             decodedColor = decodedColor || branding.color;
             decodedLogo = decodedLogo || branding.logo;
+            data.slogan = data.slogan || branding.slogan;
+            data.address = data.address || branding.address;
+            data.email = data.email || branding.email;
+            data.website = data.website || branding.website;
+            data.phone_number = data.phone_number || branding.phone;
           } catch (e) {}
         }
 
@@ -531,7 +551,12 @@ NOTIFY pgrst, 'reload schema';
           vat_enabled: data.vat_enabled,
           low_stock_threshold: (data.low_stock_threshold || 0).toString(),
           logo_url: decodedLogo,
-          brand_color: decodedColor
+          brand_color: decodedColor,
+          slogan: data.slogan || '',
+          address: data.address || '',
+          email: data.email || '',
+          website: data.website || '',
+          phone_number: data.phone_number || ''
         });
         await refreshSettings();
         toast.success('Settings saved successfully');
@@ -811,42 +836,88 @@ NOTIFY pgrst, 'reload schema';
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-zinc-100 dark:border-zinc-800">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Name</label>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  value={settings.business_name} 
-                  onChange={(e) => setSettings({...settings, business_name: e.target.value})}
-                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
-                />
-                <button 
-                  onClick={() => saveSettings()}
-                  disabled={isSaving}
-                  className="px-4 py-3 bg-zinc-900 dark:bg-zinc-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
-                >
-                  {isSaving ? '...' : 'Save'}
-                </button>
-              </div>
+              <input 
+                type="text" 
+                value={settings.business_name} 
+                onChange={(e) => setSettings({...settings, business_name: e.target.value})}
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+              />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Currency</label>
-              <select 
-                value={settings.currency}
-                onChange={(e) => {
-                  const newSettings = {...settings, currency: e.target.value};
-                  setSettings(newSettings);
-                  saveSettings(newSettings);
-                }}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none dark:text-white text-zinc-900"
-              >
-                <option value="NGN">NGN (₦)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-              </select>
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Slogan / Tagline</label>
+              <input 
+                type="text" 
+                value={settings.slogan} 
+                onChange={(e) => setSettings({...settings, slogan: e.target.value})}
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+              />
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Address</label>
+              <input 
+                type="email" 
+                value={settings.email} 
+                onChange={(e) => setSettings({...settings, email: e.target.value})}
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Phone Number</label>
+              <input 
+                type="text" 
+                value={settings.phone_number} 
+                onChange={(e) => setSettings({...settings, phone_number: e.target.value})}
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-6">
+            <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Address</label>
+            <textarea 
+              value={settings.address} 
+              onChange={(e) => setSettings({...settings, address: e.target.value})}
+              rows={3}
+              className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 resize-none" 
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Website URL</label>
+              <input 
+                type="text" 
+                value={settings.website} 
+                onChange={(e) => setSettings({...settings, website: e.target.value})}
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Currency Symbol</label>
+              <input 
+                type="text" 
+                value={settings.currency} 
+                onChange={(e) => setSettings({...settings, currency: e.target.value})}
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+              />
+            </div>
+          </div>
+
+          <div className="pt-8 flex justify-end">
+            <button 
+              onClick={() => saveSettings()}
+              disabled={isSaving}
+              className="w-full sm:w-auto px-10 py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center justify-center gap-2"
+            >
+              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+              Save Branding Settings
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

@@ -95,9 +95,9 @@ const Invoices: React.FC = () => {
       setDiscount(invoice.discount_percentage || 0);
       setRecipient({
         name: invoice.customer_name || (invoice.customers?.name) || '',
-        email: invoice.customer_email || '', 
-        phone: invoice.customer_phone || '',
-        address: invoice.customer_address || ''
+        email: invoice.customer_email || (invoice.customers?.email) || '', 
+        phone: invoice.customer_phone || (invoice.customers?.phone) || '',
+        address: invoice.customer_address || (invoice.customers?.address) || ''
       });
       
       if (invoice.sale_items && Array.isArray(invoice.sale_items)) {
@@ -135,9 +135,9 @@ const Invoices: React.FC = () => {
       items: mappedItems,
       recipient: {
         name: inv.customer_name || inv.customers?.name || 'N/A',
-        email: inv.customer_email || '',
-        phone: inv.customer_phone || '',
-        address: inv.customer_address || ''
+        email: inv.customer_email || inv.customers?.email || '',
+        phone: inv.customer_phone || inv.customers?.phone || '',
+        address: inv.customer_address || inv.customers?.address || ''
       },
       invoiceNumber: inv.invoice_number,
       invoiceDate: new Date(inv.created_at).toLocaleDateString(),
@@ -173,6 +173,8 @@ const Invoices: React.FC = () => {
         })),
         customer_name: recipient.name,
         customer_phone: recipient.phone,
+        customer_email: recipient.email,
+        customer_address: recipient.address,
         invoice_number: invoiceNumber,
         discount_percentage: discount,
         discount_amount: discountAmount,
@@ -335,19 +337,53 @@ const Invoices: React.FC = () => {
       doc.text('From:', 15, 55);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.text(settings?.business_name || 'StockFlow', 15, 62);
+      let fromY = 62;
+      doc.text(settings?.business_name || 'StockFlow', 15, fromY);
+      fromY += 5;
+      if (settings?.slogan) {
+        doc.setFont('helvetica', 'italic');
+        doc.text(settings.slogan, 15, fromY);
+        doc.setFont('helvetica', 'normal');
+        fromY += 5;
+      }
+      if (settings?.email) {
+        doc.text(`Email: ${settings.email}`, 15, fromY);
+        fromY += 5;
+      }
+      if (settings?.phone_number) {
+        doc.text(`Phone: ${settings.phone_number}`, 15, fromY);
+        fromY += 5;
+      }
+      if (settings?.website) {
+        doc.text(`Web: ${settings.website}`, 15, fromY);
+        fromY += 5;
+      }
+      if (settings?.address) {
+        const splitFromAddress = doc.splitTextToSize(settings.address, 75);
+        doc.text(splitFromAddress, 15, fromY);
+        fromY += (splitFromAddress.length * 5);
+      }
       
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
       doc.text('Bill To:', 120, 55);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.text(rec.name, 120, 62);
-      if (rec.email) doc.text(rec.email, 120, 67);
-      if (rec.phone) doc.text(rec.phone, 120, 72);
+      let toY = 62;
+      doc.text(rec.name, 120, toY);
+      toY += 5;
+      if (rec.email) {
+        doc.text(rec.email, 120, toY);
+        toY += 5;
+      }
+      if (rec.phone) {
+        doc.text(rec.phone, 120, toY);
+        toY += 5;
+      }
       if (rec.address) {
         const splitAddress = doc.splitTextToSize(rec.address, 75);
-        doc.text(splitAddress, 120, 77);
+        doc.text(splitAddress, 120, toY);
+        toY += (splitAddress.length * 5);
       }
 
       // Invoice Details
@@ -872,7 +908,13 @@ const Invoices: React.FC = () => {
                 )}
                 <div>
                   <h3 className="font-black text-xl text-slate-900">{settings?.business_name || 'StockFlow'}</h3>
-                  <p className="text-slate-500 text-sm">Official Invoice</p>
+                  {settings?.slogan && <p className="text-slate-400 text-[10px] font-bold italic">{settings.slogan}</p>}
+                  <div className="mt-2 space-y-0.5">
+                    {settings?.email && <p className="text-slate-500 text-[10px] font-medium">Email: {settings.email}</p>}
+                    {settings?.phone_number && <p className="text-slate-500 text-[10px] font-medium">Phone: {settings.phone_number}</p>}
+                    {settings?.website && <p className="text-slate-500 text-[10px] font-medium">Web: {settings.website}</p>}
+                    {settings?.address && <p className="text-slate-500 text-[10px] font-medium max-w-[200px]">{settings.address}</p>}
+                  </div>
                 </div>
               </div>
               <div className="text-right space-y-1">
@@ -885,7 +927,17 @@ const Invoices: React.FC = () => {
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bill To</p>
                 <h4 className="font-black text-lg text-slate-900">{previewInvoice.customer_name || previewInvoice.customers?.name || 'Walk-in Customer'}</h4>
-                <p className="text-slate-500 text-sm">{previewInvoice.customer_phone || 'No phone provided'}</p>
+                <div className="space-y-0.5">
+                  {(previewInvoice.customer_email || previewInvoice.customers?.email) && (
+                    <p className="text-slate-500 text-xs">{previewInvoice.customer_email || previewInvoice.customers?.email}</p>
+                  )}
+                  {(previewInvoice.customer_phone || previewInvoice.customers?.phone) && (
+                    <p className="text-slate-500 text-xs">{previewInvoice.customer_phone || previewInvoice.customers?.phone}</p>
+                  )}
+                  {(previewInvoice.customer_address || previewInvoice.customers?.address) && (
+                    <p className="text-slate-500 text-xs max-w-[200px]">{previewInvoice.customer_address || previewInvoice.customers?.address}</p>
+                  )}
+                </div>
               </div>
               <div className="space-y-2 text-right">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment Method</p>
