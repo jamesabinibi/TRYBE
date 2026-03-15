@@ -116,14 +116,28 @@ const Invoices: React.FC = () => {
       });
       
       if (invoice.sale_items && Array.isArray(invoice.sale_items)) {
-        const items: InvoiceItem[] = invoice.sale_items.map((si: any) => ({
-          id: si.variant_id || si.service_id || Math.random().toString(),
-          name: si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || 'Item',
-          type: si.service_id ? 'service' : 'product',
-          quantity: si.quantity || 0,
-          price: si.unit_price || si.price_at_sale || 0,
-          total: si.total_price || (si.quantity * (si.unit_price || si.price_at_sale || 0))
-        }));
+        const items: InvoiceItem[] = invoice.sale_items.map((si: any) => {
+          // Try to get name from various possible sources
+          const name = 
+            si.product_variants?.products?.name || 
+            si.services?.name || 
+            si.product_name || 
+            si.service_name || 
+            'Item';
+            
+          const variantInfo = si.product_variants ? 
+            ` (${si.product_variants.size || ''}${si.product_variants.size && si.product_variants.color ? ' - ' : ''}${si.product_variants.color || ''})` : 
+            '';
+
+          return {
+            id: si.variant_id || si.service_id || Math.random().toString(),
+            name: name.includes('(') ? name : name + variantInfo,
+            type: si.service_id ? 'service' : 'product',
+            quantity: si.quantity || 0,
+            price: si.unit_price || si.price_at_sale || 0,
+            total: si.total_price || (si.quantity * (si.unit_price || si.price_at_sale || 0))
+          };
+        });
         setInvoiceItems(items);
       } else {
         setInvoiceItems([]);
@@ -144,10 +158,12 @@ const Invoices: React.FC = () => {
     }
 
     const mappedItems = inv.sale_items.map((si: any) => {
-      const name = si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || 'Item';
+      const baseName = si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || 'Item';
       const variant = si.product_variants ? ` (${si.product_variants.size || ''}${si.product_variants.color ? ' - ' + si.product_variants.color : ''})` : '';
+      const fullName = baseName.includes('(') ? baseName : baseName + variant;
+      
       return {
-        name: name + variant,
+        name: fullName,
         type: si.service_id ? 'service' : 'product',
         quantity: si.quantity || 0,
         price: si.unit_price || si.price_at_sale || 0,

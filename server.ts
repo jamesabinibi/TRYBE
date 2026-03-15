@@ -2212,7 +2212,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           vat_amount,
           payment_method, 
           staff_id: validStaffId,
-          customer_id: finalCustomerId
+          customer_id: finalCustomerId,
+          status: 'Completed' // Default status for invoices
         }])
         .select()
         .single();
@@ -2224,6 +2225,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         let sellingPrice = 0;
         let costPrice = 0;
         let profit = 0;
+        let itemName = '';
 
         if (item.variant_id) {
           const { data: variant, error: vError } = await supabase
@@ -2235,6 +2237,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           if (vError || !variant) throw new Error(`Variant not found: ${item.variant_id}`);
           
           const product = variant.products;
+          itemName = product.name + (variant.size || variant.color ? ` (${variant.size || ''}${variant.size && variant.color ? ' - ' : ''}${variant.color || ''})` : '');
           sellingPrice = item.price_override || variant.price_override || product.selling_price;
           costPrice = product.cost_price || 0;
           profit = (sellingPrice - costPrice) * item.quantity;
@@ -2254,6 +2257,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               account_id: userInfo.account_id,
               sale_id: saleId,
               variant_id: item.variant_id,
+              product_name: itemName,
               quantity: item.quantity,
               unit_price: sellingPrice,
               cost_price: costPrice,
@@ -2286,8 +2290,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
           if (sError || !service) throw new Error(`Service not found: ${item.service_id}`);
 
+          itemName = service.name;
           sellingPrice = item.price_override || service.price;
-          costPrice = 0; // Services usually don't have a direct cost price in this schema
+          costPrice = 0; 
           profit = sellingPrice * item.quantity;
 
           total_amount += sellingPrice * item.quantity;
@@ -2299,6 +2304,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               account_id: userInfo.account_id,
               sale_id: saleId,
               service_id: item.service_id,
+              service_name: itemName,
               quantity: item.quantity,
               unit_price: sellingPrice,
               cost_price: costPrice,
@@ -2413,12 +2419,20 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         if (saleIds.length > 0) {
           const { data: itemsData } = await supabase
             .from('sale_items')
-            .select('*')
+            .select(`
+              *,
+              product_variants (
+                *,
+                products (name)
+              ),
+              services (name)
+            `)
             .in('sale_id', saleIds);
           
           if (itemsData) {
             salesData?.forEach(sale => {
-              sale.sale_items = itemsData.filter(item => item.sale_id === sale.id);
+              // Use loose equality or string conversion to avoid type mismatch issues
+              sale.sale_items = itemsData.filter(item => String(item.sale_id) === String(sale.id));
             });
           }
         }
@@ -2427,8 +2441,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       
       const flattened = (data || []).map((s: any) => ({
         ...s,
-        customer_name: s.customers?.name || (Array.isArray(s.customers) ? s.customers[0]?.name : null) || 'Walk-in',
-        staff_name: s.users?.name || (Array.isArray(s.users) ? s.users[0]?.name : null) || 'System'
+        customer_name: s.customer_name || s.customers?.name || (Array.isArray(s.customers) ? s.customers[0]?.name : null) || 'Walk-in',
+        staff_name: s.users?.name || (Array.isArray(s.users) ? s.users[0]?.name : null) || 'System',
+        sale_items: s.sale_items || []
       }));
       console.log(`[SALES] Returning ${flattened.length} sales`);
       res.json(flattened);
