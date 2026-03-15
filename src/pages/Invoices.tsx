@@ -138,6 +138,11 @@ const Invoices: React.FC = () => {
   };
 
   const handleDownload = (inv: any) => {
+    if (!inv || !inv.sale_items) {
+      toast.error('Invalid invoice data');
+      return;
+    }
+
     const mappedItems = inv.sale_items.map((si: any) => {
       const name = si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || 'Item';
       const variant = si.product_variants ? ` (${si.product_variants.size || ''}${si.product_variants.color ? ' - ' + si.product_variants.color : ''})` : '';
@@ -153,7 +158,7 @@ const Invoices: React.FC = () => {
     const mappedData = {
       items: mappedItems,
       recipient: {
-        name: inv.customer_name || inv.customers?.name || 'N/A',
+        name: inv.customer_name || inv.customers?.name || 'Walk-in Customer',
         email: inv.customer_email || inv.customers?.email || '',
         phone: inv.customer_phone || inv.customers?.phone || '',
         address: inv.customer_address || inv.customers?.address || ''
@@ -241,13 +246,32 @@ const Invoices: React.FC = () => {
   };
 
   const addItem = (item: any, type: 'product' | 'service') => {
+    let itemId = item.id;
+    let itemPrice = type === 'product' ? (item.selling_price || 0) : (item.price || 0);
+    let itemName = item.name;
+
+    // If it's a product, we MUST use a variant ID for the backend to work correctly
+    if (type === 'product') {
+      if (item.product_variants && item.product_variants.length > 0) {
+        const variant = item.product_variants[0];
+        itemId = variant.id;
+        itemPrice = variant.selling_price || item.selling_price || 0;
+        if (variant.size || variant.color) {
+          itemName += ` (${variant.size || ''}${variant.size && variant.color ? ' - ' : ''}${variant.color || ''})`;
+        }
+      } else {
+        toast.error('This product has no variants/price defined');
+        return;
+      }
+    }
+
     const newItem: InvoiceItem = {
-      id: item.id,
-      name: item.name,
+      id: itemId,
+      name: itemName,
       type,
       quantity: 1,
-      price: type === 'product' ? item.selling_price : item.price,
-      total: type === 'product' ? item.selling_price : item.price
+      price: itemPrice,
+      total: itemPrice
     };
     setInvoiceItems([...invoiceItems, newItem]);
     setShowItemDropdown(false);
@@ -290,15 +314,17 @@ const Invoices: React.FC = () => {
     return calculateSubtotal() - calculateDiscountAmount() + calculateVAT();
   };
 
-  const generatePDF = async (externalData?: any) => {
-    const isExternal = !!externalData;
-    const items = isExternal ? externalData.items : invoiceItems;
-    const rec = isExternal ? externalData.recipient : recipient;
-    const num = isExternal ? externalData.invoiceNumber : invoiceNumber;
-    const date = isExternal ? externalData.invoiceDate : invoiceDate;
-    const disc = isExternal ? externalData.discount : discount;
+  const generatePDF = async (data?: any) => {
+    // Check if data is an event (e.g. from onClick) or actual data
+    const isExternal = data && typeof data === 'object' && 'items' in data;
+    
+    const items = isExternal ? data.items : invoiceItems;
+    const rec = isExternal ? data.recipient : recipient;
+    const num = isExternal ? data.invoiceNumber : invoiceNumber;
+    const date = isExternal ? data.invoiceDate : invoiceDate;
+    const disc = isExternal ? data.discount : discount;
 
-    if (items.length === 0) {
+    if (!items || items.length === 0) {
       toast.error('Please add at least one item to the invoice');
       return;
     }
@@ -331,6 +357,8 @@ const Invoices: React.FC = () => {
           await new Promise((resolve, reject) => {
             img.onload = resolve;
             img.onerror = reject;
+            // Timeout after 3 seconds
+            setTimeout(() => reject(new Error('Logo load timeout')), 3000);
           });
           doc.addImage(img, 'PNG', 15, 8, 24, 24);
         } catch (e) {
@@ -403,7 +431,7 @@ const Invoices: React.FC = () => {
       // Table
       const tableData = items.map((item: any) => [
         item.name,
-        item.type.toUpperCase(),
+        item.type?.toUpperCase() || 'PRODUCT',
         item.quantity.toString(),
         `${settings?.currency || '₦'}${item.price.toLocaleString()}`,
         `${settings?.currency || '₦'}${item.total.toLocaleString()}`
@@ -996,7 +1024,14 @@ const Invoices: React.FC = () => {
               <div className="w-full max-w-xs space-y-3">
                 <div className="flex justify-between text-slate-500 dark:text-zinc-400 text-sm">
                   <span>Subtotal</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{settings?.currency || '₦'}{(previewInvoice.total_amount + (previewInvoice.discount_amount || 0) - (previewInvoice.vat_amount || 0)).toLocaleString()}</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {settings?.currency || '₦'}
+                    {(
+                      (previewInvoice.total_amount || 0) + 
+                      (previewInvoice.discount_amount || 0) - 
+                      (previewInvoice.vat_amount || 0)
+                    ).toLocaleString()}
+                  </span>
                 </div>
                 {previewInvoice.discount_amount > 0 && (
                   <div className="flex justify-between text-rose-500 text-sm">
@@ -1012,7 +1047,9 @@ const Invoices: React.FC = () => {
                 )}
                 <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex justify-between items-center">
                   <span className="text-lg font-black text-slate-900 dark:text-white">Total</span>
-                  <span className="text-2xl font-black" style={{ color: brandColor }}>{settings?.currency || '₦'}{previewInvoice.total_amount.toLocaleString()}</span>
+                  <span className="text-2xl font-black" style={{ color: brandColor }}>
+                    {settings?.currency || '₦'}{(previewInvoice.total_amount || 0).toLocaleString()}
+                  </span>
                 </div>
               </div>
             </div>

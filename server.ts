@@ -2261,7 +2261,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         date: new Date().toISOString().split('T')[0]
       }]);
       
-      await supabase
+      const { error: updateError } = await supabase
         .from('sales')
         .update({ 
           total_amount: final_total_amount, 
@@ -2269,6 +2269,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           cost_price_total: cost_price_total
         })
         .eq('id', saleId);
+
+      if (updateError) throw updateError;
 
       res.json({ saleId, invoice_number });
     } catch (e: any) {
