@@ -10,10 +10,6 @@ import {
   Banknote, 
   ArrowRight,
   ChevronRight,
-  Package,
-  FileText,
-  Download,
-  Calendar,
   ChevronDown,
   Maximize,
   Scan,
@@ -21,7 +17,16 @@ import {
   Image as ImageIcon,
   Sparkles,
   Loader2,
-  History
+  History,
+  Eye,
+  X,
+  TrendingUp,
+  ArrowUpRight,
+  Filter,
+  Package,
+  FileText,
+  Download,
+  Calendar
 } from 'lucide-react';
 import { Product, Variant, Sale, Customer } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
@@ -58,6 +63,8 @@ export default function Sales() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [selectedSaleForPreview, setSelectedSaleForPreview] = useState<any>(null);
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('month');
 
   const brandColor = settings?.brand_color || '#10b981';
   const [isProcessingAI, setIsProcessingAI] = useState(false);
@@ -66,6 +73,37 @@ export default function Sales() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+
+  const clearCart = () => {
+    if (cart.length === 0) return;
+    toast.custom((t) => (
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-zinc-900 dark:text-white">
+          <Trash2 className="w-5 h-5 text-red-500" />
+          <h3 className="font-display font-bold text-lg">Clear Cart?</h3>
+        </div>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">This will remove all items from your current order. This action cannot be undone.</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => {
+              setCart([]);
+              toast.dismiss(t);
+              toast.success('Cart cleared');
+            }}
+            className="flex-1 py-3 bg-red-500 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-red-600 transition-all active:scale-95"
+          >
+            Clear All
+          </button>
+          <button 
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ));
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -439,14 +477,32 @@ export default function Sales() {
   });
 
   const filteredSales = (sales || []).filter(s => {
-    const search = (searchQuery || '').toLowerCase();
-    return (s.invoice_number || '').toLowerCase().includes(search) ||
+    const search = (historySearchQuery || '').toLowerCase();
+    const matchesSearch = (s.invoice_number || '').toLowerCase().includes(search) ||
            (s.staff_name || '').toLowerCase().includes(search) ||
+           (s.customer_name || '').toLowerCase().includes(search) ||
            (s.payment_method || '').toLowerCase().includes(search);
+
+    if (!matchesSearch) return false;
+
+    const saleDate = new Date(s.created_at);
+    const now = new Date();
+    
+    if (dateRange === 'today') {
+      return saleDate.toDateString() === now.toDateString();
+    } else if (dateRange === 'week') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return saleDate >= weekAgo;
+    } else if (dateRange === 'month') {
+      const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      return saleDate >= monthAgo;
+    }
+    
+    return true;
   });
 
   return (
-    <div className="h-full flex flex-col gap-6 overflow-hidden">
+    <div className="h-full flex flex-col gap-8 overflow-hidden max-w-[1600px] mx-auto">
       {/* Tabs */}
       <div className="flex items-center gap-8 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
         <button 
@@ -479,14 +535,14 @@ export default function Sales() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="h-full flex flex-col lg:flex-row gap-6 sm:gap-8"
+              className="h-full flex flex-col lg:flex-row gap-8"
             >
               {/* Product Selection */}
-              <div className="flex-1 flex flex-col gap-6 min-h-0">
-                <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
-                  <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 flex flex-col gap-8 min-h-0">
+                <div className="glass-card p-8 space-y-8">
+                  <div className="flex items-center justify-between gap-6">
                     <div className="flex-1 space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Select Product</label>
+                      <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Select Product</label>
                       <ProductSelect 
                         products={products}
                         selectedProduct={selectedProduct}
@@ -496,16 +552,16 @@ export default function Sales() {
                     </div>
                     <button 
                       onClick={startScanner}
-                      className="mt-6 p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+                      className="mt-6 p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95 border border-zinc-200 dark:border-zinc-700 shadow-sm"
                       title="Scan Barcode"
                     >
                       <Scan className="w-5 h-5" />
                     </button>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Customer (Optional)</label>
+                      <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Customer (Optional)</label>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                         <select 
@@ -518,36 +574,37 @@ export default function Sales() {
                               setCustomerPhone('');
                             }
                           }}
-                          className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none"
+                          className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none cursor-pointer"
                         >
                           <option value="" className="dark:bg-zinc-900">Walk-in Customer</option>
                           {customers.map(c => (
                             <option key={c.id} value={c.id} className="dark:bg-zinc-900">{c.name} ({c.phone})</option>
                           ))}
                         </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
                       </div>
                     </div>
 
                     {!selectedCustomer && (
-                      <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                      <div className="grid grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">New Customer Name</label>
+                          <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">New Customer Name</label>
                           <input 
                             type="text"
                             value={customerName}
                             onChange={(e) => setCustomerName(e.target.value)}
                             placeholder="John Doe"
-                            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                            className="w-full px-5 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Phone Number</label>
+                          <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Phone Number</label>
                           <input 
                             type="tel"
                             value={customerPhone}
                             onChange={(e) => setCustomerPhone(e.target.value)}
                             placeholder="080..."
-                            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                            className="w-full px-5 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                           />
                         </div>
                       </div>
@@ -561,38 +618,38 @@ export default function Sales() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="space-y-6 pt-4 border-t border-zinc-100"
+                        className="space-y-8 pt-8 border-t border-zinc-100 dark:border-zinc-800"
                       >
                         <div className="flex items-start justify-between">
                           <div>
-                            <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">{selectedProduct.name}</h2>
-                            <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{selectedProduct.category_name}</p>
+                            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedProduct.name}</h2>
+                            <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{selectedProduct.category_name}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(selectedProduct.selling_price, currency)}</p>
-                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Base Price</p>
+                            <p className="text-2xl font-bold text-brand tracking-tight">{formatCurrency(selectedProduct.selling_price, currency)}</p>
+                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">Base Price</p>
                           </div>
                         </div>
 
-                        <div className="space-y-3">
-                          <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Pick Size & Color</p>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Pick Size & Color</p>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                             {(selectedProduct.variants || []).map((variant) => (
                               <button
                                 key={variant.id}
                                 disabled={variant.quantity <= 0}
                                 onClick={() => addToCart(selectedProduct, variant)}
                                 className={cn(
-                                  "p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 text-center group relative overflow-hidden",
+                                  "p-5 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 text-center group relative overflow-hidden",
                                   variant.quantity > 0 
-                                    ? "border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:border-brand hover:bg-white dark:hover:bg-zinc-800 text-zinc-900 dark:text-white active:scale-95" 
+                                    ? "border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:border-brand hover:bg-white dark:hover:bg-zinc-800 text-zinc-900 dark:text-white active:scale-95 shadow-sm" 
                                     : "border-zinc-50 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
                                 )}
                               >
-                                <span className="text-xs font-black uppercase tracking-widest">{variant.size}</span>
+                                <span className="text-xs font-bold uppercase tracking-widest">{variant.size}</span>
                                 {variant.color && <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500">{variant.color}</span>}
                                 <span className={cn(
-                                  "text-[9px] font-bold mt-1",
+                                  "text-[9px] font-bold mt-2",
                                   variant.quantity > 0 ? "text-brand" : "text-zinc-300 dark:text-zinc-700"
                                 )}>
                                   {variant.quantity > 0 ? `${variant.quantity} in stock` : 'Out of stock'}
@@ -608,9 +665,9 @@ export default function Sales() {
                         </div>
                       </motion.div>
                     ) : (
-                      <div className="py-12 text-center space-y-4">
-                        <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto">
-                          <Package className="w-8 h-8 text-zinc-200 dark:text-zinc-700" />
+                      <div className="py-20 text-center space-y-4">
+                        <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 rounded-3xl flex items-center justify-center mx-auto border border-zinc-100 dark:border-zinc-700 shadow-sm">
+                          <Package className="w-10 h-10 text-zinc-200 dark:text-zinc-700" />
                         </div>
                         <p className="text-sm font-bold text-zinc-400 dark:text-zinc-500 tracking-tight">Select a product to see available sizes</p>
                       </div>
@@ -620,25 +677,26 @@ export default function Sales() {
 
                 {!selectedProduct && (
                   <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                       {(filteredProducts || []).map((product) => (
-                        <button 
+                        <motion.button 
                           key={product.id} 
+                          whileHover={{ y: -4 }}
                           onClick={() => setSelectedProduct(product)}
-                          className="bg-white dark:bg-zinc-900 p-5 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col gap-4 hover:shadow-md hover:border-brand/30 transition-all text-left group"
+                          className="glass-card p-6 flex flex-col gap-4 text-left group"
                         >
-                          <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start justify-between gap-4">
                             <div className="min-w-0">
-                              <h4 className="font-black text-zinc-900 dark:text-white truncate tracking-tight group-hover:text-brand transition-colors">{product.name}</h4>
-                              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{product.category_name}</p>
+                              <h4 className="font-bold text-zinc-900 dark:text-white truncate tracking-tight group-hover:text-brand transition-colors">{product.name}</h4>
+                              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{product.category_name}</p>
                             </div>
-                            <span className="text-sm font-black text-brand whitespace-nowrap">{formatCurrency(product.selling_price, currency)}</span>
+                            <span className="text-sm font-bold text-brand whitespace-nowrap">{formatCurrency(product.selling_price, currency)}</span>
                           </div>
-                          <div className="flex items-center justify-between mt-auto">
+                          <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800">
                             <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{(product.variants || []).length} variants</span>
                             <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-brand group-hover:translate-x-1 transition-all" />
                           </div>
-                        </button>
+                        </motion.button>
                       ))}
                     </div>
                   </div>
@@ -646,20 +704,29 @@ export default function Sales() {
               </div>
 
               {/* Cart & Checkout */}
-              <div className="w-full lg:w-[400px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2.5rem] shadow-xl flex flex-col overflow-hidden lg:h-full">
-                <div className="p-6 sm:p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-brand rounded-xl text-white">
-                      <ShoppingCart className="w-5 h-5" />
+              <div className="w-full lg:w-[450px] glass-card p-0 flex flex-col overflow-hidden lg:h-full shadow-2xl">
+                <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/30">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-brand rounded-2xl text-white shadow-lg shadow-brand/20">
+                      <ShoppingCart className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="font-black text-zinc-900 dark:text-white tracking-tight">Current Order</h3>
-                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{cart.length} items selected</p>
+                      <h3 className="font-display font-bold text-zinc-900 dark:text-white tracking-tight">Current Order</h3>
+                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{cart.length} items selected</p>
                     </div>
                   </div>
+                  {cart.length > 0 && (
+                    <button 
+                      onClick={clearCart}
+                      className="p-3 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl transition-all active:scale-90"
+                      title="Clear Cart"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 custom-scrollbar min-h-[300px] lg:min-h-0">
+                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar min-h-[400px] lg:min-h-0">
                   {error && (
                     <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-2xl text-red-600 text-xs font-bold text-center">
                       {error}
@@ -677,33 +744,33 @@ export default function Sales() {
                           className="flex items-center gap-4 group"
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-black text-zinc-900 dark:text-white truncate tracking-tight">{item.product.name}</p>
-                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{item.variant.size} {item.variant.color && `· ${item.variant.color}`}</p>
+                            <p className="text-sm font-bold text-zinc-900 dark:text-white truncate tracking-tight">{item.product.name}</p>
+                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{item.variant.size} {item.variant.color && `· ${item.variant.color}`}</p>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden p-1">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-2xl overflow-hidden p-1.5 border border-zinc-200 dark:border-zinc-700">
                               <button 
                                 onClick={() => updateQuantity(item.variant.id, -1)}
-                                className="p-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-lg text-zinc-500 dark:text-zinc-400 transition-colors"
+                                className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-xl text-zinc-500 dark:text-zinc-400 transition-all active:scale-90"
                               >
-                                <Minus className="w-3 h-3" />
+                                <Minus className="w-3.5 h-3.5" />
                               </button>
-                              <span className="w-8 text-center text-xs font-black text-zinc-900 dark:text-white">{item.quantity}</span>
+                              <span className="w-10 text-center text-sm font-bold text-zinc-900 dark:text-white">{item.quantity}</span>
                               <button 
                                 onClick={() => updateQuantity(item.variant.id, 1)}
-                                className="p-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-lg text-zinc-500 dark:text-zinc-400 transition-colors"
+                                className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-xl text-zinc-500 dark:text-zinc-400 transition-all active:scale-90"
                               >
-                                <Plus className="w-3 h-3" />
+                                <Plus className="w-3.5 h-3.5" />
                               </button>
                             </div>
-                            <div className="text-right min-w-[80px]">
-                              <p className="text-sm font-black text-zinc-900 dark:text-white tracking-tight">
+                            <div className="text-right min-w-[90px]">
+                              <p className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">
                                 {formatCurrency(((item.price_override || item.variant.price_override || item.product.selling_price) || 0) * item.quantity, currency)}
                               </p>
                             </div>
                             <button 
                               onClick={() => removeFromCart(item.variant.id)}
-                              className="p-2 text-zinc-300 dark:text-zinc-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90"
+                              className="p-2.5 text-zinc-300 dark:text-zinc-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -713,71 +780,85 @@ export default function Sales() {
                     })}
                   </AnimatePresence>
                   {cart.length === 0 && (
-                    <div className="h-full flex flex-col items-center justify-center text-center py-12">
-                      <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-6">
-                        <Package className="w-10 h-10 text-zinc-200 dark:text-zinc-700" />
+                    <div className="h-full flex flex-col items-center justify-center text-center py-20">
+                      <div className="w-24 h-24 bg-zinc-50 dark:bg-zinc-800 rounded-[2rem] flex items-center justify-center mb-8 border border-zinc-100 dark:border-zinc-700 shadow-sm">
+                        <Package className="w-12 h-12 text-zinc-200 dark:text-zinc-700" />
                       </div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">Your cart is empty</p>
-                      <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 mt-1">Add products to start a sale</p>
+                      <p className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Your cart is empty</p>
+                      <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500 mt-2">Add products to start a sale</p>
                     </div>
                   )}
                 </div>
 
-                <div className="p-6 sm:p-8 bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-800 space-y-8">
+                <div className="p-8 bg-zinc-50 dark:bg-zinc-800/30 border-t border-zinc-100 dark:border-zinc-800 space-y-8">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
                       <span className="text-xs font-bold uppercase tracking-widest">Subtotal</span>
-                      <span className="text-sm font-black tracking-tight">{formatCurrency(subtotal, currency)}</span>
+                      <span className="text-sm font-bold tracking-tight">{formatCurrency(subtotal, currency)}</span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Discount (%)</label>
+                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Discount (%)</label>
                         <input 
                           type="number"
                           min="0"
                           max="100"
                           value={discountPercent}
                           onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                          className="w-20 px-2 py-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-black text-right outline-none focus:border-brand"
+                          className="w-24 px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-right outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                         />
                       </div>
                       {discountAmount > 0 && (
                         <div className="flex items-center justify-between text-emerald-500">
-                          <span className="text-[10px] font-black uppercase tracking-widest">Discount Amount</span>
-                          <span className="text-xs font-black">-{formatCurrency(discountAmount, currency)}</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest">Discount Amount</span>
+                          <span className="text-xs font-bold">-{formatCurrency(discountAmount, currency)}</span>
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-zinc-700">
-                      <span className="text-sm font-black text-zinc-950 dark:text-white uppercase tracking-widest">Total Amount</span>
-                      <span className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(total, currency)}</span>
+                    <div className="flex items-center justify-between pt-6 border-t border-zinc-200 dark:border-zinc-700">
+                      <span className="text-sm font-bold text-zinc-950 dark:text-white uppercase tracking-widest">Total Amount</span>
+                      <span className="text-4xl font-display font-bold text-brand tracking-tight">{formatCurrency(total, currency)}</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={() => setPaymentMethod('Cash')}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95",
+                        paymentMethod === 'Cash' 
+                          ? "bg-white dark:bg-zinc-800 border-brand text-brand shadow-xl shadow-brand/10" 
+                          : "bg-transparent border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:bg-white dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600"
+                      )}
+                    >
+                      <Banknote className="w-6 h-6" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Cash</span>
+                    </button>
                     <button 
                       onClick={() => setPaymentMethod('Transfer')}
                       className={cn(
-                        "flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all active:scale-95",
+                        "flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95",
                         paymentMethod === 'Transfer' 
-                          ? "bg-white dark:bg-zinc-800 border-brand text-brand shadow-lg shadow-brand/10" 
+                          ? "bg-white dark:bg-zinc-800 border-brand text-brand shadow-xl shadow-brand/10" 
                           : "bg-transparent border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:bg-white dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600"
                       )}
                     >
                       <History className="w-6 h-6" />
-                      <span className="text-xs font-black uppercase tracking-widest">Bank Transfer</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Transfer</span>
                     </button>
                   </div>
 
                   <button 
                     onClick={handleCheckout}
                     disabled={cart.length === 0 || isProcessing}
-                    className="w-full py-5 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl shadow-brand/20 active:scale-[0.98]"
+                    className="w-full py-6 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white rounded-3xl font-display font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-2xl shadow-brand/20 active:scale-[0.98]"
                   >
-                    {isProcessing ? "Processing..." : (
+                    {isProcessing ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
                       <>
                         Complete Checkout
-                        <ArrowRight className="w-5 h-5" />
+                        <ArrowRight className="w-6 h-6" />
                       </>
                     )}
                   </button>
@@ -790,14 +871,14 @@ export default function Sales() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-8 overflow-y-auto h-full pr-2 custom-scrollbar"
+              className="space-y-10 overflow-y-auto h-full pr-2 custom-scrollbar"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Reports & Analytics</h1>
-                  <p className="text-zinc-500 dark:text-zinc-400 font-medium">Track your business performance and export data.</p>
+                  <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Reports & Analytics</h1>
+                  <p className="text-zinc-500 dark:text-zinc-400 font-medium mt-1">Track your business performance and export data.</p>
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-4">
                   <button 
                     onClick={exportExcel}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
@@ -815,95 +896,182 @@ export default function Sales() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
-                  <div className="relative z-10">
-                    <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Revenue</p>
-                    <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">
-                      {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0), currency)}
-                    </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="glass-card p-6 group relative overflow-hidden">
+                  <div className="relative z-10 flex flex-col h-full justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-2 bg-brand/10 rounded-lg">
+                          <TrendingUp className="w-4 h-4 text-brand" />
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+12.5%</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Revenue</p>
+                      <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                        {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0), currency)}
+                      </h3>
+                    </div>
                   </div>
-                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-zinc-50 dark:bg-zinc-800 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
                 </div>
-                <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
-                  <div className="relative z-10">
-                    <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Profit</p>
-                    <h3 className="text-2xl sm:text-3xl font-black text-brand tracking-tight">
-                      {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0), currency)}
-                    </h3>
+
+                <div className="glass-card p-6 group relative overflow-hidden">
+                  <div className="relative z-10 flex flex-col h-full justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-2 bg-emerald-500/10 rounded-lg">
+                          <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+8.2%</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Profit</p>
+                      <h3 className="text-2xl font-bold text-emerald-500 tracking-tight">
+                        {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0), currency)}
+                      </h3>
+                    </div>
                   </div>
-                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-brand/5 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
                 </div>
-                <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden group sm:col-span-2 lg:col-span-1">
-                  <div className="relative z-10">
-                    <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Transactions</p>
-                    <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{filteredSales.length}</h3>
+
+                <div className="glass-card p-6 group relative overflow-hidden">
+                  <div className="relative z-10 flex flex-col h-full justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-2 bg-blue-500/10 rounded-lg">
+                          <ShoppingCart className="w-4 h-4 text-blue-500" />
+                        </div>
+                        <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">Active</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Transactions</p>
+                      <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{filteredSales.length}</h3>
+                    </div>
                   </div>
-                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-zinc-50 dark:bg-zinc-800 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+                </div>
+
+                <div className="glass-card p-6 group relative overflow-hidden">
+                  <div className="relative z-10 flex flex-col h-full justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-2 bg-purple-500/10 rounded-lg">
+                          <CreditCard className="w-4 h-4 text-purple-500" />
+                        </div>
+                        <span className="text-[10px] font-bold text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full">Stable</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Avg. Order Value</p>
+                      <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                        {formatCurrency(filteredSales.length > 0 ? (filteredSales.reduce((acc, s) => acc + (s.total_amount || 0), 0) / filteredSales.length) : 0, currency)}
+                      </h3>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-                <div className="p-6 sm:p-8 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-50/50 dark:bg-zinc-800/50">
+              <div className="glass-card p-0 overflow-hidden border-zinc-200/50 dark:border-white/[0.02]">
+                <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-zinc-50/30 dark:bg-zinc-800/20">
                   <div>
-                    <h3 className="font-black text-zinc-900 dark:text-white tracking-tight text-lg">Sales History</h3>
-                    <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">Detailed transaction log</p>
+                    <h3 className="font-bold text-zinc-900 dark:text-white tracking-tight text-lg">Sales History</h3>
+                    <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">Real-time transaction log</p>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-400 shadow-sm">
-                      <Calendar className="w-3.5 h-3.5" />
-                      This Month
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
+                      <input 
+                        type="text"
+                        value={historySearchQuery}
+                        onChange={(e) => setHistorySearchQuery(e.target.value)}
+                        placeholder="Search invoices, customers..."
+                        className="pl-10 pr-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all w-full sm:w-64"
+                      />
+                    </div>
+                    <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-1">
+                      {(['today', 'week', 'month', 'all'] as const).map((range) => (
+                        <button
+                          key={range}
+                          onClick={() => setDateRange(range)}
+                          className={cn(
+                            "px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
+                            dateRange === range 
+                              ? "bg-brand text-white shadow-sm" 
+                              : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
+                          )}
+                        >
+                          {range}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 
                 <div className="overflow-x-auto hidden md:block">
-                  <table className="w-full text-left border-collapse min-w-[800px]">
+                  <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead>
                       <tr className="bg-zinc-50/30 dark:bg-zinc-800/30 border-b border-zinc-100 dark:border-zinc-800">
-                        <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Invoice</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Staff</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Payment</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Amount</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Profit</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Invoice</th>
+                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Date</th>
+                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Customer</th>
+                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Staff</th>
+                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Payment</th>
+                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-right">Amount</th>
+                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-right">Profit</th>
+                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                       {(filteredSales || []).map((sale) => (
-                        <tr key={sale.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
+                        <tr key={sale.id} className="hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 transition-all group cursor-pointer">
                           <td className="px-8 py-5">
                             <button 
                               onClick={() => handlePreview(sale)}
-                              className="text-sm font-black text-brand hover:underline tracking-tight"
+                              className="text-xs font-bold text-brand group-hover:text-white dark:group-hover:text-brand transition-colors tracking-widest uppercase"
                             >
                               {sale.invoice_number}
                             </button>
                           </td>
-                          <td className="px-8 py-5 text-sm text-zinc-500 dark:text-zinc-400 font-medium">
-                            {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'N/A'}
+                          <td className="px-8 py-5 text-[11px] font-medium opacity-70">
+                            {sale.created_at ? new Date(sale.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                           </td>
-                          <td className="px-8 py-5 text-sm text-zinc-600 dark:text-zinc-400 font-bold">{sale.staff_name}</td>
                           <td className="px-8 py-5">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                            <div className="flex items-center gap-3">
+                              <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[9px] font-bold text-zinc-500 dark:text-zinc-400 group-hover:bg-white/10 dark:group-hover:bg-zinc-900/10">
+                                {sale.customer_name?.charAt(0) || 'W'}
+                              </div>
+                              <span className="text-xs font-bold">{sale.customer_name || 'Walk-in'}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5 text-[11px] font-bold opacity-80">{sale.staff_name}</td>
+                          <td className="px-8 py-5">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-widest bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 group-hover:bg-white/10 group-hover:text-white dark:group-hover:bg-zinc-900/10 dark:group-hover:text-zinc-900">
                               {sale.payment_method}
                             </span>
                           </td>
-                          <td className="px-8 py-5 text-sm font-black text-zinc-900 dark:text-white text-right tracking-tight">
+                          <td className="px-8 py-5 text-sm font-mono font-bold text-right tracking-tighter">
                             {formatCurrency(sale.total_amount, currency)}
                           </td>
-                          <td className="px-8 py-5 text-sm font-black text-brand text-right tracking-tight">
+                          <td className="px-8 py-5 text-sm font-mono font-bold text-brand text-right tracking-tighter group-hover:text-white dark:group-hover:text-brand">
                             {formatCurrency(sale.total_profit, currency)}
                           </td>
                           <td className="px-8 py-5 text-right">
-                            <button 
-                              onClick={() => handleDeleteSale(sale.id)}
-                              className="p-2 text-zinc-300 dark:text-zinc-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handlePreview(sale); }}
+                                className="p-2 text-zinc-400 hover:text-brand group-hover:text-white dark:group-hover:text-brand transition-all active:scale-90"
+                                title="View Invoice"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleDownloadInvoice(sale); }}
+                                className="p-2 text-zinc-400 hover:text-brand group-hover:text-white dark:group-hover:text-brand transition-all active:scale-90"
+                                title="Download PDF"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleDeleteSale(sale.id); }}
+                                className="p-2 text-zinc-300 dark:text-zinc-700 hover:text-red-500 group-hover:text-red-400 transition-all active:scale-90"
+                                title="Delete Sale"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -914,12 +1082,12 @@ export default function Sales() {
                 {/* Mobile Sales Cards */}
                 <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
                   {(filteredSales || []).map((sale) => (
-                    <div key={sale.id} className="p-6 space-y-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <div key={sale.id} className="p-6 space-y-6 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
                       <div className="flex items-start justify-between">
-                        <div>
+                        <div className="space-y-1">
                           <button 
                             onClick={() => handlePreview(sale)}
-                            className="text-sm font-black text-brand hover:underline tracking-tight"
+                            className="text-sm font-bold text-brand hover:underline tracking-tight"
                           >
                             {sale.invoice_number}
                           </button>
@@ -927,30 +1095,43 @@ export default function Sales() {
                             {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'N/A'} · {sale.staff_name}
                           </p>
                         </div>
-                        <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                        <span className="px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
                           {sale.payment_method}
                         </span>
                       </div>
                       
-                      <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center justify-between">
                         <div className="space-y-1">
-                          <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Total Amount</p>
-                          <p className="text-base font-black text-zinc-900 dark:text-white tracking-tight">{formatCurrency(sale.total_amount, currency)}</p>
+                          <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Total Amount</p>
+                          <p className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">{formatCurrency(sale.total_amount, currency)}</p>
                         </div>
                         <div className="text-right space-y-1">
-                          <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Profit</p>
-                          <p className="text-base font-black text-brand tracking-tight">{formatCurrency(sale.total_profit, currency)}</p>
+                          <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Profit</p>
+                          <p className="text-lg font-bold text-brand tracking-tight">{formatCurrency(sale.total_profit, currency)}</p>
                         </div>
                       </div>
 
-                      <div className="flex justify-end pt-2">
-                        <button 
-                          onClick={() => handleDeleteSale(sale.id)}
-                          className="flex items-center gap-2 px-4 py-2 text-red-600 bg-red-50 dark:bg-red-500/10 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete Sale
-                        </button>
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
+                            {sale.customer_name?.charAt(0) || 'W'}
+                          </div>
+                          <span className="text-xs font-bold text-zinc-900 dark:text-white">{sale.customer_name || 'Walk-in'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handlePreview(sale)}
+                            className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteSale(sale.id)}
+                            className="p-2.5 text-red-600 bg-red-50 dark:bg-red-500/10 rounded-xl active:scale-95 transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -978,113 +1159,127 @@ export default function Sales() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
               >
-                <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+                <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/30">
                   <div>
-                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white">Invoice Preview</h2>
-                    <p className="text-zinc-500 dark:text-zinc-400 text-sm">#{selectedSaleForPreview.invoice_number}</p>
+                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Invoice Preview</h2>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-xs font-bold uppercase tracking-widest mt-1">#{selectedSaleForPreview.invoice_number}</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     <button
                       onClick={() => handleDownloadInvoice(selectedSaleForPreview)}
-                      className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand text-white font-bold shadow-lg transition-all hover:scale-105 active:scale-95"
+                      className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand text-white font-bold shadow-lg shadow-brand/20 transition-all hover:scale-105 active:scale-95"
                     >
                       <Download className="w-5 h-5" />
-                      PDF
+                      Download PDF
                     </button>
                     <button
                       onClick={() => setSelectedSaleForPreview(null)}
-                      className="p-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-2xl transition-all"
+                      className="p-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-2xl transition-all active:scale-90"
                     >
-                      <X className="w-6 h-6" />
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-10 space-y-12 custom-scrollbar">
                   <div className="flex justify-between items-start">
-                    <div className="space-y-4">
+                    <div className="space-y-8">
                       {settings?.logo_url ? (
-                        <img src={settings.logo_url} alt="Logo" className="h-12 object-contain" referrerPolicy="no-referrer" />
+                        <img src={settings.logo_url} alt="Logo" className="h-20 object-contain" referrerPolicy="no-referrer" />
                       ) : (
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-black text-xl bg-brand">
+                        <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-white font-bold text-3xl bg-brand shadow-xl shadow-brand/20">
                           {settings?.business_name?.charAt(0) || 'S'}
                         </div>
                       )}
                       <div>
-                        <h3 className="font-black text-lg text-zinc-900 dark:text-white">{settings?.business_name || 'StockFlow'}</h3>
-                        <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-medium">{settings?.email}</p>
+                        <h3 className="font-display text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{settings?.business_name || 'StockFlow'}</h3>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">{settings?.email}</p>
                       </div>
                     </div>
-                    <div className="text-right space-y-1">
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</p>
-                      <p className="font-bold text-zinc-900 dark:text-white">{new Date(selectedSaleForPreview.created_at).toLocaleDateString()}</p>
+                    <div className="text-right space-y-3">
+                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Invoice Number</p>
+                      <p className="font-display text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">#{selectedSaleForPreview.invoice_number}</p>
+                      <div className="pt-4">
+                        <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date Issued</p>
+                        <p className="font-bold text-zinc-900 dark:text-white text-sm tracking-tight">{new Date(selectedSaleForPreview.created_at).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-8 pt-8 border-t border-zinc-100 dark:border-zinc-800">
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Bill To</p>
-                      <h4 className="font-black text-zinc-900 dark:text-white">{selectedSaleForPreview.customer_name}</h4>
-                      <p className="text-zinc-500 dark:text-zinc-400 text-xs">{selectedSaleForPreview.customer_phone}</p>
-                      <p className="text-zinc-500 dark:text-zinc-400 text-xs">{selectedSaleForPreview.customer_email}</p>
+                  <div className="grid grid-cols-2 gap-16 pt-12 border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="space-y-6">
+                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Billed To</p>
+                      <div className="space-y-2">
+                        <h4 className="font-display text-xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedSaleForPreview.customer_name || 'Walk-in Customer'}</h4>
+                        <div className="space-y-1">
+                          {selectedSaleForPreview.customer_phone && <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">{selectedSaleForPreview.customer_phone}</p>}
+                          {selectedSaleForPreview.customer_email && <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">{selectedSaleForPreview.customer_email}</p>}
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2 text-right">
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Payment</p>
-                      <p className="font-bold text-zinc-900 dark:text-white">{selectedSaleForPreview.payment_method}</p>
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-4">Staff</p>
-                      <p className="font-bold text-zinc-900 dark:text-white">{selectedSaleForPreview.staff_name}</p>
+                    <div className="space-y-8 text-right">
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Payment Details</p>
+                        <p className="font-bold text-zinc-900 dark:text-white text-sm">{selectedSaleForPreview.payment_method}</p>
+                      </div>
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Account Manager</p>
+                        <p className="font-bold text-zinc-900 dark:text-white text-sm">{selectedSaleForPreview.staff_name}</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
+                  <div className="rounded-3xl border border-zinc-100 dark:border-zinc-800 overflow-hidden shadow-sm bg-zinc-50/30 dark:bg-zinc-800/20">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-zinc-50 dark:bg-zinc-800/80">
-                          <th className="px-6 py-4 text-[10px] font-black text-zinc-400 dark:text-zinc-300 uppercase tracking-widest">Item</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-zinc-400 dark:text-zinc-300 uppercase tracking-widest text-center">Qty</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-zinc-400 dark:text-zinc-300 uppercase tracking-widest text-right">Price</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-zinc-400 dark:text-zinc-300 uppercase tracking-widest text-right">Total</th>
+                        <tr className="border-b border-zinc-100 dark:border-zinc-800">
+                          <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Description</th>
+                          <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-center">Qty</th>
+                          <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Unit Price</th>
+                          <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                         {selectedSaleForPreview.sale_items?.map((item: any, idx: number) => (
-                          <tr key={idx}>
-                            <td className="px-6 py-4">
-                              <p className="font-bold text-zinc-900 dark:text-white">{item.product_name || item.service_name}</p>
-                              {item.variant_info && <p className="text-[10px] text-zinc-400 font-bold uppercase">{item.variant_info}</p>}
+                          <tr key={idx} className="hover:bg-white dark:hover:bg-zinc-800 transition-colors group">
+                            <td className="px-8 py-6">
+                              <p className="font-bold text-zinc-900 dark:text-white tracking-tight group-hover:text-brand transition-colors">{item.product_name || item.service_name}</p>
+                              {item.variant_info && <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-widest mt-1.5">{item.variant_info}</p>}
                             </td>
-                            <td className="px-6 py-4 text-center font-bold text-zinc-600 dark:text-zinc-400">{item.quantity}</td>
-                            <td className="px-6 py-4 text-right font-bold text-zinc-600 dark:text-zinc-400">{formatCurrency(item.unit_price || 0, currency)}</td>
-                            <td className="px-6 py-4 text-right font-black text-zinc-900 dark:text-white">{formatCurrency(item.total_price || 0, currency)}</td>
+                            <td className="px-8 py-6 text-center font-bold text-zinc-600 dark:text-zinc-400">{item.quantity}</td>
+                            <td className="px-8 py-6 text-right font-bold text-zinc-600 dark:text-zinc-400">{formatCurrency(item.unit_price || 0, currency)}</td>
+                            <td className="px-8 py-6 text-right font-bold text-zinc-900 dark:text-white tracking-tight">{formatCurrency(item.total_price || 0, currency)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
 
-                  <div className="flex justify-end pt-4">
-                    <div className="w-full max-w-xs space-y-2">
-                      <div className="flex justify-between text-zinc-500 dark:text-zinc-400 text-xs">
-                        <span>Subtotal</span>
-                        <span className="font-bold text-zinc-900 dark:text-white">
-                          {formatCurrency((selectedSaleForPreview.total_amount || 0) + (selectedSaleForPreview.discount_amount || 0) - (selectedSaleForPreview.vat_amount || 0), currency)}
-                        </span>
+                  <div className="flex justify-end pt-8">
+                    <div className="w-full max-w-sm space-y-6">
+                      <div className="space-y-4">
+                        <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Subtotal</span>
+                          <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                            {formatCurrency((selectedSaleForPreview.total_amount || 0) + (selectedSaleForPreview.discount_amount || 0) - (selectedSaleForPreview.vat_amount || 0), currency)}
+                          </span>
+                        </div>
+                        {selectedSaleForPreview.discount_amount > 0 && (
+                          <div className="flex justify-between text-emerald-500">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Discount ({selectedSaleForPreview.discount_percentage}%)</span>
+                            <span className="text-sm font-bold">-{formatCurrency(selectedSaleForPreview.discount_amount, currency)}</span>
+                          </div>
+                        )}
+                        {selectedSaleForPreview.vat_amount > 0 && (
+                          <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">VAT (7.5%)</span>
+                            <span className="text-sm font-bold text-zinc-900 dark:text-white">{formatCurrency(selectedSaleForPreview.vat_amount, currency)}</span>
+                          </div>
+                        )}
                       </div>
-                      {selectedSaleForPreview.discount_amount > 0 && (
-                        <div className="flex justify-between text-emerald-500 text-xs">
-                          <span>Discount ({selectedSaleForPreview.discount_percentage}%)</span>
-                          <span className="font-bold">-{formatCurrency(selectedSaleForPreview.discount_amount, currency)}</span>
-                        </div>
-                      )}
-                      {selectedSaleForPreview.vat_amount > 0 && (
-                        <div className="flex justify-between text-zinc-500 dark:text-zinc-400 text-xs">
-                          <span>VAT (7.5%)</span>
-                          <span className="font-bold text-zinc-900 dark:text-white">{formatCurrency(selectedSaleForPreview.vat_amount, currency)}</span>
-                        </div>
-                      )}
-                      <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
-                        <span className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Total</span>
-                        <span className="text-xl font-black text-brand">
+                      <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+                        <span className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-[0.2em]">Grand Total</span>
+                        <span className="text-4xl font-display font-bold text-brand tracking-tight">
                           {formatCurrency(selectedSaleForPreview.total_amount || 0, currency)}
                         </span>
                       </div>
@@ -1130,9 +1325,3 @@ export default function Sales() {
     </div>
   );
 }
-
-const X = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);

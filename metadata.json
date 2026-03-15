@@ -1,5 +1,5 @@
 {
-  "name": "StockFlow Pro",
-  "description": "A modern, responsive Inventory & Sales Management Web App for small to medium businesses featuring real-time tracking, profit analytics, and role-based access.",
+  "name": "Gryndee",
+  "description": "A high-performance business management dashboard for monitoring sales, inventory, and system health with precision.",
   "requestFramePermissions": ["camera"]
 }

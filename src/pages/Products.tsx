@@ -12,6 +12,7 @@ import {
   Package,
   AlertCircle,
   Image as ImageIcon,
+  TrendingUp,
   X,
   Check,
   Briefcase
@@ -390,7 +391,7 @@ export default function Products() {
   const totalSellingValue = filteredProducts.reduce((acc, p) => acc + ((p.selling_price || 0) * (p.total_stock || 0)), 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-[1600px] mx-auto">
       {/* Top Tabs */}
       <div className="flex items-center gap-8 border-b border-zinc-200 dark:border-zinc-800">
         <button 
@@ -406,142 +407,165 @@ export default function Products() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-4">Stock value @ cost price</p>
-          <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">{formatCurrency(totalCostValue, currency)}</h3>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-4">Stock value @ selling price</p>
-          <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">{formatCurrency(totalSellingValue, currency)}</h3>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <motion.div 
+          whileHover={{ y: -4 }}
+          className="glass-card p-8 group relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Package className="w-24 h-24" />
+          </div>
+          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Stock value @ cost price</p>
+          <h3 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">
+            <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
+            {totalCostValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h3>
+        </motion.div>
+        <motion.div 
+          whileHover={{ y: -4 }}
+          className="glass-card p-8 group relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <TrendingUp className="w-24 h-24" />
+          </div>
+          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Stock value @ selling price</p>
+          <h3 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">
+            <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
+            {totalSellingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h3>
+        </motion.div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 p-4 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
+      <div className="glass-card p-0 overflow-hidden">
         {/* Sub Tabs and Search */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
-          <div className="flex items-center gap-6 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
-            <button 
-              onClick={() => setActiveSubTab('products')}
-              className={cn(
-                "pb-2 text-sm font-bold transition-all relative",
-                activeSubTab === 'products' ? "text-brand" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
-              )}
-            >
-              Products
-              {activeSubTab === 'products' && <motion.div layoutId="activeSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />}
-            </button>
-            <button 
-              onClick={() => setActiveSubTab('services')}
-              className={cn(
-                "pb-2 text-sm font-bold transition-all relative",
-                activeSubTab === 'services' ? "text-brand" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
-              )}
-            >
-              Services
-              {activeSubTab === 'services' && <motion.div layoutId="activeSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />}
-            </button>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1 max-w-3xl">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-              <input 
-                type="text" 
-                placeholder="Search products..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
-              />
-            </div>
-            <div className="relative group">
-              <select 
-                value={searchParams.get('category') || 'all'}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const newParams = new URLSearchParams(searchParams);
-                  if (val === 'all') newParams.delete('category');
-                  else newParams.set('category', val);
-                  setSearchParams(newParams);
-                }}
-                className="w-full sm:w-auto pl-4 pr-10 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-bold text-zinc-900 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer min-w-[160px]"
+        <div className="p-8 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex items-center gap-6 overflow-x-auto pb-2 lg:pb-0 no-scrollbar">
+              <button 
+                onClick={() => setActiveSubTab('products')}
+                className={cn(
+                  "pb-2 text-sm font-bold transition-all relative",
+                  activeSubTab === 'products' ? "text-brand" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
+                )}
               >
-                <option value="all" className="dark:bg-zinc-900">All Categories</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id} className="dark:bg-zinc-900">{cat.name}</option>
-                ))}
-              </select>
-              <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none group-hover:text-brand transition-colors" />
+                Products
+                {activeSubTab === 'products' && <motion.div layoutId="activeSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />}
+              </button>
+              <button 
+                onClick={() => setActiveSubTab('services')}
+                className={cn(
+                  "pb-2 text-sm font-bold transition-all relative",
+                  activeSubTab === 'services' ? "text-brand" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
+                )}
+              >
+                Services
+                {activeSubTab === 'services' && <motion.div layoutId="activeSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />}
+              </button>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1 max-w-3xl">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                <input 
+                  type="text" 
+                  placeholder="Search products..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
+                />
+              </div>
+              <div className="relative group">
+                <select 
+                  value={searchParams.get('category') || 'all'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const newParams = new URLSearchParams(searchParams);
+                    if (val === 'all') newParams.delete('category');
+                    else newParams.set('category', val);
+                    setSearchParams(newParams);
+                  }}
+                  className="w-full sm:w-auto pl-4 pr-10 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer min-w-[180px]"
+                >
+                  <option value="all" className="dark:bg-zinc-900">All Categories</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id} className="dark:bg-zinc-900">{cat.name}</option>
+                  ))}
+                </select>
+                <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none group-hover:text-brand transition-colors" />
+              </div>
             </div>
           </div>
         </div>
 
         {displayItems.length > 0 ? (
-          <div className="space-y-4">
+          <div className="overflow-hidden">
             {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-                      {activeSubTab === 'products' ? 'Product' : 'Service'}
+                  <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
+                    <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
+                      {activeSubTab === 'products' ? 'Product Details' : 'Service Details'}
                     </th>
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</th>
+                    <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Category</th>
                     {activeSubTab === 'products' && (
-                      <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Stock</th>
+                      <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Stock Status</th>
                     )}
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Price</th>
+                    <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Unit Price</th>
                     {activeSubTab === 'products' && (
-                      <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Total Value</th>
+                      <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Inventory Value</th>
                     )}
                     {activeSubTab === 'services' && (
-                      <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Duration</th>
+                      <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Duration</th>
                     )}
-                    <th className="pb-4 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-right">Actions</th>
+                    <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                   {displayItems.map((item: any) => (
-                    <tr key={item.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
-                      <td className="py-5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                    <tr key={item.id} className="hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 transition-all group cursor-pointer">
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-5">
+                          <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700 group-hover:border-white/20 dark:group-hover:border-black/20 transition-colors">
                             {activeSubTab === 'products' ? (
                               item.images && item.images.length > 0 ? (
                                 <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
-                                <ImageIcon className="w-4 h-4" />
+                                <Package className="w-6 h-6" />
                               )
                             ) : (
-                              <Briefcase className="w-4 h-4" />
+                              <Briefcase className="w-6 h-6" />
                             )}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">{item.name}</p>
+                            <p className="text-sm font-bold tracking-tight mb-0.5">{item.name}</p>
                             {activeSubTab === 'products' && (
-                              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{item.supplier_name}</p>
+                              <p className="text-[10px] font-bold opacity-50 uppercase tracking-widest">{item.supplier_name || 'No Supplier'}</p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="py-5">
-                        <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                      <td className="px-8 py-6">
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 group-hover:bg-white/10 dark:group-hover:bg-black/10 transition-colors">
                           {activeSubTab === 'products' ? item.category_name : item.category}
                         </span>
                       </td>
                       {activeSubTab === 'products' && (
-                        <td className="py-5">
-                          <div className="space-y-1">
-                            <p className={cn(
-                              "text-sm font-bold tracking-tight",
-                              (item.total_stock || 0) <= 5 ? "text-red-600" : "text-zinc-900 dark:text-white"
-                            )}>
-                              {item.total_stock || 0} units
-                            </p>
+                        <td className="px-8 py-6">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <p className={cn(
+                                "text-sm font-bold font-mono tracking-tighter",
+                                (item.total_stock || 0) <= (item.low_stock_threshold || 5) ? "text-red-500" : ""
+                              )}>
+                                {item.total_stock || 0}
+                              </p>
+                              <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest">Units</span>
+                            </div>
                             {item.variants && item.variants.length > 1 && (
                               <div className="flex flex-wrap gap-1">
                                 {item.variants.map((v: any, i: number) => v.quantity > 0 && (
-                                  <span key={i} className="text-[9px] font-black px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-md uppercase tracking-tighter">
+                                  <span key={i} className="text-[8px] font-bold px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-md uppercase tracking-tighter border border-zinc-200 dark:border-zinc-700 group-hover:border-white/10 dark:group-hover:border-black/10 transition-colors">
                                     {v.size}: {v.quantity}
                                   </span>
                                 ))}
@@ -550,25 +574,27 @@ export default function Products() {
                           </div>
                         </td>
                       )}
-                      <td className="py-5 text-sm text-zinc-900 dark:text-white font-black tracking-tight">
-                        {formatCurrency(activeSubTab === 'products' ? item.selling_price : item.price, currency)}
+                      <td className="px-8 py-6 text-sm font-bold font-mono tracking-tighter">
+                        <span className="opacity-50 mr-1 text-xs">{currency === 'NGN' ? '₦' : currency}</span>
+                        {(activeSubTab === 'products' ? item.selling_price : item.price).toLocaleString()}
                       </td>
                       {activeSubTab === 'products' && (
-                        <td className="py-5 text-sm text-zinc-900 dark:text-white font-black tracking-tight">
-                          {formatCurrency((item.selling_price || 0) * (item.total_stock || 0), currency)}
+                        <td className="px-8 py-6 text-sm font-bold font-mono tracking-tighter">
+                          <span className="opacity-50 mr-1 text-xs">{currency === 'NGN' ? '₦' : currency}</span>
+                          {((item.selling_price || 0) * (item.total_stock || 0)).toLocaleString()}
                         </td>
                       )}
                       {activeSubTab === 'services' && (
-                        <td className="py-5">
-                          <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{item.duration_minutes} mins</span>
+                        <td className="px-8 py-6">
+                          <span className="text-xs font-bold opacity-70">{item.duration_minutes} mins</span>
                         </td>
                       )}
-                      <td className="py-5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
+                      <td className="px-8 py-6 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all">
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
+                          <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -580,28 +606,32 @@ export default function Products() {
             </div>
 
             {/* Mobile Card Grid */}
-            <div className="md:hidden grid grid-cols-1 gap-4">
-              {filteredProducts.map((product) => (
-                <div key={product.id} className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4 shadow-sm">
+            <div className="md:hidden grid grid-cols-1 gap-4 p-4">
+              {displayItems.map((item: any) => (
+                <div key={item.id} className="p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4 shadow-sm">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
-                        {product.images && product.images.length > 0 ? (
-                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                        {activeSubTab === 'products' ? (
+                          item.images && item.images.length > 0 ? (
+                            <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <ImageIcon className="w-6 h-6" />
+                          )
                         ) : (
-                          <ImageIcon className="w-5 h-5" />
+                          <Briefcase className="w-6 h-6" />
                         )}
                       </div>
                       <div>
-                        <h4 className="text-sm font-black text-zinc-900 dark:text-white tracking-tight">{product.name}</h4>
-                        <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{product.category_name}</p>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">{item.name}</h4>
+                        <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{activeSubTab === 'products' ? item.category_name : item.category}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => handleEditClick(product)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
+                      <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
+                      <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -609,24 +639,26 @@ export default function Products() {
                   
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                     <div>
-                      <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Stock</p>
+                      <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">
+                        {activeSubTab === 'products' ? 'Stock' : 'Duration'}
+                      </p>
                       <p className={cn(
                         "text-xs font-bold",
-                        product.total_stock <= 5 ? "text-red-600" : "text-zinc-900 dark:text-white"
+                        activeSubTab === 'products' && (item.total_stock || 0) <= 5 ? "text-red-600" : "text-zinc-900 dark:text-white"
                       )}>
-                        {product.total_stock} units
+                        {activeSubTab === 'products' ? `${item.total_stock || 0} units` : `${item.duration_minutes} mins`}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Price</p>
-                      <p className="text-xs font-black text-zinc-900 dark:text-white">{formatCurrency(product.selling_price, currency)}</p>
+                      <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Price</p>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-white">{formatCurrency(activeSubTab === 'products' ? item.selling_price : item.price, currency)}</p>
                     </div>
                   </div>
 
-                  {product.variants && product.variants.length > 1 && (
+                  {activeSubTab === 'products' && item.variants && item.variants.length > 1 && (
                     <div className="flex flex-wrap gap-1.5 pt-2">
-                      {product.variants.map((v, i) => v.quantity > 0 && (
-                        <span key={i} className="text-[9px] font-black px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-lg uppercase tracking-tighter">
+                      {item.variants.map((v: any, i: number) => v.quantity > 0 && (
+                        <span key={i} className="text-[9px] font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-lg uppercase tracking-tighter">
                           {v.size}: {v.quantity}
                         </span>
                       ))}
@@ -637,29 +669,29 @@ export default function Products() {
             </div>
           </div>
         ) : (
-            <div className="py-20 text-center">
-              <div className="w-64 h-64 mx-auto mb-8 relative">
+            <div className="py-32 text-center">
+              <div className="w-72 h-72 mx-auto mb-8 relative">
                 <div className="absolute inset-0 bg-brand/5 rounded-full opacity-50 blur-3xl" />
-                <div className="relative bg-white rounded-3xl p-8 shadow-xl border border-zinc-100">
-                  <div className="space-y-4">
-                    <div className="h-4 bg-zinc-100 rounded-full w-3/4" />
-                    <div className="h-4 bg-zinc-100 rounded-full w-1/2" />
-                    <div className="h-4 bg-zinc-100 rounded-full w-2/3" />
-                    <div className="pt-4 flex justify-center">
-                      <div className="w-16 h-16 bg-brand/10 rounded-2xl flex items-center justify-center">
-                        <Package className="w-8 h-8 text-brand" />
+                <div className="relative bg-white dark:bg-zinc-900 rounded-[2.5rem] p-10 shadow-2xl border border-zinc-100 dark:border-zinc-800">
+                  <div className="space-y-6">
+                    <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full w-3/4" />
+                    <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full w-1/2" />
+                    <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full w-2/3" />
+                    <div className="pt-6 flex justify-center">
+                      <div className="w-20 h-20 bg-brand/10 rounded-3xl flex items-center justify-center">
+                        <Package className="w-10 h-10 text-brand" />
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <h3 className="text-xl font-black text-zinc-900 mb-2">Add all your products</h3>
-              <p className="text-zinc-400 font-medium mb-8">Start by adding your first product in seconds</p>
+              <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-3">Add all your products</h3>
+              <p className="text-zinc-500 dark:text-zinc-400 font-medium mb-10 max-w-sm mx-auto">Start by adding your first product in seconds and manage your inventory with ease.</p>
               <button 
                 onClick={() => activeSubTab === 'products' ? openAddModal() : setIsServiceModalOpen(true)}
-                className="inline-flex items-center gap-2 px-8 py-3 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
+                className="inline-flex items-center gap-3 px-10 py-4 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add {activeSubTab === 'products' ? 'product' : 'service'}
               </button>
             </div>
@@ -681,70 +713,70 @@ export default function Products() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800"
             >
-              <div className="p-8">
+              <div className="p-10">
                 <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-black text-zinc-900 tracking-tight">
+                  <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
                     {editingService ? 'Edit Service' : 'Add Service'}
                   </h3>
-                  <button onClick={() => setIsServiceModalOpen(false)} className="p-2 hover:bg-zinc-100 rounded-xl transition-colors">
+                  <button onClick={() => setIsServiceModalOpen(false)} className="p-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-2xl transition-all">
                     <X className="w-5 h-5 text-zinc-400" />
                   </button>
                 </div>
 
                 <form onSubmit={handleSaveService} className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Service Name</label>
+                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Service Name</label>
                     <input 
                       required
                       value={newService.name}
                       onChange={(e) => setNewService({...newService, name: e.target.value})}
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900"
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Price (₦)</label>
+                      <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Price ({currency === 'NGN' ? '₦' : currency})</label>
                       <input 
                         required
                         type="number"
                         value={newService.price}
                         onChange={(e) => setNewService({...newService, price: e.target.value})}
-                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900"
+                        className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Duration (mins)</label>
+                      <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Duration (mins)</label>
                       <input 
                         required
                         type="number"
                         value={newService.duration_minutes}
                         onChange={(e) => setNewService({...newService, duration_minutes: e.target.value})}
-                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900"
+                        className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</label>
+                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
                     <input 
                       value={newService.category}
                       onChange={(e) => setNewService({...newService, category: e.target.value})}
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900"
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Description</label>
+                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Description</label>
                     <textarea 
                       value={newService.description}
                       onChange={(e) => setNewService({...newService, description: e.target.value})}
                       rows={3}
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none resize-none text-zinc-900"
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none resize-none text-zinc-900 dark:text-white"
                     />
                   </div>
                   <button 
                     type="submit"
-                    className="w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
+                    className="w-full py-5 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-[0.98]"
                   >
                     {editingService ? 'Update Service' : 'Add Service'}
                   </button>
@@ -774,23 +806,23 @@ export default function Products() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full max-w-6xl h-full sm:h-auto sm:max-h-[90vh] bg-white dark:bg-zinc-900 sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative z-10"
+              className="w-full max-w-6xl h-full sm:h-auto sm:max-h-[90vh] bg-white dark:bg-zinc-900 sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative z-10 border border-zinc-100 dark:border-zinc-800"
             >
               {/* Header */}
-              <div className="p-4 sm:p-8 bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 z-20">
-                <div className="flex items-center gap-4">
+              <div className="p-6 sm:p-10 bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 z-20">
+                <div className="flex items-center gap-6">
                   <button 
                     onClick={closeModal}
-                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-brand rounded-full text-xs sm:text-sm font-bold transition-all border border-zinc-200 dark:border-zinc-700"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-brand rounded-2xl text-xs sm:text-sm font-bold transition-all border border-zinc-200 dark:border-zinc-700 shadow-sm"
                   >
                     <ChevronRight className="w-4 h-4 rotate-180" />
-                    <span className="hidden sm:inline text-brand">Back</span>
+                    <span className="hidden sm:inline">Back</span>
                   </button>
-                  <h2 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white tracking-tight">
+                  <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
                     {editingProduct ? 'Edit Product' : 'Add Product'}
                   </h2>
                 </div>
-                <div className="flex items-center gap-2 text-brand font-bold text-[10px] sm:text-sm bg-zinc-50 dark:bg-zinc-800 px-3 sm:px-4 py-2 rounded-xl">
+                <div className="flex items-center gap-2 text-brand font-bold text-[10px] sm:text-sm bg-brand/5 px-4 py-2.5 rounded-2xl border border-brand/10">
                   <span role="img" aria-label="calendar">📅</span>
                   {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </div>

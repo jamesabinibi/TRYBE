@@ -105,9 +105,9 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   const location = useLocation();
   
   const navItems = [
-    { icon: LayoutDashboard, label: 'Home', path: '/' },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
     { icon: Package, label: 'Inventory', path: '/products' },
-    { icon: ShoppingCart, label: 'Sales & Analytics', path: '/sales' },
+    { icon: ShoppingCart, label: 'Sales', path: '/sales' },
     { icon: Wallet, label: 'Expenses', path: '/expenses' },
     { icon: Briefcase, label: 'Bookkeeping', path: '/bookkeeping' },
     { icon: FileText, label: 'Tax Report', path: '/tax' },
@@ -129,63 +129,37 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md z-40 lg:hidden"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
           />
         )}
       </AnimatePresence>
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 w-72 flex flex-col border-r z-50 transition-all duration-500 ease-in-out lg:translate-x-0 lg:static",
-        isDarkMode ? "bg-zinc-950 text-zinc-400 border-zinc-800/50" : "bg-white text-zinc-500 border-zinc-200",
+        "fixed inset-y-0 left-0 w-64 flex flex-col z-50 transition-all duration-300 ease-in-out lg:translate-x-0 lg:static",
+        isDarkMode ? "bg-[#0A0A0B] text-zinc-400 border-r border-white/[0.04]" : "bg-white text-zinc-500 border-r border-zinc-100",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="p-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {settings?.logo_url ? (
-              <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-xl shadow-black/20">
-                <img src={settings.logo_url} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-              </div>
-            ) : (
-              <div 
-                className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl rotate-3"
-                style={{ backgroundColor: brandColor, boxShadow: `0 10px 20px ${brandColor}33` }}
-              >
-                {settings?.business_name?.charAt(0) || 'S'}
-              </div>
-            )}
-            <div>
-              <span className={cn(
-                "font-black text-xl tracking-tight block leading-none",
-                isDarkMode ? "text-white" : "text-zinc-900"
-              )}>
-                {settings?.business_name || 'StockFlow'}
-              </span>
-              <span 
-                className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 block truncate max-w-[150px]"
-                style={{ color: brandColor }}
-              >
-                {settings?.slogan || 'Pro Edition'}
-              </span>
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg"
+              style={{ backgroundColor: brandColor }}
+            >
+              {settings?.business_name?.charAt(0) || 'S'}
             </div>
+            <span className={cn(
+              "font-display font-bold text-lg tracking-tight",
+              isDarkMode ? "text-white" : "text-zinc-900"
+            )}>
+              {settings?.business_name || 'StockFlow'}
+            </span>
           </div>
-          <button onClick={onClose} className={cn(
-            "lg:hidden p-2 rounded-xl transition-colors",
-            isDarkMode ? "text-zinc-500 hover:text-white bg-zinc-900" : "text-zinc-400 hover:text-zinc-900 bg-zinc-100"
-          )}>
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <X className="w-4 h-4" />
           </button>
         </div>
         
-        <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto custom-scrollbar">
-          <div className="px-4 mb-4 flex items-center justify-between">
-            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Main Menu</p>
-            <button 
-              onClick={toggleDarkMode}
-              className="p-2 bg-zinc-900 rounded-xl text-zinc-500 hover:text-white transition-colors"
-            >
-              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-          </div>
+        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -196,20 +170,20 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                   if (window.innerWidth < 1024) onClose();
                 }}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative overflow-hidden",
+                  "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group relative",
                   isActive 
-                    ? "text-white shadow-lg" 
-                    : "hover:bg-zinc-900 hover:text-zinc-200"
+                    ? isDarkMode ? "text-white" : "text-zinc-900"
+                    : "hover:bg-zinc-100 dark:hover:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
                 )}
-                style={isActive ? { backgroundColor: brandColor, boxShadow: `0 10px 15px -3px ${brandColor}33` } : {}}
               >
-                <item.icon className={cn("w-5 h-5 transition-transform duration-300 group-hover:scale-110", isActive ? "text-white" : "text-zinc-500 group-hover:text-brand")} />
-                <span className="text-sm font-bold tracking-tight">{item.label}</span>
+                <item.icon className={cn("w-4.5 h-4.5 transition-colors", isActive ? "text-brand" : "text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300")} />
+                <span className="text-[13px] font-medium tracking-tight">{item.label}</span>
                 {isActive && (
                   <motion.div 
-                    layoutId="active-nav-bg"
-                    className="absolute inset-0 -z-10"
-                    style={{ backgroundColor: brandColor }}
+                    layoutId="active-nav-glow"
+                    className="absolute inset-0 bg-brand/5 dark:bg-brand/10 rounded-xl -z-10"
+                    initial={false}
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
               </Link>
@@ -217,35 +191,34 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
           })}
         </nav>
 
-        <div className="p-6 space-y-4">
-          <div className="bg-zinc-900/50 rounded-3xl p-4 border border-zinc-800/50">
-            <div className="flex items-center gap-3 mb-4">
-              <div 
-                className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-black border"
-                style={{ 
-                  backgroundColor: `${brandColor}1a`, 
-                  color: brandColor,
-                  borderColor: `${brandColor}33`
-                }}
-              >
+        <div className="p-4 mt-auto">
+          <div className={cn(
+            "rounded-2xl p-3 border",
+            isDarkMode ? "bg-white/[0.02] border-white/[0.04]" : "bg-zinc-50 border-zinc-100"
+          )}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold text-xs">
                 {user?.name.charAt(0)}
               </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-black text-white truncate tracking-tight">{user?.name}</p>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">{user?.role}</p>
+              <div className="flex-1 min-w-0">
+                <p className={cn("text-xs font-semibold truncate", isDarkMode ? "text-white" : "text-zinc-900")}>{user?.name}</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">{user?.role}</p>
               </div>
             </div>
-            <button 
-              onClick={logout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-red-500/10 hover:text-red-500 rounded-xl text-zinc-400 transition-all font-black text-[10px] uppercase tracking-widest"
-            >
-              <LogOut className="w-3 h-3" />
-              <span>Sign Out</span>
-            </button>
-          </div>
-          
-          <div className="px-4 py-2 text-center">
-            <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.3em]">Version 2.4.9-Stable</p>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={toggleDarkMode}
+                className="flex-1 flex items-center justify-center p-2 rounded-lg bg-zinc-100 dark:bg-white/[0.05] text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
+              >
+                {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
+              <button 
+                onClick={logout}
+                className="flex-1 flex items-center justify-center p-2 rounded-lg bg-zinc-100 dark:bg-white/[0.05] text-zinc-500 hover:text-red-500 transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
@@ -265,68 +238,61 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className={cn(
-      "flex min-h-screen font-sans selection-brand selection:text-white transition-colors duration-500",
-      isDarkMode ? "bg-black" : "bg-zinc-50"
+      "flex min-h-screen font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300",
+      isDarkMode ? "bg-[#050505] text-white" : "bg-zinc-50 text-zinc-900"
     )}>
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <header className={cn(
-          "h-20 backdrop-blur-xl border-b flex items-center justify-between px-6 lg:px-10 sticky top-0 z-30 transition-colors duration-500",
+          "h-16 border-b flex items-center justify-between px-6 sticky top-0 z-30 transition-colors duration-300",
           isDarkMode 
-            ? "bg-zinc-900/80 border-zinc-800/50" 
-            : "bg-white/80 border-zinc-200/50"
+            ? "bg-[#050505]/80 backdrop-blur-md border-white/[0.04]" 
+            : "bg-white/80 backdrop-blur-md border-zinc-100"
         )}>
-          <div className="flex items-center gap-6 flex-1">
+          <div className="flex items-center gap-4 flex-1">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-3 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95"
+              className="lg:hidden p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/[0.05] rounded-lg transition-colors"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5" />
             </button>
-            <div className="relative w-full max-w-md hidden md:block group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-brand transition-colors" />
+            <div className="relative w-full max-w-md hidden md:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
               <input 
                 type="text" 
-                placeholder="Search for products, sales, or reports..." 
+                placeholder="Search anything..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
-                  "w-full pl-12 pr-4 py-3 border-transparent rounded-2xl text-sm font-medium focus:ring-8 focus:ring-brand/5 focus:border-brand/20 transition-all outline-none border",
+                  "w-full pl-10 pr-4 py-2 rounded-xl text-[13px] transition-all outline-none border",
                   isDarkMode
-                    ? "bg-zinc-800/50 text-white focus:bg-zinc-800 border-zinc-700/50 focus:border-zinc-600"
-                    : "bg-zinc-100/50 text-zinc-900 focus:bg-white border-zinc-200/0 focus:border-zinc-200"
+                    ? "bg-white/[0.03] text-white border-white/[0.04] focus:border-brand/50"
+                    : "bg-zinc-100 text-zinc-900 border-transparent focus:bg-white focus:border-brand/50"
                 )}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-[10px] font-black text-zinc-400 shadow-sm">
-                <span>⌘</span>
-                <span>K</span>
-              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 sm:gap-6">
+
+          <div className="flex items-center gap-2 sm:gap-4">
             {user && <NotificationCenter userId={user.id} />}
-            <div className="h-10 w-px bg-zinc-200 dark:bg-zinc-800 hidden sm:block"></div>
-            {location.pathname.startsWith('/products') ? (
-              <Link 
-                to="/products?action=add"
-                className="flex items-center gap-2 px-5 py-3 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl active:scale-95"
-                style={{ backgroundColor: brandColor, boxShadow: `0 20px 25px -5px ${brandColor}33` }}
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Add Product</span>
-              </Link>
-            ) : (
-              <Link 
-                to="/sales"
-                className="flex items-center gap-2 px-5 py-3 bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-zinc-900/10 active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">New Transaction</span>
-              </Link>
-            )}
+            
+            <Link 
+              to={location.pathname.startsWith('/products') ? "/products?action=add" : "/sales"}
+              className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-brand/20"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {location.pathname.startsWith('/products') ? "Add Product" : "New Transaction"}
+              </span>
+            </Link>
+
+            <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05]">
+              {user?.name.charAt(0)}
+            </div>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 lg:p-10 custom-scrollbar">
+
+        <div className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

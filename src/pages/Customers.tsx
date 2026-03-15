@@ -258,14 +258,22 @@ export default function Customers() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total Customers</p>
-          <h3 className="text-2xl font-black text-zinc-900 dark:text-white">{customers.length}</h3>
-          <div className="mt-2 flex items-center gap-1 text-emerald-500 text-[10px] font-black uppercase">
-            <TrendingUp className="w-3 h-3" />
-            Growing
+        <motion.div 
+          whileHover={{ y: -4 }}
+          className="glass-card p-8 group relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Users className="w-24 h-24" />
           </div>
-        </div>
+          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Total Customers</p>
+          <h3 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">
+            {customers.length}
+          </h3>
+          <div className="mt-4 flex items-center gap-2 text-emerald-500 text-[10px] font-bold uppercase tracking-widest">
+            <TrendingUp className="w-3.5 h-3.5" />
+            Active Growth
+          </div>
+        </motion.div>
       </div>
 
       <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden">
@@ -282,70 +290,79 @@ export default function Customers() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-8">
           {filteredCustomers.map((customer) => (
             <motion.div 
               layout
+              whileHover={{ y: -4 }}
               key={customer.id}
-              className="bg-zinc-50 dark:bg-zinc-800/50 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-700/50 hover:border-brand transition-all group"
+              className="glass-card p-8 group relative overflow-hidden border-zinc-200/50 dark:border-zinc-700/30"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-white dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-brand font-black text-xl shadow-sm border border-zinc-100 dark:border-zinc-700">
+              <div className="flex items-start justify-between mb-6">
+                <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-[2rem] flex items-center justify-center text-brand font-bold text-2xl border border-zinc-200 dark:border-zinc-700 group-hover:bg-brand group-hover:text-white group-hover:border-brand transition-all duration-500">
                   {customer.name.charAt(0)}
                 </div>
-                <div className="flex items-center gap-1 px-3 py-1 bg-brand/10 text-brand rounded-full text-[10px] font-black uppercase tracking-widest">
-                  <Star className="w-3 h-3 fill-current" />
-                  {customer.loyalty_points} pts
+                <div className="flex items-center gap-1.5 px-4 py-2 bg-brand/10 text-brand rounded-full text-[10px] font-bold uppercase tracking-widest">
+                  <Star className="w-3.5 h-3.5 fill-current" />
+                  {customer.loyalty_points} Points
                 </div>
               </div>
               
-              <h3 className="text-lg font-black text-zinc-950 dark:text-white mb-4 tracking-tight">{customer.name}</h3>
+              <h3 className="text-xl font-bold text-zinc-950 dark:text-white mb-6 tracking-tight font-display">{customer.name}</h3>
               
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
-                  <Phone className="w-4 h-4" />
-                  <span className="text-sm font-medium">{customer.phone}</span>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
+                  <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-brand/10 group-hover:text-brand transition-all">
+                    <Phone className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-bold font-mono tracking-tighter">{customer.phone}</span>
                 </div>
                 {customer.email && (
-                  <div className="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
-                    <Mail className="w-4 h-4" />
+                  <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
+                    <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-brand/10 group-hover:text-brand transition-all">
+                      <Mail className="w-4 h-4" />
+                    </div>
                     <span className="text-sm font-medium truncate">{customer.email}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-3 text-zinc-400">
-                  <History className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Joined {new Date(customer.created_at).toLocaleDateString()}</span>
+                <div className="flex items-center gap-4 text-zinc-400 dark:text-zinc-500">
+                  <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Since {new Date(customer.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
 
-              <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-700 flex gap-2">
+              <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
                 <button 
                   onClick={() => fetchHistory(customer)}
-                  className="flex-1 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all"
+                  className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-950 hover:text-white dark:hover:bg-white dark:hover:text-zinc-950 transition-all"
                 >
-                  View History
+                  History
                 </button>
-                <button 
-                  onClick={() => {
-                    setSelectedCustomer(customer);
-                    setNewCustomer({
-                      name: customer.name,
-                      phone: customer.phone,
-                      email: customer.email || '',
-                      address: customer.address || ''
-                    });
-                    setIsEditModalOpen(true);
-                  }}
-                  className="px-4 py-2 bg-brand/10 text-brand rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand/20 transition-all"
-                >
-                  <Edit2 className="w-3 h-3" />
-                </button>
-                <button 
-                  onClick={() => handleDeleteCustomer(customer.id)}
-                  className="px-4 py-2 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-500/20 transition-all"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      setSelectedCustomer(customer);
+                      setNewCustomer({
+                        name: customer.name,
+                        phone: customer.phone,
+                        email: customer.email || '',
+                        address: customer.address || ''
+                      });
+                      setIsEditModalOpen(true);
+                    }}
+                    className="p-3 bg-brand/10 text-brand rounded-2xl hover:bg-brand hover:text-white transition-all"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteCustomer(customer.id)}
+                    className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </motion.div>
           ))}

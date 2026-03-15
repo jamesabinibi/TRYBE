@@ -246,17 +246,19 @@ export default function Expenses() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center text-red-600">
-              <TrendingDown className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Total Expenses</p>
-              <h3 className="text-2xl font-black text-zinc-950 dark:text-white">{formatCurrency(totalExpenses, currency)}</h3>
-            </div>
+        <motion.div 
+          whileHover={{ y: -4 }}
+          className="glass-card p-8 group relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <TrendingDown className="w-24 h-24" />
           </div>
-        </div>
+          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Total Expenses</p>
+          <h3 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">
+            <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
+            {totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h3>
+        </motion.div>
       </div>
 
       <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden">
@@ -296,40 +298,40 @@ export default function Expenses() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Description</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Amount</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+              <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
+                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date</th>
+                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Category</th>
+                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Description</th>
+                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Amount</th>
+                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {filteredExpenses.map((expense) => (
-                <tr key={expense.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 text-sm font-bold text-zinc-950 dark:text-white">
-                      <Calendar className="w-3 h-3 text-zinc-400" />
+                <tr key={expense.id} className="hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 transition-all group cursor-pointer">
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-3 text-sm font-bold font-mono tracking-tighter">
+                      <Calendar className="w-3.5 h-3.5 opacity-50" />
                       {new Date(expense.date).toLocaleDateString()}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  <td className="px-8 py-5">
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 group-hover:bg-white/10 dark:group-hover:bg-black/10 transition-colors">
                       {expense.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">{expense.description}</p>
+                  <td className="px-8 py-5">
+                    <p className="text-sm font-medium opacity-70 line-clamp-1">{expense.description}</p>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="text-sm font-black text-red-600">
+                  <td className="px-8 py-5 text-right">
+                    <span className="text-sm font-bold font-mono tracking-tighter text-red-500 group-hover:text-red-400">
                       -{formatCurrency(expense.amount, currency)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-8 py-5 text-right">
                     <button 
                       onClick={() => handleDeleteExpense(expense.id)}
-                      className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                      className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-red-500/10 rounded-xl transition-all"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
