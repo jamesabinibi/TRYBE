@@ -277,8 +277,8 @@ export default function Dashboard() {
                   <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4">Restock Suggestions</h4>
                   <div className="space-y-3">
                     {forecast.restock_suggestions && forecast.restock_suggestions.length > 0 ? (
-                      forecast.restock_suggestions.map((item: any, i: number) => (
-                        <div key={i} className="flex items-center justify-between">
+                      forecast.restock_suggestions.map((item: any) => (
+                        <div key={item.product_name} className="flex items-center justify-between">
                           <span className="text-sm font-bold text-zinc-300">{item.product_name}</span>
                           <span className="px-3 py-1 bg-amber-400/10 text-amber-400 rounded-full text-[10px] font-black uppercase">
                             Buy {item.suggested_quantity}
@@ -416,7 +416,7 @@ export default function Dashboard() {
             </div>
             <div className="space-y-4">
               {topSales.map((sale, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
+                <div key={`top-sale-${i}-${sale.name}`} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl flex items-center justify-center font-black text-brand shadow-sm border border-zinc-100 dark:border-zinc-700">
                       <Package className="w-4 h-4" />
@@ -451,7 +451,7 @@ export default function Dashboard() {
             </div>
             <div className="space-y-4">
               {topExpenses.map((expense, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
+                <div key={`top-expense-${i}-${expense.category}`} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl flex items-center justify-center font-black text-red-500 shadow-sm border border-zinc-100 dark:border-zinc-700">
                       <ArrowDownRight className="w-4 h-4" />
