@@ -57,6 +57,9 @@ export default function Sales() {
   const [discountPercent, setDiscountPercent] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [selectedSaleForPreview, setSelectedSaleForPreview] = useState<any>(null);
+
+  const brandColor = settings?.brand_color || '#10b981';
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -216,6 +219,60 @@ export default function Sales() {
       success: 'Sale recorded successfully!',
       error: (err) => err
     });
+  };
+
+  const handlePreview = (sale: any) => {
+    setSelectedSaleForPreview(sale);
+  };
+
+  const handleDownloadInvoice = (sale: any) => {
+    const doc = new jsPDF();
+    const brandColor = settings?.brand_color || '#10b981';
+    
+    doc.setFillColor(brandColor);
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.text(settings?.business_name || 'StockFlow', 15, 25);
+    
+    doc.setFontSize(10);
+    doc.text('INVOICE', 195, 25, { align: 'right' });
+    doc.text(`#${sale.invoice_number}`, 195, 32, { align: 'right' });
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.text('Bill To:', 15, 55);
+    doc.setFontSize(10);
+    doc.text(sale.customer_name || 'Walk-in Customer', 15, 62);
+    if (sale.customer_phone) doc.text(sale.customer_phone, 15, 67);
+    if (sale.customer_email) doc.text(sale.customer_email, 15, 72);
+
+    doc.text('Date:', 140, 62);
+    doc.text(new Date(sale.created_at).toLocaleDateString(), 160, 62);
+
+    const tableData = (sale.sale_items || []).map((item: any) => [
+      item.product_name || item.service_name || 'Item',
+      item.quantity.toString(),
+      formatCurrency(item.unit_price || 0, currency),
+      formatCurrency(item.total_price || 0, currency)
+    ]);
+
+    autoTable(doc, {
+      startY: 80,
+      head: [['Description', 'Qty', 'Unit Price', 'Total']],
+      body: tableData,
+      headStyles: { fillColor: brandColor },
+      foot: [
+        ['', '', 'Subtotal', formatCurrency((sale.total_amount || 0) + (sale.discount_amount || 0) - (sale.vat_amount || 0), currency)],
+        ['', '', `Discount (${sale.discount_percentage}%)`, `-${formatCurrency(sale.discount_amount || 0, currency)}`],
+        ['', '', 'VAT (7.5%)', formatCurrency(sale.vat_amount || 0, currency)],
+        ['', '', 'Total', formatCurrency(sale.total_amount || 0, currency)]
+      ],
+      footStyles: { fillColor: [245, 245, 245], textColor: 0, fontStyle: 'bold' }
+    });
+
+    doc.save(`invoice-${sale.invoice_number}.pdf`);
   };
 
   const startScanner = () => {
@@ -817,7 +874,14 @@ export default function Sales() {
                     <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                       {(filteredSales || []).map((sale) => (
                         <tr key={sale.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
-                          <td className="px-8 py-5 text-sm font-black text-zinc-900 dark:text-white tracking-tight">{sale.invoice_number}</td>
+                          <td className="px-8 py-5">
+                            <button 
+                              onClick={() => handlePreview(sale)}
+                              className="text-sm font-black text-brand hover:underline tracking-tight"
+                            >
+                              {sale.invoice_number}
+                            </button>
+                          </td>
                           <td className="px-8 py-5 text-sm text-zinc-500 dark:text-zinc-400 font-medium">
                             {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'N/A'}
                           </td>
@@ -853,7 +917,12 @@ export default function Sales() {
                     <div key={sale.id} className="p-6 space-y-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="text-sm font-black text-zinc-900 dark:text-white tracking-tight">{sale.invoice_number}</p>
+                          <button 
+                            onClick={() => handlePreview(sale)}
+                            className="text-sm font-black text-brand hover:underline tracking-tight"
+                          >
+                            {sale.invoice_number}
+                          </button>
                           <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
                             {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'N/A'} · {sale.staff_name}
                           </p>
@@ -897,6 +966,133 @@ export default function Sales() {
                 )}
               </div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {selectedSaleForPreview && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+              >
+                <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+                  <div>
+                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white">Invoice Preview</h2>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-sm">#{selectedSaleForPreview.invoice_number}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleDownloadInvoice(selectedSaleForPreview)}
+                      className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand text-white font-bold shadow-lg transition-all hover:scale-105 active:scale-95"
+                    >
+                      <Download className="w-5 h-5" />
+                      PDF
+                    </button>
+                    <button
+                      onClick={() => setSelectedSaleForPreview(null)}
+                      className="p-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-2xl transition-all"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-4">
+                      {settings?.logo_url ? (
+                        <img src={settings.logo_url} alt="Logo" className="h-12 object-contain" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-black text-xl bg-brand">
+                          {settings?.business_name?.charAt(0) || 'S'}
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-black text-lg text-zinc-900 dark:text-white">{settings?.business_name || 'StockFlow'}</h3>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-medium">{settings?.email}</p>
+                      </div>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</p>
+                      <p className="font-bold text-zinc-900 dark:text-white">{new Date(selectedSaleForPreview.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-8 pt-8 border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Bill To</p>
+                      <h4 className="font-black text-zinc-900 dark:text-white">{selectedSaleForPreview.customer_name}</h4>
+                      <p className="text-zinc-500 dark:text-zinc-400 text-xs">{selectedSaleForPreview.customer_phone}</p>
+                      <p className="text-zinc-500 dark:text-zinc-400 text-xs">{selectedSaleForPreview.customer_email}</p>
+                    </div>
+                    <div className="space-y-2 text-right">
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Payment</p>
+                      <p className="font-bold text-zinc-900 dark:text-white">{selectedSaleForPreview.payment_method}</p>
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-4">Staff</p>
+                      <p className="font-bold text-zinc-900 dark:text-white">{selectedSaleForPreview.staff_name}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-zinc-50 dark:bg-zinc-800/80">
+                          <th className="px-6 py-4 text-[10px] font-black text-zinc-400 dark:text-zinc-300 uppercase tracking-widest">Item</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-zinc-400 dark:text-zinc-300 uppercase tracking-widest text-center">Qty</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-zinc-400 dark:text-zinc-300 uppercase tracking-widest text-right">Price</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-zinc-400 dark:text-zinc-300 uppercase tracking-widest text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        {selectedSaleForPreview.sale_items?.map((item: any, idx: number) => (
+                          <tr key={idx}>
+                            <td className="px-6 py-4">
+                              <p className="font-bold text-zinc-900 dark:text-white">{item.product_name || item.service_name}</p>
+                              {item.variant_info && <p className="text-[10px] text-zinc-400 font-bold uppercase">{item.variant_info}</p>}
+                            </td>
+                            <td className="px-6 py-4 text-center font-bold text-zinc-600 dark:text-zinc-400">{item.quantity}</td>
+                            <td className="px-6 py-4 text-right font-bold text-zinc-600 dark:text-zinc-400">{formatCurrency(item.unit_price || 0, currency)}</td>
+                            <td className="px-6 py-4 text-right font-black text-zinc-900 dark:text-white">{formatCurrency(item.total_price || 0, currency)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <div className="w-full max-w-xs space-y-2">
+                      <div className="flex justify-between text-zinc-500 dark:text-zinc-400 text-xs">
+                        <span>Subtotal</span>
+                        <span className="font-bold text-zinc-900 dark:text-white">
+                          {formatCurrency((selectedSaleForPreview.total_amount || 0) + (selectedSaleForPreview.discount_amount || 0) - (selectedSaleForPreview.vat_amount || 0), currency)}
+                        </span>
+                      </div>
+                      {selectedSaleForPreview.discount_amount > 0 && (
+                        <div className="flex justify-between text-emerald-500 text-xs">
+                          <span>Discount ({selectedSaleForPreview.discount_percentage}%)</span>
+                          <span className="font-bold">-{formatCurrency(selectedSaleForPreview.discount_amount, currency)}</span>
+                        </div>
+                      )}
+                      {selectedSaleForPreview.vat_amount > 0 && (
+                        <div className="flex justify-between text-zinc-500 dark:text-zinc-400 text-xs">
+                          <span>VAT (7.5%)</span>
+                          <span className="font-bold text-zinc-900 dark:text-white">{formatCurrency(selectedSaleForPreview.vat_amount, currency)}</span>
+                        </div>
+                      )}
+                      <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+                        <span className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Total</span>
+                        <span className="text-xl font-black text-brand">
+                          {formatCurrency(selectedSaleForPreview.total_amount || 0, currency)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           )}
         </AnimatePresence>
 

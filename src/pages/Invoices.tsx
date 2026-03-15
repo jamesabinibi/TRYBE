@@ -21,9 +21,8 @@ import {
   History,
   X
 } from 'lucide-react';
-import { useAuth } from '../App';
-import { useSettings } from '../App';
-import { cn } from '../lib/utils';
+import { useAuth, useSettings } from '../App';
+import { cn, formatCurrency } from '../lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -987,16 +986,16 @@ const Invoices: React.FC = () => {
             <div className="grid grid-cols-2 gap-10 pt-10 border-t border-slate-100 dark:border-zinc-800">
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bill To</p>
-                <h4 className="font-black text-lg text-slate-900 dark:text-white">{previewInvoice.customer_name || previewInvoice.customers?.name || 'Walk-in Customer'}</h4>
+                <h4 className="font-black text-lg text-slate-900 dark:text-white">{previewInvoice.customer_name || 'Walk-in Customer'}</h4>
                 <div className="space-y-0.5">
-                  {(previewInvoice.customer_email || previewInvoice.customers?.email) && (
-                    <p className="text-slate-500 dark:text-zinc-400 text-xs">{previewInvoice.customer_email || previewInvoice.customers?.email}</p>
+                  {previewInvoice.customer_email && (
+                    <p className="text-slate-500 dark:text-zinc-400 text-xs">{previewInvoice.customer_email}</p>
                   )}
-                  {(previewInvoice.customer_phone || previewInvoice.customers?.phone) && (
-                    <p className="text-slate-500 dark:text-zinc-400 text-xs">{previewInvoice.customer_phone || previewInvoice.customers?.phone}</p>
+                  {previewInvoice.customer_phone && (
+                    <p className="text-slate-500 dark:text-zinc-400 text-xs">{previewInvoice.customer_phone}</p>
                   )}
-                  {(previewInvoice.customer_address || previewInvoice.customers?.address) && (
-                    <p className="text-slate-500 dark:text-zinc-400 text-xs max-w-[200px]">{previewInvoice.customer_address || previewInvoice.customers?.address}</p>
+                  {previewInvoice.customer_address && (
+                    <p className="text-slate-500 dark:text-zinc-400 text-xs max-w-[200px]">{previewInvoice.customer_address}</p>
                   )}
                 </div>
               </div>
@@ -1027,8 +1026,8 @@ const Invoices: React.FC = () => {
                           <p className="text-[10px] text-slate-400 uppercase font-black">{item.service_id ? 'Service' : 'Product'}</p>
                         </td>
                         <td className="px-6 py-4 text-center font-bold text-slate-600 dark:text-zinc-400">{item.quantity}</td>
-                        <td className="px-6 py-4 text-right font-bold text-slate-600 dark:text-zinc-400">{settings?.currency || '₦'}{(item.unit_price || item.price_at_sale || 0).toLocaleString()}</td>
-                        <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">{settings?.currency || '₦'}{(item.total_price || (item.quantity * (item.unit_price || item.price_at_sale || 0))).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-right font-bold text-slate-600 dark:text-zinc-400">{formatCurrency(item.unit_price || 0, settings?.currency || 'NGN')}</td>
+                        <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">{formatCurrency(item.total_price || 0, settings?.currency || 'NGN')}</td>
                       </tr>
                     );
                   })}
@@ -1041,30 +1040,25 @@ const Invoices: React.FC = () => {
                 <div className="flex justify-between text-slate-500 dark:text-zinc-400 text-sm">
                   <span>Subtotal</span>
                   <span className="font-bold text-slate-900 dark:text-white">
-                    {settings?.currency || '₦'}
-                    {(
-                      (previewInvoice.total_amount || 0) + 
-                      (previewInvoice.discount_amount || 0) - 
-                      (previewInvoice.vat_amount || 0)
-                    ).toLocaleString()}
+                    {formatCurrency((previewInvoice.total_amount || 0) + (previewInvoice.discount_amount || 0) - (previewInvoice.vat_amount || 0), settings?.currency || 'NGN')}
                   </span>
                 </div>
                 {previewInvoice.discount_amount > 0 && (
                   <div className="flex justify-between text-rose-500 text-sm">
                     <span>Discount ({previewInvoice.discount_percentage}%)</span>
-                    <span className="font-bold">-{settings?.currency || '₦'}{previewInvoice.discount_amount.toLocaleString()}</span>
+                    <span className="font-bold">-{formatCurrency(previewInvoice.discount_amount, settings?.currency || 'NGN')}</span>
                   </div>
                 )}
                 {previewInvoice.vat_amount > 0 && (
                   <div className="flex justify-between text-slate-500 dark:text-zinc-400 text-sm">
                     <span>VAT (7.5%)</span>
-                    <span className="font-bold text-slate-900 dark:text-white">{settings?.currency || '₦'}{previewInvoice.vat_amount.toLocaleString()}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(previewInvoice.vat_amount, settings?.currency || 'NGN')}</span>
                   </div>
                 )}
                 <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex justify-between items-center">
                   <span className="text-lg font-black text-slate-900 dark:text-white">Total</span>
                   <span className="text-2xl font-black" style={{ color: brandColor }}>
-                    {settings?.currency || '₦'}{(previewInvoice.total_amount || 0).toLocaleString()}
+                    {formatCurrency(previewInvoice.total_amount || 0, settings?.currency || 'NGN')}
                   </span>
                 </div>
               </div>

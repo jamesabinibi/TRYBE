@@ -2494,8 +2494,18 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const flattened = (data || []).map((s: any) => ({
         ...s,
         customer_name: s.customer_name || s.customers?.name || (Array.isArray(s.customers) ? s.customers[0]?.name : null) || 'Walk-in',
+        customer_email: s.customer_email || s.customers?.email || (Array.isArray(s.customers) ? s.customers[0]?.email : null) || '',
+        customer_phone: s.customer_phone || s.customers?.phone || (Array.isArray(s.customers) ? s.customers[0]?.phone : null) || '',
+        customer_address: s.customer_address || s.customers?.address || (Array.isArray(s.customers) ? s.customers[0]?.address : null) || '',
         staff_name: s.users?.name || (Array.isArray(s.users) ? s.users[0]?.name : null) || 'System',
-        sale_items: s.sale_items || []
+        sale_items: (s.sale_items || []).map((item: any) => ({
+          ...item,
+          unit_price: item.unit_price || item.price_at_sale || 0,
+          cost_price: item.cost_price || item.cost_at_sale || 0,
+          product_name: item.product_name || item.product_variants?.products?.name || 'Item',
+          service_name: item.service_name || item.services?.name || 'Service',
+          variant_info: item.product_variants ? `${item.product_variants.size || ''} ${item.product_variants.color || ''}`.trim() : ''
+        }))
       }));
       console.log(`[SALES] Returning ${flattened.length} sales`);
       res.json(flattened);
