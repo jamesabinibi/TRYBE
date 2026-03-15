@@ -3268,9 +3268,34 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           payment_method TEXT DEFAULT 'Cash',
           status TEXT DEFAULT 'Completed',
           staff_id BIGINT,
-          invoice_number TEXT UNIQUE,
-          created_at TIMESTAMPTZ DEFAULT NOW()
+          invoice_number TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          CONSTRAINT sales_account_invoice_unique UNIQUE (account_id, invoice_number)
         );
+      `);
+
+      // Fix unique constraint on invoice_number to be per account for existing tables
+      await runSql(`
+        DO $$
+        DECLARE
+            constraint_name TEXT;
+        BEGIN
+            -- Find the global unique constraint on invoice_number
+            SELECT conname INTO constraint_name
+            FROM pg_constraint
+            WHERE conrelid = 'sales'::regclass AND contype = 'u' AND conkey = (SELECT array_agg(attnum) FROM pg_attribute WHERE attrelid = 'sales'::regclass AND attname = 'invoice_number');
+            
+            IF constraint_name IS NOT NULL THEN
+                EXECUTE 'ALTER TABLE sales DROP CONSTRAINT ' || constraint_name;
+            END IF;
+            
+            -- Add the composite unique constraint if it doesn't exist
+            IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'sales'::regclass AND contype = 'u' AND conkey = (SELECT array_agg(attnum) FROM pg_attribute WHERE attrelid = 'sales'::regclass AND attname IN ('account_id', 'invoice_number'))) THEN
+                ALTER TABLE sales ADD CONSTRAINT sales_account_invoice_unique UNIQUE (account_id, invoice_number);
+            END IF;
+        EXCEPTION WHEN OTHERS THEN
+            -- Ignore errors
+        END $$;
       `);
 
       // Add missing columns to sales if they don't exist
@@ -3351,6 +3376,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         { table: 'sales', column: 'vat_amount', type: 'DECIMAL(12,2) DEFAULT 0' },
         { table: 'sales', column: 'discount_percentage', type: 'DECIMAL(12,2) DEFAULT 0' },
         { table: 'sales', column: 'discount_amount', type: 'DECIMAL(12,2) DEFAULT 0' },
+        { table: 'sales', column: 'staff_id', type: 'BIGINT' },
         { table: 'sales', column: 'created_by', type: 'BIGINT' },
         { table: 'services', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
         { table: 'products', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
