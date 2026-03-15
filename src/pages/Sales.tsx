@@ -29,7 +29,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
@@ -346,7 +346,7 @@ export default function Sales() {
       formatCurrency(s.total_profit || 0, currency)
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [['Invoice', 'Date', 'Staff', 'Payment', 'Amount', 'Profit']],
       body: tableData,
       startY: 20,

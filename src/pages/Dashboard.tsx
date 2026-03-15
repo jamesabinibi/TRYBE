@@ -381,7 +381,7 @@ export default function Dashboard() {
             </div>
             <div className="space-y-4">
               {staffPerformance.map((staff, i) => (
-                <div key={staff.id} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
+                <div key={`staff-${i}-${staff.name}`} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl flex items-center justify-center font-black text-brand shadow-sm border border-zinc-100 dark:border-zinc-700">
                       {i + 1}

@@ -26,8 +26,8 @@ import { useSettings } from '../App';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface InvoiceItem {
   id: string;
@@ -442,7 +442,7 @@ const Invoices: React.FC = () => {
       const vatAmount = settings?.vat_enabled ? (subtotal - discountAmount) * 0.075 : 0;
       const total = subtotal - discountAmount + vatAmount;
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: 100,
         head: [['Description', 'Type', 'Qty', 'Unit Price', 'Amount']],
         body: tableData,
