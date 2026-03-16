@@ -136,7 +136,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
       <aside className={cn(
         "fixed inset-y-0 left-0 w-64 flex flex-col z-50 transition-all duration-300 ease-in-out lg:translate-x-0 lg:static",
-        isDarkMode ? "bg-[#0A0A0B] text-zinc-400 border-r border-white/[0.04]" : "bg-white text-zinc-500 border-r border-zinc-100",
+        isDarkMode ? "bg-[#0A0A0B] text-zinc-400 border-r border-white/[0.04]" : "bg-white text-zinc-500 border-r border-zinc-200",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="p-6 flex items-center justify-between">
@@ -267,7 +267,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   "w-full pl-10 pr-4 py-2 rounded-xl text-[13px] transition-all outline-none border",
                   isDarkMode
                     ? "bg-white/[0.03] text-white border-white/[0.04] focus:border-brand/50"
-                    : "bg-zinc-100 text-zinc-900 border-transparent focus:bg-white focus:border-brand/50"
+                    : "bg-zinc-100 text-zinc-900 border-zinc-200 focus:bg-white focus:border-brand/50"
                 )}
               />
             </div>

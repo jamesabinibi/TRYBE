@@ -308,7 +308,7 @@ export default function Customers() {
                 </div>
               </div>
               
-              <h3 className="text-xl font-bold text-zinc-950 dark:text-white mb-6 tracking-tight font-display">{customer.name}</h3>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6 tracking-tight font-display">{customer.name}</h3>
               
               <div className="space-y-4">
                 <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
@@ -403,7 +403,7 @@ export default function Customers() {
                   <div className="w-10 h-10 bg-brand/10 rounded-2xl flex items-center justify-center text-brand">
                     {isAddModalOpen ? <UserPlus className="w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
                   </div>
-                  <h2 className="text-xl font-black text-zinc-950 dark:text-white tracking-tight">
+                  <h2 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">
                     {isAddModalOpen ? 'Add New Customer' : 'Edit Customer'}
                   </h2>
                 </div>
@@ -427,7 +427,7 @@ export default function Customers() {
                       value={newCustomer.name}
                       onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
                       placeholder="John Doe"
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                     />
                 </div>
 
@@ -440,7 +440,7 @@ export default function Customers() {
                       value={newCustomer.phone}
                       onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
                       placeholder="+234..."
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                     />
                   </div>
                   <div className="space-y-2">
@@ -450,7 +450,7 @@ export default function Customers() {
                       value={newCustomer.email}
                       onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
                       placeholder="john@example.com"
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                     />
                   </div>
                 </div>
@@ -462,7 +462,7 @@ export default function Customers() {
                     onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
                     placeholder="123 Main St, Lagos"
                     rows={2}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                   />
                 </div>
 

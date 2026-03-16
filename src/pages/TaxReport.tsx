@@ -100,7 +100,7 @@ const TaxReport = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Nigeria Tax Report</h1>
+          <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Nigeria Tax Report</h1>
           <p className="text-zinc-500 dark:text-zinc-400 mt-1 font-medium">
             Estimated tax assessment based on Finance Act 2023 and Nigerian tax laws.
           </p>
@@ -298,7 +298,7 @@ const TaxReport = () => {
                       <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                     </div>
                     <div>
-                      <h4 className="font-black text-zinc-950 dark:text-white uppercase tracking-widest text-xs mb-1">Small Business Exemption</h4>
+                      <h4 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">Small Business Exemption</h4>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                         Companies with turnover &lt; N25m are exempt from CIT and VAT. However, you are still required to file annual returns.
                       </p>
@@ -312,7 +312,7 @@ const TaxReport = () => {
                       <AlertCircle className="w-6 h-6 text-amber-600" />
                     </div>
                     <div>
-                      <h4 className="font-black text-zinc-950 dark:text-white uppercase tracking-widest text-xs mb-1">VAT Compliance (7.5%)</h4>
+                      <h4 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">VAT Compliance (7.5%)</h4>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                         Once turnover hits N25m, you must register for VAT and remit collections by the 21st of every month.
                       </p>
@@ -320,13 +320,13 @@ const TaxReport = () => {
                   </div>
                 </div>
 
-                <div className="bg-zinc-900 dark:bg-brand rounded-[2rem] p-8 text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mx-auto">
-                    <HelpCircle className="w-8 h-8 text-white" />
+                <div className="bg-zinc-100 dark:bg-brand rounded-[2rem] p-8 text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-zinc-900/10 dark:bg-white/10 flex items-center justify-center mx-auto">
+                    <HelpCircle className="w-8 h-8 text-zinc-900 dark:text-white" />
                   </div>
                   <div>
-                    <h4 className="font-black text-white uppercase tracking-widest text-sm">Need Help?</h4>
-                    <p className="text-xs text-white/70 mt-2 leading-relaxed font-medium">
+                    <h4 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-sm">Need Help?</h4>
+                    <p className="text-xs text-zinc-500 dark:text-white/70 mt-2 leading-relaxed font-medium">
                       Consult with a certified Nigerian tax professional for a formal audit and filing.
                     </p>
                   </div>

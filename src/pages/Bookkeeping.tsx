@@ -169,7 +169,7 @@ export default function Bookkeeping() {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Financial Bookkeeping</h1>
+          <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Financial Bookkeeping</h1>
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">Record non-sales inflows like loans and investments</p>
         </div>
         <div className="flex gap-3">
@@ -198,7 +198,7 @@ export default function Bookkeeping() {
             </div>
             <div>
               <p className="text-xs font-black text-zinc-500 uppercase tracking-widest">Total Inflows</p>
-              <h3 className="text-2xl font-black text-zinc-950 dark:text-white">{formatCurrency(totalInflows, currency)}</h3>
+              <h3 className="text-2xl font-black text-zinc-900 dark:text-white">{formatCurrency(totalInflows, currency)}</h3>
             </div>
           </div>
         </div>
@@ -213,7 +213,7 @@ export default function Bookkeeping() {
               placeholder="Search records..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-transparent rounded-2xl text-sm font-medium text-zinc-950 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand/20 transition-all outline-none"
+              className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-transparent rounded-2xl text-sm font-medium text-zinc-900 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand/20 transition-all outline-none"
             />
           </div>
           <div className="flex items-center gap-3">
@@ -248,7 +248,7 @@ export default function Bookkeeping() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Calendar className="w-4 h-4 text-zinc-400" />
-                      <span className="text-sm font-bold text-zinc-950 dark:text-white">
+                      <span className="text-sm font-bold text-zinc-900 dark:text-white">
                         {new Date(record.date).toLocaleDateString()}
                       </span>
                     </div>
@@ -330,7 +330,7 @@ export default function Bookkeeping() {
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-black text-zinc-950 dark:text-white tracking-tight">Record Inflow</h2>
+                  <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Record Inflow</h2>
                   <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Add non-sales income to your books</p>
                 </div>
                 <button 
@@ -348,7 +348,7 @@ export default function Bookkeeping() {
                     <select 
                       value={newRecord.type}
                       onChange={(e) => setNewRecord({...newRecord, type: e.target.value as any})}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none transition-all"
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none transition-all"
                     >
                       {types.map(t => (
                         <option key={t.value} value={t.value}>{t.label}</option>
@@ -360,7 +360,7 @@ export default function Bookkeeping() {
                     <select 
                       value={newRecord.nature}
                       onChange={(e) => setNewRecord({...newRecord, nature: e.target.value as any})}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none transition-all"
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none transition-all"
                     >
                       {natures.map(n => (
                         <option key={n.value} value={n.value}>{n.label}</option>
@@ -376,7 +376,7 @@ export default function Bookkeeping() {
                       type="date" 
                       value={newRecord.date}
                       onChange={(e) => setNewRecord({...newRecord, date: e.target.value})}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none transition-all"
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none transition-all"
                     />
                   </div>
                   <div className="space-y-2">
@@ -386,7 +386,7 @@ export default function Bookkeeping() {
                       placeholder="0.00"
                       value={newRecord.amount}
                       onChange={(e) => setNewRecord({...newRecord, amount: e.target.value})}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none transition-all"
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -397,7 +397,7 @@ export default function Bookkeeping() {
                     placeholder="What is this inflow for?"
                     value={newRecord.description}
                     onChange={(e) => setNewRecord({...newRecord, description: e.target.value})}
-                    className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none transition-all resize-none h-32"
+                    className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none transition-all resize-none h-32"
                   />
                 </div>
 

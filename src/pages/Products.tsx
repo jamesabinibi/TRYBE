@@ -416,7 +416,7 @@ export default function Products() {
             <Package className="w-24 h-24" />
           </div>
           <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Stock value @ cost price</p>
-          <h3 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">
+          <h3 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
             <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
             {totalCostValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
@@ -429,7 +429,7 @@ export default function Products() {
             <TrendingUp className="w-24 h-24" />
           </div>
           <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Stock value @ selling price</p>
-          <h3 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">
+          <h3 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
             <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
             {totalSellingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>

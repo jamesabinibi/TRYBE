@@ -33,7 +33,7 @@ import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAuth, useSettings } from '../App';
+import { useAuth, useSettings, useTheme } from '../App';
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any) => (
   <motion.div 
@@ -54,6 +54,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { fetchWithAuth } = useAuth();
   const { settings: globalSettings } = useSettings();
+  const { isDarkMode } = useTheme();
   const brandColor = globalSettings?.brand_color || '#10b981';
   const currency = globalSettings?.currency || 'NGN';
   const [summary, setSummary] = useState<any>(null);
@@ -64,7 +65,6 @@ export default function Dashboard() {
   const [topExpenses, setTopExpenses] = useState<any[]>([]);
   const [forecast, setForecast] = useState<any>(null);
   const [isForecasting, setIsForecasting] = useState(false);
-  const isDarkMode = document.documentElement.classList.contains('dark');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -127,7 +127,7 @@ export default function Dashboard() {
     <div className="space-y-8 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-zinc-950 dark:text-white">Dashboard</h1>
+          <h1 className="text-zinc-900 dark:text-white">Dashboard</h1>
           <p className="body-text text-zinc-500 dark:text-zinc-400">Welcome back, here's what's happening today.</p>
         </div>
         <div className="flex gap-2">

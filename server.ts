@@ -2396,15 +2396,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .from('sales')
         .select(`
           *,
-          customers (name),
-          users (name),
+          customers!customer_id (name),
+          users!staff_id (name),
           sale_items (
             *,
-            product_variants (
+            product_variants!variant_id (
               *,
-              products (name)
+              products!product_id (name)
             ),
-            services (name)
+            services!service_id (name)
           )
         `)
         .eq('account_id', userInfo.account_id)
@@ -2416,7 +2416,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           return res.json([]);
         }
         
-        console.error('[SALES] Fetch error:', error);
+        console.error('[SALES] Fetch error:', JSON.stringify(error, null, 2));
         // Fallback to separate queries if join fails
         const { data: salesData, error: salesError } = await supabase
           .from('sales')
@@ -2429,7 +2429,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             console.warn('[SALES] Table "sales" not found in fallback. Returning empty array.');
             return res.json([]);
           }
-          console.error('[SALES] Fetch error (fallback sales):', salesError);
+          console.error('[SALES] Fetch error (fallback sales):', JSON.stringify(salesError, null, 2));
           return res.status(500).json({ error: salesError.message });
         }
 
@@ -2477,7 +2477,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       console.log(`[SALES] Returning ${flattened.length} sales`);
       res.json(flattened);
     } catch (error: any) {
-      console.error('[SALES] API Error:', error);
+      console.error('[SALES] API Error:', JSON.stringify(error, null, 2));
       res.status(500).json({ error: error.message });
     }
   });

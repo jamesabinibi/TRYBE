@@ -509,7 +509,7 @@ const Invoices: React.FC = () => {
               onClick={() => setActiveTab('create')}
               className={cn(
                 "px-6 py-2.5 rounded-xl text-xs font-bold transition-all uppercase tracking-widest",
-                activeTab === 'create' ? "bg-white dark:bg-zinc-700 text-zinc-950 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                activeTab === 'create' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               )}
             >
               Create
@@ -518,7 +518,7 @@ const Invoices: React.FC = () => {
               onClick={() => setActiveTab('history')}
               className={cn(
                 "px-6 py-2.5 rounded-xl text-xs font-bold transition-all uppercase tracking-widest",
-                activeTab === 'history' ? "bg-white dark:bg-zinc-700 text-zinc-950 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                activeTab === 'history' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               )}
             >
               History
@@ -537,7 +537,7 @@ const Invoices: React.FC = () => {
               <button
                 onClick={saveInvoice}
                 disabled={isSaving || invoiceItems.length === 0}
-                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all disabled:opacity-50 active:scale-95"
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all disabled:opacity-50 active:scale-95"
               >
                 {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                 <span className="text-xs uppercase tracking-widest">Save</span>
@@ -655,7 +655,7 @@ const Invoices: React.FC = () => {
                   type="text"
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all font-mono"
+                  className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all font-mono"
                 />
               </div>
             </div>
@@ -667,7 +667,7 @@ const Invoices: React.FC = () => {
                   type="date"
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                  className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                 />
               </div>
             </div>
@@ -676,11 +676,11 @@ const Invoices: React.FC = () => {
           {/* Item Selection */}
           <div className="glass-card p-8">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">Invoice Items</h2>
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">Invoice Items</h2>
               <div className="relative">
                 <button
                   onClick={() => setShowItemDropdown(!showItemDropdown)}
-                  className="flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all active:scale-95"
+                  className="flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all active:scale-95"
                 >
                   <Plus className="w-4 h-4" />
                   Add Item
@@ -703,7 +703,7 @@ const Invoices: React.FC = () => {
                             placeholder="Search inventory..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 text-zinc-950 dark:text-white outline-none"
+                            className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 text-zinc-900 dark:text-white outline-none"
                             autoFocus
                           />
                         </div>
@@ -721,11 +721,11 @@ const Invoices: React.FC = () => {
                                   {item.price ? <Wrench className="w-4 h-4" /> : <Package className="w-4 h-4" />}
                                 </div>
                                 <div>
-                                  <p className="text-sm font-bold text-zinc-950 dark:text-white">{item.name}</p>
+                                  <p className="text-sm font-bold text-zinc-900 dark:text-white">{item.name}</p>
                                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{item.price ? 'Service' : 'Product'}</p>
                                 </div>
                               </div>
-                              <p className="text-sm font-bold font-mono tracking-tighter text-zinc-950 dark:text-white">
+                              <p className="text-sm font-bold font-mono tracking-tighter text-zinc-900 dark:text-white">
                                 <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
                                 {(item.price || item.selling_price || 0).toLocaleString()}
                               </p>

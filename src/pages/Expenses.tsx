@@ -233,7 +233,7 @@ export default function Expenses() {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Business Expenses</h1>
+          <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Business Expenses</h1>
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">Track your operational costs and overheads</p>
         </div>
         <button 
@@ -254,7 +254,7 @@ export default function Expenses() {
             <TrendingDown className="w-24 h-24" />
           </div>
           <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Total Expenses</p>
-          <h3 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">
+          <h3 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
             <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
             {totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
