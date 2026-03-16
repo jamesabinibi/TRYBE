@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import fs from 'fs';
 import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
+import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { GoogleGenAI, Type } from "@google/genai";
 import { v2 as cloudinary } from 'cloudinary';
@@ -70,16 +71,154 @@ try {
 }
 
 // Email transporter setup
-// Note: In a real app, use environment variables for credentials
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+  host: process.env.SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: process.env.SMTP_SECURE === 'true',
   auth: {
-    user: process.env.SMTP_USER || 'mock_user',
-    pass: process.env.SMTP_PASS || 'mock_pass',
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
   },
 });
+
+// AWS RDS Pool
+const { Pool } = pg;
+const pool = new Pool({
+  host: process.env.AWS_DB_HOST || 'gryndee-db.cevskqcic97b.us-east-1.rds.amazonaws.com',
+  port: parseInt(process.env.AWS_DB_PORT || '5432'),
+  user: process.env.AWS_DB_USER || 'postgres',
+  password: process.env.AWS_DB_PASSWORD,
+  database: process.env.AWS_DB_NAME || 'postgres',
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+async function initAwsDb() {
+  if (!process.env.AWS_DB_PASSWORD) {
+    console.warn('[DB] AWS_DB_PASSWORD not set. Skipping RDS initialization.');
+    return;
+  }
+  try {
+    const client = await pool.connect();
+    console.log('[DB] Connected to AWS RDS. Running schema check...');
+    
+    // Full schema check/init
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS accounts (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        owner_id INTEGER,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        username TEXT UNIQUE,
+        password TEXT NOT NULL,
+        name TEXT,
+        role TEXT DEFAULT 'user',
+        account_id INTEGER REFERENCES accounts(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS settings (
+        id SERIAL PRIMARY KEY,
+        account_id INTEGER REFERENCES accounts(id),
+        business_name TEXT,
+        currency TEXT DEFAULT 'NGN',
+        vat_enabled BOOLEAN DEFAULT FALSE,
+        low_stock_threshold INTEGER DEFAULT 5,
+        logo_url TEXT,
+        brand_color TEXT DEFAULT '#10b981',
+        slogan TEXT,
+        address TEXT,
+        email TEXT,
+        website TEXT,
+        phone_number TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS categories (
+        id SERIAL PRIMARY KEY,
+        account_id INTEGER REFERENCES accounts(id),
+        name TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS products (
+        id SERIAL PRIMARY KEY,
+        account_id INTEGER REFERENCES accounts(id),
+        category_id INTEGER REFERENCES categories(id),
+        name TEXT NOT NULL,
+        description TEXT,
+        cost_price DECIMAL(12, 2) DEFAULT 0,
+        selling_price DECIMAL(12, 2) DEFAULT 0,
+        supplier_name TEXT,
+        unit TEXT DEFAULT 'Pieces',
+        pieces_per_unit INTEGER DEFAULT 1,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS product_variants (
+        id SERIAL PRIMARY KEY,
+        product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+        size TEXT,
+        color TEXT,
+        sku TEXT,
+        quantity INTEGER DEFAULT 0,
+        low_stock_threshold INTEGER DEFAULT 5,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS sales (
+        id SERIAL PRIMARY KEY,
+        account_id INTEGER REFERENCES accounts(id),
+        customer_id INTEGER,
+        staff_id INTEGER REFERENCES users(id),
+        total_amount DECIMAL(12, 2) DEFAULT 0,
+        cost_price_total DECIMAL(12, 2) DEFAULT 0,
+        discount_amount DECIMAL(12, 2) DEFAULT 0,
+        vat_amount DECIMAL(12, 2) DEFAULT 0,
+        payment_method TEXT,
+        status TEXT DEFAULT 'completed',
+        customer_name TEXT,
+        customer_phone TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS sale_items (
+        id SERIAL PRIMARY KEY,
+        sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
+        product_id INTEGER REFERENCES products(id),
+        variant_id INTEGER REFERENCES product_variants(id),
+        quantity INTEGER NOT NULL,
+        unit_price DECIMAL(12, 2) NOT NULL,
+        total_price DECIMAL(12, 2) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS expenses (
+        id SERIAL PRIMARY KEY,
+        account_id INTEGER REFERENCES accounts(id),
+        category TEXT,
+        amount DECIMAL(12, 2) NOT NULL,
+        description TEXT,
+        date DATE DEFAULT CURRENT_DATE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        account_id INTEGER REFERENCES accounts(id),
+        user_id INTEGER REFERENCES users(id),
+        title TEXT,
+        message TEXT,
+        type TEXT,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('[DB] AWS RDS Schema check complete.');
+    client.release();
+  } catch (err) {
+    console.error('[DB] AWS RDS connection failed:', err);
+  }
+}
+
+initAwsDb();
 
 async function sendEmail(to: string, subject: string, text: string, html?: string) {
   console.log(`[EMAIL] Sending to ${to}: ${subject}`);
@@ -95,7 +234,7 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     }
 
     const info = await transporter.sendMail({
-      from: `"StockFlow Pro" <${process.env.SMTP_FROM || 'noreply@stockflow.pro'}>`,
+      from: `"Gryndee" <${process.env.SMTP_FROM || 'noreply@gryndee.com'}>`,
       to,
       subject,
       text,
@@ -136,6 +275,91 @@ async function createServer() {
     next();
   });
 
+  // Data Migration Tool
+  app.post("/api/admin/migrate", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'super_admin') {
+        return res.status(403).json({ error: "Only superadmin can run migration" });
+      }
+
+      if (!supabase || !process.env.AWS_DB_PASSWORD) {
+        return res.status(500).json({ error: "Both Supabase and RDS must be configured" });
+      }
+
+      console.log('[MIGRATE] Starting data migration from Supabase to RDS...');
+      const results: any = {};
+
+      // 1. Migrate Accounts
+      const { data: accounts } = await supabase.from('accounts').select('*');
+      if (accounts) {
+        console.log(`[MIGRATE] Migrating ${accounts.length} accounts...`);
+        for (const acc of accounts) {
+          await pool.query(
+            'INSERT INTO accounts (id, name, owner_id, created_at) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, owner_id = EXCLUDED.owner_id',
+            [acc.id, acc.name, acc.owner_id, acc.created_at]
+          );
+        }
+        results.accounts = accounts.length;
+      }
+
+      // 2. Migrate Users
+      const { data: users } = await supabase.from('users').select('*');
+      if (users) {
+        console.log(`[MIGRATE] Migrating ${users.length} users...`);
+        for (const u of users) {
+          await pool.query(
+            'INSERT INTO users (id, email, username, password, name, role, account_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, username = EXCLUDED.username, password = EXCLUDED.password, name = EXCLUDED.name, role = EXCLUDED.role, account_id = EXCLUDED.account_id',
+            [u.id, u.email, u.username, u.password, u.name, u.role, u.account_id, u.created_at]
+          );
+        }
+        results.users = users.length;
+      }
+
+      // 3. Migrate Categories
+      const { data: categories } = await supabase.from('categories').select('*');
+      if (categories) {
+        for (const cat of categories) {
+          await pool.query(
+            'INSERT INTO categories (id, account_id, name, created_at) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING',
+            [cat.id, cat.account_id, cat.name, cat.created_at]
+          );
+        }
+        results.categories = categories.length;
+      }
+
+      // 4. Migrate Products
+      const { data: products } = await supabase.from('products').select('*');
+      if (products) {
+        for (const p of products) {
+          await pool.query(
+            'INSERT INTO products (id, account_id, category_id, name, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (id) DO NOTHING',
+            [p.id, p.account_id, p.category_id, p.name, p.description, p.cost_price, p.selling_price, p.supplier_name, p.unit, p.pieces_per_unit, p.created_at]
+          );
+        }
+        results.products = products.length;
+      }
+
+      // 5. Migrate Variants
+      const { data: variants } = await supabase.from('product_variants').select('*');
+      if (variants) {
+        for (const v of variants) {
+          await pool.query(
+            'INSERT INTO product_variants (id, product_id, size, color, sku, quantity, low_stock_threshold, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING',
+            [v.id, v.product_id, v.size, v.color, v.sku, v.quantity, v.low_stock_threshold, v.created_at]
+          );
+        }
+        results.variants = variants.length;
+      }
+
+      console.log('[MIGRATE] Migration completed successfully.');
+      res.json({ status: "success", results });
+    } catch (err: any) {
+      console.error('[MIGRATE] Migration failed:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Health check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", version: "2.4.9-stable", time: new Date().toISOString() });
@@ -159,12 +383,23 @@ async function createServer() {
       
       console.log(`[AUTH] Virtual superadmin detected`);
       try {
+        // Try RDS first
+        if (process.env.AWS_DB_PASSWORD) {
+          const { rows } = await pool.query('SELECT id FROM accounts WHERE name = $1 LIMIT 1', ['System Admin']);
+          let systemAccount = rows[0];
+          if (!systemAccount) {
+            const insertRes = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['System Admin']);
+            systemAccount = insertRes.rows[0];
+          }
+          return { id: '0', account_id: systemAccount?.id || 0, role: 'super_admin' };
+        }
+
+        // Fallback to Supabase
         let { data: systemAccount } = await supabase.from('accounts').select('id').eq('name', 'System Admin').maybeSingle();
         if (!systemAccount) {
           const { data: newAcc, error: accErr } = await supabase.from('accounts').insert([{ name: 'System Admin' }]).select().single();
           if (accErr) {
             console.error(`[AUTH] Failed to create System Admin account:`, accErr);
-            // Fallback to a hardcoded ID if table exists but insert fails (unlikely)
             return { account_id: 0, role: 'super_admin' };
           }
           systemAccount = newAcc;
@@ -177,26 +412,23 @@ async function createServer() {
     }
     
     try {
+      // Try RDS first
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT id, account_id, role FROM users WHERE id = $1', [userId]);
+        if (rows.length > 0) {
+          return rows[0];
+        }
+      }
+
+      // Fallback to Supabase
       let { data: user, error } = await supabase.from('users').select('id, account_id, role').eq('id', userId).single();
       if (error || !user) {
-        // If table doesn't exist, don't log as error
-        if (error?.message?.includes('relation "users" does not exist') || error?.code === '42P01') {
-          console.warn(`[AUTH] Table "users" not found. Supabase might not be initialized.`);
-          return null;
-        }
-        
-        // If user not found (PGRST116), just return null without error log if it's a common ID like '1'
         if (error?.code === 'PGRST116' || !user) {
           console.log(`[AUTH] User ID ${userId} not found in users table.`);
           return null;
         }
-
         console.error(`[AUTH] Failed to find user for ID ${userId}:`, error);
         return null;
-      }
-
-      if (!user.account_id && user.role !== 'super_admin') {
-        console.warn(`[AUTH] User ${userId} has no account_id! Proceeding with caution.`);
       }
 
       return user;
@@ -1021,9 +1253,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           *,
           sale_items (
             *,
-            product_variants (
+            product_variants!variant_id (
               *,
-              products (name)
+              products!product_id (name)
             )
           )
         `)
@@ -1275,56 +1507,71 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       // Special case for superadmin if configured via env
       const superAdminPass = process.env.SUPERADMIN_PASSWORD;
-      if (trimmedUsername.toLowerCase() === 'superadmin') {
-        if (!superAdminPass) {
-          console.error('[AUTH] Superadmin login attempt but SUPERADMIN_PASSWORD is not set in environment');
-          return res.status(401).json({ error: "Superadmin login is disabled. Please set SUPERADMIN_PASSWORD environment variable." });
-        }
-        
-        if (password === superAdminPass) {
-          console.log(`[AUTH] Superadmin login via environment variable`);
-          // Find or create a system account for superadmin
+    if (trimmedUsername.toLowerCase() === 'superadmin') {
+      if (!superAdminPass) {
+        console.error('[AUTH] Superadmin login attempt but SUPERADMIN_PASSWORD is not set in environment');
+        return res.status(401).json({ error: "Superadmin login is disabled. Please set SUPERADMIN_PASSWORD environment variable." });
+      }
+      
+      if (password === superAdminPass) {
+        console.log(`[AUTH] Superadmin login via environment variable`);
+        // Find or create a system account for superadmin
+        let systemAccountId;
+        if (process.env.AWS_DB_PASSWORD) {
+          const { rows } = await pool.query('SELECT id FROM accounts WHERE name = $1 LIMIT 1', ['System Admin']);
+          if (rows[0]) {
+            systemAccountId = rows[0].id;
+          } else {
+            const insertRes = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['System Admin']);
+            systemAccountId = insertRes.rows[0].id;
+          }
+        } else {
           let { data: systemAccount } = await supabase.from('accounts').select('id').eq('name', 'System Admin').maybeSingle();
           if (!systemAccount) {
             const { data: newAcc } = await supabase.from('accounts').insert([{ name: 'System Admin' }]).select().single();
             systemAccount = newAcc;
           }
-          
-          return res.json({
-            id: '0',
-            username: 'superadmin',
-            email: 'admin@stockflow.pro',
-            role: 'super_admin',
-            name: 'System Super Admin',
-            account_id: systemAccount?.id || 0
-          });
-        } else {
-          return res.status(401).json({ error: "Invalid superadmin password" });
+          systemAccountId = systemAccount?.id;
         }
+        
+        return res.json({
+          id: '0',
+          username: 'superadmin',
+          email: 'admin@stockflow.pro',
+          role: 'super_admin',
+          name: 'System Super Admin',
+          account_id: systemAccountId || 0
+        });
+      } else {
+        return res.status(401).json({ error: "Invalid superadmin password" });
+      }
+    }
+
+    try {
+      let user;
+      // Try RDS first
+      if (process.env.AWS_DB_PASSWORD) {
+        console.log(`[AUTH] Querying AWS RDS for: "${trimmedUsername}"`);
+        const { rows } = await pool.query(
+          'SELECT id, username, email, role, name, password, account_id FROM users WHERE username ILIKE $1 OR email ILIKE $1 LIMIT 1',
+          [trimmedUsername]
+        );
+        user = rows[0];
       }
 
-      // Support login via username or email
-      console.log(`[AUTH] Querying Supabase for: "${trimmedUsername}"`);
-      let { data: user, error: supabaseError } = await supabase
-        .from('users')
-        .select('id, username, email, role, name, password, account_id')
-        .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
-        .maybeSingle();
-
-      if (supabaseError) {
-        console.error(`[AUTH] Supabase query error (specific columns):`, supabaseError);
-        // Fallback to select all if specific columns fail
-        const fallback = await supabase
+      // Fallback to Supabase if not found in RDS
+      if (!user && supabase) {
+        console.log(`[AUTH] Querying Supabase for: "${trimmedUsername}"`);
+        let { data: supabaseUser, error: supabaseError } = await supabase
           .from('users')
-          .select('*')
+          .select('id, username, email, role, name, password, account_id')
           .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
           .maybeSingle();
-        
-        if (fallback.error) {
-          console.error(`[AUTH] Supabase query error (fallback):`, fallback.error);
-          return res.status(500).json({ error: `Database error: ${fallback.error.message}` });
+
+        if (supabaseError) {
+          console.error(`[AUTH] Supabase query error:`, supabaseError);
         }
-        user = fallback.data;
+        user = supabaseUser;
       }
 
       if (user) {
@@ -1377,11 +1624,62 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const trimmedUsername = username?.trim();
     const trimmedEmail = email?.trim()?.toLowerCase();
     console.log(`Register attempt: ${trimmedUsername} (${trimmedEmail})`);
-    if (!supabase) {
-      return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
-    }
 
     try {
+      // Try RDS first
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: existing } = await pool.query(
+          'SELECT id FROM users WHERE username ILIKE $1 OR email ILIKE $2 LIMIT 1',
+          [trimmedUsername, trimmedEmail]
+        );
+
+        if (existing.length > 0) {
+          return res.status(400).json({ error: "Username or email already exists" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // 1. Create Account
+        const { rows: accountRows } = await pool.query(
+          'INSERT INTO accounts (name) VALUES ($1) RETURNING id',
+          [`${name || trimmedUsername}'s Business`]
+        );
+        const account = accountRows[0];
+
+        // 2. Create User
+        const { rows: userRows } = await pool.query(
+          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+          [account.id, trimmedUsername, trimmedEmail, hashedPassword, 'admin', name?.trim()]
+        );
+        const newUser = userRows[0];
+
+        // 3. Update Account owner
+        await pool.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser.id, account.id]);
+
+        // 4. Create settings
+        await pool.query(
+          'INSERT INTO settings (account_id, business_name, currency, brand_color) VALUES ($1, $2, $3, $4)',
+          [account.id, name ? `${name}'s Business` : 'StockFlow Pro', 'NGN', '#10b981']
+        );
+
+        console.log(`[AUTH] Register success (RDS): "${trimmedUsername}" (ID: ${newUser.id}, Account: ${account.id}).`);
+
+        // Send email
+        sendEmail(
+          trimmedEmail,
+          'Welcome to StockFlow Pro!',
+          `Hi ${name},\n\nYour account has been successfully created. You can now sign in with your username: ${trimmedUsername}.\n\nBest regards,\nThe StockFlow Team`,
+          `<h1>Welcome to StockFlow Pro!</h1><p>Hi ${name},</p><p>Your account has been successfully created. You can now sign in with your username: <strong>${trimmedUsername}</strong>.</p><p>Best regards,<br>The StockFlow Team</p>`
+        ).catch(err => console.error('Failed to send registration email:', err));
+
+        return res.json({ id: newUser.id, username: trimmedUsername, email: trimmedEmail, account_id: account.id, role: 'admin' });
+      }
+
+      // Fallback to Supabase
+      if (!supabase) {
+        return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+      }
+
       // Check if exists case-insensitively
       const { data: existing, error: checkError } = await supabase
         .from('users')
@@ -1593,11 +1891,30 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Products
   app.get("/api/products", async (req, res) => {
-    if (!supabase) return res.json([]);
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
+      // Try RDS first
+      if (process.env.AWS_DB_PASSWORD) {
+        console.log(`[DB] Fetching products from AWS RDS for account ${userInfo.account_id}`);
+        const { rows: products } = await pool.query(
+          'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.account_id = $1 ORDER BY p.created_at DESC',
+          [userInfo.account_id]
+        );
+        
+        for (const product of products) {
+          const { rows: variants } = await pool.query('SELECT * FROM product_variants WHERE product_id = $1', [product.id]);
+          product.product_variants = variants;
+          product.categories = { name: product.category_name };
+        }
+
+        if (products.length > 0) {
+          return res.json(products);
+        }
+      }
+
+      if (!supabase) return res.json([]);
       let { data: products, error } = await supabase
         .from('products')
         .select(`
@@ -1647,13 +1964,42 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/products", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
       const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
       
+      // Try RDS first
+      if (process.env.AWS_DB_PASSWORD) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const { rows: productRows } = await client.query(
+            'INSERT INTO products (account_id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+            [userInfo.account_id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit]
+          );
+          const product = productRows[0];
+
+          if (variants && Array.isArray(variants)) {
+            for (const v of variants) {
+              await client.query(
+                'INSERT INTO product_variants (product_id, size, color, quantity, low_stock_threshold) VALUES ($1, $2, $3, $4, $5)',
+                [product.id, v.size, v.color, v.quantity, v.low_stock_threshold]
+              );
+            }
+          }
+          await client.query('COMMIT');
+          return res.json(product);
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data: product, error: productError } = await supabase
         .from('products')
         .insert([{ 
@@ -2440,11 +2786,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             .from('sale_items')
             .select(`
               *,
-              product_variants (
+              product_variants!variant_id (
                 *,
-                products (name)
+                products!product_id (name)
               ),
-              services (name)
+              services!service_id (name)
             `)
             .in('sale_id', saleIds);
           
