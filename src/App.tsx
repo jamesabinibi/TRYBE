@@ -141,12 +141,21 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       )}>
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div 
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg"
-              style={{ backgroundColor: brandColor }}
-            >
-              {settings?.business_name?.charAt(0) || 'S'}
-            </div>
+            {settings?.logo_url ? (
+              <img 
+                src={settings.logo_url} 
+                alt={settings.business_name} 
+                className="w-8 h-8 rounded-lg object-contain"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg"
+                style={{ backgroundColor: brandColor }}
+              >
+                {settings?.business_name?.charAt(0) || 'S'}
+              </div>
+            )}
             <span className={cn(
               "font-display font-bold text-lg tracking-tight",
               isDarkMode ? "text-white" : "text-zinc-900"
