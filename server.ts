@@ -111,6 +111,15 @@ async function initAwsDb() {
         owner_id INTEGER,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+      
+      -- Ensure owner_id exists if table was created without it
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='owner_id') THEN
+          ALTER TABLE accounts ADD COLUMN owner_id INTEGER;
+        END IF;
+      END $$;
+
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
@@ -121,6 +130,23 @@ async function initAwsDb() {
         account_id INTEGER REFERENCES accounts(id),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      -- Ensure users columns exist
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='username') THEN
+          ALTER TABLE users ADD COLUMN username TEXT UNIQUE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='name') THEN
+          ALTER TABLE users ADD COLUMN name TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='role') THEN
+          ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='account_id') THEN
+          ALTER TABLE users ADD COLUMN account_id INTEGER REFERENCES accounts(id);
+        END IF;
+      END $$;
       CREATE TABLE IF NOT EXISTS settings (
         id SERIAL PRIMARY KEY,
         account_id INTEGER REFERENCES accounts(id),
@@ -143,6 +169,15 @@ async function initAwsDb() {
         name TEXT NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      -- Ensure categories columns exist
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='account_id') THEN
+          ALTER TABLE categories ADD COLUMN account_id INTEGER REFERENCES accounts(id);
+        END IF;
+      END $$;
+
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
         account_id INTEGER REFERENCES accounts(id),
@@ -156,6 +191,21 @@ async function initAwsDb() {
         pieces_per_unit INTEGER DEFAULT 1,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      -- Ensure products columns exist
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='supplier_name') THEN
+          ALTER TABLE products ADD COLUMN supplier_name TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='unit') THEN
+          ALTER TABLE products ADD COLUMN unit TEXT DEFAULT 'Pieces';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='pieces_per_unit') THEN
+          ALTER TABLE products ADD COLUMN pieces_per_unit INTEGER DEFAULT 1;
+        END IF;
+      END $$;
+
       CREATE TABLE IF NOT EXISTS product_variants (
         id SERIAL PRIMARY KEY,
         product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
@@ -166,6 +216,14 @@ async function initAwsDb() {
         low_stock_threshold INTEGER DEFAULT 5,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      -- Ensure product_variants columns exist
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='low_stock_threshold') THEN
+          ALTER TABLE product_variants ADD COLUMN low_stock_threshold INTEGER DEFAULT 5;
+        END IF;
+      END $$;
       CREATE TABLE IF NOT EXISTS sales (
         id SERIAL PRIMARY KEY,
         account_id INTEGER REFERENCES accounts(id),
@@ -191,6 +249,17 @@ async function initAwsDb() {
         total_price DECIMAL(12, 2) NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS customers (
+        id SERIAL PRIMARY KEY,
+        account_id INTEGER REFERENCES accounts(id),
+        name TEXT NOT NULL,
+        email TEXT,
+        phone TEXT,
+        address TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS expenses (
         id SERIAL PRIMARY KEY,
         account_id INTEGER REFERENCES accounts(id),
@@ -200,6 +269,37 @@ async function initAwsDb() {
         date DATE DEFAULT CURRENT_DATE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS product_images (
+        id SERIAL PRIMARY KEY,
+        product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,
+        is_primary BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS services (
+        id SERIAL PRIMARY KEY,
+        account_id INTEGER REFERENCES accounts(id),
+        name TEXT NOT NULL,
+        description TEXT,
+        price DECIMAL(12, 2) DEFAULT 0,
+        duration_minutes INTEGER,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS bookkeeping (
+        id SERIAL PRIMARY KEY,
+        account_id INTEGER REFERENCES accounts(id),
+        type TEXT NOT NULL, -- 'income' or 'expense'
+        category TEXT,
+        amount DECIMAL(12, 2) NOT NULL,
+        description TEXT,
+        reference_id TEXT, -- sale_id or expense_id
+        date DATE DEFAULT CURRENT_DATE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
         account_id INTEGER REFERENCES accounts(id),
@@ -350,6 +450,66 @@ async function createServer() {
           );
         }
         results.variants = variants.length;
+      }
+
+      // 6. Migrate Settings
+      const { data: settings } = await supabase.from('settings').select('*');
+      if (settings) {
+        for (const s of settings) {
+          await pool.query(
+            'INSERT INTO settings (id, account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) ON CONFLICT (id) DO NOTHING',
+            [s.id, s.account_id, s.business_name, s.currency, s.vat_enabled, s.low_stock_threshold, s.logo_url, s.brand_color, s.slogan, s.address, s.email, s.website, s.phone_number, s.created_at]
+          );
+        }
+        results.settings = settings.length;
+      }
+
+      // 7. Migrate Customers
+      const { data: customers } = await supabase.from('customers').select('*');
+      if (customers) {
+        for (const c of customers) {
+          await pool.query(
+            'INSERT INTO customers (id, account_id, name, email, phone, address, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING',
+            [c.id, c.account_id, c.name, c.email, c.phone, c.address, c.created_at]
+          );
+        }
+        results.customers = customers.length;
+      }
+
+      // 8. Migrate Sales
+      const { data: sales } = await supabase.from('sales').select('*');
+      if (sales) {
+        for (const s of sales) {
+          await pool.query(
+            'INSERT INTO sales (id, account_id, customer_id, staff_id, total_amount, cost_price_total, discount_amount, vat_amount, payment_method, status, customer_name, customer_phone, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) ON CONFLICT (id) DO NOTHING',
+            [s.id, s.account_id, s.customer_id, s.staff_id, s.total_amount, s.cost_price_total, s.discount_amount, s.vat_amount, s.payment_method, s.status, s.customer_name, s.customer_phone, s.created_at]
+          );
+        }
+        results.sales = sales.length;
+      }
+
+      // 9. Migrate Sale Items
+      const { data: saleItems } = await supabase.from('sale_items').select('*');
+      if (saleItems) {
+        for (const si of saleItems) {
+          await pool.query(
+            'INSERT INTO sale_items (id, sale_id, product_id, variant_id, quantity, unit_price, total_price) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING',
+            [si.id, si.sale_id, si.product_id, si.variant_id, si.quantity, si.unit_price, si.total_price]
+          );
+        }
+        results.sale_items = saleItems.length;
+      }
+
+      // 10. Migrate Expenses
+      const { data: expenses } = await supabase.from('expenses').select('*');
+      if (expenses) {
+        for (const e of expenses) {
+          await pool.query(
+            'INSERT INTO expenses (id, account_id, category, amount, description, date, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING',
+            [e.id, e.account_id, e.category, e.amount, e.description, e.date, e.created_at]
+          );
+        }
+        results.expenses = expenses.length;
       }
 
       console.log('[MIGRATE] Migration completed successfully.');
@@ -1547,10 +1707,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
     }
 
-    try {
-      let user;
-      // Try RDS first
-      if (process.env.AWS_DB_PASSWORD) {
+    let user;
+    // Try RDS first
+    if (process.env.AWS_DB_PASSWORD) {
         console.log(`[AUTH] Querying AWS RDS for: "${trimmedUsername}"`);
         const { rows } = await pool.query(
           'SELECT id, username, email, role, name, password, account_id FROM users WHERE username ILIKE $1 OR email ILIKE $1 LIMIT 1',

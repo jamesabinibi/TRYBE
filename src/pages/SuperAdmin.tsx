@@ -159,6 +159,27 @@ export default function SuperAdmin() {
     }
   };
 
+  const handleMigrate = async () => {
+    const confirm = window.confirm("This will copy all data from Supabase to AWS RDS. Existing data in RDS with same IDs will be updated. Continue?");
+    if (!confirm) return;
+
+    toast.loading('Migrating data to AWS RDS...', { id: 'migrate' });
+    try {
+      const res = await fetchWithAuth('/api/admin/migrate', { method: 'POST' });
+      const data = await res.json();
+      
+      if (res.ok) {
+        toast.success(`Migration successful! Migrated: ${Object.entries(data.results).map(([k, v]) => `${v} ${k}`).join(', ')}`, { id: 'migrate', duration: 5000 });
+        fetchStats();
+        fetchUsers();
+      } else {
+        toast.error(data.error || 'Migration failed', { id: 'migrate' });
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Network error during migration', { id: 'migrate' });
+    }
+  };
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser || !newPassword) return;
@@ -463,6 +484,15 @@ export default function SuperAdmin() {
                   <Database className="w-5 h-5" />
                 </div>
                 Run System Setup
+              </button>
+              <button 
+                onClick={handleMigrate}
+                className="w-full flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl text-sm font-bold text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all group border border-blue-100 dark:border-blue-900/30"
+              >
+                <div className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <ArrowUpRight className="w-5 h-5" />
+                </div>
+                Migrate to AWS RDS
               </button>
               <button 
                 onClick={() => setIsSettingsModalOpen(true)}
