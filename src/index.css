@@ -8,10 +8,10 @@
   --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-brand: var(--brand-color);
-  --color-brand-light: var(--brand-color-light);
-  --color-brand-muted: var(--brand-color-muted);
-  --color-brand-hover: var(--brand-color-hover);
+  --color-brand: var(--brand-color, #10b981);
+  --color-brand-light: var(--brand-color-light, #10b98133);
+  --color-brand-muted: var(--brand-color-muted, #10b9811a);
+  --color-brand-hover: var(--brand-color-hover, #059669);
 
   --radius-card: 16px;
 }
