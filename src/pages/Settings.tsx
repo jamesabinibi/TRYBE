@@ -266,6 +266,36 @@ export default function Settings() {
   };
 
   const [isInitializing, setIsInitializing] = useState(false);
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+
+  const handleSendTestEmail = async () => {
+    const email = prompt('Enter recipient email address for the test:', user?.email);
+    if (!email) return;
+
+    setIsSendingTestEmail(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Test email sent! Please check your inbox (and spam folder).');
+      } else {
+        toast.error(data.error || 'Failed to send test email');
+        if (data.details) {
+          console.error('SMTP Error Details:', data.details);
+          toast.error(`SMTP Error: ${data.details}`, { duration: 10000 });
+        }
+      }
+    } catch (err) {
+      toast.error('Network error during test email');
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
+
   const handleInitializeDb = async () => {
     if (!confirm('This will create all necessary tables. Existing data will be preserved. Continue?')) return;
     setIsInitializing(true);
@@ -1099,8 +1129,8 @@ NOTIFY pgrst, 'reload schema';
         </div>
       </section>
 
-      {/* System Diagnostics Section - Superadmin only */}
-      {user?.role === 'super_admin' && (
+      {/* System Diagnostics Section - Admin and Superadmin only */}
+      {(user?.role === 'super_admin' || user?.role === 'admin') && (
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -1182,11 +1212,23 @@ NOTIFY pgrst, 'reload schema';
                   {diagResults?.env?.gemini ? 'Configured' : 'Missing'}
                 </p>
               </div>
-              <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Email (SMTP)</p>
-                <p className={cn("text-xs font-bold", diagResults?.env?.smtp ? "text-emerald-500" : "text-zinc-400")}>
-                  {diagResults?.env?.smtp ? 'Configured' : 'Mock Mode'}
-                </p>
+              <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex flex-col justify-between">
+                <div>
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Email (SMTP)</p>
+                  <p className={cn("text-xs font-bold", diagResults?.env?.smtp ? "text-emerald-500" : "text-zinc-400")}>
+                    {diagResults?.env?.smtp ? 'Configured' : 'Mock Mode'}
+                  </p>
+                </div>
+                {diagResults?.env?.smtp && (
+                  <button 
+                    onClick={handleSendTestEmail}
+                    disabled={isSendingTestEmail}
+                    className="mt-2 text-[8px] font-black uppercase tracking-widest text-brand hover:underline flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {isSendingTestEmail ? <Loader2 className="w-2 h-2 animate-spin" /> : <Bell className="w-2 h-2" />}
+                    Send Test
+                  </button>
+                )}
               </div>
             </div>
           </div>

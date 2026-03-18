@@ -2042,9 +2042,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       );
 
       res.json({ message: "Confirmation code sent to " + email });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Forgot password error:', error);
-      res.status(500).json({ error: "Failed to process request" });
+      const errorMessage = error.message || "Failed to process request";
+      res.status(500).json({ error: errorMessage });
     }
   });
 
@@ -2098,6 +2099,44 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     } catch (error) {
       console.error('Reset password error:', error);
       res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
+
+  // Test Email Route
+  app.post("/api/admin/test-email", authenticateToken, async (req: any, res) => {
+    if (req.user.role !== 'super_admin' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    try {
+      await sendEmail(
+        email,
+        'Gryndee SMTP Test',
+        'This is a test email from your Gryndee application. If you received this, your SMTP settings are working correctly!',
+        `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+            <h2 style="color: #10b981; margin-top: 0;">SMTP Test Successful!</h2>
+            <p>This is a test email from your <strong>Gryndee</strong> application.</p>
+            <p>If you received this, your SMTP settings (AWS SES) are configured correctly.</p>
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #6b7280;">Sent at: ${new Date().toLocaleString()}</p>
+          </div>
+        `
+      );
+      res.json({ success: true, message: 'Test email sent successfully!' });
+    } catch (error: any) {
+      console.error('Test email failed:', error);
+      res.status(500).json({ 
+        error: 'Failed to send test email', 
+        details: error.message,
+        code: error.code,
+        command: error.command
+      });
     }
   });
 
