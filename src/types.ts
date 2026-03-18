@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'manager' | 'staff';
+export type Role = 'admin' | 'manager' | 'staff' | 'owner' | 'super_admin';
 
 export interface User {
   id: number;
@@ -6,6 +6,7 @@ export interface User {
   role: Role;
   name: string;
   email?: string;
+  account_id?: number;
 }
 
 export interface Category {
@@ -34,7 +35,7 @@ export interface Product {
   supplier_name: string;
   created_at: string;
   total_stock: number;
-  product_type: 'one' | 'bulk';
+  product_type: 'one' | 'multiple';
   variants: Variant[];
   images: string[];
 }
@@ -49,6 +50,7 @@ export interface Sale {
   staff_name?: string;
   created_at: string;
   customer_id?: number;
+  customer_name?: string;
 }
 
 export interface Customer {
@@ -76,4 +78,12 @@ export interface SaleItem {
   selling_price: number;
   cost_price: number;
   profit: number;
+  unit_price?: number;
+  product_variants?: {
+    size: string;
+    color: string;
+    products?: {
+      name: string;
+    };
+  };
 }

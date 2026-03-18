@@ -46,10 +46,10 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any)
     className={cn("glass-card p-6 flex flex-col justify-between min-h-[140px]", className)}
   >
     <div>
-      <p className="label-text text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">{title}</p>
+      <p className="label-text text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1">{title}</p>
       <h3 className={cn("card-number", color)}>{value}</h3>
     </div>
-    {subtitle && <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium mt-2">{subtitle}</p>}
+    {subtitle && <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mt-2">{subtitle}</p>}
   </motion.div>
 );
 

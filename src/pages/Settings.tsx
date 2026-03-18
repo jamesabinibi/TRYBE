@@ -734,7 +734,7 @@ NOTIFY pgrst, 'reload schema';
     <div className="max-w-4xl space-y-8 sm:space-y-12 pb-20">
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Settings</h1>
-        <p className="text-sm sm:text-base text-zinc-500 dark:text-zinc-400 font-medium">Configure your business preferences and system settings.</p>
+        <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 font-medium">Configure your business preferences and system settings.</p>
       </div>
 
       {/* Product Categories Section */}
@@ -821,7 +821,7 @@ NOTIFY pgrst, 'reload schema';
         <div id="logo" className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
             <div className="space-y-4">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Logo</label>
+              <label className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Business Logo</label>
               <div className="flex flex-col gap-4">
                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl sm:rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 overflow-hidden bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center relative group">
                   {logoPreview ? (

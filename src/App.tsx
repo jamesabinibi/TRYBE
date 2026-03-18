@@ -64,6 +64,9 @@ interface Settings {
   email: string;
   website: string;
   phone_number: string;
+  welcome_email_subject?: string;
+  welcome_email_body?: string;
+  invoice_footer?: string;
 }
 
 interface SettingsContextType {
@@ -182,10 +185,10 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                   "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group relative",
                   isActive 
                     ? isDarkMode ? "text-white" : "text-zinc-900"
-                    : "hover:bg-zinc-100 dark:hover:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                    : "hover:bg-zinc-100 dark:hover:bg-white/[0.03] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
                 )}
               >
-                <item.icon className={cn("w-4.5 h-4.5 transition-colors", isActive ? "text-brand" : "text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300")} />
+                <item.icon className={cn("w-4.5 h-4.5 transition-colors", isActive ? "text-brand" : "text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300")} />
                 <span className="text-[13px] font-medium tracking-tight">{item.label}</span>
                 {isActive && (
                   <motion.div 

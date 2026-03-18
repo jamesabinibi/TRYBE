@@ -17,7 +17,9 @@ import {
   Lock,
   X,
   Shield,
-  User as UserIcon
+  User as UserIcon,
+  Trash2,
+  Power
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
@@ -45,7 +47,7 @@ const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
       <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4", color)}>
         <Icon className="w-6 h-6" />
       </div>
-      <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-1">{title}</p>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400 font-medium mb-1">{title}</p>
       <h3 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{value}</h3>
       {trend && (
         <div className="flex items-center gap-1 mt-2 text-emerald-500 text-xs font-bold">
@@ -61,6 +63,7 @@ export default function SuperAdmin() {
   const { fetchWithAuth } = useAuth();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'accounts' | 'users'>('accounts');
@@ -79,6 +82,7 @@ export default function SuperAdmin() {
   useEffect(() => {
     fetchStats();
     fetchUsers();
+    fetchAccounts();
   }, []);
 
   const fetchStats = async () => {
@@ -109,6 +113,59 @@ export default function SuperAdmin() {
     } catch (err: any) {
       toast.error(err.message || 'Failed to load system users');
       console.error('Failed to fetch users:', err);
+    }
+  };
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetchWithAuth('/api/admin/accounts');
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to fetch accounts');
+      }
+      const data = await res.json();
+      setAccounts(data);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load system accounts');
+      console.error('Failed to fetch accounts:', err);
+    }
+  };
+
+  const handleToggleAccountStatus = async (id: number, currentStatus: boolean) => {
+    try {
+      const res = await fetchWithAuth(`/api/admin/accounts/${id}/toggle-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !currentStatus })
+      });
+      if (res.ok) {
+        toast.success(`Account ${currentStatus ? 'deactivated' : 'activated'} successfully`);
+        fetchAccounts();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to toggle account status');
+      }
+    } catch (err: any) {
+      toast.error('Network error');
+    }
+  };
+
+  const handleDeleteAccount = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this account? This will delete all associated users, products, and sales. This action cannot be undone.')) return;
+    try {
+      const res = await fetchWithAuth(`/api/admin/accounts/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        toast.success('Account deleted successfully');
+        fetchAccounts();
+        fetchStats();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to delete account');
+      }
+    } catch (err: any) {
+      toast.error('Network error');
     }
   };
 
@@ -218,7 +275,7 @@ export default function SuperAdmin() {
     );
   }
 
-  const filteredAccounts = stats?.recentAccounts.filter(acc => 
+  const filteredAccounts = accounts.filter(acc => 
     acc.name.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
@@ -291,30 +348,13 @@ export default function SuperAdmin() {
           <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
             <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setActiveTab('accounts')}
-                  className={cn(
-                    "px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all",
-                    activeTab === 'accounts' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-zinc-600"
-                  )}
-                >
-                  Accounts
-                </button>
-                <button 
-                  onClick={() => setActiveTab('users')}
-                  className={cn(
-                    "px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all",
-                    activeTab === 'users' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-zinc-600"
-                  )}
-                >
-                  Users
-                </button>
+                <h2 className="text-xl font-black text-zinc-900 dark:text-white">Accounts & Users</h2>
               </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input 
                   type="text"
-                  placeholder={activeTab === 'accounts' ? "Search accounts..." : "Search users..."}
+                  placeholder="Search accounts..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white outline-none focus:border-emerald-500 transition-all"
@@ -323,26 +363,29 @@ export default function SuperAdmin() {
             </div>
 
             <div className="overflow-x-auto">
-              {activeTab === 'accounts' ? (
-                <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
                       <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Name</th>
                       <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Owner</th>
+                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Users</th>
                       <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Joined Date</th>
                       <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                     {filteredAccounts.map((account) => (
-                      <tr key={account.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
+                      <tr key={account.id} className={cn("hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group", !account.is_active && "opacity-50")}>
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
                               {account.name.charAt(0)}
                             </div>
                             <div>
-                              <p className="text-sm font-black text-zinc-900 dark:text-white">{account.name}</p>
+                              <p className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                                {account.name}
+                                {!account.is_active && <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full uppercase tracking-wider">Inactive</span>}
+                              </p>
                               <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">ID: #{account.id}</p>
                             </div>
                           </div>
@@ -358,20 +401,39 @@ export default function SuperAdmin() {
                         </td>
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
+                            <Users className="w-4 h-4 opacity-50" />
+                            {account.users?.length || 0}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
                             <Calendar className="w-4 h-4 opacity-50" />
                             {new Date(account.created_at).toLocaleDateString()}
                           </div>
                         </td>
                         <td className="px-8 py-5 text-right">
-                          <button className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors">
-                            <ExternalLink className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => handleToggleAccountStatus(account.id, account.is_active)}
+                              className={cn("p-2 transition-colors", account.is_active ? "text-zinc-400 hover:text-amber-500" : "text-amber-500 hover:text-amber-600")}
+                              title={account.is_active ? "Deactivate Account" : "Activate Account"}
+                            >
+                              <Power className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteAccount(account.id)}
+                              className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                              title="Delete Account"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                     {filteredAccounts.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-8 py-12 text-center">
+                        <td colSpan={5} className="px-8 py-12 text-center">
                           <div className="flex flex-col items-center gap-2">
                             <Building2 className="w-8 h-8 text-zinc-200 dark:text-zinc-800" />
                             <p className="text-sm text-zinc-500 font-medium italic">No accounts found in the system.</p>
@@ -381,67 +443,6 @@ export default function SuperAdmin() {
                     )}
                   </tbody>
                 </table>
-              ) : (
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
-                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">User</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
-                              <UserIcon className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-black text-zinc-900 dark:text-white">{user.name || 'N/A'}</p>
-                              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">@{user.username}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-8 py-5">
-                          <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">{user.accounts?.name || 'System'}</span>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-2">
-                            <Shield className={cn(
-                              "w-4 h-4",
-                              user.role === 'super_admin' ? "text-emerald-500" : 
-                              user.role === 'admin' ? "text-purple-500" : "text-zinc-400"
-                            )} />
-                            <span className="text-xs font-black uppercase tracking-widest text-zinc-500">{user.role}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <button 
-                            onClick={() => { setSelectedUser(user); setIsResetModalOpen(true); }}
-                            className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors"
-                            title="Reset Password"
-                          >
-                            <Lock className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredUsers.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-8 py-12 text-center">
-                          <div className="flex flex-col items-center gap-2">
-                            <Users className="w-8 h-8 text-zinc-200 dark:text-zinc-800" />
-                            <p className="text-sm text-zinc-500 font-medium italic">No users found in the system.</p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              )}
             </div>
           </div>
         </div>

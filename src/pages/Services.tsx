@@ -136,7 +136,7 @@ const Services = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Services</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 font-medium">Manage your service offerings and pricing</p>
+          <p className="text-zinc-600 dark:text-zinc-400 font-medium">Manage your service offerings and pricing</p>
         </div>
         <button 
           onClick={() => {
@@ -153,7 +153,7 @@ const Services = () => {
       <div className="bg-white dark:bg-zinc-900 p-4 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 dark:text-zinc-400" />
             <input 
               type="text" 
               placeholder="Search services..." 

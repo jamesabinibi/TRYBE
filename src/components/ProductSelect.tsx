@@ -39,7 +39,7 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
           isOpen && "border-brand ring-4 ring-brand/10"
         )}
       >
-        <Search className="w-5 h-5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+        <Search className="w-5 h-5 text-zinc-600 dark:text-zinc-400 shrink-0" />
         <div className="flex-1 truncate">
           {selectedProduct ? (
             <div className="flex items-center gap-2 text-zinc-900 dark:text-white">

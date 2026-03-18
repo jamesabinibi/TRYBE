@@ -78,7 +78,7 @@ export default function ForgotPassword() {
               <Key className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">Reset Password</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+            <p className="text-zinc-600 dark:text-zinc-400 font-medium">
               {step === 1 ? "Enter your email to receive a code" : "Enter the code and your new password"}
             </p>
           </div>
@@ -93,7 +93,7 @@ export default function ForgotPassword() {
             {step === 1 ? (
               <form onSubmit={handleSendCode} className="space-y-6">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Email Address</label>
+                  <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
                     <input 

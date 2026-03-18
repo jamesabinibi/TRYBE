@@ -15,7 +15,8 @@ import {
   TrendingUp,
   X,
   Check,
-  Briefcase
+  Briefcase,
+  Upload
 } from 'lucide-react';
 import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
@@ -33,7 +34,7 @@ const getInitialProductState = () => ({
   supplier_name: '',
   unit: 'Pieces',
   pieces_per_unit: '1',
-  product_type: 'one' as const,
+  product_type: 'one' as 'one' | 'multiple',
   variants: [{ size: '', color: '', quantity: '0', low_stock_threshold: '5' }],
   images: []
 });
@@ -54,7 +55,8 @@ export default function Products() {
     description: '',
     price: '',
     duration_minutes: '30',
-    category: ''
+    category: '',
+    image_url: ''
   });
 
   const closeModal = useCallback(() => {
@@ -176,7 +178,7 @@ export default function Products() {
         unit: newProduct.unit,
         pieces_per_unit: parseInt(newProduct.pieces_per_unit as any) || 1,
         product_type: newProduct.product_type,
-        variants: newProduct.variants.map(v => ({
+        variants: (newProduct.product_type === 'one' ? [newProduct.variants[0] || { size: '', color: '', quantity: '0', low_stock_threshold: '5' }] : newProduct.variants).map(v => ({
           ...v,
           quantity: parseInt(v.quantity as any) || 0,
           low_stock_threshold: parseInt(v.low_stock_threshold as any) || 5
@@ -254,7 +256,8 @@ export default function Products() {
       description: service.description || '',
       price: service.price.toString(),
       duration_minutes: service.duration_minutes.toString(),
-      category: service.category || ''
+      category: service.category || '',
+      image_url: service.image_url || ''
     });
     setIsServiceModalOpen(true);
   };
@@ -269,15 +272,15 @@ export default function Products() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newService,
-          price: parseFloat(newService.price),
-          duration_minutes: parseInt(newService.duration_minutes)
+          price: parseFloat(newService.price) || 0,
+          duration_minutes: parseInt(newService.duration_minutes) || 30
         })
       });
       if (response.ok) {
         toast.success(editingService ? 'Service updated' : 'Service added');
         setIsServiceModalOpen(false);
         setEditingService(null);
-        setNewService({ name: '', description: '', price: '', duration_minutes: '30', category: '' });
+        setNewService({ name: '', description: '', price: '', duration_minutes: '30', category: '', image_url: '' });
         fetchServices();
       } else {
         toast.error('Failed to save service');
@@ -328,6 +331,21 @@ export default function Products() {
     ), { duration: Infinity });
   };
 
+  const handleServiceImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setNewService(prev => ({ ...prev, image_url: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeServiceImage = () => {
+    setNewService(prev => ({ ...prev, image_url: '' }));
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -362,7 +380,7 @@ export default function Products() {
   const addVariant = () => {
     setNewProduct({
       ...newProduct,
-      variants: [...newProduct.variants, { size: '', color: '', quantity: 0, low_stock_threshold: 5 }]
+      variants: [...newProduct.variants, { size: '', color: '', quantity: '0', low_stock_threshold: '5' }]
     });
   };
 
@@ -398,7 +416,7 @@ export default function Products() {
           onClick={() => setActiveTab('list')}
           className={cn(
             "pb-4 text-sm font-bold transition-all relative",
-            activeTab === 'list' ? "text-brand" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
+            activeTab === 'list' ? "text-brand" : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
           )}
         >
           Inventory list
@@ -534,7 +552,11 @@ export default function Products() {
                                 <Package className="w-6 h-6" />
                               )
                             ) : (
-                              <Briefcase className="w-6 h-6" />
+                              item.image_url ? (
+                                <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              ) : (
+                                <Briefcase className="w-6 h-6" />
+                              )
                             )}
                           </div>
                           <div>
@@ -619,7 +641,11 @@ export default function Products() {
                             <ImageIcon className="w-6 h-6" />
                           )
                         ) : (
-                          <Briefcase className="w-6 h-6" />
+                          item.image_url ? (
+                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <Briefcase className="w-6 h-6" />
+                          )
                         )}
                       </div>
                       <div>
@@ -726,6 +752,35 @@ export default function Products() {
                 </div>
 
                 <form onSubmit={handleSaveService} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Service Image</label>
+                    <div className="flex items-center gap-4">
+                      {newService.image_url ? (
+                        <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800 group">
+                          <img src={newService.image_url} alt="Service Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <button 
+                            type="button"
+                            onClick={removeServiceImage}
+                            className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="w-24 h-24 flex flex-col items-center justify-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all text-zinc-400 dark:text-zinc-500">
+                          <Upload className="w-6 h-6" />
+                          <span className="text-[10px] font-bold uppercase tracking-widest">Upload</span>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleServiceImageUpload} 
+                            className="hidden" 
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Service Name</label>
                     <input 
@@ -974,7 +1029,7 @@ export default function Products() {
                         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                           <button 
                             type="button"
-                            onClick={() => setNewProduct({...newProduct, product_type: 'one'})}
+                            onClick={() => setNewProduct({...newProduct, product_type: 'one', variants: [newProduct.variants[0] || { size: '', color: '', quantity: '0', low_stock_threshold: '5' }]})}
                             className={cn(
                               "flex-1 sm:flex-none px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all border",
                               newProduct.product_type === 'one' 

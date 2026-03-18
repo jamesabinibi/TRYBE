@@ -499,7 +499,7 @@ const Invoices: React.FC = () => {
           <h1 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display mb-2">
             Invoicing System
           </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+          <p className="text-zinc-600 dark:text-zinc-400 font-medium">
             {activeTab === 'create' ? 'Generate professional invoices for your clients' : 'View and manage your past invoices'}
           </p>
         </div>
@@ -566,7 +566,7 @@ const Invoices: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
-                  <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Invoice #</th>
+                  <th className="px-8 py-6 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.2em]">Invoice #</th>
                   <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date</th>
                   <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Client</th>
                   <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Amount</th>

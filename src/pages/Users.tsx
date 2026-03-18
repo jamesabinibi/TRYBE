@@ -259,7 +259,7 @@ export default function Users() {
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Full Name</label>
+                  <label className="text-[10px] font-black text-zinc-600 dark:text-zinc-400 uppercase tracking-widest">Full Name</label>
                   <input 
                     required
                     type="text" 

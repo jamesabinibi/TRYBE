@@ -101,7 +101,7 @@ const TaxReport = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Nigeria Tax Report</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1 font-medium">
+          <p className="text-zinc-600 dark:text-zinc-400 mt-1 font-medium">
             Estimated tax assessment based on Finance Act 2023 and Nigerian tax laws.
           </p>
         </div>

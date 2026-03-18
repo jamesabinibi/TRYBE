@@ -170,7 +170,7 @@ export default function Bookkeeping() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Financial Bookkeeping</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 font-medium">Record non-sales inflows like loans and investments</p>
+          <p className="text-zinc-600 dark:text-zinc-400 font-medium">Record non-sales inflows like loans and investments</p>
         </div>
         <div className="flex gap-3">
           <button 

@@ -234,7 +234,7 @@ export default function Expenses() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Business Expenses</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 font-medium">Track your operational costs and overheads</p>
+          <p className="text-zinc-600 dark:text-zinc-400 font-medium">Track your operational costs and overheads</p>
         </div>
         <button 
           onClick={() => setIsAddModalOpen(true)}
@@ -253,7 +253,7 @@ export default function Expenses() {
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
             <TrendingDown className="w-24 h-24" />
           </div>
-          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Total Expenses</p>
+          <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.2em] mb-4">Total Expenses</p>
           <h3 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
             <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
             {totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

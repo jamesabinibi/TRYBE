@@ -58,7 +58,7 @@ export default function Login() {
               <ShieldCheck className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">Gryndee</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 font-medium">Sign in to manage your inventory</p>
+            <p className="text-zinc-600 dark:text-zinc-400 font-medium">Sign in to manage your inventory</p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -70,7 +70,7 @@ export default function Login() {
             
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Username or Email</label>
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Username or Email</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
                   <input 

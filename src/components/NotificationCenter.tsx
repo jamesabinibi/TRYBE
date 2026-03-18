@@ -196,7 +196,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
                               {new Date(notification.created_at).toLocaleDateString()}
                             </span>
                           </div>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-2">
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed line-clamp-2">
                             {notification.message}
                           </p>
                         </div>
@@ -208,7 +208,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
                     <div className="w-12 h-12 bg-zinc-50 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-300 dark:text-zinc-700 mx-auto mb-4">
                       <Bell className="w-6 h-6" />
                     </div>
-                    <p className="text-sm font-bold text-zinc-400 dark:text-zinc-500 tracking-tight">No notifications yet</p>
+                    <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400 tracking-tight">No notifications yet</p>
                   </div>
                 )}
               </div>

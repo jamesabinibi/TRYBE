@@ -38,10 +38,18 @@ interface Customer {
 
 interface SaleItem {
   id: number;
-  product_id: number;
+  product_id?: number;
   quantity: number;
-  price: number;
-  products: { name: string };
+  price?: number;
+  unit_price?: number;
+  products?: { name: string };
+  product_variants?: {
+    size: string;
+    color: string;
+    products?: {
+      name: string;
+    };
+  };
 }
 
 interface SaleHistory {
@@ -227,7 +235,7 @@ export default function Customers() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Customer CRM</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 font-medium">Manage your relationships and loyalty programs</p>
+          <p className="text-zinc-600 dark:text-zinc-400 font-medium">Manage your relationships and loyalty programs</p>
         </div>
         <div className="flex gap-3">
           <button 
@@ -265,7 +273,7 @@ export default function Customers() {
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
             <Users className="w-24 h-24" />
           </div>
-          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Total Customers</p>
+          <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.2em] mb-4">Total Customers</p>
           <h3 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">
             {customers.length}
           </h3>

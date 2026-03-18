@@ -82,7 +82,7 @@ export default function Sales() {
           <Trash2 className="w-5 h-5 text-red-500" />
           <h3 className="font-display font-bold text-lg text-zinc-900 dark:text-white">Clear Cart?</h3>
         </div>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">This will remove all items from your current order. This action cannot be undone.</p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">This will remove all items from your current order. This action cannot be undone.</p>
         <div className="flex gap-3">
           <button 
             onClick={() => {
@@ -509,7 +509,7 @@ export default function Sales() {
           onClick={() => setActiveTab('pos')}
           className={cn(
             "pb-4 text-sm font-bold transition-all relative",
-            activeTab === 'pos' ? "text-brand" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
+            activeTab === 'pos' ? "text-brand" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
           )}
         >
           Point of Sale

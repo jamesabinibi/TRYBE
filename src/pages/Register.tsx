@@ -63,11 +63,11 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center p-4 transition-colors duration-500">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="sm:mx-auto sm:w-full sm:max-w-md"
       >
         <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors duration-500">
           <div className="p-8 pt-12 text-center">
@@ -75,7 +75,7 @@ export default function Register() {
               <UserPlus className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">Create Account</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 font-medium">Join Gryndee to manage your inventory</p>
+            <p className="text-zinc-600 dark:text-zinc-400 font-medium">Join Gryndee to manage your inventory</p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -93,7 +93,7 @@ export default function Register() {
                   We've sent a confirmation email to <span className="text-zinc-900 dark:text-white font-bold">{email}</span>.
                 </p>
                 <div className="pt-4">
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-widest">Redirecting to login...</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest">Redirecting to login...</p>
                   <div className="w-full h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
