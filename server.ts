@@ -337,54 +337,44 @@ async function initAwsDb() {
       `);
       console.log('[DB] RDS Schema check complete.');
       
-      // ONE-TIME CLEANUP: Clear all demo data to ensure a fresh start
-      // We check for "GIANT CARROT LTD" or "Gryndee Demo" to trigger a full wipe
-      const { rows: demoSettings } = await client.query("SELECT id FROM settings WHERE business_name IN ('GIANT CARROT LTD', 'Gryndee Demo', 'Gryndee') LIMIT 1");
-      if (demoSettings.length > 0) {
-        console.log('[DB] Demo/Old data detected. Performing thorough cleanup...');
-        await client.query('TRUNCATE bookkeeping, notifications, services, product_images, expenses, customers, sale_items, sales, product_variants, products, categories, settings CASCADE');
-        // Also clear all users except the ones we're about to create
-        await client.query("DELETE FROM users WHERE username NOT IN ('admin', 'superadmin')");
-        await client.query("DELETE FROM accounts WHERE name NOT IN ('Gryndee Demo Account', 'System Admin', 'System Administration')");
-        console.log('[DB] All transactional and demo data cleared.');
+      // FINAL AGGRESSIVE CLEANUP: Clear EVERYTHING to ensure a fresh start
+      console.log('[DB] Performing FINAL AGGRESSIVE CLEANUP of RDS...');
+      try {
+        await client.query('TRUNCATE bookkeeping, notifications, services, product_images, expenses, customers, sale_items, sales, product_variants, products, categories, settings, users, accounts CASCADE');
+        console.log('[DB] All RDS tables truncated.');
+      } catch (truncateErr) {
+        console.error('[DB] Truncate failed, attempting individual deletes:', truncateErr);
+        const tables = ['bookkeeping', 'notifications', 'services', 'product_images', 'expenses', 'customers', 'sale_items', 'sales', 'product_variants', 'products', 'categories', 'settings', 'users', 'accounts'];
+        for (const table of tables) {
+          await client.query(`DELETE FROM ${table}`).catch(e => console.error(`Failed to delete from ${table}:`, e));
+        }
       }
 
       // Ensure superadmin exists with the correct hashed password
       const hashedSuperPass = await bcrypt.hash('superpassword123', 10);
-      const { rows: existingSuperAdmin } = await client.query('SELECT id FROM users WHERE username = $1 LIMIT 1', ['superadmin']);
-      if (existingSuperAdmin.length === 0) {
-        console.log('[DB] Creating superadmin...');
-        const { rows: sysAccs } = await client.query("INSERT INTO accounts (name) VALUES ('System Admin') RETURNING id");
-        await client.query(
-          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
-          [sysAccs[0].id, 'superadmin', 'admin@stockflow.pro', hashedSuperPass, 'super_admin', 'System Admin']
-        );
-      } else {
-        // Update password just in case it was wrong
-        await client.query('UPDATE users SET password = $1 WHERE username = $2', [hashedSuperPass, 'superadmin']);
-      }
+      console.log('[DB] Creating superadmin with password: superpassword123');
+      const { rows: sysAccs } = await client.query("INSERT INTO accounts (name) VALUES ('System Admin') RETURNING id");
+      await client.query(
+        'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
+        [sysAccs[0].id, 'superadmin', 'admin@stockflow.pro', hashedSuperPass, 'super_admin', 'System Admin']
+      );
 
       // Ensure default admin exists
       const hashedAdminPass = await bcrypt.hash('admin123', 10);
-      const { rows: existingAdmin } = await client.query('SELECT id FROM users WHERE username = $1 LIMIT 1', ['admin']);
-      if (existingAdmin.length === 0) {
-        console.log('[DB] No default admin found. Creating admin/admin123...');
-        const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
-        const accountId = accounts[0].id;
-        
-        await client.query(
-          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
-          [accountId, 'admin', 'admin@gryndee.com', hashedAdminPass, 'admin', 'Demo Admin']
-        );
-        
-        await client.query(
-          'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
-          [accountId, 'Gryndee Demo', 'NGN']
-        );
-      } else {
-        // Update password just in case
-        await client.query('UPDATE users SET password = $1 WHERE username = $2', [hashedAdminPass, 'admin']);
-      }
+      console.log('[DB] Creating admin with password: admin123');
+      const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
+      const accountId = accounts[0].id;
+      
+      await client.query(
+        'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
+        [accountId, 'admin', 'admin@gryndee.com', hashedAdminPass, 'admin', 'Demo Admin']
+      );
+      
+      await client.query(
+        'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
+        [accountId, 'Gryndee Demo', 'NGN']
+      );
+      console.log('[DB] RDS Initialization complete.');
     } finally {
       client.release();
     }
@@ -1978,39 +1968,32 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (user) {
         console.log(`[AUTH] User found: "${user.username}" (ID: ${user.id}, Role: ${user.role}, Account: ${user.account_id})`);
         
-        // Auto-fix orphaned users if possible
-        if (!user.account_id && user.role !== 'super_admin') {
-          console.log(`[AUTH] Orphaned user detected, attempting to assign default account...`);
-          const { data: firstAcc } = await supabase.from('accounts').select('id').limit(1).maybeSingle();
-          if (firstAcc) {
-            await supabase.from('users').update({ account_id: firstAcc.id }).eq('id', user.id);
-            user.account_id = firstAcc.id;
-            console.log(`[AUTH] Assigned user ${user.id} to account ${firstAcc.id}`);
-          }
-        }
-
         // Verify password
         let isPasswordValid = false;
         const storedPassword = user.password || '';
-        if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$')) {
+        console.log(`[AUTH] Stored password prefix: ${storedPassword.substring(0, 10)}... Input password length: ${password.length}`);
+        
+        if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$') || storedPassword.startsWith('$2y$')) {
           isPasswordValid = await bcrypt.compare(password, storedPassword);
+          console.log(`[AUTH] Bcrypt comparison result: ${isPasswordValid}`);
         } else {
           // Fallback for plain text passwords (legacy)
           isPasswordValid = storedPassword === password;
+          console.log(`[AUTH] Plain text comparison result: ${isPasswordValid}`);
         }
 
         if (isPasswordValid) {
           console.log(`[AUTH] Login success: "${trimmedUsername}" (ID: ${user.id})`);
           // Don't send password back to client
           const { password: _, ...userWithoutPassword } = user;
-          res.json(userWithoutPassword);
+          return res.json(userWithoutPassword);
         } else {
           console.log(`[AUTH] Login failed: "${trimmedUsername}" - Password mismatch.`);
-          res.status(401).json({ error: "Invalid username or password" });
+          return res.status(401).json({ error: "Invalid username or password" });
         }
       } else {
         console.log(`[AUTH] Login failed: "${trimmedUsername}" - No user found with this username or email`);
-        res.status(401).json({ error: "Invalid username or password" });
+        return res.status(401).json({ error: "Invalid username or password" });
       }
     } catch (error) {
       console.error(`[AUTH] Login error:`, error);
@@ -2196,7 +2179,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       res.json(newUser);
     } catch (e: any) {
       console.error(`Register failed:`, e);
-      res.status(400).json({ error: "Registration failed. Please try again." });
+      res.status(400).json({ error: e.message || "Registration failed. Please try again." });
     }
   };
 
@@ -4779,19 +4762,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // Reload schema cache
       await runSql(`NOTIFY pgrst, 'reload schema';`);
 
-      // ONE-TIME CLEANUP: Clear all demo data from Supabase
-      const { data: demoSettings } = await supabase.from('settings').select('id').in('business_name', ['GIANT CARROT LTD', 'Gryndee Demo', 'Gryndee']).maybeSingle();
-      if (demoSettings) {
-        console.log('[INIT] Demo/Old data detected in Supabase. Performing thorough cleanup...');
-        const tables = ['bookkeeping', 'notifications', 'services', 'product_images', 'expenses', 'customers', 'sale_items', 'sales', 'product_variants', 'products', 'categories', 'settings'];
-        for (const table of tables) {
-          await runSql(`TRUNCATE ${table} CASCADE;`);
-        }
-        // Also clear all users except the ones we're about to create
-        await supabase.from('users').delete().not('username', 'in', '("admin","superadmin")');
-        await supabase.from('accounts').delete().not('name', 'in', '("Gryndee Demo Account","System Administration","System Admin")');
-        console.log('[INIT] All transactional and demo data cleared from Supabase.');
+      // FINAL AGGRESSIVE CLEANUP: Clear EVERYTHING from Supabase
+      console.log('[INIT] Performing FINAL AGGRESSIVE CLEANUP of Supabase...');
+      const tables = ['bookkeeping', 'notifications', 'services', 'product_images', 'expenses', 'customers', 'sale_items', 'sales', 'product_variants', 'products', 'categories', 'settings', 'users', 'accounts'];
+      for (const table of tables) {
+        await runSql(`TRUNCATE ${table} CASCADE;`).catch(e => console.error(`Failed to truncate ${table}:`, e));
       }
+      console.log('[INIT] All Supabase tables truncated.');
 
       // Data migrations for consistency
       await runSql(`
