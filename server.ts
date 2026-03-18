@@ -144,230 +144,226 @@ async function initAwsDb() {
           account_id INTEGER REFERENCES accounts(id),
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+
+        -- Ensure users columns exist
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='username') THEN
+            ALTER TABLE users ADD COLUMN username TEXT UNIQUE;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='name') THEN
+            ALTER TABLE users ADD COLUMN name TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='role') THEN
+            ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='account_id') THEN
+            ALTER TABLE users ADD COLUMN account_id INTEGER REFERENCES accounts(id);
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reset_code') THEN
+            ALTER TABLE users ADD COLUMN reset_code TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reset_expires') THEN
+            ALTER TABLE users ADD COLUMN reset_expires TIMESTAMP WITH TIME ZONE;
+          END IF;
+        END $$;
+
+        CREATE TABLE IF NOT EXISTS settings (
+          id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id),
+          business_name TEXT DEFAULT 'Gryndee',
+          currency TEXT DEFAULT 'NGN',
+          vat_enabled BOOLEAN DEFAULT FALSE,
+          low_stock_threshold INTEGER DEFAULT 5,
+          logo_url TEXT,
+          brand_color TEXT DEFAULT '#10b981',
+          slogan TEXT,
+          address TEXT,
+          email TEXT,
+          website TEXT,
+          phone_number TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS categories (
+          id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id),
+          name TEXT NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Ensure categories columns exist
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='account_id') THEN
+            ALTER TABLE categories ADD COLUMN account_id INTEGER REFERENCES accounts(id);
+          END IF;
+        END $$;
+
+        CREATE TABLE IF NOT EXISTS products (
+          id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id),
+          category_id INTEGER REFERENCES categories(id),
+          name TEXT NOT NULL,
+          description TEXT,
+          cost_price DECIMAL(12, 2) DEFAULT 0,
+          selling_price DECIMAL(12, 2) DEFAULT 0,
+          supplier_name TEXT,
+          unit TEXT DEFAULT 'Pieces',
+          pieces_per_unit INTEGER DEFAULT 1,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Ensure products columns exist
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='supplier_name') THEN
+            ALTER TABLE products ADD COLUMN supplier_name TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='unit') THEN
+            ALTER TABLE products ADD COLUMN unit TEXT DEFAULT 'Pieces';
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='pieces_per_unit') THEN
+            ALTER TABLE products ADD COLUMN pieces_per_unit INTEGER DEFAULT 1;
+          END IF;
+        END $$;
+
+        CREATE TABLE IF NOT EXISTS product_variants (
+          id SERIAL PRIMARY KEY,
+          product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+          size TEXT,
+          color TEXT,
+          sku TEXT,
+          quantity INTEGER DEFAULT 0,
+          low_stock_threshold INTEGER DEFAULT 5,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Ensure product_variants columns exist
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='low_stock_threshold') THEN
+            ALTER TABLE product_variants ADD COLUMN low_stock_threshold INTEGER DEFAULT 5;
+          END IF;
+        END $$;
+
+        CREATE TABLE IF NOT EXISTS sales (
+          id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id),
+          customer_id INTEGER,
+          staff_id INTEGER REFERENCES users(id),
+          total_amount DECIMAL(12, 2) DEFAULT 0,
+          cost_price_total DECIMAL(12, 2) DEFAULT 0,
+          discount_amount DECIMAL(12, 2) DEFAULT 0,
+          vat_amount DECIMAL(12, 2) DEFAULT 0,
+          payment_method TEXT,
+          status TEXT DEFAULT 'completed',
+          customer_name TEXT,
+          customer_phone TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS sale_items (
+          id SERIAL PRIMARY KEY,
+          sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
+          product_id INTEGER REFERENCES products(id),
+          variant_id INTEGER REFERENCES product_variants(id),
+          quantity INTEGER NOT NULL,
+          unit_price DECIMAL(12, 2) NOT NULL,
+          total_price DECIMAL(12, 2) NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS customers (
+          id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id),
+          name TEXT NOT NULL,
+          email TEXT,
+          phone TEXT,
+          address TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS expenses (
+          id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id),
+          category TEXT,
+          amount DECIMAL(12, 2) NOT NULL,
+          description TEXT,
+          date DATE DEFAULT CURRENT_DATE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS product_images (
+          id SERIAL PRIMARY KEY,
+          product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+          url TEXT NOT NULL,
+          is_primary BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS services (
+          id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id),
+          name TEXT NOT NULL,
+          description TEXT,
+          price DECIMAL(12, 2) DEFAULT 0,
+          duration_minutes INTEGER,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS bookkeeping (
+          id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id),
+          type TEXT NOT NULL, -- 'income' or 'expense'
+          category TEXT,
+          amount DECIMAL(12, 2) NOT NULL,
+          description TEXT,
+          reference_id TEXT, -- sale_id or expense_id
+          date DATE DEFAULT CURRENT_DATE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS notifications (
+          id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id),
+          user_id INTEGER REFERENCES users(id),
+          title TEXT,
+          message TEXT,
+          type TEXT,
+          is_read BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
       `);
       console.log('[DB] RDS Schema check complete.');
+      
+      // Ensure default admin exists
+      const { rows: existingAdmin } = await client.query('SELECT id FROM users WHERE username = $1 LIMIT 1', ['admin']);
+      if (existingAdmin.length === 0) {
+        console.log('[DB] No default admin found. Creating admin/admin123...');
+        // Create a default account for the admin
+        const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
+        const accountId = accounts[0].id;
+        
+        const hashedPassword = await bcrypt.hash('admin123', 10);
+        await client.query(
+          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
+          [accountId, 'admin', 'admin@gryndee.com', hashedPassword, 'admin', 'Demo Admin']
+        );
+        
+        // Create default settings for this account
+        await client.query(
+          'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
+          [accountId, 'Gryndee Demo', 'NGN']
+        );
+        
+        console.log('[DB] Default admin created: admin / admin123');
+      }
     } finally {
       client.release();
     }
-  } catch (e) {
-    console.error('[DB] RDS Initialization failed (non-fatal):', e);
-  }
-}
-
-      -- Ensure users columns exist
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='username') THEN
-          ALTER TABLE users ADD COLUMN username TEXT UNIQUE;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='name') THEN
-          ALTER TABLE users ADD COLUMN name TEXT;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='role') THEN
-          ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='account_id') THEN
-          ALTER TABLE users ADD COLUMN account_id INTEGER REFERENCES accounts(id);
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reset_code') THEN
-          ALTER TABLE users ADD COLUMN reset_code TEXT;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reset_expires') THEN
-          ALTER TABLE users ADD COLUMN reset_expires TIMESTAMP WITH TIME ZONE;
-        END IF;
-      END $$;
-      CREATE TABLE IF NOT EXISTS settings (
-        id SERIAL PRIMARY KEY,
-        account_id INTEGER REFERENCES accounts(id),
-        business_name TEXT DEFAULT 'Gryndee',
-        currency TEXT DEFAULT 'NGN',
-        vat_enabled BOOLEAN DEFAULT FALSE,
-        low_stock_threshold INTEGER DEFAULT 5,
-        logo_url TEXT,
-        brand_color TEXT DEFAULT '#10b981',
-        slogan TEXT,
-        address TEXT,
-        email TEXT,
-        website TEXT,
-        phone_number TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS categories (
-        id SERIAL PRIMARY KEY,
-        account_id INTEGER REFERENCES accounts(id),
-        name TEXT NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      -- Ensure categories columns exist
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='account_id') THEN
-          ALTER TABLE categories ADD COLUMN account_id INTEGER REFERENCES accounts(id);
-        END IF;
-      END $$;
-
-      CREATE TABLE IF NOT EXISTS products (
-        id SERIAL PRIMARY KEY,
-        account_id INTEGER REFERENCES accounts(id),
-        category_id INTEGER REFERENCES categories(id),
-        name TEXT NOT NULL,
-        description TEXT,
-        cost_price DECIMAL(12, 2) DEFAULT 0,
-        selling_price DECIMAL(12, 2) DEFAULT 0,
-        supplier_name TEXT,
-        unit TEXT DEFAULT 'Pieces',
-        pieces_per_unit INTEGER DEFAULT 1,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      -- Ensure products columns exist
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='supplier_name') THEN
-          ALTER TABLE products ADD COLUMN supplier_name TEXT;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='unit') THEN
-          ALTER TABLE products ADD COLUMN unit TEXT DEFAULT 'Pieces';
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='pieces_per_unit') THEN
-          ALTER TABLE products ADD COLUMN pieces_per_unit INTEGER DEFAULT 1;
-        END IF;
-      END $$;
-
-      CREATE TABLE IF NOT EXISTS product_variants (
-        id SERIAL PRIMARY KEY,
-        product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
-        size TEXT,
-        color TEXT,
-        sku TEXT,
-        quantity INTEGER DEFAULT 0,
-        low_stock_threshold INTEGER DEFAULT 5,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      -- Ensure product_variants columns exist
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='low_stock_threshold') THEN
-          ALTER TABLE product_variants ADD COLUMN low_stock_threshold INTEGER DEFAULT 5;
-        END IF;
-      END $$;
-      CREATE TABLE IF NOT EXISTS sales (
-        id SERIAL PRIMARY KEY,
-        account_id INTEGER REFERENCES accounts(id),
-        customer_id INTEGER,
-        staff_id INTEGER REFERENCES users(id),
-        total_amount DECIMAL(12, 2) DEFAULT 0,
-        cost_price_total DECIMAL(12, 2) DEFAULT 0,
-        discount_amount DECIMAL(12, 2) DEFAULT 0,
-        vat_amount DECIMAL(12, 2) DEFAULT 0,
-        payment_method TEXT,
-        status TEXT DEFAULT 'completed',
-        customer_name TEXT,
-        customer_phone TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS sale_items (
-        id SERIAL PRIMARY KEY,
-        sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
-        product_id INTEGER REFERENCES products(id),
-        variant_id INTEGER REFERENCES product_variants(id),
-        quantity INTEGER NOT NULL,
-        unit_price DECIMAL(12, 2) NOT NULL,
-        total_price DECIMAL(12, 2) NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS customers (
-        id SERIAL PRIMARY KEY,
-        account_id INTEGER REFERENCES accounts(id),
-        name TEXT NOT NULL,
-        email TEXT,
-        phone TEXT,
-        address TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS expenses (
-        id SERIAL PRIMARY KEY,
-        account_id INTEGER REFERENCES accounts(id),
-        category TEXT,
-        amount DECIMAL(12, 2) NOT NULL,
-        description TEXT,
-        date DATE DEFAULT CURRENT_DATE,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS product_images (
-        id SERIAL PRIMARY KEY,
-        product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
-        url TEXT NOT NULL,
-        is_primary BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS services (
-        id SERIAL PRIMARY KEY,
-        account_id INTEGER REFERENCES accounts(id),
-        name TEXT NOT NULL,
-        description TEXT,
-        price DECIMAL(12, 2) DEFAULT 0,
-        duration_minutes INTEGER,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS bookkeeping (
-        id SERIAL PRIMARY KEY,
-        account_id INTEGER REFERENCES accounts(id),
-        type TEXT NOT NULL, -- 'income' or 'expense'
-        category TEXT,
-        amount DECIMAL(12, 2) NOT NULL,
-        description TEXT,
-        reference_id TEXT, -- sale_id or expense_id
-        date DATE DEFAULT CURRENT_DATE,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS notifications (
-        id SERIAL PRIMARY KEY,
-        account_id INTEGER REFERENCES accounts(id),
-        user_id INTEGER REFERENCES users(id),
-        title TEXT,
-        message TEXT,
-        type TEXT,
-        is_read BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log('[DB] AWS RDS Schema check complete.');
-    
-    // Ensure default admin exists
-    const { rows: existingAdmin } = await client.query('SELECT id FROM users WHERE username = $1 LIMIT 1', ['admin']);
-    if (existingAdmin.length === 0) {
-      console.log('[DB] No default admin found. Creating admin/admin123...');
-      // Create a default account for the admin
-      const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
-      const accountId = accounts[0].id;
-      
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      await client.query(
-        'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
-        [accountId, 'admin', 'admin@gryndee.com', hashedPassword, 'admin', 'Demo Admin']
-      );
-      
-      // Create default settings for this account
-      await client.query(
-        'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
-        [accountId, 'Gryndee Demo', 'NGN']
-      );
-      
-      console.log('[DB] Default admin created: admin / admin123');
-    }
-
-    client.release();
   } catch (err) {
-    console.error('[DB] AWS RDS connection failed:', err);
+    console.error('[DB] RDS Initialization failed (non-fatal):', err);
   }
 }
 
@@ -575,7 +571,7 @@ async function createServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "2.4.9-stable", time: new Date().toISOString() });
+    res.json({ status: "ok", version: "2.5.2", time: new Date().toISOString() });
   });
 
   // Helper to get account_id from headers or user_id
@@ -648,6 +644,20 @@ async function createServer() {
     } catch (e) {
       console.error(`[AUTH] Exception in getAccountId for ID ${userId}:`, e);
       return null;
+    }
+  };
+
+  const authenticateToken = async (req: any, res: any, next: any) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      req.user = userInfo;
+      next();
+    } catch (error) {
+      console.error('[AUTH] Token authentication error:', error);
+      res.status(401).json({ error: "Unauthorized" });
     }
   };
 
@@ -1197,11 +1207,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   // --- NEW FEATURES: EXPENSES, CUSTOMERS, SERVICES, AI (MOVED TO TOP OF API) ---
 
   app.get("/api/services", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT * FROM services WHERE account_id = $1 ORDER BY name ASC', [userInfo.account_id]);
+        return res.json(rows || []);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('services')
         .select('*')
@@ -1221,12 +1236,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/services", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
       const { name, description, price, duration_minutes, category } = req.body;
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'INSERT INTO services (account_id, name, description, price, duration_minutes, category) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+          [userInfo.account_id, name, description, price, duration_minutes, category]
+        );
+        return res.json(rows[0]);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('services')
         .insert([{ 
@@ -1243,16 +1267,25 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.put("/api/services/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    const { name, description, price, duration_minutes, category } = req.body;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
-      const { name, description, price, duration_minutes, category } = req.body;
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'UPDATE services SET name = $1, description = $2, price = $3, duration_minutes = $4, category = $5 WHERE id = $6 AND account_id = $7 RETURNING *',
+          [name, description, price, duration_minutes, category, id, userInfo.account_id]
+        );
+        return res.json(rows[0]);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('services')
         .update({ name, description, price, duration_minutes, category })
-        .eq('id', req.params.id)
+        .eq('id', id)
         .eq('account_id', userInfo.account_id)
         .select()
         .single();
@@ -1264,15 +1297,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.delete("/api/services/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query('DELETE FROM services WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+        return res.json({ success: true });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { error } = await supabase
         .from('services')
         .delete()
-        .eq('id', req.params.id)
+        .eq('id', id)
         .eq('account_id', userInfo.account_id);
       if (error) throw error;
       res.json({ success: true });
@@ -1283,11 +1322,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Expenses API
   app.get("/api/expenses", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT * FROM expenses WHERE account_id = $1 ORDER BY date DESC', [userInfo.account_id]);
+        return res.json(rows || []);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       let { data, error } = await supabase
         .from('expenses')
         .select('*')
@@ -1305,17 +1349,43 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/expenses", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
       const { category, amount, description, date } = req.body;
+      const finalDate = date || new Date().toISOString();
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const { rows } = await client.query(
+            'INSERT INTO expenses (account_id, category, amount, description, date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [userInfo.account_id, category, amount, description, finalDate]
+          );
+          
+          await client.query(
+            'INSERT INTO bookkeeping (account_id, type, nature, amount, description, date) VALUES ($1, $2, $3, $4, $5, $6)',
+            [userInfo.account_id, 'Expense', 'expense', parseFloat(amount), `Expense - ${category}: ${description}`, finalDate.split('T')[0]]
+          );
+          
+          await client.query('COMMIT');
+          return res.json(rows[0]);
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('expenses')
         .insert([{ 
           account_id: userInfo.account_id,
-          category, amount, description, date: date || new Date().toISOString() 
+          category, amount, description, date: finalDate 
         }])
         .select()
         .single();
@@ -1343,15 +1413,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.delete("/api/expenses/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query('DELETE FROM expenses WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+        return res.json({ success: true });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { error } = await supabase
         .from('expenses')
         .delete()
-        .eq('id', req.params.id)
+        .eq('id', id)
         .eq('account_id', userInfo.account_id);
       if (error) throw error;
       res.json({ success: true });
@@ -1362,11 +1438,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Customers API
   app.get("/api/customers", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT * FROM customers WHERE account_id = $1 ORDER BY name ASC', [userInfo.account_id]);
+        return res.json(rows || []);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       let { data, error } = await supabase
         .from('customers')
         .select('*')
@@ -1389,15 +1470,24 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/customers", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
-      const { name, phone, email } = req.body;
+      const { name, phone, email, address } = req.body;
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'INSERT INTO customers (account_id, name, phone, email, address) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+          [userInfo.account_id, name, phone, email, address]
+        );
+        return res.json(rows[0]);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const customerData: any = { 
         account_id: userInfo.account_id,
-        name, phone, email
+        name, phone, email, address
       };
       
       // Try with loyalty_points first, fallback if it fails
@@ -1416,16 +1506,25 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.put("/api/customers/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
+    const { name, phone, email, address } = req.body;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
-      const { name, phone, email, address } = req.body;
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'UPDATE customers SET name = $1, phone = $2, email = $3, address = $4 WHERE id = $5 AND account_id = $6 RETURNING *',
+          [name, phone, email, address, id, userInfo.account_id]
+        );
+        return res.json(rows[0]);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('customers')
         .update({ name, phone, email, address })
-        .eq('id', req.params.id)
+        .eq('id', id)
         .eq('account_id', userInfo.account_id)
         .select()
         .single();
@@ -1437,15 +1536,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.delete("/api/customers/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query('DELETE FROM customers WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+        return res.json({ success: true });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { error } = await supabase
         .from('customers')
         .delete()
-        .eq('id', req.params.id)
+        .eq('id', id)
         .eq('account_id', userInfo.account_id);
       if (error) throw error;
       res.json({ success: true });
@@ -1626,7 +1731,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
     res.json({ 
       message: "Gryndee API is working", 
-      version: "2.5.1", 
+      version: "2.5.2", 
       database: dbStatus,
       env: process.env.NODE_ENV 
     });
@@ -1645,7 +1750,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       // Wipe all tables and restart IDs
       await pool.query(`
-        TRUNCATE users, accounts, settings, products, sales, customers, expenses, bookkeeping, invoices, categories 
+        TRUNCATE users, accounts, settings, products, product_variants, product_images, sales, sale_items, customers, expenses, bookkeeping, services, notifications, categories 
         RESTART IDENTITY CASCADE
       `);
       
@@ -1659,11 +1764,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Categories (Moved to top)
   app.get("/api/categories", async (req, res) => {
-    if (!supabase) return res.json([]);
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT * FROM categories WHERE account_id = $1 ORDER BY name', [userInfo.account_id]);
+        return res.json(rows || []);
+      }
+
+      if (!supabase) return res.json([]);
       let { data, error } = await supabase
         .from('categories')
         .select('*')
@@ -1682,11 +1792,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   app.post("/api/categories", async (req, res) => {
     const { name } = req.body;
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('INSERT INTO categories (account_id, name) VALUES ($1, $2) RETURNING *', [userInfo.account_id, name]);
+        return res.json(rows[0]);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('categories')
         .insert([{ account_id: userInfo.account_id, name }])
@@ -1700,13 +1815,18 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.put("/api/categories/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { name } = req.body;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('UPDATE categories SET name = $1 WHERE id = $2 AND account_id = $3 RETURNING *', [name, id, userInfo.account_id]);
+        return res.json(rows[0]);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('categories')
         .update({ name })
@@ -1722,12 +1842,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.delete("/api/categories/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: products } = await pool.query('SELECT id FROM products WHERE category_id = $1 AND account_id = $2 LIMIT 1', [id, userInfo.account_id]);
+        if (products.length > 0) {
+          return res.status(400).json({ error: "Cannot delete category with associated products" });
+        }
+        await pool.query('DELETE FROM categories WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+        return res.json({ success: true });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { count } = await supabase
         .from('products')
         .select('*', { count: 'exact', head: true })
@@ -2211,11 +2340,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Users Management
   app.get("/api/users", async (req, res) => {
-    if (!supabase) return res.json([]);
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT id, username, email, role, name FROM users WHERE account_id = $1', [userInfo.account_id]);
+        return res.json(rows || []);
+      }
+
+      if (!supabase) return res.json([]);
       // Try selecting specific columns first
       let { data, error } = await supabase
         .from('users')
@@ -2238,15 +2372,23 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post(["/api/users", "/api/users/"], async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { username, password, name, role, email } = req.body;
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role !== 'admin' && userInfo.role !== 'super_admin') return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'super_admin' && userInfo.role !== 'owner')) return res.status(403).json({ error: "Forbidden" });
 
       // Hash password if provided
       const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'INSERT INTO users (account_id, username, password, name, role, email) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, email, role, name',
+          [userInfo.account_id, username, hashedPassword, name, role, email]
+        );
+        return res.json(rows[0]);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('users')
         .insert([{ 
@@ -2265,18 +2407,32 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.put(["/api/users/:id", "/api/users/:id/"], async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { username, password, name, role, email } = req.body;
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role !== 'admin' && userInfo.role !== 'super_admin') return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'super_admin' && userInfo.role !== 'owner')) return res.status(403).json({ error: "Forbidden" });
 
       const updateData: any = { username, name, role, email };
       if (password) {
         updateData.password = await bcrypt.hash(password, 10);
       }
       
+      if (process.env.AWS_DB_PASSWORD) {
+        let query = 'UPDATE users SET username = $1, name = $2, role = $3, email = $4';
+        const params = [username, name, role, email];
+        if (password) {
+          params.push(updateData.password);
+          query += `, password = $${params.length}`;
+        }
+        params.push(id, userInfo.account_id);
+        query += ` WHERE id = $${params.length - 1} AND account_id = $${params.length} RETURNING id, username, email, role, name`;
+        
+        const { rows } = await pool.query(query, params);
+        return res.json(rows[0]);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('users')
         .update(updateData)
@@ -2292,12 +2448,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.delete(["/api/users/:id", "/api/users/:id/"], async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role !== 'admin' && userInfo.role !== 'super_admin') return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'super_admin' && userInfo.role !== 'owner')) return res.status(403).json({ error: "Forbidden" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query('DELETE FROM users WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+        return res.json({ success: true });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { error } = await supabase
         .from('users')
         .delete()
@@ -2461,7 +2622,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.put("/api/products/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
     
@@ -2469,6 +2629,36 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          await client.query(
+            'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8 WHERE id = $9 AND account_id = $10',
+            [name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, id, userInfo.account_id]
+          );
+
+          if (variants && Array.isArray(variants)) {
+            // Simple approach: delete and re-insert variants
+            await client.query('DELETE FROM product_variants WHERE product_id = $1', [id]);
+            for (const v of variants) {
+              await client.query(
+                'INSERT INTO product_variants (product_id, size, color, quantity, low_stock_threshold) VALUES ($1, $2, $3, $4, $5)',
+                [id, v.size, v.color, v.quantity, v.low_stock_threshold]
+              );
+            }
+          }
+          await client.query('COMMIT');
+          return res.json({ success: true });
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       let productError;
       try {
         const result = await supabase
@@ -2568,12 +2758,40 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.delete("/api/products/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          // Check if product is in any sales
+          const { rows: sales } = await client.query(`
+            SELECT si.id FROM sale_items si 
+            JOIN product_variants pv ON si.variant_id = pv.id 
+            WHERE pv.product_id = $1 AND si.account_id = $2 LIMIT 1
+          `, [id, userInfo.account_id]);
+          
+          if (sales.length > 0) {
+            return res.status(400).json({ error: "Cannot delete product with associated sales" });
+          }
+
+          await client.query('DELETE FROM product_variants WHERE product_id = $1', [id]);
+          await client.query('DELETE FROM product_images WHERE product_id = $1', [id]);
+          await client.query('DELETE FROM products WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+          await client.query('COMMIT');
+          return res.json({ success: true });
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       // 1. Get all variant IDs for this product
       const { data: variants, error: vError } = await supabase
         .from('product_variants')
@@ -2636,16 +2854,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       website: '',
       phone_number: ''
     };
-    if (!supabase) return res.json(defaultSettings);
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json(defaultSettings);
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT * FROM settings WHERE account_id = $1', [userInfo.account_id]);
+        if (rows.length > 0) return res.json(rows[0]);
+        return res.json({ account_id: userInfo.account_id, ...defaultSettings });
+      }
+
+      if (!supabase) return res.json(defaultSettings);
       const { data, error } = await supabase.from('settings').select('*').eq('account_id', userInfo.account_id);
       if (error) throw error;
       
       let settings = data[0] || { account_id: userInfo.account_id, ...defaultSettings };
-      
       res.json(settings);
     } catch (error) {
       res.json(defaultSettings);
@@ -2653,7 +2876,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post(["/api/settings", "/api/settings/"], async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { 
       business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
       slogan, address, email, website, phone_number 
@@ -2661,6 +2883,26 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+      
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: existing } = await pool.query('SELECT id FROM settings WHERE account_id = $1', [userInfo.account_id]);
+        
+        if (existing.length > 0) {
+          const { rows } = await pool.query(
+            'UPDATE settings SET business_name = $1, currency = $2, vat_enabled = $3, low_stock_threshold = $4, logo_url = $5, brand_color = $6, slogan = $7, address = $8, email = $9, website = $10, phone_number = $11 WHERE account_id = $12 RETURNING *',
+            [business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, userInfo.account_id]
+          );
+          return res.json(rows[0]);
+        } else {
+          const { rows } = await pool.query(
+            'INSERT INTO settings (account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *',
+            [userInfo.account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number]
+          );
+          return res.json(rows[0]);
+        }
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       
       if (userInfo.role !== 'admin' && userInfo.role !== 'owner' && userInfo.role !== 'super_admin') {
         const { data: account } = await supabase.from('accounts').select('owner_id').eq('id', userInfo.account_id).single();
@@ -2683,31 +2925,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         result = await supabase.from('settings').insert([{ account_id: userInfo.account_id, ...settingsData }]).select().single();
       }
       
-      if (result.error) {
-        console.error('[SETTINGS] Save error:', result.error);
-        // Fallback: If columns are missing, try to save without them but encode them in business_name
-        if (result.error.message?.includes('column') || result.error.code === '42703') {
-          const brandingData = {
-            name: business_name,
-            color: brand_color,
-            logo: logo_url,
-            slogan,
-            address,
-            email,
-            website,
-            phone: phone_number
-          };
-          const fallbackName = JSON.stringify(brandingData);
-          const fallbackData = { business_name: fallbackName, currency, vat_enabled, low_stock_threshold };
-          if (existing) {
-            result = await supabase.from('settings').update(fallbackData).eq('id', existing.id).select().single();
-          } else {
-            result = await supabase.from('settings').insert([{ account_id: userInfo.account_id, ...fallbackData }]).select().single();
-          }
-        } else {
-          throw result.error;
-        }
-      }
+      if (result.error) throw result.error;
       res.json(result.data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -2787,11 +3005,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Bookkeeping API
   app.get("/api/bookkeeping", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT * FROM bookkeeping WHERE account_id = $1 ORDER BY date DESC', [userInfo.account_id]);
+        return res.json(rows || []);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('bookkeeping')
         .select('*')
@@ -2806,12 +3029,20 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/bookkeeping", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { type, nature, amount, description, date } = req.body;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'INSERT INTO bookkeeping (account_id, type, nature, amount, description, date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+          [userInfo.account_id, type, nature || 'other', parseFloat(amount), description, date || new Date().toISOString().split('T')[0]]
+        );
+        return res.json(rows[0]);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('bookkeeping')
         .insert([{
@@ -2833,12 +3064,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.delete("/api/bookkeeping/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query('DELETE FROM bookkeeping WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+        return res.json({ success: true });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { error } = await supabase
         .from('bookkeeping')
         .delete()
@@ -2854,10 +3090,18 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // User Profile
   app.put("/api/profile/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { name, email } = req.body;
     try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, username, email, role, name',
+          [name, email, id]
+        );
+        return res.json(rows[0]);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       const { data, error } = await supabase
         .from('users')
         .update({ name, email })
@@ -2872,27 +3116,48 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/change-password/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
     const { currentPassword, newPassword } = req.body;
     try {
-      const { data: user, error: fetchError } = await supabase
-        .from('users')
-        .select('password')
-        .eq('id', id)
-        .single();
+      let storedPassword = '';
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT password FROM users WHERE id = $1', [id]);
+        if (rows.length === 0) throw new Error("User not found");
+        storedPassword = rows[0].password;
+      } else {
+        if (!supabase) return res.status(503).json({ error: "Database not available" });
+        const { data: user, error: fetchError } = await supabase
+          .from('users')
+          .select('password')
+          .eq('id', id)
+          .single();
+        if (fetchError || !user) throw new Error("User not found");
+        storedPassword = user.password;
+      }
       
-      if (fetchError || !user) throw new Error("User not found");
-      if (user.password !== currentPassword) {
+      let isPasswordValid = false;
+      if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$')) {
+        isPasswordValid = await bcrypt.compare(currentPassword, storedPassword);
+      } else {
+        isPasswordValid = storedPassword === currentPassword;
+      }
+
+      if (!isPasswordValid) {
         return res.status(401).json({ error: "Current password is incorrect" });
       }
 
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ password: newPassword })
-        .eq('id', id);
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, id]);
+      } else {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ password: hashedPassword })
+          .eq('id', id);
+        if (updateError) throw updateError;
+      }
       
-      if (updateError) throw updateError;
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2925,6 +3190,129 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
       let invoice_number = custom_invoice_number || ("INV-" + Date.now());
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          
+          // Check if invoice number exists
+          const { rows: existingSales } = await client.query('SELECT id FROM sales WHERE account_id = $1 AND invoice_number = $2', [userInfo.account_id, invoice_number]);
+          if (existingSales.length > 0) {
+            if (custom_invoice_number) {
+              await client.query('ROLLBACK');
+              return res.status(400).json({ error: "Invoice number already exists. Please use a different one." });
+            } else {
+              invoice_number = "INV-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+            }
+          }
+
+          let finalCustomerId = customer_id;
+          if (!finalCustomerId && customer_name && customer_phone) {
+            const { rows: existingCustomers } = await client.query('SELECT id FROM customers WHERE account_id = $1 AND phone = $2', [userInfo.account_id, customer_phone]);
+            if (existingCustomers.length > 0) {
+              finalCustomerId = existingCustomers[0].id;
+            } else {
+              const { rows: newCustomers } = await client.query(
+                'INSERT INTO customers (account_id, name, phone, email, address) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                [userInfo.account_id, customer_name, customer_phone, customer_email, customer_address]
+              );
+              finalCustomerId = newCustomers[0].id;
+            }
+          }
+
+          const validStaffId = (staff_id && !isNaN(Number(staff_id))) ? Number(staff_id) : null;
+          const { rows: saleRows } = await client.query(
+            'INSERT INTO sales (account_id, invoice_number, customer_name, customer_phone, customer_email, customer_address, total_amount, total_profit, cost_price_total, discount_amount, discount_percentage, vat_amount, payment_method, staff_id, customer_id, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id',
+            [userInfo.account_id, invoice_number, customer_name, customer_phone, customer_email, customer_address, 0, 0, 0, discount_amount, discount_percentage, vat_amount, payment_method, validStaffId, finalCustomerId, 'Completed']
+          );
+          const saleId = saleRows[0].id;
+
+          let total_amount = 0;
+          let total_profit = 0;
+          let cost_price_total = 0;
+
+          for (const item of items) {
+            let itemName = '';
+            let sellingPrice = 0;
+            let costPrice = 0;
+            let profit = 0;
+
+            if (item.variant_id) {
+              const { rows: variants } = await client.query(`
+                SELECT pv.*, p.name, p.cost_price, p.selling_price 
+                FROM product_variants pv 
+                JOIN products p ON pv.product_id = p.id 
+                WHERE pv.id = $1
+              `, [item.variant_id]);
+              
+              if (variants.length === 0) throw new Error(`Variant not found: ${item.variant_id}`);
+              const v = variants[0];
+              itemName = v.name;
+              sellingPrice = item.price_override || v.selling_price;
+              costPrice = v.cost_price || 0;
+              profit = (sellingPrice - costPrice) * item.quantity;
+              
+              total_amount += sellingPrice * item.quantity;
+              total_profit += profit;
+              cost_price_total += costPrice * item.quantity;
+
+              // Update stock
+              const newQuantity = (v.quantity || 0) - item.quantity;
+              await client.query('UPDATE product_variants SET quantity = $1 WHERE id = $2', [newQuantity, item.variant_id]);
+              
+              // Low stock check (simplified for now)
+              if (newQuantity <= (v.low_stock_threshold || 5)) {
+                console.log(`[SALES] Low stock alert for ${itemName}`);
+              }
+
+              await client.query(
+                'INSERT INTO sale_items (account_id, sale_id, variant_id, product_name, quantity, unit_price, cost_price, total_price, profit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+                [userInfo.account_id, saleId, item.variant_id, itemName, item.quantity, sellingPrice, costPrice, sellingPrice * item.quantity, profit]
+              );
+            } else if (item.service_id) {
+              const { rows: services } = await client.query('SELECT * FROM services WHERE id = $1', [item.service_id]);
+              if (services.length === 0) throw new Error(`Service not found: ${item.service_id}`);
+              const s = services[0];
+              itemName = s.name;
+              sellingPrice = item.price_override || s.price;
+              costPrice = 0;
+              profit = sellingPrice * item.quantity;
+              
+              total_amount += sellingPrice * item.quantity;
+              total_profit += profit;
+
+              await client.query(
+                'INSERT INTO sale_items (account_id, sale_id, service_id, service_name, quantity, unit_price, cost_price, total_price, profit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+                [userInfo.account_id, saleId, item.service_id, itemName, item.quantity, sellingPrice, costPrice, sellingPrice * item.quantity, profit]
+              );
+            }
+          }
+
+          const final_total_amount = total_amount - discount_amount + vat_amount;
+          const final_total_profit = total_profit - discount_amount;
+
+          await client.query(
+            'UPDATE sales SET total_amount = $1, total_profit = $2, cost_price_total = $3 WHERE id = $4',
+            [final_total_amount, final_total_profit, cost_price_total, saleId]
+          );
+
+          await client.query(
+            'INSERT INTO bookkeeping (account_id, type, nature, amount, description, date) VALUES ($1, $2, $3, $4, $5, $6)',
+            [userInfo.account_id, 'Income', 'sale', final_total_amount, `Sale - Invoice #${invoice_number}`, new Date().toISOString().split('T')[0]]
+          );
+
+          await client.query('COMMIT');
+          return res.json({ saleId, invoice_number });
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       
       // Check if invoice number exists to prevent duplicate key errors
       const { data: existingSale } = await supabase
@@ -3217,7 +3605,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.get("/api/sales", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) {
@@ -3225,6 +3612,44 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         return res.json([]);
       }
 
+      if (process.env.AWS_DB_PASSWORD) {
+        console.log(`[SALES] Fetching sales from AWS RDS for account: ${userInfo.account_id}`);
+        const { rows: sales } = await pool.query(`
+          SELECT s.*, c.name as customer_name_from_table, u.name as staff_name 
+          FROM sales s 
+          LEFT JOIN customers c ON s.customer_id = c.id 
+          LEFT JOIN users u ON s.staff_id = u.id 
+          WHERE s.account_id = $1 
+          ORDER BY s.created_at DESC
+        `, [userInfo.account_id]);
+
+        if (sales.length > 0) {
+          const saleIds = sales.map(s => s.id);
+          const { rows: items } = await pool.query(`
+            SELECT si.*, pv.size, pv.color, p.name as product_name_from_table, sv.name as service_name_from_table
+            FROM sale_items si
+            LEFT JOIN product_variants pv ON si.variant_id = pv.id
+            LEFT JOIN products p ON pv.product_id = p.id
+            LEFT JOIN services sv ON si.service_id = sv.id
+            WHERE si.sale_id = ANY($1)
+          `, [saleIds]);
+
+          sales.forEach(s => {
+            s.sale_items = items.filter(item => item.sale_id === s.id).map(item => ({
+              ...item,
+              unit_price: item.unit_price || 0,
+              cost_price: item.cost_price || 0,
+              product_name: item.product_name || item.product_name_from_table || 'Item',
+              service_name: item.service_name || item.service_name_from_table || 'Service',
+              variant_info: `${item.size || ''} ${item.color || ''}`.trim()
+            }));
+            s.customer_name = s.customer_name || s.customer_name_from_table || 'Walk-in';
+          });
+        }
+        return res.json(sales);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       console.log(`[SALES] Fetching sales for account: ${userInfo.account_id}`);
       let { data, error } = await supabase
         .from('sales')
@@ -3317,11 +3742,27 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.delete("/api/sales", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          await client.query('DELETE FROM sale_items WHERE account_id = $1', [userInfo.account_id]);
+          await client.query('DELETE FROM sales WHERE account_id = $1', [userInfo.account_id]);
+          await client.query('COMMIT');
+          return res.json({ success: true });
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       // Delete only for this account
       await supabase.from('sale_items').delete().eq('account_id', userInfo.account_id);
       const { error } = await supabase.from('sales').delete().eq('account_id', userInfo.account_id);
@@ -3333,13 +3774,49 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.delete("/api/sales/:id", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     const { id } = req.params;
 
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          
+          // 1. Get sale items to revert stock
+          const { rows: items } = await client.query('SELECT * FROM sale_items WHERE sale_id = $1 AND account_id = $2', [id, userInfo.account_id]);
+          
+          // 2. Revert stock for each item
+          for (const item of items) {
+            if (item.variant_id) {
+              await client.query('UPDATE product_variants SET quantity = quantity + $1 WHERE id = $2', [item.quantity, item.variant_id]);
+            }
+          }
+
+          // 3. Delete sale items
+          await client.query('DELETE FROM sale_items WHERE sale_id = $1 AND account_id = $2', [id, userInfo.account_id]);
+
+          // 4. Delete the sale record
+          const { rowCount } = await client.query('DELETE FROM sales WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+          
+          if (rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: "Sale not found" });
+          }
+
+          await client.query('COMMIT');
+          return res.json({ success: true });
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
       // 1. Get sale items to revert stock (ensure it belongs to this account)
       const { data: items, error: itemsError } = await supabase
         .from('sale_items')
@@ -3474,7 +3951,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   };
 
   app.get("/api/notifications/:userId", async (req, res) => {
-    if (!supabase) return res.json([]);
     const { userId } = req.params;
     
     if (!userId || userId === 'undefined' || userId === 'null' || userId === '[object Object]') {
@@ -3482,6 +3958,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
 
     try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
+          [userId]
+        );
+        return res.json(rows || []);
+      }
+
+      if (!supabase) return res.json([]);
       // Run low stock check in background - don't await to keep response fast
       checkLowStock(userId).catch(err => console.error('[NOTIFICATIONS] Background check failed:', err));
 
@@ -3505,12 +3990,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/notifications/:id/read", async (req, res) => {
-    if (!supabase) return res.json({ success: true });
     const { id } = req.params;
     try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      if (process.env.AWS_DB_PASSWORD) {
+        if (id === 'all') {
+          await pool.query('UPDATE notifications SET is_read = true WHERE user_id = $1', [userInfo.id]);
+        } else {
+          await pool.query('UPDATE notifications SET is_read = true WHERE id = $1', [id]);
+        }
+        return res.json({ success: true });
+      }
+
+      if (!supabase) return res.json({ success: true });
       if (id === 'all') {
-        const userInfo = await getAccountId(req);
-        if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
         await supabase.from('notifications').update({ is_read: true }).eq('user_id', userInfo.id);
       } else {
         await supabase.from('notifications').update({ is_read: true }).eq('id', id);
@@ -3522,13 +4017,19 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.delete("/api/notifications/:userId", async (req, res) => {
-    if (!supabase) return res.json({ success: true });
     const { userId } = req.params;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.id.toString() !== userId.toString()) {
         return res.status(403).json({ error: "Forbidden" });
       }
+
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
+        return res.json({ success: true });
+      }
+
+      if (!supabase) return res.json({ success: true });
       await supabase.from('notifications').delete().eq('user_id', userId);
       res.json({ success: true });
     } catch (error) {
@@ -3545,6 +4046,33 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const now = new Date();
       const today = now.toISOString().split('T')[0];
       
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: productsCount } = await pool.query('SELECT COUNT(*) FROM products WHERE account_id = $1', [userInfo.account_id]);
+        const { rows: salesCount } = await pool.query('SELECT COUNT(*) FROM sales WHERE account_id = $1', [userInfo.account_id]);
+        const { rows: variants } = await pool.query('SELECT quantity, low_stock_threshold FROM product_variants WHERE account_id = $1', [userInfo.account_id]);
+        
+        const totalProducts = parseInt(productsCount[0].count);
+        const totalSalesCount = parseInt(salesCount[0].count);
+        const totalStock = variants?.reduce((acc, v) => acc + (v.quantity || 0), 0) || 0;
+        const lowStockCount = variants?.filter(v => v.quantity <= (v.low_stock_threshold || 0)).length || 0;
+
+        const { rows: todaySalesData } = await pool.query(
+          'SELECT total_amount FROM sales WHERE account_id = $1 AND created_at::date = $2',
+          [userInfo.account_id, today]
+        );
+        const todaySales = todaySalesData?.reduce((acc, s) => acc + (parseFloat(s.total_amount) || 0), 0) || 0;
+
+        return res.json({
+          totalProducts,
+          totalSales: totalSalesCount,
+          totalStock,
+          lowStockCount,
+          todaySales
+        });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
+
       const { count: totalProducts } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('account_id', userInfo.account_id);
       const { count: totalSalesCount } = await supabase.from('sales').select('*', { count: 'exact', head: true }).eq('account_id', userInfo.account_id);
       
@@ -3569,7 +4097,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (Number(e.amount) || 0), 0) || 0;
 
       res.json({
-        version: "2.4.9-stable",
+        version: "2.5.2",
         total_products: totalProducts || 0,
         total_sales_count: totalSalesCount || 0,
         total_stock: totalStock,
