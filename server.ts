@@ -431,7 +431,7 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     }
 
     const info = await transporter.sendMail({
-      from: `"Gryndee" <${process.env.SMTP_FROM || 'noreply@gryndee.com'}>`,
+      from: process.env.SMTP_FROM || '"Gryndee" <noreply@gryndee.com>',
       to,
       subject,
       text,
@@ -3152,6 +3152,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         currency: 'NGN'
       });
     } catch (err: any) {
+      console.error("Tax report error:", err);
       res.status(500).json({ error: err.message });
     }
   });

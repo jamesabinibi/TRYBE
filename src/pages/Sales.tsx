@@ -622,8 +622,17 @@ export default function Sales() {
                       >
                         <div className="flex items-start justify-between">
                           <div>
-                            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedProduct.name}</h2>
-                            <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{selectedProduct.category_name}</p>
+                            <div className="flex items-center gap-3 mb-2">
+                              <button
+                                onClick={() => setSelectedProduct(null)}
+                                className="p-2 -ml-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all"
+                                title="Back to Products"
+                              >
+                                <ArrowRight className="w-5 h-5 rotate-180" />
+                              </button>
+                              <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedProduct.name}</h2>
+                            </div>
+                            <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1 ml-10">{selectedProduct.category_name}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-2xl font-bold text-brand tracking-tight">{formatCurrency(selectedProduct.selling_price, currency)}</p>
