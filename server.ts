@@ -114,35 +114,45 @@ async function initAwsDb() {
   }
   try {
     const client = await pool.connect();
-    console.log('[DB] Connected to AWS RDS. Running schema check...');
-    
-    // Full schema check/init
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS accounts (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        owner_id INTEGER,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
+    try {
+      console.log('[DB] Connected to AWS RDS. Running schema check...');
       
-      -- Ensure owner_id exists if table was created without it
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='owner_id') THEN
-          ALTER TABLE accounts ADD COLUMN owner_id INTEGER;
-        END IF;
-      END $$;
+      // Full schema check/init
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS accounts (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          owner_id INTEGER,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        -- Ensure owner_id exists if table was created without it
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='owner_id') THEN
+            ALTER TABLE accounts ADD COLUMN owner_id INTEGER;
+          END IF;
+        END $$;
 
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        username TEXT UNIQUE,
-        password TEXT NOT NULL,
-        name TEXT,
-        role TEXT DEFAULT 'user',
-        account_id INTEGER REFERENCES accounts(id),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          email TEXT UNIQUE NOT NULL,
+          username TEXT UNIQUE,
+          password TEXT NOT NULL,
+          name TEXT,
+          role TEXT DEFAULT 'user',
+          account_id INTEGER REFERENCES accounts(id),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      console.log('[DB] RDS Schema check complete.');
+    } finally {
+      client.release();
+    }
+  } catch (e) {
+    console.error('[DB] RDS Initialization failed (non-fatal):', e);
+  }
+}
 
       -- Ensure users columns exist
       DO $$ 
