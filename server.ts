@@ -337,6 +337,11 @@ async function initAwsDb() {
       `);
       console.log('[DB] RDS Schema check complete.');
       
+      // Reset all non-admin users to allow fresh registration
+      await client.query("DELETE FROM users WHERE username NOT IN ('admin', 'superadmin')");
+      await client.query("DELETE FROM accounts WHERE id NOT IN (SELECT account_id FROM users)");
+      console.log('[DB] General reset for non-admin users completed in RDS.');
+
       // Ensure default admin exists
       const { rows: existingAdmin } = await client.query('SELECT id FROM users WHERE username = $1 LIMIT 1', ['admin']);
       if (existingAdmin.length === 0) {
@@ -4525,6 +4530,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   try {
     // Ensure at least one super admin exists
     if (supabase) {
+      // Reset all non-admin users to allow fresh registration
+      await supabase.from('users').delete().neq('username', 'admin').neq('username', 'superadmin');
+      console.log('[INIT] General reset for non-admin users completed in Supabase.');
+
       // 1. Run basic migrations
       console.log('[INIT] Running startup migrations...');
       
