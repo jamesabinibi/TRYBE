@@ -1584,8 +1584,34 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
 
-  app.get("/api/test", (req, res) => {
-    res.json({ message: "API is working", version: "2.4.3", env: process.env.NODE_ENV });
+  app.get("/api/test", async (req, res) => {
+    const dbStatus = {
+      rds: false,
+      supabase: !!supabase,
+      active_db: 'none'
+    };
+
+    if (process.env.AWS_DB_PASSWORD) {
+      try {
+        const client = await pool.connect();
+        dbStatus.rds = true;
+        dbStatus.active_db = 'AWS RDS';
+        client.release();
+      } catch (e) {
+        console.error('[TEST] RDS Connection failed:', e);
+      }
+    }
+
+    if (dbStatus.active_db === 'none' && supabase) {
+      dbStatus.active_db = 'Supabase (Fallback)';
+    }
+
+    res.json({ 
+      message: "Gryndee API is working", 
+      version: "2.5.0", 
+      database: dbStatus,
+      env: process.env.NODE_ENV 
+    });
   });
 
   // Categories (Moved to top)
