@@ -81,6 +81,11 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+function isValidEmail(email: string) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}
+
 // AWS RDS Pool
 const { Pool } = pg;
 const pool = new Pool({
@@ -145,6 +150,12 @@ async function initAwsDb() {
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='account_id') THEN
           ALTER TABLE users ADD COLUMN account_id INTEGER REFERENCES accounts(id);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reset_code') THEN
+          ALTER TABLE users ADD COLUMN reset_code TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reset_expires') THEN
+          ALTER TABLE users ADD COLUMN reset_expires TIMESTAMP WITH TIME ZONE;
         END IF;
       END $$;
       CREATE TABLE IF NOT EXISTS settings (
@@ -1805,6 +1816,19 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const { username, email, password, name, role = 'staff' } = req.body;
     const trimmedUsername = username?.trim();
     const trimmedEmail = email?.trim()?.toLowerCase();
+    
+    if (!trimmedUsername || !trimmedEmail || !password) {
+      return res.status(400).json({ error: "Username, email and password are required" });
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
     console.log(`Register attempt: ${trimmedUsername} (${trimmedEmail})`);
 
     try {
@@ -1851,7 +1875,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           trimmedEmail,
           'Welcome to Gryndee!',
           `Hi ${name},\n\nYour account has been successfully created. You can now sign in with your username: ${trimmedUsername}.\n\nBest regards,\nThe Gryndee Team`,
-          `<h1>Welcome to Gryndee!</h1><p>Hi ${name},</p><p>Your account has been successfully created. You can now sign in with your username: <strong>${trimmedUsername}</strong>.</p><p>Best regards,<br>The Gryndee Team</p>`
+          `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h1 style="color: #10b981;">Welcome to Gryndee!</h1>
+            <p>Hi <strong>${name}</strong>,</p>
+            <p>Your account has been successfully created. You can now sign in with your username: <strong>${trimmedUsername}</strong>.</p>
+            <p>Gryndee helps you manage your inventory, sales, and bookkeeping with ease.</p>
+            <p>Best regards,<br>The Gryndee Team</p>
+          </div>
+          `
         ).catch(err => console.error('Failed to send registration email:', err));
 
         return res.json({ id: newUser.id, username: trimmedUsername, email: trimmedEmail, account_id: account.id, role: 'admin' });
@@ -1928,7 +1960,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         trimmedEmail,
         'Welcome to Gryndee!',
         `Hi ${name},\n\nYour account has been successfully created. You can now sign in with your username: ${trimmedUsername}.\n\nBest regards,\nThe Gryndee Team`,
-        `<h1>Welcome to Gryndee!</h1><p>Hi ${name},</p><p>Your account has been successfully created. You can now sign in with your username: <strong>${trimmedUsername}</strong>.</p><p>Best regards,<br>The Gryndee Team</p>`
+        `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h1 style="color: #10b981;">Welcome to Gryndee!</h1>
+          <p>Hi <strong>${name}</strong>,</p>
+          <p>Your account has been successfully created. You can now sign in with your username: <strong>${trimmedUsername}</strong>.</p>
+          <p>Gryndee helps you manage your inventory, sales, and bookkeeping with ease.</p>
+          <p>Best regards,<br>The Gryndee Team</p>
+        </div>
+        `
       ).catch(err => console.error('Failed to send registration email:', err));
 
       // Create notification
@@ -1952,22 +1992,113 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   app.post(["/api/register", "/api/register/"], registerHandler);
 
-  app.post("/api/forgot-password", (req, res) => {
+  app.post("/api/forgot-password", async (req, res) => {
     const { email } = req.body;
-    res.json({ message: "Confirmation code sent to " + email, code: "123456" });
+    if (!email || !isValidEmail(email)) {
+      return res.status(400).json({ error: "Valid email is required" });
+    }
+
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expires = new Date(Date.now() + 30 * 60000); // 30 mins
+
+      let user;
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('UPDATE users SET reset_code = $1, reset_expires = $2 WHERE email = $3 RETURNING username', [code, expires, email]);
+        user = rows[0];
+      } else {
+        const { data, error } = await supabase
+          .from('users')
+          .update({ reset_code: code, reset_expires: expires.toISOString() })
+          .eq('email', email)
+          .select('username')
+          .maybeSingle();
+        if (error) throw error;
+        user = data;
+      }
+
+      if (!user) {
+        // Don't reveal if user exists for security
+        return res.json({ message: "If an account exists with this email, a code has been sent." });
+      }
+
+      await sendEmail(
+        email,
+        'Password Reset Code - Gryndee',
+        `Your password reset code is: ${code}. It expires in 30 minutes.`,
+        `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #10b981;">Password Reset</h2>
+          <p>You requested a password reset for your Gryndee account.</p>
+          <p>Your confirmation code is:</p>
+          <div style="background: #f4f4f4; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px; border-radius: 5px; margin: 20px 0;">
+            ${code}
+          </div>
+          <p>This code will expire in 30 minutes.</p>
+          <p>If you didn't request this, you can safely ignore this email.</p>
+          <p>Best regards,<br>The Gryndee Team</p>
+        </div>
+        `
+      );
+
+      res.json({ message: "Confirmation code sent to " + email });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ error: "Failed to process request" });
+    }
   });
 
   app.post("/api/reset-password", async (req, res) => {
     const { username, newPassword, code } = req.body;
-    if (code !== "123456") return res.status(400).json({ error: "Invalid code" });
-    const { data, error } = await supabase
-      .from('users')
-      .update({ password: newPassword })
-      .ilike('username', username)
-      .select();
-    if (error) return res.status(500).json({ error: error.message });
-    if (data && data.length > 0) res.json({ success: true });
-    else res.status(404).json({ error: "User not found" });
+    if (!username || !newPassword || !code) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    try {
+      let user;
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'SELECT id, reset_code, reset_expires FROM users WHERE username = $1',
+          [username]
+        );
+        user = rows[0];
+      } else {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, reset_code, reset_expires')
+          .eq('username', username)
+          .maybeSingle();
+        if (error) throw error;
+        user = data;
+      }
+
+      if (!user) return res.status(404).json({ error: "User not found" });
+      
+      if (user.reset_code !== code) return res.status(400).json({ error: "Invalid code" });
+      
+      const expires = new Date(user.reset_expires);
+      if (expires < new Date()) return res.status(400).json({ error: "Code expired" });
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query(
+          'UPDATE users SET password = $1, reset_code = NULL, reset_expires = NULL WHERE id = $2',
+          [hashedPassword, user.id]
+        );
+      } else {
+        const { error } = await supabase
+          .from('users')
+          .update({ password: hashedPassword, reset_code: null, reset_expires: null })
+          .eq('id', user.id);
+        if (error) throw error;
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ error: "Failed to reset password" });
+    }
   });
 
   // Users Management
@@ -2768,6 +2899,37 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (saleError) throw saleError;
       const saleId = sale.id;
 
+      // Notify admin of new sale
+      const { data: adminUser } = await supabase
+        .from('users')
+        .select('email, name')
+        .eq('account_id', userInfo.account_id)
+        .eq('role', 'admin')
+        .limit(1)
+        .maybeSingle();
+
+      if (adminUser && adminUser.email) {
+        sendEmail(
+          adminUser.email,
+          `New Sale Recorded: ${invoice_number}`,
+          `A new sale of ${total_amount} NGN has been recorded. Invoice: ${invoice_number}`,
+          `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #10b981;">New Sale Recorded</h2>
+            <p>Hi ${adminUser.name},</p>
+            <p>A new transaction has been completed in your store.</p>
+            <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0;">Invoice: <strong>${invoice_number}</strong></p>
+              <p style="margin: 0;">Total Amount: <strong>${total_amount} NGN</strong></p>
+              <p style="margin: 0;">Payment Method: ${payment_method}</p>
+            </div>
+            <p>You can view the full details in your Gryndee dashboard.</p>
+            <p>Best regards,<br>Gryndee System</p>
+          </div>
+          `
+        ).catch(err => console.error('Failed to send sale notification email:', err));
+      }
+
       for (const item of items) {
         let sellingPrice = 0;
         let costPrice = 0;
@@ -2797,6 +2959,42 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             .from('product_variants')
             .update({ quantity: variant.quantity - item.quantity })
             .eq('id', item.variant_id);
+
+          // Low Stock Alert
+          const newQuantity = variant.quantity - item.quantity;
+          const threshold = variant.low_stock_threshold || 5;
+          if (newQuantity <= threshold) {
+            console.log(`[ALERT] Low stock for ${itemName}: ${newQuantity}`);
+            // Find account owner email
+            const { data: owner } = await supabase
+              .from('users')
+              .select('email, name')
+              .eq('account_id', userInfo.account_id)
+              .eq('role', 'admin')
+              .limit(1)
+              .maybeSingle();
+
+            if (owner && owner.email) {
+              sendEmail(
+                owner.email,
+                `Low Stock Alert: ${itemName}`,
+                `The stock for ${itemName} is low (${newQuantity} remaining). Please restock soon.`,
+                `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                  <h2 style="color: #f59e0b;">Low Stock Alert</h2>
+                  <p>Hi ${owner.name},</p>
+                  <p>The stock for <strong>${itemName}</strong> has reached the low threshold.</p>
+                  <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0;">Current Quantity: <strong>${newQuantity}</strong></p>
+                    <p style="margin: 0;">Threshold: ${threshold}</p>
+                  </div>
+                  <p>Please restock this item soon to avoid running out.</p>
+                  <p>Best regards,<br>Gryndee System</p>
+                </div>
+                `
+              ).catch(err => console.error('Failed to send low stock email:', err));
+            }
+          }
 
           const { error: itemError } = await supabase
             .from('sale_items')
@@ -3718,6 +3916,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           password TEXT NOT NULL,
           role TEXT DEFAULT 'staff',
           name TEXT,
+          reset_code TEXT,
+          reset_expires TIMESTAMPTZ,
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
       `);
@@ -3802,6 +4002,23 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             -- Ignore errors
         END $$;
       `);
+
+      // Add missing columns to users if they don't exist
+      const userCols = ['reset_code', 'reset_expires'];
+      for (const col of userCols) {
+        await runSql(`
+          DO $$ 
+          BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='${col}') THEN
+              IF '${col}' = 'reset_expires' THEN
+                ALTER TABLE users ADD COLUMN reset_expires TIMESTAMPTZ;
+              ELSE
+                ALTER TABLE users ADD COLUMN ${col} TEXT;
+              END IF;
+            END IF;
+          END $$;
+        `);
+      }
 
       // Add missing columns to sales if they don't exist
       const salesCols = ['customer_name', 'customer_phone', 'customer_email', 'customer_address'];

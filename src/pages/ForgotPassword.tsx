@@ -26,11 +26,10 @@ export default function ForgotPassword() {
       });
       
       if (response.ok) {
-        const data = await response.json();
-        alert(`Demo: Confirmation code is ${data.code}`);
         setStep(2);
       } else {
-        setError('Failed to send code');
+        const data = await response.json();
+        setError(data.error || 'Failed to send code');
       }
     } catch (err) {
       setError('Something went wrong');
