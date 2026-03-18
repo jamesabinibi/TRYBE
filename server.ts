@@ -4283,7 +4283,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server is listening on http://0.0.0.0:${PORT}`);
+    console.log(`[SERVER] Gryndee is running on port ${PORT}`);
+    console.log(`[SERVER] Health check endpoint: http://localhost:${PORT}/api/test`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 
