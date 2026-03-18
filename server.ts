@@ -640,7 +640,7 @@ async function createServer() {
     
     try {
       // Try RDS first
-      if (process.env.AWS_DB_PASSWORD) {
+      if (process.env.AWS_DB_PASSWORD && !isNaN(Number(userId))) {
         const { rows } = await pool.query('SELECT id, account_id, role FROM users WHERE id = $1', [userId]);
         if (rows.length > 0) {
           return rows[0];
@@ -1942,6 +1942,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const normalizedUsername = username?.trim()?.toLowerCase()?.replace(/\s+/g, '');
     console.log(`[AUTH] Login attempt for: "${normalizedUsername}"`);
     
+    // Virtual superadmin login
+    const superAdminPass = process.env.SUPERADMIN_PASSWORD;
+    if (superAdminPass && (normalizedUsername === 'superadmin' || normalizedUsername === 'admin@stockflow.pro') && password === superAdminPass) {
+      console.log(`[AUTH] Virtual superadmin login success: "${normalizedUsername}"`);
+      return res.json({ id: '0', username: 'superadmin', email: 'admin@stockflow.pro', role: 'super_admin', name: 'System Admin' });
+    }
+
     if (!supabase) {
       console.warn('[AUTH] Supabase client not initialized, skipping Supabase check');
     } else {
