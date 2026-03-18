@@ -31,11 +31,11 @@
   .label-text { @apply text-[12px] font-medium; }
 }
 
-.bg-brand { background-color: var(--brand-color); }
-.text-brand { color: var(--brand-color); }
-.border-brand { border-color: var(--brand-color); }
-.ring-brand { --tw-ring-color: var(--brand-color); }
-.selection-brand { --tw-selection-bg: var(--brand-color-light); }
+.bg-brand { background-color: var(--brand-color, #10b981); }
+.text-brand { color: var(--brand-color, #10b981); }
+.border-brand { border-color: var(--brand-color, #10b981); }
+.ring-brand { --tw-ring-color: var(--brand-color, #10b981); }
+.selection-brand { --tw-selection-bg: var(--brand-color-light, #10b98133); }
 
 .glass-card {
   @apply bg-white dark:bg-[#121821] border border-zinc-200/50 dark:border-white/[0.04] rounded-[16px] shadow-sm;
