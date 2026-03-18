@@ -182,6 +182,8 @@ async function initAwsDb() {
           email TEXT,
           website TEXT,
           phone_number TEXT,
+          welcome_email_subject TEXT DEFAULT 'Welcome to Gryndee!',
+          welcome_email_body TEXT DEFAULT 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -1929,8 +1931,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       return res.status(400).json({ error: "Username/Email and password are required" });
     }
 
-    const trimmedUsername = username.trim();
-    console.log(`[AUTH] Login attempt for: "${trimmedUsername}"`);
+    const normalizedUsername = username?.trim()?.toLowerCase()?.replace(/\s+/g, '');
+    console.log(`[AUTH] Login attempt for: "${normalizedUsername}"`);
     
     if (!supabase) {
       console.warn('[AUTH] Supabase client not initialized, skipping Supabase check');
@@ -1942,21 +1944,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       let user;
     // Try RDS first
     if (process.env.AWS_DB_PASSWORD) {
-        console.log(`[AUTH] Querying AWS RDS for: "${trimmedUsername}"`);
+        console.log(`[AUTH] Querying AWS RDS for: "${normalizedUsername}"`);
         const { rows } = await pool.query(
           'SELECT id, username, email, role, name, password, account_id FROM users WHERE username ILIKE $1 OR email ILIKE $1 LIMIT 1',
-          [trimmedUsername]
+          [normalizedUsername]
         );
         user = rows[0];
       }
 
       // Fallback to Supabase if not found in RDS
       if (!user && supabase) {
-        console.log(`[AUTH] Querying Supabase for: "${trimmedUsername}"`);
+        console.log(`[AUTH] Querying Supabase for: "${normalizedUsername}"`);
         let { data: supabaseUser, error: supabaseError } = await supabase
           .from('users')
           .select('id, username, email, role, name, password, account_id')
-          .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedUsername}"`)
+          .or(`username.ilike."${normalizedUsername}",email.ilike."${normalizedUsername}"`)
           .maybeSingle();
 
         if (supabaseError) {
@@ -1983,16 +1985,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }
 
         if (isPasswordValid) {
-          console.log(`[AUTH] Login success: "${trimmedUsername}" (ID: ${user.id})`);
+          console.log(`[AUTH] Login success: "${normalizedUsername}" (ID: ${user.id})`);
           // Don't send password back to client
           const { password: _, ...userWithoutPassword } = user;
           return res.json(userWithoutPassword);
         } else {
-          console.log(`[AUTH] Login failed: "${trimmedUsername}" - Password mismatch.`);
+          console.log(`[AUTH] Login failed: "${normalizedUsername}" - Password mismatch.`);
           return res.status(401).json({ error: "Invalid username or password" });
         }
       } else {
-        console.log(`[AUTH] Login failed: "${trimmedUsername}" - No user found with this username or email`);
+        console.log(`[AUTH] Login failed: "${normalizedUsername}" - No user found with this username or email`);
         return res.status(401).json({ error: "Invalid username or password" });
       }
     } catch (error) {
@@ -2004,186 +2006,216 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post(["/api/login", "/api/login/"], loginHandler);
 
   const registerHandler = async (req: any, res: any) => {
-    const { username, email, password, name, role = 'staff' } = req.body;
-    const trimmedUsername = username?.trim();
+    const { username, email, password, name } = req.body;
+    const normalizedUsername = username?.trim()?.toLowerCase()?.replace(/\s+/g, '');
     const trimmedEmail = email?.trim()?.toLowerCase();
-    
-    if (!trimmedUsername || !trimmedEmail || !password) {
-      return res.status(400).json({ error: "Username, email and password are required" });
-    }
+  
+  if (!normalizedUsername || !trimmedEmail || !password) {
+    return res.status(400).json({ error: "Username, email and password are required" });
+  }
 
-    if (!isValidEmail(trimmedEmail)) {
-      return res.status(400).json({ error: "Invalid email format" });
-    }
+  if (!isValidEmail(trimmedEmail)) {
+    return res.status(400).json({ error: "Invalid email format" });
+  }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters" });
-    }
+  if (password.length < 6) {
+    return res.status(400).json({ error: "Password must be at least 6 characters" });
+  }
 
-    console.log(`Register attempt: ${trimmedUsername} (${trimmedEmail})`);
+  console.log(`Register attempt: ${normalizedUsername} (${trimmedEmail})`);
 
-    try {
-      // Try RDS first
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows: existing } = await pool.query(
-          'SELECT id, username, email FROM users WHERE username ILIKE $1 OR email ILIKE $2 LIMIT 1',
-          [trimmedUsername, trimmedEmail]
-        );
+  try {
+    // Try RDS first
+    if (process.env.AWS_DB_PASSWORD) {
+      const { rows: existing } = await pool.query(
+        'SELECT id, username, email FROM users WHERE username ILIKE $1 OR email ILIKE $2 LIMIT 1',
+        [normalizedUsername, trimmedEmail]
+      );
 
-        if (existing.length > 0) {
-          console.warn(`[AUTH] Registration failed: User already exists in RDS. Found: ${JSON.stringify(existing[0])}`);
-          return res.status(400).json({ error: "Username or email already exists" });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // 1. Create Account
-        const { rows: accountRows } = await pool.query(
-          'INSERT INTO accounts (name) VALUES ($1) RETURNING id',
-          [`${name || trimmedUsername}'s Business`]
-        );
-        const account = accountRows[0];
-
-        // 2. Create User
-        const { rows: userRows } = await pool.query(
-          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-          [account.id, trimmedUsername, trimmedEmail, hashedPassword, 'admin', name?.trim()]
-        );
-        const newUser = userRows[0];
-
-        // 3. Update Account owner
-        await pool.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser.id, account.id]);
-
-        // 4. Create settings
-        await pool.query(
-          'INSERT INTO settings (account_id, business_name, currency, brand_color) VALUES ($1, $2, $3, $4)',
-          [account.id, name ? `${name}'s Business` : 'Gryndee', 'NGN', '#10b981']
-        );
-
-        console.log(`[AUTH] Register success (RDS): "${trimmedUsername}" (ID: ${newUser.id}, Account: ${account.id}).`);
-
-        // Send email
-        sendEmail(
-          trimmedEmail,
-          'Welcome to Gryndee!',
-          `Hi ${name},\n\nYour account has been successfully created. You can now sign in with your username: ${trimmedUsername}.\n\nBest regards,\nThe Gryndee Team`,
-          `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h1 style="color: #10b981;">Welcome to Gryndee!</h1>
-            <p>Hi <strong>${name}</strong>,</p>
-            <p>Your account has been successfully created. You can now sign in with your username: <strong>${trimmedUsername}</strong>.</p>
-            <p>Gryndee helps you manage your inventory, sales, and bookkeeping with ease.</p>
-            <p>Best regards,<br>The Gryndee Team</p>
-          </div>
-          `
-        ).catch(err => console.error('Failed to send registration email:', err));
-
-        return res.json({ id: newUser.id, username: trimmedUsername, email: trimmedEmail, account_id: account.id, role: 'admin' });
-      }
-
-      // Fallback to Supabase
-      if (!supabase) {
-        return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
-      }
-
-      // Check if exists case-insensitively
-      const { data: existing, error: checkError } = await supabase
-        .from('users')
-        .select('id, username, email')
-        .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedEmail}"`)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error('[AUTH] Registration check failed:', checkError);
-        return res.status(500).json({ error: `Database error: ${checkError.message}` });
-      }
-
-      if (existing) {
-        console.warn(`[AUTH] Registration failed: User already exists in Supabase. Found: ${JSON.stringify(existing)}`);
+      if (existing.length > 0) {
+        console.warn(`[AUTH] Registration failed: User already exists in RDS. Found: ${JSON.stringify(existing[0])}`);
         return res.status(400).json({ error: "Username or email already exists" });
       }
 
-      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // 1. Create Account first
-      const { data: account, error: accountError } = await supabase
-        .from('accounts')
-        .insert([{ name: `${name || trimmedUsername}'s Business` }])
-        .select()
-        .single();
+      // 1. Create Account
+      const { rows: accountRows } = await pool.query(
+        'INSERT INTO accounts (name) VALUES ($1) RETURNING id',
+        [`${name || normalizedUsername}'s Business`]
+      );
+      const account = accountRows[0];
 
-      if (accountError) {
-        console.error('[AUTH] Account creation failed:', accountError);
-        return res.status(500).json({ error: `Failed to create account: ${accountError.message}` });
-      }
+      // 2. Create User
+      const { rows: userRows } = await pool.query(
+        'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+        [account.id, normalizedUsername, trimmedEmail, hashedPassword, 'admin', name?.trim() || normalizedUsername]
+      );
+      const newUser = userRows[0];
 
-      // 2. Create User linked to Account
-      const { data: newUser, error } = await supabase
-        .from('users')
-        .insert([{ 
-          account_id: account.id,
-          username: trimmedUsername, 
-          email: trimmedEmail, 
-          password: hashedPassword, 
-          role: 'admin', // First user of a new account is ALWAYS admin
-          name: name?.trim() 
-        }])
-        .select()
-        .single();
+      // 3. Update Account owner
+      await pool.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser.id, account.id]);
 
-      if (error) throw error;
+      // 4. Create settings
+      const welcomeSubject = 'Welcome to Gryndee!';
+      const welcomeBody = 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nPlease verify your email by clicking the link below:\n{verification_link}\n\nBest regards,\nThe Gryndee Team';
+      
+      await pool.query(
+        'INSERT INTO settings (account_id, business_name, currency, brand_color, welcome_email_subject, welcome_email_body) VALUES ($1, $2, $3, $4, $5, $6)',
+        [account.id, name ? `${name}'s Business` : 'Gryndee', 'NGN', '#10b981', welcomeSubject, welcomeBody]
+      );
 
-      // 3. Update Account with owner_id
-      await supabase.from('accounts').update({ owner_id: newUser.id }).eq('id', account.id);
+      console.log(`[AUTH] Register success (RDS): "${normalizedUsername}" (ID: ${newUser.id}, Account: ${account.id}).`);
 
-      // 4. Create default settings for this account
-      await supabase.from('settings').insert([{
-        account_id: account.id,
-        business_name: name ? `${name}'s Business` : 'Gryndee',
-        currency: 'NGN',
-        brand_color: '#10b981'
-      }]);
+      // Send email
+      const verificationLink = `${req.protocol}://${req.get('host')}/verify-email?token=mock-token-${newUser.id}`;
+      const emailBody = welcomeBody
+        .replace('{name}', name || normalizedUsername)
+        .replace('{username}', normalizedUsername)
+        .replace('{verification_link}', verificationLink);
 
-      const userId = newUser.id;
-      console.log(`[AUTH] Register success: "${trimmedUsername}" (ID: ${userId}, Account: ${account.id}).`);
-
-      // Send confirmation email
       sendEmail(
         trimmedEmail,
-        'Welcome to Gryndee!',
-        `Hi ${name},\n\nYour account has been successfully created. You can now sign in with your username: ${trimmedUsername}.\n\nBest regards,\nThe Gryndee Team`,
+        welcomeSubject,
+        emailBody,
         `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h1 style="color: #10b981;">Welcome to Gryndee!</h1>
-          <p>Hi <strong>${name}</strong>,</p>
-          <p>Your account has been successfully created. You can now sign in with your username: <strong>${trimmedUsername}</strong>.</p>
-          <p>Gryndee helps you manage your inventory, sales, and bookkeeping with ease.</p>
-          <p>Best regards,<br>The Gryndee Team</p>
+          <h1 style="color: #10b981;">${welcomeSubject}</h1>
+          <p>${emailBody.replace(/\n/g, '<br>')}</p>
+          <div style="margin-top: 20px; text-align: center;">
+            <a href="${verificationLink}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email Address</a>
+          </div>
         </div>
         `
       ).catch(err => console.error('Failed to send registration email:', err));
 
-      // Create notification
-      if (supabase) {
-        await supabase
-          .from('notifications')
-          .insert([{
-            user_id: userId,
-            title: 'Welcome!',
-            message: 'Your account has been successfully created. Welcome to Gryndee!',
-            type: 'info'
-          }]);
-      }
-
-      res.json(newUser);
-    } catch (e: any) {
-      console.error(`Register failed:`, e);
-      res.status(400).json({ error: e.message || "Registration failed. Please try again." });
+      return res.json({ id: newUser.id, username: normalizedUsername, email: trimmedEmail, account_id: account.id, role: 'admin' });
     }
-  };
+
+    // Fallback to Supabase
+    if (!supabase) {
+      return res.status(500).json({ error: "Server configuration error: Supabase client is not initialized." });
+    }
+
+    // Check if exists case-insensitively
+    const { data: existing, error: checkError } = await supabase
+      .from('users')
+      .select('id, username, email')
+      .or(`username.ilike."${normalizedUsername}",email.ilike."${trimmedEmail}"`)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('[AUTH] Registration check failed:', checkError);
+      return res.status(500).json({ error: `Database error: ${checkError.message}` });
+    }
+
+    if (existing) {
+      console.warn(`[AUTH] Registration failed: User already exists in Supabase. Found: ${JSON.stringify(existing)}`);
+      return res.status(400).json({ error: "Username or email already exists" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 1. Create Account first
+    const { data: account, error: accountError } = await supabase
+      .from('accounts')
+      .insert([{ name: `${name || normalizedUsername}'s Business` }])
+      .select()
+      .single();
+
+    if (accountError) {
+      console.error('[AUTH] Account creation failed:', accountError);
+      return res.status(500).json({ error: `Failed to create account: ${accountError.message}` });
+    }
+
+    // 2. Create User linked to Account
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .insert([{ 
+        account_id: account.id,
+        username: normalizedUsername, 
+        email: trimmedEmail, 
+        password: hashedPassword, 
+        role: 'admin', // First user of a new account is ALWAYS admin
+        name: name?.trim() || normalizedUsername
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // 3. Update Account with owner_id
+    await supabase.from('accounts').update({ owner_id: newUser.id }).eq('id', account.id);
+
+    // 4. Create default settings for this account
+    const welcomeSubject = 'Welcome to Gryndee!';
+    const welcomeBody = 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nPlease verify your email by clicking the link below:\n{verification_link}\n\nBest regards,\nThe Gryndee Team';
+
+    await supabase.from('settings').insert([{
+      account_id: account.id,
+      business_name: name ? `${name}'s Business` : 'Gryndee',
+      currency: 'NGN',
+      brand_color: '#10b981',
+      welcome_email_subject: welcomeSubject,
+      welcome_email_body: welcomeBody
+    }]);
+
+    const userId = newUser.id;
+    console.log(`[AUTH] Register success: "${normalizedUsername}" (ID: ${userId}, Account: ${account.id}).`);
+
+    // Send email
+    const verificationLink = `${req.protocol}://${req.get('host')}/verify-email?token=mock-token-${newUser.id}`;
+    const emailBody = welcomeBody
+      .replace('{name}', name || normalizedUsername)
+      .replace('{username}', normalizedUsername)
+      .replace('{verification_link}', verificationLink);
+
+    sendEmail(
+      trimmedEmail,
+      welcomeSubject,
+      emailBody,
+      `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h1 style="color: #10b981;">${welcomeSubject}</h1>
+        <p>${emailBody.replace(/\n/g, '<br>')}</p>
+        <div style="margin-top: 20px; text-align: center;">
+          <a href="${verificationLink}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email Address</a>
+        </div>
+      </div>
+      `
+    ).catch(err => console.error('Failed to send registration email:', err));
+
+    // Create notification
+    await supabase
+      .from('notifications')
+      .insert([{
+        user_id: userId,
+        title: 'Welcome!',
+        message: 'Your account has been successfully created. Welcome to Gryndee!',
+        type: 'info'
+      }]);
+
+    return res.json({ id: newUser.id, username: normalizedUsername, email: trimmedEmail, account_id: account.id, role: 'admin' });
+  } catch (e: any) {
+    console.error(`Register failed:`, e);
+    res.status(400).json({ error: e.message || "Registration failed. Please try again." });
+  }
+};
 
   app.post(["/api/register", "/api/register/"], registerHandler);
+
+  app.get("/verify-email", (req, res) => {
+    res.send(`
+      <div style="font-family: sans-serif; text-align: center; padding: 50px; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+        <h1 style="color: #10b981; font-size: 32px; margin-bottom: 20px;">Email Verified!</h1>
+        <p style="color: #666; font-size: 16px; line-height: 1.6;">Your email has been successfully verified. You can now close this window and continue using Gryndee.</p>
+        <div style="margin-top: 30px;">
+          <a href="/" style="display: inline-block; padding: 12px 30px; background-color: #10b981; color: white; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 14px; transition: all 0.2s;">Go to Dashboard</a>
+        </div>
+      </div>
+    `);
+  });
 
   app.post("/api/forgot-password", async (req, res) => {
     const { email } = req.body;
@@ -4568,13 +4600,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           email TEXT,
           website TEXT,
           phone_number TEXT,
+          welcome_email_subject TEXT DEFAULT 'Welcome to Gryndee!',
+          welcome_email_body TEXT DEFAULT 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
           updated_at TIMESTAMPTZ DEFAULT NOW(),
           UNIQUE(account_id)
         );
       `);
 
       // Add missing columns to settings if they don't exist
-      const settingsCols = ['slogan', 'address', 'email', 'website', 'phone_number'];
+      const settingsCols = ['slogan', 'address', 'email', 'website', 'phone_number', 'welcome_email_subject', 'welcome_email_body'];
       for (const col of settingsCols) {
         await runSql(`
           DO $$ 

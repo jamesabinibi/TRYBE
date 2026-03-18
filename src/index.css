@@ -18,17 +18,18 @@
 
 @layer base {
   html, body {
-    @apply overflow-hidden h-full;
+    @apply overflow-hidden h-full fixed inset-0 w-full;
+    touch-action: manipulation;
   }
   body {
-    @apply font-sans text-zinc-900 dark:text-zinc-100 antialiased;
+    @apply font-sans text-zinc-900 dark:text-zinc-100 antialiased overflow-hidden w-full;
   }
   
-  h1 { @apply font-display text-[32px] font-bold tracking-tight; }
-  h2 { @apply font-display text-[18px] font-medium tracking-tight; }
-  .card-number { @apply font-display text-[28px] font-semibold tracking-tight; }
-  .body-text { @apply text-[14px] leading-relaxed; }
-  .label-text { @apply text-[12px] font-medium; }
+  h1 { @apply font-display text-[24px] sm:text-[32px] font-bold tracking-tight; }
+  h2 { @apply font-display text-[16px] sm:text-[18px] font-medium tracking-tight; }
+  .card-number { @apply font-display text-[20px] sm:text-[28px] font-semibold tracking-tight; }
+  .body-text { @apply text-[12px] sm:text-[14px] leading-relaxed; }
+  .label-text { @apply text-[10px] sm:text-[12px] font-medium; }
 }
 
 .bg-brand { background-color: var(--brand-color, #10b981); }
@@ -43,7 +44,7 @@
 }
 
 .glass-card:hover {
-  @apply shadow-md -translate-y-1;
+  @apply shadow-md lg:-translate-y-1;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -56,4 +57,43 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   @apply bg-zinc-200 dark:bg-zinc-800 rounded-full;
+}
+
+/* Fix for nested scrollbars and mobile layout */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.main-content {
+  height: calc(100vh - 64px);
+  height: calc(100dvh - 64px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 1rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .glass-card {
+    @apply p-4;
+  }
+  
+  .h-screen {
+    height: 100dvh;
+  }
+}
+
+/* Hide scrollbars but keep functionality if needed */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

@@ -42,7 +42,9 @@ export default function Settings() {
     address: globalSettings?.address || '',
     email: globalSettings?.email || '',
     website: globalSettings?.website || '',
-    phone_number: globalSettings?.phone_number || ''
+    phone_number: globalSettings?.phone_number || '',
+    welcome_email_subject: globalSettings?.welcome_email_subject || 'Welcome to Gryndee!',
+    welcome_email_body: globalSettings?.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team'
   });
   const [isSaving, setIsSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(globalSettings?.logo_url || null);
@@ -60,7 +62,9 @@ export default function Settings() {
         address: globalSettings.address || '',
         email: globalSettings.email || '',
         website: globalSettings.website || '',
-        phone_number: globalSettings.phone_number || ''
+        phone_number: globalSettings.phone_number || '',
+        welcome_email_subject: globalSettings.welcome_email_subject || 'Welcome to Gryndee!',
+        welcome_email_body: globalSettings.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team'
       });
       setLogoPreview(globalSettings.logo_url || null);
     }
@@ -69,11 +73,16 @@ export default function Settings() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const section = params.get('section');
-    if (section) {
-      const element = document.getElementById(section);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
+    const hash = window.location.hash.replace('#', '');
+    
+    const targetId = section || hash;
+    if (targetId) {
+      setTimeout(() => {
+        const element = document.getElementById(targetId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 500);
     }
   }, []);
 
@@ -527,7 +536,9 @@ NOTIFY pgrst, 'reload schema';
         address: updatedSettings.address,
         email: updatedSettings.email,
         website: updatedSettings.website,
-        phone: updatedSettings.phone_number
+        phone: updatedSettings.phone_number,
+        welcome_email_subject: updatedSettings.welcome_email_subject,
+        welcome_email_body: updatedSettings.welcome_email_body
       });
 
       const payload = {
@@ -572,6 +583,8 @@ NOTIFY pgrst, 'reload schema';
             data.email = data.email || branding.email;
             data.website = data.website || branding.website;
             data.phone_number = data.phone_number || branding.phone;
+            data.welcome_email_subject = data.welcome_email_subject || branding.welcome_email_subject;
+            data.welcome_email_body = data.welcome_email_body || branding.welcome_email_body;
           } catch (e) {}
         }
 
@@ -586,7 +599,9 @@ NOTIFY pgrst, 'reload schema';
           address: data.address || '',
           email: data.email || '',
           website: data.website || '',
-          phone_number: data.phone_number || ''
+          phone_number: data.phone_number || '',
+          welcome_email_subject: data.welcome_email_subject || 'Welcome to Gryndee!',
+          welcome_email_body: data.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team'
         });
         await refreshSettings();
         toast.success('Settings saved successfully');
@@ -1007,6 +1022,66 @@ NOTIFY pgrst, 'reload schema';
                 If you enable this, ensure you are registered with FIRS. Visit the <strong>Tax Report</strong> page for more details.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Email Templates Section */}
+      <section id="email-templates" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Bell className="w-4 h-4 text-brand" />
+            <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Email Templates</h3>
+          </div>
+          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Customize the automated emails sent to your users.</p>
+        </div>
+        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Welcome Email</h4>
+              <button 
+                onClick={handleSendTestEmail}
+                disabled={isSendingTestEmail}
+                className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex items-center gap-2"
+              >
+                {isSendingTestEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bell className="w-3 h-3" />}
+                Send Test
+              </button>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Subject Line</label>
+              <input 
+                type="text" 
+                value={settings.welcome_email_subject} 
+                onChange={(e) => setSettings({...settings, welcome_email_subject: e.target.value})}
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Body</label>
+              <textarea 
+                value={settings.welcome_email_body} 
+                onChange={(e) => setSettings({...settings, welcome_email_body: e.target.value})}
+                rows={6}
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 resize-none" 
+              />
+              <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-medium italic">
+                Use <code className="text-brand">{'{name}'}</code> and <code className="text-brand">{'{username}'}</code> as placeholders.
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-4 flex justify-end">
+            <button 
+              onClick={() => saveSettings()}
+              disabled={isSaving}
+              className="w-full sm:w-auto px-10 py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center justify-center gap-2"
+            >
+              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+              Save Email Templates
+            </button>
           </div>
         </div>
       </section>

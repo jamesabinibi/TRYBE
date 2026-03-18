@@ -301,7 +301,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar main-content">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

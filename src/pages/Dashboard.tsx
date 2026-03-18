@@ -15,7 +15,10 @@ import {
   Loader2,
   BrainCircuit,
   TrendingDown,
-  Plus
+  Plus,
+  Settings as SettingsIcon,
+  Image as ImageIcon,
+  CheckCircle2
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -52,7 +55,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any)
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
   const { settings: globalSettings } = useSettings();
   const { isDarkMode } = useTheme();
   const brandColor = globalSettings?.brand_color || '#10b981';
@@ -123,8 +126,90 @@ export default function Dashboard() {
     </div>
   );
 
+  const isSetupComplete = globalSettings?.business_name && 
+                         globalSettings?.business_name !== 'Gryndee' && 
+                         globalSettings?.logo_url && 
+                         globalSettings?.phone_number;
+  
+  const showSetupBanner = (user?.role === 'admin' || user?.role === 'owner') && !isSetupComplete;
+
   return (
     <div className="space-y-8 pb-10">
+      <AnimatePresence>
+        {showSetupBanner && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-brand/10 border border-brand/20 rounded-2xl p-6 mb-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="flex gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-brand/20 flex items-center justify-center text-brand shrink-0">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-zinc-900 dark:text-white font-bold">Complete Your Business Setup</h3>
+                    <p className="text-[13px] text-zinc-600 dark:text-zinc-400 mt-1">
+                      To get the most out of Gryndee, please finish setting up your business profile and email templates.
+                    </p>
+                    <div className="flex flex-wrap gap-4 mt-4">
+                      <div className="flex items-center gap-2">
+                        {globalSettings?.business_name && globalSettings?.business_name !== 'Gryndee' ? (
+                          <CheckCircle2 className="w-4 h-4 text-brand" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700" />
+                        )}
+                        <span className="text-[11px] font-medium text-zinc-500">Business Name</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {globalSettings?.logo_url ? (
+                          <CheckCircle2 className="w-4 h-4 text-brand" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700" />
+                        )}
+                        <span className="text-[11px] font-medium text-zinc-500">Business Logo</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {globalSettings?.phone_number ? (
+                          <CheckCircle2 className="w-4 h-4 text-brand" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700" />
+                        )}
+                        <span className="text-[11px] font-medium text-zinc-500">Contact Details</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {globalSettings?.welcome_email_subject ? (
+                          <CheckCircle2 className="w-4 h-4 text-brand" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700" />
+                        )}
+                        <span className="text-[11px] font-medium text-zinc-500">Email Templates</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                  <Link
+                    to="/settings#email-templates"
+                    className="flex-1 md:flex-none px-6 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-xl text-[13px] font-bold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all text-center"
+                  >
+                    Edit Email
+                  </Link>
+                  <Link
+                    to="/settings"
+                    className="flex-1 md:flex-none px-6 py-2.5 bg-brand text-white rounded-xl text-[13px] font-bold hover:opacity-90 transition-all shadow-lg shadow-brand/20 text-center"
+                  >
+                    Complete Setup
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-zinc-900 dark:text-white">Dashboard</h1>
