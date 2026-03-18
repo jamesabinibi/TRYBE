@@ -694,12 +694,25 @@ async function createServer() {
   });
 
   app.post("/api/diag/setup", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'super_admin')) {
         return res.status(403).json({ error: "Forbidden" });
       }
+
+      const runSql = async (sql: string) => {
+        if (process.env.AWS_DB_PASSWORD) {
+          try {
+            await pool.query(sql);
+          } catch (e: any) {
+            console.warn(`[DIAG] RDS Setup warning: ${e.message}`);
+          }
+        }
+        if (supabase) {
+          const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
+          if (error) console.warn(`[DIAG] Supabase Setup warning: ${error.message}`);
+        }
+      };
 
       // Ensure RLS is disabled on all tables to avoid join issues
       const tablesToDisableRLS = [
@@ -708,8 +721,10 @@ async function createServer() {
         'settings', 'notifications', 'services', 'bookkeeping'
       ];
       
-      for (const table of tablesToDisableRLS) {
-        await supabase.rpc('exec_sql', { sql_query: `ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY;` }).catch(() => {});
+      if (supabase) {
+        for (const table of tablesToDisableRLS) {
+          await supabase.rpc('exec_sql', { sql_query: `ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY;` }).catch(() => {});
+        }
       }
 
       const setupSql = `
@@ -1152,14 +1167,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // Split SQL by semicolon and execute each statement
       const statements = setupSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
       for (const statement of statements) {
-        const { error } = await supabase.rpc('exec_sql', { sql_query: statement });
-        if (error) {
-          // Fallback if rpc exec_sql is not available (which is common)
-          // In that case, we can't really run arbitrary SQL from the client easily without a custom function
-          // But we can try to at least check if tables exist by querying them
-          console.error(`[DIAG] Failed to execute statement:`, error);
-          return res.status(500).json({ error: `Failed to execute SQL. Please run the SQL manually in Supabase SQL Editor. Error: ${error.message}` });
-        }
+        await runSql(statement);
       }
 
       res.json({ success: true });
@@ -4322,7 +4330,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Super Admin Broadcast
   app.post("/api/admin/broadcast", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role !== 'super_admin') {
@@ -4334,6 +4341,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       console.log(`[ADMIN] Broadcasting message: "${message}"`);
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: users } = await pool.query('SELECT id, account_id FROM users');
+        if (users && users.length > 0) {
+          for (const user of users) {
+            await pool.query(
+              'INSERT INTO notifications (account_id, user_id, title, message, type, is_read) VALUES ($1, $2, $3, $4, $5, $6)',
+              [user.account_id, user.id, title, message, 'info', false]
+            );
+          }
+        }
+        return res.json({ success: true, count: users.length });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
+      
       // Get all users to send notifications to
       const { data: users, error: userError } = await supabase.from('users').select('id, account_id');
       if (userError) {
@@ -4367,13 +4389,39 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Super Admin Stats
   app.get("/api/admin/stats", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role !== 'super_admin') {
         return res.status(403).json({ error: "Forbidden" });
       }
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: accRows } = await pool.query('SELECT COUNT(*) FROM accounts');
+        const { rows: userRows } = await pool.query('SELECT COUNT(*) FROM users');
+        const { rows: prodRows } = await pool.query('SELECT COUNT(*) FROM products');
+        const { rows: saleRows } = await pool.query('SELECT COUNT(*) FROM sales');
+        const { rows: recentAccs } = await pool.query(`
+          SELECT a.*, u.name as user_name, u.email as user_email 
+          FROM accounts a 
+          LEFT JOIN users u ON u.account_id = a.id AND u.role = 'admin'
+          ORDER BY a.created_at DESC 
+          LIMIT 10
+        `);
+
+        return res.json({
+          accounts: parseInt(accRows[0].count) || 0,
+          users: parseInt(userRows[0].count) || 0,
+          products: parseInt(prodRows[0].count) || 0,
+          sales: parseInt(saleRows[0].count) || 0,
+          recentAccounts: recentAccs.map((a: any) => ({
+            ...a,
+            users: a.user_name ? [{ name: a.user_name, email: a.user_email }] : []
+          }))
+        });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
+      
       const { count: accountCount, error: accErr } = await supabase.from('accounts').select('*', { count: 'exact', head: true });
       if (accErr) console.warn('[ADMIN] Stats: Failed to count accounts:', accErr.message);
       
@@ -4410,7 +4458,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Super Admin List All Users
   app.get("/api/admin/users", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role !== 'super_admin') {
@@ -4418,6 +4465,18 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       console.log(`[ADMIN] Fetching all users...`);
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(`
+          SELECT u.*, a.business_name 
+          FROM users u 
+          LEFT JOIN accounts a ON u.account_id = a.id 
+          ORDER BY u.created_at DESC
+        `);
+        return res.json(rows || []);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
 
       // Try simple select first to see if it's the join or order by causing issues
       let query = supabase.from('users').select('*, accounts(name)');
@@ -4454,7 +4513,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Super Admin Reset User Password
   app.post("/api/admin/reset-user-password", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role !== 'super_admin') {
@@ -4467,6 +4525,14 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, userId]);
+        return res.json({ success: true });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
+      
       const { error } = await supabase
         .from('users')
         .update({ password: hashedPassword })
@@ -4551,13 +4617,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   try {
     // Ensure at least one super admin exists
-    if (supabase) {
+    if (supabase || process.env.AWS_DB_PASSWORD) {
       // 1. Run basic migrations
       console.log('[INIT] Running startup migrations...');
       
       const runSql = async (sql: string) => {
-        const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
-        if (error) console.warn(`[INIT] Migration warning: ${error.message}`);
+        if (process.env.AWS_DB_PASSWORD) {
+          try {
+            await pool.query(sql);
+          } catch (e: any) {
+            console.warn(`[INIT] RDS Migration warning: ${e.message}`);
+          }
+        }
+        if (supabase) {
+          const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
+          if (error) console.warn(`[INIT] Supabase Migration warning: ${error.message}`);
+        }
       };
 
       // Ensure tables exist with all required columns
@@ -4820,83 +4895,114 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       `);
 
       // 2. Check for superadmin (by username or email)
-      const { data: existingUsers, error: checkErr } = await supabase
-        .from('users')
-        .select('id, password, username, email')
-        .or('username.eq.superadmin,email.eq.admin@stockflow.pro');
+      let existingAdmin = null;
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT id FROM users WHERE username = $1 OR email = $2 LIMIT 1', ['superadmin', 'admin@stockflow.pro']);
+        if (rows.length > 0) existingAdmin = rows[0];
+      } else if (supabase) {
+        const { data } = await supabase.from('users').select('id').or('username.eq.superadmin,email.eq.admin@stockflow.pro').maybeSingle();
+        existingAdmin = data;
+      }
 
-      const existingAdmin = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
-
-      if (checkErr) {
-        console.error('[INIT] Error checking for super admin:', checkErr);
-      } else if (!existingAdmin) {
+      if (!existingAdmin) {
         console.log('[INIT] No super admin found. Creating default super admin...');
-        const { data: account, error: accErr } = await supabase.from('accounts').insert([{ name: 'System Administration' }]).select().single();
-        if (accErr) {
-          console.error('[INIT] Failed to create system account:', accErr);
-        } else if (account) {
-          const hashedPassword = await bcrypt.hash('superpassword123', 10);
-          const { error: userErr } = await supabase.from('users').insert([{
-            account_id: account.id,
-            username: 'superadmin',
-            email: 'admin@stockflow.pro',
-            password: hashedPassword,
-            role: 'super_admin',
-            name: 'System Admin'
-          }]);
-          if (userErr) {
-            console.error('[INIT] Failed to create super admin user:', JSON.stringify(userErr, null, 2));
-          } else {
-            console.log('[INIT] Default super admin created: superadmin / superpassword123');
+        const hashedPassword = await bcrypt.hash('superpassword123', 10);
+        
+        if (process.env.AWS_DB_PASSWORD) {
+          const { rows: accRows } = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['System Administration']);
+          const account = accRows[0];
+          await pool.query(
+            'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
+            [account.id, 'superadmin', 'admin@stockflow.pro', hashedPassword, 'super_admin', 'System Admin']
+          );
+        }
+        
+        if (supabase) {
+          const { data: account, error: accErr } = await supabase.from('accounts').insert([{ name: 'System Administration' }]).select().single();
+          if (!accErr && account) {
+            await supabase.from('users').insert([{
+              account_id: account.id,
+              username: 'superadmin',
+              email: 'admin@stockflow.pro',
+              password: hashedPassword,
+              role: 'super_admin',
+              name: 'System Admin'
+            }]);
           }
         }
+        console.log('[INIT] Default super admin created: superadmin / superpassword123');
       } else {
         console.log('[INIT] Super admin already exists. Updating password...');
         const hashedPassword = await bcrypt.hash('superpassword123', 10);
-        await supabase.from('users').update({ password: hashedPassword }).eq('id', existingAdmin.id);
+        if (process.env.AWS_DB_PASSWORD) {
+          await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, existingAdmin.id]);
+        }
+        if (supabase) {
+          await supabase.from('users').update({ password: hashedPassword }).eq('id', existingAdmin.id);
+        }
       }
 
       // 3. Check for demo admin (by username or email)
-      const { data: existingDemoUsers, error: demoCheckErr } = await supabase
-        .from('users')
-        .select('id')
-        .or('username.eq.admin,email.eq.admin@gryndee.com');
+      let demoAdmin = null;
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT id FROM users WHERE username = $1 OR email = $2 LIMIT 1', ['admin', 'admin@gryndee.com']);
+        if (rows.length > 0) demoAdmin = rows[0];
+      } else if (supabase) {
+        const { data } = await supabase.from('users').select('id').or('username.eq.admin,email.eq.admin@gryndee.com').maybeSingle();
+        demoAdmin = data;
+      }
 
-      const demoAdmin = existingDemoUsers && existingDemoUsers.length > 0 ? existingDemoUsers[0] : null;
+      if (!demoAdmin) {
+        console.log('[INIT] No demo admin found. Creating default demo admin...');
+        const hashedPassword = await bcrypt.hash('admin123', 10);
+        
+        if (process.env.AWS_DB_PASSWORD) {
+          const { rows: accRows } = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo']);
+          const account = accRows[0];
+          const { rows: userRows } = await pool.query(
+            'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+            [account.id, 'admin', 'admin@gryndee.com', hashedPassword, 'admin', 'Demo Admin']
+          );
+          await pool.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [userRows[0].id, account.id]);
+          await pool.query(
+            'INSERT INTO settings (account_id, business_name, currency, brand_color) VALUES ($1, $2, $3, $4)',
+            [account.id, 'Gryndee Demo', 'NGN', '#10b981']
+          );
+        }
 
-      if (demoCheckErr) {
-        console.error('[INIT] Error checking for demo admin:', demoCheckErr);
-      } else if (!demoAdmin) {
-        console.log('[INIT] No demo admin found. Creating admin/admin123...');
-        const { data: account, error: demoAccErr } = await supabase.from('accounts').insert([{ name: 'Gryndee Demo Account' }]).select().single();
-        if (demoAccErr) {
-          console.error('[INIT] Failed to create demo account:', demoAccErr);
-        } else if (account) {
-          const hashedPassword = await bcrypt.hash('admin123', 10);
-          const { error: demoUserErr } = await supabase.from('users').insert([{
-            account_id: account.id,
-            username: 'admin',
-            email: 'admin@gryndee.com',
-            password: hashedPassword,
-            role: 'admin',
-            name: 'Demo Admin'
-          }]);
-          
-          if (demoUserErr) {
-            console.error('[INIT] Failed to create demo admin user:', JSON.stringify(demoUserErr, null, 2));
-          } else {
-            await supabase.from('settings').insert([{
+        if (supabase) {
+          const { data: account, error: accErr } = await supabase.from('accounts').insert([{ name: 'Gryndee Demo' }]).select().single();
+          if (!accErr && account) {
+            const { data: user, error: userErr } = await supabase.from('users').insert([{
               account_id: account.id,
-              business_name: 'Gryndee Demo',
-              currency: 'NGN'
-            }]);
-            console.log('[INIT] Default admin created: admin / admin123');
+              username: 'admin',
+              email: 'admin@gryndee.com',
+              password: hashedPassword,
+              role: 'admin',
+              name: 'Demo Admin'
+            }]).select().single();
+            
+            if (user) {
+              await supabase.from('accounts').update({ owner_id: user.id }).eq('id', account.id);
+              await supabase.from('settings').insert([{
+                account_id: account.id,
+                business_name: 'Gryndee Demo',
+                currency: 'NGN',
+                brand_color: '#10b981'
+              }]);
+            }
           }
         }
+        console.log('[INIT] Default demo admin created: admin / admin123');
       } else {
         console.log('[INIT] Demo admin already exists. Updating password...');
         const hashedPassword = await bcrypt.hash('admin123', 10);
-        await supabase.from('users').update({ password: hashedPassword }).eq('id', demoAdmin.id);
+        if (process.env.AWS_DB_PASSWORD) {
+          await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, demoAdmin.id]);
+        }
+        if (supabase) {
+          await supabase.from('users').update({ password: hashedPassword }).eq('id', demoAdmin.id);
+        }
       }
     }
   } catch (e) {

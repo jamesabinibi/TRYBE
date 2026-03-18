@@ -1026,65 +1026,67 @@ NOTIFY pgrst, 'reload schema';
         </div>
       </section>
 
-      {/* Email Templates Section */}
-      <section id="email-templates" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Email Templates</h3>
+      {/* Email Templates Section - Restricted to Super Admin */}
+      {user?.role === 'super_admin' && (
+        <section id="email-templates" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-brand" />
+              <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Email Templates</h3>
+            </div>
+            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Customize the automated emails sent to your users.</p>
           </div>
-          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Customize the automated emails sent to your users.</p>
-        </div>
-        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Welcome Email</h4>
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Welcome Email</h4>
+                <button 
+                  onClick={handleSendTestEmail}
+                  disabled={isSendingTestEmail}
+                  className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex items-center gap-2"
+                >
+                  {isSendingTestEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bell className="w-3 h-3" />}
+                  Send Test
+                </button>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Subject Line</label>
+                <input 
+                  type="text" 
+                  value={settings.welcome_email_subject} 
+                  onChange={(e) => setSettings({...settings, welcome_email_subject: e.target.value})}
+                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Body</label>
+                <textarea 
+                  value={settings.welcome_email_body} 
+                  onChange={(e) => setSettings({...settings, welcome_email_body: e.target.value})}
+                  rows={6}
+                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 resize-none" 
+                />
+                <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-medium italic">
+                  Use <code className="text-brand">{'{name}'}</code> and <code className="text-brand">{'{username}'}</code> as placeholders.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-4 flex justify-end">
               <button 
-                onClick={handleSendTestEmail}
-                disabled={isSendingTestEmail}
-                className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex items-center gap-2"
+                onClick={() => saveSettings()}
+                disabled={isSaving}
+                className="w-full sm:w-auto px-10 py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center justify-center gap-2"
               >
-                {isSendingTestEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bell className="w-3 h-3" />}
-                Send Test
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                Save Email Templates
               </button>
             </div>
-            
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Subject Line</label>
-              <input 
-                type="text" 
-                value={settings.welcome_email_subject} 
-                onChange={(e) => setSettings({...settings, welcome_email_subject: e.target.value})}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Body</label>
-              <textarea 
-                value={settings.welcome_email_body} 
-                onChange={(e) => setSettings({...settings, welcome_email_body: e.target.value})}
-                rows={6}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 resize-none" 
-              />
-              <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-medium italic">
-                Use <code className="text-brand">{'{name}'}</code> and <code className="text-brand">{'{username}'}</code> as placeholders.
-              </p>
-            </div>
           </div>
-
-          <div className="pt-4 flex justify-end">
-            <button 
-              onClick={() => saveSettings()}
-              disabled={isSaving}
-              className="w-full sm:w-auto px-10 py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center justify-center gap-2"
-            >
-              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-              Save Email Templates
-            </button>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* User Account Section */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
