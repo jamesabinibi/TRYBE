@@ -3936,6 +3936,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       const userInfo = req.user;
 
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(`
+          SELECT a.*, u.name as user_name, u.email as user_email 
+          FROM accounts a 
+          LEFT JOIN users u ON u.account_id = a.id AND u.role = 'admin'
+          ORDER BY a.created_at DESC
+        `);
+        return res.json(rows.map((a: any) => ({
+          ...a,
+          users: a.user_name ? [{ name: a.user_name, email: a.user_email }] : []
+        })));
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
+
       const { data, error } = await supabase
         .from('accounts')
         .select('*, users(name, email)')
@@ -4490,12 +4505,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (process.env.AWS_DB_PASSWORD) {
         const { rows } = await pool.query(`
-          SELECT u.*, a.business_name 
+          SELECT u.*, a.name as account_name 
           FROM users u 
           LEFT JOIN accounts a ON u.account_id = a.id 
           ORDER BY u.created_at DESC
         `);
-        return res.json(rows || []);
+        return res.json(rows.map((u: any) => ({
+          ...u,
+          accounts: u.account_name ? { name: u.account_name } : null
+        })));
       }
 
       if (!supabase) return res.status(503).json({ error: "Database not available" });
