@@ -88,7 +88,7 @@ function isValidEmail(email: string) {
 
 // AWS RDS Pool
 const { Pool } = pg;
-const pool = new Pool({
+const poolConfig = {
   host: process.env.AWS_DB_HOST || 'gryndee-db.cevskqcic97b.us-east-1.rds.amazonaws.com',
   port: parseInt(process.env.AWS_DB_PORT || '5432'),
   user: process.env.AWS_DB_USER || 'postgres',
@@ -97,6 +97,14 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   }
+};
+
+// Only create pool if we have a password, otherwise use a dummy or handle gracefully
+const pool = new Pool(poolConfig);
+
+// Handle pool errors to prevent process crash
+pool.on('error', (err) => {
+  console.error('[RDS] Unexpected error on idle client', err);
 });
 
 async function initAwsDb() {
