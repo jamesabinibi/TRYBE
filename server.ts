@@ -337,27 +337,53 @@ async function initAwsDb() {
       `);
       console.log('[DB] RDS Schema check complete.');
       
+      // ONE-TIME CLEANUP: Clear all demo data to ensure a fresh start
+      // We check for "GIANT CARROT LTD" or "Gryndee Demo" to trigger a full wipe
+      const { rows: demoSettings } = await client.query("SELECT id FROM settings WHERE business_name IN ('GIANT CARROT LTD', 'Gryndee Demo', 'Gryndee') LIMIT 1");
+      if (demoSettings.length > 0) {
+        console.log('[DB] Demo/Old data detected. Performing thorough cleanup...');
+        await client.query('TRUNCATE bookkeeping, notifications, services, product_images, expenses, customers, sale_items, sales, product_variants, products, categories, settings CASCADE');
+        // Also clear all users except the ones we're about to create
+        await client.query("DELETE FROM users WHERE username NOT IN ('admin', 'superadmin')");
+        await client.query("DELETE FROM accounts WHERE name NOT IN ('Gryndee Demo Account', 'System Admin', 'System Administration')");
+        console.log('[DB] All transactional and demo data cleared.');
+      }
+
+      // Ensure superadmin exists with the correct hashed password
+      const hashedSuperPass = await bcrypt.hash('superpassword123', 10);
+      const { rows: existingSuperAdmin } = await client.query('SELECT id FROM users WHERE username = $1 LIMIT 1', ['superadmin']);
+      if (existingSuperAdmin.length === 0) {
+        console.log('[DB] Creating superadmin...');
+        const { rows: sysAccs } = await client.query("INSERT INTO accounts (name) VALUES ('System Admin') RETURNING id");
+        await client.query(
+          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
+          [sysAccs[0].id, 'superadmin', 'admin@stockflow.pro', hashedSuperPass, 'super_admin', 'System Admin']
+        );
+      } else {
+        // Update password just in case it was wrong
+        await client.query('UPDATE users SET password = $1 WHERE username = $2', [hashedSuperPass, 'superadmin']);
+      }
+
       // Ensure default admin exists
+      const hashedAdminPass = await bcrypt.hash('admin123', 10);
       const { rows: existingAdmin } = await client.query('SELECT id FROM users WHERE username = $1 LIMIT 1', ['admin']);
       if (existingAdmin.length === 0) {
         console.log('[DB] No default admin found. Creating admin/admin123...');
-        // Create a default account for the admin
         const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
         const accountId = accounts[0].id;
         
-        const hashedPassword = await bcrypt.hash('admin123', 10);
         await client.query(
           'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
-          [accountId, 'admin', 'admin@gryndee.com', hashedPassword, 'admin', 'Demo Admin']
+          [accountId, 'admin', 'admin@gryndee.com', hashedAdminPass, 'admin', 'Demo Admin']
         );
         
-        // Create default settings for this account
         await client.query(
           'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
           [accountId, 'Gryndee Demo', 'NGN']
         );
-        
-        console.log('[DB] Default admin created: admin / admin123');
+      } else {
+        // Update password just in case
+        await client.query('UPDATE users SET password = $1 WHERE username = $2', [hashedAdminPass, 'admin']);
       }
     } finally {
       client.release();
@@ -1923,44 +1949,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
 
     try {
-      // Special case for superadmin if configured via env
-      const superAdminPass = process.env.SUPERADMIN_PASSWORD;
-      if (trimmedUsername.toLowerCase() === 'superadmin' && superAdminPass) {
-        if (password === superAdminPass) {
-          console.log(`[AUTH] Superadmin login via environment variable`);
-          // Find or create a system account for superadmin
-          let systemAccountId;
-          if (process.env.AWS_DB_PASSWORD) {
-            const { rows } = await pool.query('SELECT id FROM accounts WHERE name = $1 LIMIT 1', ['System Admin']);
-            if (rows[0]) {
-              systemAccountId = rows[0].id;
-            } else {
-              const insertRes = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['System Admin']);
-              systemAccountId = insertRes.rows[0].id;
-            }
-          } else {
-            let { data: systemAccount } = await supabase.from('accounts').select('id').eq('name', 'System Admin').maybeSingle();
-            if (!systemAccount) {
-              const { data: newAcc } = await supabase.from('accounts').insert([{ name: 'System Admin' }]).select().single();
-              systemAccount = newAcc;
-            }
-            systemAccountId = systemAccount?.id;
-          }
-          
-          return res.json({
-            id: '0',
-            username: 'superadmin',
-            email: 'admin@gryndee.com',
-            role: 'super_admin',
-            name: 'System Super Admin',
-            account_id: systemAccountId || 0
-          });
-        } else {
-          return res.status(401).json({ error: "Invalid superadmin password" });
-        }
-      }
-
-    let user;
+      let user;
     // Try RDS first
     if (process.env.AWS_DB_PASSWORD) {
         console.log(`[AUTH] Querying AWS RDS for: "${trimmedUsername}"`);
@@ -4790,6 +4779,20 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // Reload schema cache
       await runSql(`NOTIFY pgrst, 'reload schema';`);
 
+      // ONE-TIME CLEANUP: Clear all demo data from Supabase
+      const { data: demoSettings } = await supabase.from('settings').select('id').in('business_name', ['GIANT CARROT LTD', 'Gryndee Demo', 'Gryndee']).maybeSingle();
+      if (demoSettings) {
+        console.log('[INIT] Demo/Old data detected in Supabase. Performing thorough cleanup...');
+        const tables = ['bookkeeping', 'notifications', 'services', 'product_images', 'expenses', 'customers', 'sale_items', 'sales', 'product_variants', 'products', 'categories', 'settings'];
+        for (const table of tables) {
+          await runSql(`TRUNCATE ${table} CASCADE;`);
+        }
+        // Also clear all users except the ones we're about to create
+        await supabase.from('users').delete().not('username', 'in', '("admin","superadmin")');
+        await supabase.from('accounts').delete().not('name', 'in', '("Gryndee Demo Account","System Administration","System Admin")');
+        console.log('[INIT] All transactional and demo data cleared from Supabase.');
+      }
+
       // Data migrations for consistency
       await runSql(`
         UPDATE sale_items si 
@@ -4837,13 +4840,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           }
         }
       } else {
-        console.log('[INIT] Super admin already exists.');
-        // Update to hashed password if it's still plain text
-        if (existingAdmin.password === 'superpassword123') {
-          console.log('[INIT] Updating superadmin password to hashed version...');
-          const hashedPassword = await bcrypt.hash('superpassword123', 10);
-          await supabase.from('users').update({ password: hashedPassword }).eq('id', existingAdmin.id);
-        }
+        console.log('[INIT] Super admin already exists. Updating password...');
+        const hashedPassword = await bcrypt.hash('superpassword123', 10);
+        await supabase.from('users').update({ password: hashedPassword }).eq('id', existingAdmin.id);
       }
 
       // 3. Check for demo admin (by username or email)
@@ -4883,6 +4882,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             console.log('[INIT] Default admin created: admin / admin123');
           }
         }
+      } else {
+        console.log('[INIT] Demo admin already exists. Updating password...');
+        const hashedPassword = await bcrypt.hash('admin123', 10);
+        await supabase.from('users').update({ password: hashedPassword }).eq('id', demoAdmin.id);
       }
     }
   } catch (e) {
