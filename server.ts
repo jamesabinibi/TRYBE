@@ -442,8 +442,23 @@ async function createServer() {
     next();
   });
 
+  const requireSuperAdmin = async (req: any, res: any, next: any) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'super_admin') {
+        console.warn(`[AUTH] SuperAdmin access denied for user:`, userInfo);
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      req.user = userInfo;
+      next();
+    } catch (error) {
+      console.error('[AUTH] SuperAdmin check error:', error);
+      res.status(403).json({ error: "Forbidden" });
+    }
+  };
+
   // Data Migration Tool
-  app.post("/api/admin/migrate", requireSuperAdmin, async (req, res) => {
+  app.post("/api/admin/migrate", requireSuperAdmin, async (req: any, res) => {
     try {
       const userInfo = req.user;
 
@@ -687,21 +702,6 @@ async function createServer() {
     } catch (error) {
       console.error('[AUTH] Token authentication error:', error);
       res.status(401).json({ error: "Unauthorized" });
-    }
-  };
-
-  const requireSuperAdmin = async (req: any, res: any, next: any) => {
-    try {
-      const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role !== 'super_admin') {
-        console.warn(`[AUTH] SuperAdmin access denied for user:`, userInfo);
-        return res.status(403).json({ error: "Forbidden" });
-      }
-      req.user = userInfo;
-      next();
-    } catch (error) {
-      console.error('[AUTH] SuperAdmin check error:', error);
-      res.status(403).json({ error: "Forbidden" });
     }
   };
 
@@ -2370,9 +2370,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Test Email Route
   app.post("/api/admin/test-email", requireSuperAdmin, async (req: any, res) => {
-    try {
-      const userInfo = req.user;
-
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
@@ -3932,7 +3929,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Super Admin Routes
 
-  app.get("/api/admin/accounts", requireSuperAdmin, async (req, res) => {
+  app.get("/api/admin/accounts", requireSuperAdmin, async (req: any, res) => {
     try {
       const userInfo = req.user;
 
@@ -4352,19 +4349,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
-  app.post("/api/admin/migrate-images", requireSuperAdmin, async (req, res) => {
+  app.post("/api/admin/migrate-images", requireSuperAdmin, async (req: any, res) => {
     if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = req.user;
+      const { data: images, error } = await supabase.from('product_images').select('*');
       if (error) throw error;
       
       let migratedCount = 0;
-      for (const img of images) {
-        if (img.image_data && img.image_data.startsWith('data:image')) {
-          const cloudinaryUrl = await uploadToCloudinary(img.image_data);
-          if (cloudinaryUrl && cloudinaryUrl.startsWith('http')) {
-            await supabase.from('product_images').update({ image_data: cloudinaryUrl }).eq('id', img.id);
-            migratedCount++;
+      if (images) {
+        for (const img of images) {
+          if (img.image_data && img.image_data.startsWith('data:image')) {
+            const cloudinaryUrl = await uploadToCloudinary(img.image_data);
+            if (cloudinaryUrl && cloudinaryUrl.startsWith('http')) {
+              await supabase.from('product_images').update({ image_data: cloudinaryUrl }).eq('id', img.id);
+              migratedCount++;
+            }
           }
         }
       }
@@ -4375,7 +4375,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   // Super Admin Broadcast
-  app.post("/api/admin/broadcast", requireSuperAdmin, async (req, res) => {
+  app.post("/api/admin/broadcast", requireSuperAdmin, async (req: any, res) => {
     try {
       const userInfo = req.user;
 
@@ -4431,7 +4431,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   // Super Admin Stats
-  app.get("/api/admin/stats", requireSuperAdmin, async (req, res) => {
+  app.get("/api/admin/stats", requireSuperAdmin, async (req: any, res) => {
     try {
       const userInfo = req.user;
 
@@ -4497,7 +4497,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   // Super Admin List All Users
-  app.get("/api/admin/users", requireSuperAdmin, async (req, res) => {
+  app.get("/api/admin/users", requireSuperAdmin, async (req: any, res) => {
     try {
       const userInfo = req.user;
 
@@ -4552,7 +4552,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   // Super Admin Reset User Password
-  app.post("/api/admin/reset-user-password", requireSuperAdmin, async (req, res) => {
+  app.post("/api/admin/reset-user-password", requireSuperAdmin, async (req: any, res) => {
     try {
       const userInfo = req.user;
 
