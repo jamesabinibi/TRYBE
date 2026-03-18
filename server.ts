@@ -1616,10 +1616,35 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
     res.json({ 
       message: "Gryndee API is working", 
-      version: "2.5.0", 
+      version: "2.5.1", 
       database: dbStatus,
       env: process.env.NODE_ENV 
     });
+  });
+
+  // TEMPORARY: Database Reset Endpoint
+  app.get("/api/debug/reset-rds", async (req, res) => {
+    if (req.query.confirm !== 'true') {
+      return res.status(400).send("Please add ?confirm=true to the URL to wipe the database.");
+    }
+
+    if (!process.env.AWS_DB_PASSWORD) {
+      return res.status(500).send("RDS not configured.");
+    }
+
+    try {
+      // Wipe all tables and restart IDs
+      await pool.query(`
+        TRUNCATE users, accounts, settings, products, sales, customers, expenses, bookkeeping, invoices, categories 
+        RESTART IDENTITY CASCADE
+      `);
+      
+      console.log('[DEBUG] Database wiped successfully via web endpoint');
+      res.send("<h1>Database Reset Successful!</h1><p>You can now go back to the <a href='/register'>Registration Page</a> and create your account fresh.</p>");
+    } catch (e: any) {
+      console.error('[DEBUG] Reset failed:', e);
+      res.status(500).send("Reset failed: " + e.message);
+    }
   });
 
   // Categories (Moved to top)
