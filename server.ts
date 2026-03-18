@@ -4782,9 +4782,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         WHERE pv.product_id = p.id AND pv.account_id IS NULL;
       `);
 
-      // 2. Check for superadmin
-      const { data: existingAdmin } = await supabase.from('users').select('id, password').eq('username', 'superadmin').maybeSingle();
-      if (!existingAdmin) {
+      // 2. Check for superadmin (by username or email)
+      const { data: existingUsers, error: checkErr } = await supabase
+        .from('users')
+        .select('id, password, username, email')
+        .or('username.eq.superadmin,email.eq.admin@stockflow.pro');
+
+      const existingAdmin = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
+
+      if (checkErr) {
+        console.error('[INIT] Error checking for super admin:', checkErr);
+      } else if (!existingAdmin) {
         console.log('[INIT] No super admin found. Creating default super admin...');
         const { data: account, error: accErr } = await supabase.from('accounts').insert([{ name: 'System Administration' }]).select().single();
         if (accErr) {
@@ -4800,13 +4808,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             name: 'System Admin'
           }]);
           if (userErr) {
-            console.error('[INIT] Failed to create super admin user:', userErr);
+            console.error('[INIT] Failed to create super admin user:', JSON.stringify(userErr, null, 2));
           } else {
             console.log('[INIT] Default super admin created: superadmin / superpassword123');
           }
         }
       } else {
-        console.log('[INIT] Super admin "superadmin" already exists.');
+        console.log('[INIT] Super admin already exists.');
         // Update to hashed password if it's still plain text
         if (existingAdmin.password === 'superpassword123') {
           console.log('[INIT] Updating superadmin password to hashed version...');
@@ -4815,14 +4823,24 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }
       }
 
-      // 3. Check for demo admin
-      const { data: demoAdmin } = await supabase.from('users').select('id').eq('username', 'admin').maybeSingle();
-      if (!demoAdmin) {
+      // 3. Check for demo admin (by username or email)
+      const { data: existingDemoUsers, error: demoCheckErr } = await supabase
+        .from('users')
+        .select('id')
+        .or('username.eq.admin,email.eq.admin@gryndee.com');
+
+      const demoAdmin = existingDemoUsers && existingDemoUsers.length > 0 ? existingDemoUsers[0] : null;
+
+      if (demoCheckErr) {
+        console.error('[INIT] Error checking for demo admin:', demoCheckErr);
+      } else if (!demoAdmin) {
         console.log('[INIT] No demo admin found. Creating admin/admin123...');
-        const { data: account } = await supabase.from('accounts').insert([{ name: 'Gryndee Demo Account' }]).select().single();
-        if (account) {
+        const { data: account, error: demoAccErr } = await supabase.from('accounts').insert([{ name: 'Gryndee Demo Account' }]).select().single();
+        if (demoAccErr) {
+          console.error('[INIT] Failed to create demo account:', demoAccErr);
+        } else if (account) {
           const hashedPassword = await bcrypt.hash('admin123', 10);
-          await supabase.from('users').insert([{
+          const { error: demoUserErr } = await supabase.from('users').insert([{
             account_id: account.id,
             username: 'admin',
             email: 'admin@gryndee.com',
@@ -4831,13 +4849,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             name: 'Demo Admin'
           }]);
           
-          await supabase.from('settings').insert([{
-            account_id: account.id,
-            business_name: 'Gryndee Demo',
-            currency: 'NGN'
-          }]);
-          
-          console.log('[INIT] Default admin created: admin / admin123');
+          if (demoUserErr) {
+            console.error('[INIT] Failed to create demo admin user:', JSON.stringify(demoUserErr, null, 2));
+          } else {
+            await supabase.from('settings').insert([{
+              account_id: account.id,
+              business_name: 'Gryndee Demo',
+              currency: 'NGN'
+            }]);
+            console.log('[INIT] Default admin created: admin / admin123');
+          }
         }
       }
     }
