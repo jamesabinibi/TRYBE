@@ -1364,9 +1364,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }])
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        console.error('[SERVICES] Failed to save service:', error);
+        throw error;
+      }
       res.json(data);
     } catch (error: any) {
+      console.error('[SERVICES] Error in POST /api/services:', error);
       res.status(500).json({ error: error.message });
     }
   });

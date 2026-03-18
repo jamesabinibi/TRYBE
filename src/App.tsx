@@ -42,6 +42,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import { cn } from './lib/utils';
 import NotificationCenter from './components/NotificationCenter';
+import Walkthrough from './components/Walkthrough';
 
 import { Toaster } from 'sonner';
 
@@ -253,6 +254,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       "flex min-h-screen font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300",
       isDarkMode ? "bg-[#050505] text-white" : "bg-zinc-50 text-zinc-900"
     )}>
+      <Walkthrough />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <header className={cn(

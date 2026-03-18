@@ -22,7 +22,7 @@
     touch-action: manipulation;
   }
   body {
-    @apply font-sans text-zinc-900 dark:text-zinc-100 antialiased overflow-hidden w-full;
+    @apply font-sans text-zinc-950 dark:text-zinc-100 antialiased overflow-hidden w-full;
   }
   
   h1 { @apply font-display text-[24px] sm:text-[32px] font-bold tracking-tight; }
