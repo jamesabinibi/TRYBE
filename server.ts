@@ -338,9 +338,12 @@ async function initAwsDb() {
       console.log('[DB] RDS Schema check complete.');
       
       // Reset all non-admin users to allow fresh registration
-      await client.query("DELETE FROM users WHERE username NOT IN ('admin', 'superadmin')");
-      await client.query("DELETE FROM accounts WHERE id NOT IN (SELECT account_id FROM users)");
-      console.log('[DB] General reset for non-admin users completed in RDS.');
+      const { rowCount: userCount } = await client.query("DELETE FROM users WHERE username NOT IN ('admin', 'superadmin')");
+      const { rowCount: accCount } = await client.query("DELETE FROM accounts WHERE id NOT IN (SELECT account_id FROM users)");
+      console.log(`[DB] General reset completed in RDS. Deleted ${userCount} users and ${accCount} accounts.`);
+      
+      // Specifically ensure abinibi is gone if he was somehow an admin
+      await client.query("DELETE FROM users WHERE username = 'abinibi' OR email = 'abinibimultimedia@yahoo.com'");
 
       // Ensure default admin exists
       const { rows: existingAdmin } = await client.query('SELECT id FROM users WHERE username = $1 LIMIT 1', ['admin']);
@@ -1767,6 +1770,32 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  // TEMPORARY: Debug endpoint to list users
+  app.get("/api/debug/list-users", async (req, res) => {
+    const results: any = { rds: [], supabase: [] };
+    
+    if (process.env.AWS_DB_PASSWORD) {
+      try {
+        const { rows } = await pool.query('SELECT id, username, email, role, account_id FROM users');
+        results.rds = rows;
+      } catch (e: any) {
+        results.rds_error = e.message;
+      }
+    }
+    
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('users').select('id, username, email, role, account_id');
+        if (error) results.supabase_error = error.message;
+        else results.supabase = data;
+      } catch (e: any) {
+        results.supabase_error = e.message;
+      }
+    }
+    
+    res.json(results);
+  });
+
   // Categories (Moved to top)
   app.get("/api/categories", async (req, res) => {
     try {
@@ -1904,45 +1933,40 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       // Special case for superadmin if configured via env
       const superAdminPass = process.env.SUPERADMIN_PASSWORD;
-    if (trimmedUsername.toLowerCase() === 'superadmin') {
-      if (!superAdminPass) {
-        console.error('[AUTH] Superadmin login attempt but SUPERADMIN_PASSWORD is not set in environment');
-        return res.status(401).json({ error: "Superadmin login is disabled. Please set SUPERADMIN_PASSWORD environment variable." });
-      }
-      
-      if (password === superAdminPass) {
-        console.log(`[AUTH] Superadmin login via environment variable`);
-        // Find or create a system account for superadmin
-        let systemAccountId;
-        if (process.env.AWS_DB_PASSWORD) {
-          const { rows } = await pool.query('SELECT id FROM accounts WHERE name = $1 LIMIT 1', ['System Admin']);
-          if (rows[0]) {
-            systemAccountId = rows[0].id;
+      if (trimmedUsername.toLowerCase() === 'superadmin' && superAdminPass) {
+        if (password === superAdminPass) {
+          console.log(`[AUTH] Superadmin login via environment variable`);
+          // Find or create a system account for superadmin
+          let systemAccountId;
+          if (process.env.AWS_DB_PASSWORD) {
+            const { rows } = await pool.query('SELECT id FROM accounts WHERE name = $1 LIMIT 1', ['System Admin']);
+            if (rows[0]) {
+              systemAccountId = rows[0].id;
+            } else {
+              const insertRes = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['System Admin']);
+              systemAccountId = insertRes.rows[0].id;
+            }
           } else {
-            const insertRes = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['System Admin']);
-            systemAccountId = insertRes.rows[0].id;
+            let { data: systemAccount } = await supabase.from('accounts').select('id').eq('name', 'System Admin').maybeSingle();
+            if (!systemAccount) {
+              const { data: newAcc } = await supabase.from('accounts').insert([{ name: 'System Admin' }]).select().single();
+              systemAccount = newAcc;
+            }
+            systemAccountId = systemAccount?.id;
           }
+          
+          return res.json({
+            id: '0',
+            username: 'superadmin',
+            email: 'admin@gryndee.com',
+            role: 'super_admin',
+            name: 'System Super Admin',
+            account_id: systemAccountId || 0
+          });
         } else {
-          let { data: systemAccount } = await supabase.from('accounts').select('id').eq('name', 'System Admin').maybeSingle();
-          if (!systemAccount) {
-            const { data: newAcc } = await supabase.from('accounts').insert([{ name: 'System Admin' }]).select().single();
-            systemAccount = newAcc;
-          }
-          systemAccountId = systemAccount?.id;
+          return res.status(401).json({ error: "Invalid superadmin password" });
         }
-        
-        return res.json({
-          id: '0',
-          username: 'superadmin',
-          email: 'admin@gryndee.com',
-          role: 'super_admin',
-          name: 'System Super Admin',
-          account_id: systemAccountId || 0
-        });
-      } else {
-        return res.status(401).json({ error: "Invalid superadmin password" });
       }
-    }
 
     let user;
     // Try RDS first
@@ -2038,11 +2062,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // Try RDS first
       if (process.env.AWS_DB_PASSWORD) {
         const { rows: existing } = await pool.query(
-          'SELECT id FROM users WHERE username ILIKE $1 OR email ILIKE $2 LIMIT 1',
+          'SELECT id, username, email FROM users WHERE username ILIKE $1 OR email ILIKE $2 LIMIT 1',
           [trimmedUsername, trimmedEmail]
         );
 
         if (existing.length > 0) {
+          console.warn(`[AUTH] Registration failed: User already exists in RDS. Found: ${JSON.stringify(existing[0])}`);
           return res.status(400).json({ error: "Username or email already exists" });
         }
 
@@ -2100,7 +2125,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // Check if exists case-insensitively
       const { data: existing, error: checkError } = await supabase
         .from('users')
-        .select('id')
+        .select('id, username, email')
         .or(`username.ilike."${trimmedUsername}",email.ilike."${trimmedEmail}"`)
         .maybeSingle();
 
@@ -2110,6 +2135,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       if (existing) {
+        console.warn(`[AUTH] Registration failed: User already exists in Supabase. Found: ${JSON.stringify(existing)}`);
         return res.status(400).json({ error: "Username or email already exists" });
       }
 
@@ -4531,8 +4557,20 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     // Ensure at least one super admin exists
     if (supabase) {
       // Reset all non-admin users to allow fresh registration
-      await supabase.from('users').delete().neq('username', 'admin').neq('username', 'superadmin');
-      console.log('[INIT] General reset for non-admin users completed in Supabase.');
+      const { data: deletedUsers } = await supabase.from('users').delete().neq('username', 'admin').neq('username', 'superadmin').select('id');
+      console.log(`[INIT] General reset completed in Supabase. Deleted ${deletedUsers?.length || 0} users.`);
+      
+      // Specifically ensure abinibi is gone
+      await supabase.from('users').delete().or('username.eq.abinibi,email.eq.abinibimultimedia@yahoo.com');
+      
+      // Clean up orphaned accounts in Supabase
+      const { data: activeAccs } = await supabase.from('users').select('account_id');
+      const activeAccIds = activeAccs?.map(u => u.account_id).filter(id => id) || [];
+      if (activeAccIds.length > 0) {
+        await supabase.from('accounts').delete().not('id', 'in', `(${activeAccIds.join(',')})`);
+      } else {
+        await supabase.from('accounts').delete().neq('id', 0); // Delete all if no users
+      }
 
       // 1. Run basic migrations
       console.log('[INIT] Running startup migrations...');
