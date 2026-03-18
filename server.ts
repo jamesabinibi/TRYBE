@@ -337,14 +337,6 @@ async function initAwsDb() {
       `);
       console.log('[DB] RDS Schema check complete.');
       
-      // Reset all non-admin users to allow fresh registration
-      const { rowCount: userCount } = await client.query("DELETE FROM users WHERE username NOT IN ('admin', 'superadmin')");
-      const { rowCount: accCount } = await client.query("DELETE FROM accounts WHERE id NOT IN (SELECT account_id FROM users)");
-      console.log(`[DB] General reset completed in RDS. Deleted ${userCount} users and ${accCount} accounts.`);
-      
-      // Specifically ensure abinibi is gone if he was somehow an admin
-      await client.query("DELETE FROM users WHERE username = 'abinibi' OR email = 'abinibimultimedia@yahoo.com'");
-
       // Ensure default admin exists
       const { rows: existingAdmin } = await client.query('SELECT id FROM users WHERE username = $1 LIMIT 1', ['admin']);
       if (existingAdmin.length === 0) {
@@ -4556,22 +4548,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   try {
     // Ensure at least one super admin exists
     if (supabase) {
-      // Reset all non-admin users to allow fresh registration
-      const { data: deletedUsers } = await supabase.from('users').delete().neq('username', 'admin').neq('username', 'superadmin').select('id');
-      console.log(`[INIT] General reset completed in Supabase. Deleted ${deletedUsers?.length || 0} users.`);
-      
-      // Specifically ensure abinibi is gone
-      await supabase.from('users').delete().or('username.eq.abinibi,email.eq.abinibimultimedia@yahoo.com');
-      
-      // Clean up orphaned accounts in Supabase
-      const { data: activeAccs } = await supabase.from('users').select('account_id');
-      const activeAccIds = activeAccs?.map(u => u.account_id).filter(id => id) || [];
-      if (activeAccIds.length > 0) {
-        await supabase.from('accounts').delete().not('id', 'in', `(${activeAccIds.join(',')})`);
-      } else {
-        await supabase.from('accounts').delete().neq('id', 0); // Delete all if no users
-      }
-
       // 1. Run basic migrations
       console.log('[INIT] Running startup migrations...');
       
