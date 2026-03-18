@@ -160,6 +160,9 @@ async function initAwsDb() {
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='account_id') THEN
             ALTER TABLE users ADD COLUMN account_id INTEGER REFERENCES accounts(id);
           END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='created_at') THEN
+            ALTER TABLE users ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+          END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reset_code') THEN
             ALTER TABLE users ADD COLUMN reset_code TEXT;
           END IF;
@@ -616,17 +619,20 @@ async function createServer() {
 
     // Handle virtual superadmin
     if (userId === '0') {
-      console.log(`[AUTH] Virtual superadmin detected (ID: 0)`);
+      console.log(`[AUTH] Virtual superadmin detected (ID: 0). Checking RDS status...`);
       try {
         // Try RDS first
         if (process.env.AWS_DB_PASSWORD) {
+          console.log(`[AUTH] RDS enabled. Looking up System Admin account...`);
           try {
             const { rows } = await pool.query('SELECT id FROM accounts WHERE name = $1 LIMIT 1', ['System Admin']);
             let systemAccount = rows[0];
             if (!systemAccount) {
+              console.log(`[AUTH] System Admin account not found in RDS. Creating...`);
               const insertRes = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['System Admin']);
               systemAccount = insertRes.rows[0];
             }
+            console.log(`[AUTH] Virtual superadmin RDS lookup success. Account ID: ${systemAccount?.id}`);
             return { id: '0', account_id: systemAccount?.id || 1, role: 'super_admin' };
           } catch (rdsErr) {
             console.error(`[AUTH] RDS error in virtual superadmin lookup:`, rdsErr);
@@ -664,10 +670,13 @@ async function createServer() {
     try {
       // Try RDS first
       if (process.env.AWS_DB_PASSWORD && !isNaN(Number(userId))) {
+        console.log(`[AUTH] Querying RDS for user ID: ${userId}`);
         const { rows } = await pool.query('SELECT id, account_id, role FROM users WHERE id = $1', [userId]);
         if (rows.length > 0) {
+          console.log(`[AUTH] User ${userId} found in RDS. Role: ${rows[0].role}`);
           return rows[0];
         }
+        console.log(`[AUTH] User ${userId} not found in RDS users table.`);
       }
 
       // Fallback to Supabase
@@ -4500,41 +4509,64 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.get("/api/admin/users", requireSuperAdmin, async (req: any, res) => {
     try {
       const userInfo = req.user;
-
-      console.log(`[ADMIN] Fetching all users...`);
+      console.log(`[ADMIN] Fetching all users for SuperAdmin: ${userInfo?.email || userInfo?.id}`);
 
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query(`
-          SELECT u.*, a.name as account_name 
-          FROM users u 
-          LEFT JOIN accounts a ON u.account_id = a.id 
-          ORDER BY u.created_at DESC
-        `);
-        return res.json(rows.map((u: any) => ({
-          ...u,
-          accounts: u.account_name ? { name: u.account_name } : null
-        })));
+        console.log(`[ADMIN] Querying RDS for all users...`);
+        try {
+          const { rows } = await pool.query(`
+            SELECT u.*, a.name as account_name 
+            FROM users u 
+            LEFT JOIN accounts a ON u.account_id = a.id 
+            ORDER BY u.created_at DESC
+          `);
+          console.log(`[ADMIN] RDS fetch success. Found ${rows.length} users.`);
+          
+          // Map to match frontend expectations and remove sensitive data
+          const mappedUsers = rows.map((u: any) => {
+            const { password, ...userWithoutPassword } = u;
+            return {
+              ...userWithoutPassword,
+              accounts: u.account_name ? { name: u.account_name } : null
+            };
+          });
+          
+          return res.json(mappedUsers);
+        } catch (rdsErr: any) {
+          console.error(`[ADMIN] RDS fetch users failed:`, rdsErr);
+          // Don't throw yet, maybe fallback to Supabase if available
+          if (!supabase) throw rdsErr;
+          console.warn(`[ADMIN] Falling back to Supabase due to RDS error.`);
+        }
       }
 
       if (!supabase) return res.status(503).json({ error: "Database not available" });
 
+      console.log(`[ADMIN] Querying Supabase for all users...`);
       // Try simple select first to see if it's the join or order by causing issues
       let query = supabase.from('users').select('*, accounts(name)');
       
       const { data: users, error } = await query;
 
       if (error) {
-        console.error('[ADMIN] Failed to fetch users with accounts:', error);
+        console.error('[ADMIN] Failed to fetch users with accounts from Supabase:', error);
         // Fallback to simple select without join or order
         const { data: simpleUsers, error: simpleError } = await supabase
           .from('users')
           .select('*');
         
         if (simpleError) {
-          console.error('[ADMIN] Fallback fetch users failed:', simpleError);
+          console.error('[ADMIN] Fallback fetch users from Supabase failed:', simpleError);
           throw simpleError;
         }
-        return res.json(simpleUsers);
+        
+        // Remove passwords from fallback
+        const safeSimpleUsers = (simpleUsers || []).map((u: any) => {
+          const { password, ...rest } = u;
+          return rest;
+        });
+        
+        return res.json(safeSimpleUsers);
       }
       
       // Sort in memory if created_at might be missing or causing issues in SQL
@@ -4544,10 +4576,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         return dateB - dateA;
       });
 
-      res.json(sortedUsers);
+      // Remove passwords from Supabase results
+      const safeUsers = sortedUsers.map((u: any) => {
+        const { password, ...rest } = u;
+        return rest;
+      });
+
+      res.json(safeUsers);
     } catch (error: any) {
       console.error('[ADMIN] List users failed:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message || "Internal Server Error" });
     }
   });
 
