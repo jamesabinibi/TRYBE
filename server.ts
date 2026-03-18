@@ -312,6 +312,30 @@ async function initAwsDb() {
       );
     `);
     console.log('[DB] AWS RDS Schema check complete.');
+    
+    // Ensure default admin exists
+    const { rows: existingAdmin } = await client.query('SELECT id FROM users WHERE username = $1 LIMIT 1', ['admin']);
+    if (existingAdmin.length === 0) {
+      console.log('[DB] No default admin found. Creating admin/admin123...');
+      // Create a default account for the admin
+      const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
+      const accountId = accounts[0].id;
+      
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await client.query(
+        'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
+        [accountId, 'admin', 'admin@gryndee.com', hashedPassword, 'admin', 'Demo Admin']
+      );
+      
+      // Create default settings for this account
+      await client.query(
+        'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
+        [accountId, 'Gryndee Demo', 'NGN']
+      );
+      
+      console.log('[DB] Default admin created: admin / admin123');
+    }
+
     client.release();
   } catch (err) {
     console.error('[DB] AWS RDS connection failed:', err);
@@ -3935,6 +3959,32 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           console.log('[INIT] Updating superadmin password to hashed version...');
           const hashedPassword = await bcrypt.hash('superpassword123', 10);
           await supabase.from('users').update({ password: hashedPassword }).eq('id', existingAdmin.id);
+        }
+      }
+
+      // 3. Check for demo admin
+      const { data: demoAdmin } = await supabase.from('users').select('id').eq('username', 'admin').maybeSingle();
+      if (!demoAdmin) {
+        console.log('[INIT] No demo admin found. Creating admin/admin123...');
+        const { data: account } = await supabase.from('accounts').insert([{ name: 'Gryndee Demo Account' }]).select().single();
+        if (account) {
+          const hashedPassword = await bcrypt.hash('admin123', 10);
+          await supabase.from('users').insert([{
+            account_id: account.id,
+            username: 'admin',
+            email: 'admin@gryndee.com',
+            password: hashedPassword,
+            role: 'admin',
+            name: 'Demo Admin'
+          }]);
+          
+          await supabase.from('settings').insert([{
+            account_id: account.id,
+            business_name: 'Gryndee Demo',
+            currency: 'NGN'
+          }]);
+          
+          console.log('[INIT] Default admin created: admin / admin123');
         }
       }
     }
