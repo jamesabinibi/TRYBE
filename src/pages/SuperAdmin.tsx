@@ -237,7 +237,7 @@ export default function SuperAdmin() {
             <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]">System Administration</span>
           </div>
           <h1 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tight">Global Overview</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 font-medium">Monitoring StockFlow Pro system-wide performance</p>
+          <p className="text-zinc-500 dark:text-zinc-400 font-medium">Monitoring Gryndee system-wide performance</p>
         </div>
         
         <div className="flex items-center gap-3">

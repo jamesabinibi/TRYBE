@@ -393,7 +393,7 @@ export default function App() {
 
   useEffect(() => {
     if (settings?.business_name) {
-      document.title = `${settings.business_name} | StockFlow Pro`;
+      document.title = `${settings.business_name} | Gryndee`;
     }
   }, [settings]);
 

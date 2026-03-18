@@ -56,7 +56,7 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     }
 
     const info = await transporter.sendMail({
-      from: `"StockFlow Pro" <${process.env.SMTP_FROM || 'noreply@stockflow.pro'}>`,
+      from: `"Gryndee" <${process.env.SMTP_FROM || 'noreply@gryndee.com'}>`,
       to,
       subject,
       text,
@@ -784,7 +784,7 @@ app.delete("/api/products/:id", async (req, res) => {
 
 // Settings
 app.get("/api/settings", async (req, res) => {
-  if (!supabase) return res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
+  if (!supabase) return res.json({ business_name: 'Gryndee', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
   try {
     const { data, error } = await supabase.from('settings').select('*');
     if (error) throw error;
@@ -794,7 +794,7 @@ app.get("/api/settings", async (req, res) => {
     // Find logo record
     const logoRecord = data.find(s => s.business_name.startsWith('__LOGO__'));
     
-    let settings = mainSettings || { business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' };
+    let settings = mainSettings || { business_name: 'Gryndee', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' };
     
     // 1. Decode branding from business_name
     if (settings.business_name && settings.business_name.startsWith('[')) {
@@ -812,7 +812,7 @@ app.get("/api/settings", async (req, res) => {
     
     res.json(settings);
   } catch (error) {
-    res.json({ business_name: 'StockFlow Pro', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
+    res.json({ business_name: 'Gryndee', currency: 'NGN', vat_enabled: false, low_stock_threshold: 5, logo_url: null, brand_color: '#10b981' });
   }
 });
 

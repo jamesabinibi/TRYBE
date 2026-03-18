@@ -67,7 +67,7 @@ export default function Register() {
               <UserPlus className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">Create Account</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 font-medium">Join StockFlow Pro to manage your inventory</p>
+            <p className="text-zinc-500 dark:text-zinc-400 font-medium">Join Gryndee to manage your inventory</p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">

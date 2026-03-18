@@ -56,7 +56,7 @@ export default function Login() {
             <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-brand/30 rotate-3">
               <ShieldCheck className="w-8 h-8" />
             </div>
-            <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">StockFlow Pro</h1>
+            <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">Gryndee</h1>
             <p className="text-zinc-500 dark:text-zinc-400 font-medium">Sign in to manage your inventory</p>
           </div>
 
