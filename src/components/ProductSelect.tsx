@@ -75,7 +75,7 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
               />
             </div>
           </div>
-          <div className="max-h-72 overflow-y-auto custom-scrollbar">
+          <div className="">
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
                 <div

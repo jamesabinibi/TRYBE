@@ -32,7 +32,7 @@
   .label-text { @apply text-[10px] sm:text-[12px] font-medium; }
 }
 
-.bg-brand { background-color: var(--brand-color, #10b981); }
+.bg-brand { background: var(--brand-color, #10b981); }
 .text-brand { color: var(--brand-color, #10b981); }
 .border-brand { border-color: var(--brand-color, #10b981); }
 .ring-brand { --tw-ring-color: var(--brand-color, #10b981); }
@@ -65,12 +65,9 @@
 }
 
 .main-content {
-  height: calc(100vh - 64px);
-  height: calc(100dvh - 64px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
   position: relative;
+  min-height: calc(100vh - 64px);
+  min-height: calc(100dvh - 64px);
 }
 
 @media (max-width: 1024px) {

@@ -169,7 +169,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
                 </div>
               </div>
 
-              <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+              <div className="">
                 {notifications.length > 0 ? (
                   <div className="divide-y divide-zinc-50 dark:divide-zinc-800">
                     {notifications.map((notification) => (

@@ -388,11 +388,22 @@ export default function App() {
   useEffect(() => {
     if (settings?.brand_color) {
       const root = document.documentElement;
-      root.style.setProperty('--brand-color', settings.brand_color);
-      // Generate variants
-      root.style.setProperty('--brand-color-hover', `${settings.brand_color}dd`);
-      root.style.setProperty('--brand-color-muted', `${settings.brand_color}1a`);
-      root.style.setProperty('--brand-color-light', `${settings.brand_color}33`);
+      const color = settings.brand_color;
+      const isGradient = color.includes('gradient');
+      
+      root.style.setProperty('--brand-color', color);
+      
+      if (isGradient) {
+        // For gradients, we use the same for hover and specific fallbacks for muted/light
+        root.style.setProperty('--brand-color-hover', color);
+        root.style.setProperty('--brand-color-muted', 'rgba(0,0,0,0.05)');
+        root.style.setProperty('--brand-color-light', 'rgba(0,0,0,0.1)');
+      } else {
+        // Generate variants for solid colors
+        root.style.setProperty('--brand-color-hover', `${color}dd`);
+        root.style.setProperty('--brand-color-muted', `${color}1a`);
+        root.style.setProperty('--brand-color-light', `${color}33`);
+      }
     }
   }, [settings]);
 

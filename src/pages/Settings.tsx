@@ -48,6 +48,15 @@ export default function Settings() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(globalSettings?.logo_url || null);
+  const [colorMode, setColorMode] = useState<'solid' | 'gradient'>('solid');
+
+  useEffect(() => {
+    if (settings.brand_color.includes('gradient')) {
+      setColorMode('gradient');
+    } else {
+      setColorMode('solid');
+    }
+  }, [settings.brand_color]);
 
   useEffect(() => {
     if (globalSettings) {
@@ -872,7 +881,7 @@ NOTIFY pgrst, 'reload schema';
                   <div className="relative group">
                     <div 
                       className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] border border-white/20 dark:border-white/10 flex items-center justify-center transition-transform group-hover:scale-105 cursor-pointer" 
-                      style={{ backgroundColor: settings.brand_color }}
+                      style={{ background: settings.brand_color }}
                       onClick={() => {
                         const el = document.getElementById('color-palette');
                         if (el) el.classList.toggle('hidden');
@@ -884,7 +893,26 @@ NOTIFY pgrst, 'reload schema';
                     {/* Custom Color Palette Popup */}
                     <div id="color-palette" className="hidden absolute top-full left-0 mt-4 p-4 bg-white dark:bg-[#121821] border border-zinc-200 dark:border-white/10 rounded-3xl shadow-2xl z-50 w-[280px] sm:w-[320px] backdrop-blur-xl">
                       <div className="flex justify-between items-center mb-4">
-                        <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Select Color</span>
+                        <div className="flex bg-zinc-100 dark:bg-white/5 p-1 rounded-xl">
+                          <button 
+                            onClick={() => setColorMode('solid')}
+                            className={cn(
+                              "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                              colorMode === 'solid' ? "bg-white dark:bg-white/10 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500"
+                            )}
+                          >
+                            Solid
+                          </button>
+                          <button 
+                            onClick={() => setColorMode('gradient')}
+                            className={cn(
+                              "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                              colorMode === 'gradient' ? "bg-white dark:bg-white/10 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500"
+                            )}
+                          >
+                            Gradient
+                          </button>
+                        </div>
                         <button 
                           onClick={() => document.getElementById('color-palette')?.classList.add('hidden')}
                           className="p-1.5 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors"
@@ -893,31 +921,62 @@ NOTIFY pgrst, 'reload schema';
                         </button>
                       </div>
                       
-                      <div className="grid grid-cols-4 gap-3 mb-4">
-                        {['#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#14b8a6', '#6366f1'].map(color => (
-                          <button
-                            key={color}
-                            onClick={() => {
-                              setSettings({...settings, brand_color: color});
-                              document.getElementById('color-palette')?.classList.add('hidden');
-                            }}
-                            className={cn(
-                              "w-12 h-12 rounded-2xl shadow-inner border border-white/10 transition-transform hover:scale-110 active:scale-95",
-                              settings.brand_color === color ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[#121821] ring-zinc-900 dark:ring-white" : ""
-                            )}
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
+                      {colorMode === 'solid' ? (
+                        <div className="grid grid-cols-4 gap-3 mb-4">
+                          {['#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#14b8a6', '#6366f1'].map(color => (
+                            <button
+                              key={color}
+                              onClick={() => {
+                                setSettings({...settings, brand_color: color});
+                                document.getElementById('color-palette')?.classList.add('hidden');
+                              }}
+                              className={cn(
+                                "w-12 h-12 rounded-2xl shadow-inner border border-white/10 transition-transform hover:scale-110 active:scale-95",
+                                settings.brand_color === color ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[#121821] ring-zinc-900 dark:ring-white" : ""
+                              )}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          {[
+                            'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                            'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                            'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
+                            'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+                            'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                            'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
+                            'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
+                          ].map(gradient => (
+                            <button
+                              key={gradient}
+                              onClick={() => {
+                                setSettings({...settings, brand_color: gradient});
+                                document.getElementById('color-palette')?.classList.add('hidden');
+                              }}
+                              className={cn(
+                                "h-12 rounded-2xl shadow-inner border border-white/10 transition-transform hover:scale-105 active:scale-95",
+                                settings.brand_color === gradient ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[#121821] ring-zinc-900 dark:ring-white" : ""
+                              )}
+                              style={{ background: gradient }}
+                            />
+                          ))}
+                        </div>
+                      )}
                       
                       <div className="pt-4 border-t border-zinc-100 dark:border-white/10">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Custom HEX</label>
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">
+                          {colorMode === 'solid' ? 'Custom HEX' : 'Custom Gradient CSS'}
+                        </label>
                         <div className="flex gap-2">
                           <input 
                             type="text" 
                             value={settings.brand_color}
                             onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
-                            className="flex-1 bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:border-brand"
+                            placeholder={colorMode === 'solid' ? '#000000' : 'linear-gradient(...)'}
+                            className="flex-1 bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-[11px] font-mono focus:outline-none focus:border-brand"
                           />
                         </div>
                       </div>
@@ -925,8 +984,12 @@ NOTIFY pgrst, 'reload schema';
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">HEX</span>
-                      <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-white tracking-wider">{settings.brand_color.toUpperCase()}</p>
+                      <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                        {settings.brand_color.includes('gradient') ? 'GRADIENT' : 'HEX'}
+                      </span>
+                      <p className="text-[11px] sm:text-xs font-black text-zinc-900 dark:text-white tracking-wider truncate max-w-[150px]">
+                        {settings.brand_color.toUpperCase()}
+                      </p>
                     </div>
                     <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium mt-1">Tap color box to change</p>
                   </div>
