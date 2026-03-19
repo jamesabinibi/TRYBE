@@ -286,7 +286,11 @@ export default function Settings() {
       const res = await fetchWithAuth('/api/admin/test-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ 
+          email,
+          subject: settings.welcome_email_subject,
+          body: settings.welcome_email_body
+        })
       });
       const data = await res.json();
       if (res.ok) {
@@ -857,26 +861,66 @@ NOTIFY pgrst, 'reload schema';
 
             <div id="brand" className="space-y-4">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Brand Color</label>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 sm:p-0 bg-zinc-50 dark:bg-zinc-800/50 sm:bg-transparent rounded-3xl sm:rounded-none border border-zinc-200/50 dark:border-zinc-700/50 sm:border-none relative overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 sm:p-0 bg-zinc-50 dark:bg-zinc-800/50 sm:bg-transparent rounded-3xl sm:rounded-none border border-zinc-200/50 dark:border-zinc-700/50 sm:border-none relative overflow-visible">
                 {/* Web3 decorative glow on mobile */}
                 <div 
                   className="absolute -top-10 -right-10 w-32 h-32 blur-3xl rounded-full sm:hidden pointer-events-none opacity-30 dark:opacity-20" 
                   style={{ backgroundColor: settings.brand_color }} 
                 />
                 
-                <div className="flex items-center gap-4 relative z-10">
+                <div className="flex items-center gap-4 relative z-20 w-full sm:w-auto">
                   <div className="relative group">
-                    <input 
-                      type="color" 
-                      value={settings.brand_color} 
-                      onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
-                      className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border-none cursor-pointer bg-transparent opacity-0 absolute inset-0 z-20" 
-                    />
                     <div 
-                      className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] border border-white/20 dark:border-white/10 flex items-center justify-center transition-transform group-hover:scale-105" 
-                      style={{ backgroundColor: settings.brand_color }} 
+                      className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] border border-white/20 dark:border-white/10 flex items-center justify-center transition-transform group-hover:scale-105 cursor-pointer" 
+                      style={{ backgroundColor: settings.brand_color }}
+                      onClick={() => {
+                        const el = document.getElementById('color-palette');
+                        if (el) el.classList.toggle('hidden');
+                      }}
                     >
                       <div className="w-6 h-6 rounded-full border-2 border-white/50 mix-blend-overlay" />
+                    </div>
+                    
+                    {/* Custom Color Palette Popup */}
+                    <div id="color-palette" className="hidden absolute top-full left-0 mt-4 p-4 bg-white dark:bg-[#121821] border border-zinc-200 dark:border-white/10 rounded-3xl shadow-2xl z-50 w-[280px] sm:w-[320px] backdrop-blur-xl">
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Select Color</span>
+                        <button 
+                          onClick={() => document.getElementById('color-palette')?.classList.add('hidden')}
+                          className="p-1.5 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors"
+                        >
+                          <X className="w-4 h-4 text-zinc-500" />
+                        </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-3 mb-4">
+                        {['#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#14b8a6', '#6366f1'].map(color => (
+                          <button
+                            key={color}
+                            onClick={() => {
+                              setSettings({...settings, brand_color: color});
+                              document.getElementById('color-palette')?.classList.add('hidden');
+                            }}
+                            className={cn(
+                              "w-12 h-12 rounded-2xl shadow-inner border border-white/10 transition-transform hover:scale-110 active:scale-95",
+                              settings.brand_color === color ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[#121821] ring-zinc-900 dark:ring-white" : ""
+                            )}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                      
+                      <div className="pt-4 border-t border-zinc-100 dark:border-white/10">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Custom HEX</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            value={settings.brand_color}
+                            onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
+                            className="flex-1 bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:border-brand"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="flex-1">

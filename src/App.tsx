@@ -251,7 +251,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className={cn(
-      "flex min-h-screen font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300",
+      "flex h-screen w-full overflow-hidden font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300",
       isDarkMode ? "bg-[#050505] text-white" : "bg-zinc-50 text-zinc-900"
     )}>
       <Walkthrough />

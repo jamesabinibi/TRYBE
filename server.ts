@@ -431,8 +431,10 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
       return { messageId: 'mock-id-' + Date.now() };
     }
 
+    const fromAddress = process.env.SMTP_FROM || '"Gryndee" <connectabinibi@gmail.com>';
+    
     const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER || '"Gryndee" <noreply@gryndee.com>',
+      from: fromAddress,
       to,
       subject,
       text,
@@ -2463,17 +2465,23 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Test Email Route
   app.post("/api/admin/test-email", requireSuperAdmin, async (req: any, res) => {
-    const { email } = req.body;
+    const { email, subject, body } = req.body;
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
     try {
-      await sendEmail(
-        email,
-        'Gryndee SMTP Test',
-        'This is a test email from your Gryndee application. If you received this, your SMTP settings are working correctly!',
+      const emailSubject = subject || 'Gryndee SMTP Test';
+      const emailText = body ? body.replace(/{name}/g, 'Test User').replace(/{username}/g, 'testuser') : 'This is a test email from your Gryndee application. If you received this, your SMTP settings are working correctly!';
+      const emailHtml = body 
+        ? `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+            <p style="white-space: pre-wrap; font-size: 16px; color: #374151; line-height: 1.5;">${emailText}</p>
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #6b7280;">Sent at: ${new Date().toLocaleString()}</p>
+          </div>
         `
+        : `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
             <h2 style="color: #10b981; margin-top: 0;">SMTP Test Successful!</h2>
             <p>This is a test email from your <strong>Gryndee</strong> application.</p>
@@ -2481,7 +2489,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
             <p style="font-size: 12px; color: #6b7280;">Sent at: ${new Date().toLocaleString()}</p>
           </div>
-        `
+        `;
+
+      await sendEmail(
+        email,
+        emailSubject,
+        emailText,
+        emailHtml
       );
       res.json({ success: true, message: 'Test email sent successfully!' });
     } catch (error: any) {
@@ -4669,11 +4683,42 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const { id } = req.params;
 
       if (process.env.AWS_DB_PASSWORD) {
-        await pool.query('DELETE FROM accounts WHERE id = $1', [id]);
-        return res.json({ success: true });
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          // Delete all related records first to avoid foreign key constraint violations
+          const tables = [
+            'sale_items', 'sales', 'product_images', 'product_variants', 'products',
+            'categories', 'expenses', 'bookkeeping', 'services', 'notifications',
+            'customers', 'settings', 'users'
+          ];
+          for (const table of tables) {
+            await client.query(`DELETE FROM ${table} WHERE account_id = $1`, [id]);
+          }
+          await client.query('DELETE FROM accounts WHERE id = $1', [id]);
+          await client.query('COMMIT');
+          return res.json({ success: true });
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
       }
 
       if (!supabase) return res.status(503).json({ error: "Database not available" });
+      
+      // For Supabase, we also need to manually delete related records
+      const tables = [
+        'sale_items', 'sales', 'product_images', 'product_variants', 'products',
+        'categories', 'expenses', 'bookkeeping', 'services', 'notifications',
+        'customers', 'settings', 'users'
+      ];
+      
+      for (const table of tables) {
+        await supabase.from(table).delete().eq('account_id', id);
+      }
+      
       const { error } = await supabase
         .from('accounts')
         .delete()

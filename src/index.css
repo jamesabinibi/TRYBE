@@ -18,11 +18,16 @@
 
 @layer base {
   html, body {
-    @apply overflow-hidden h-full fixed inset-0 w-full;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
     touch-action: manipulation;
   }
   body {
-    @apply font-sans text-zinc-950 dark:text-zinc-100 antialiased overflow-hidden w-full;
+    @apply font-sans text-zinc-950 dark:text-zinc-100 antialiased;
   }
   
   h1 { @apply font-display text-[24px] sm:text-[32px] font-bold tracking-tight; }
