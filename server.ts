@@ -5249,14 +5249,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // Reload schema cache
       await runSql(`NOTIFY pgrst, 'reload schema';`);
 
-      // FINAL AGGRESSIVE CLEANUP: Clear EVERYTHING from Supabase
-      console.log('[INIT] Performing FINAL AGGRESSIVE CLEANUP of Supabase...');
-      const tables = ['bookkeeping', 'notifications', 'services', 'product_images', 'expenses', 'customers', 'sale_items', 'sales', 'product_variants', 'products', 'categories', 'settings', 'users', 'accounts'];
-      for (const table of tables) {
-        await runSql(`TRUNCATE ${table} CASCADE;`).catch(e => console.error(`Failed to truncate ${table}:`, e));
-      }
-      console.log('[INIT] All Supabase tables truncated.');
-
       // Data migrations for consistency
       await runSql(`
         UPDATE sale_items si 
