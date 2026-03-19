@@ -362,7 +362,7 @@ export default function SuperAdmin() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
@@ -443,6 +443,71 @@ export default function SuperAdmin() {
                     )}
                   </tbody>
                 </table>
+            </div>
+
+            {/* Mobile View */}
+            <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+              {filteredAccounts.map((account) => (
+                <div key={account.id} className={cn("p-6 space-y-4", !account.is_active && "opacity-50")}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-black text-lg">
+                        {account.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                          {account.name}
+                          {!account.is_active && <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full uppercase tracking-wider">Inactive</span>}
+                        </h3>
+                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">ID: #{account.id}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => handleToggleAccountStatus(account.id, account.is_active)}
+                        className={cn("p-2.5 rounded-xl transition-all active:scale-95", account.is_active ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400" : "bg-amber-500/10 text-amber-500")}
+                      >
+                        <Power className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteAccount(account.id)}
+                        className="p-2.5 bg-red-500/10 text-red-500 rounded-xl active:scale-95 transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Owner</p>
+                      <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300 truncate">{account.users?.[0]?.name || 'N/A'}</p>
+                      <p className="text-[10px] text-zinc-400 truncate">{account.users?.[0]?.email || 'N/A'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest text-right">Stats</p>
+                      <div className="flex items-center justify-end gap-3 text-xs font-bold text-zinc-500">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {account.users?.length || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(account.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {filteredAccounts.length === 0 && (
+                <div className="p-12 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <Building2 className="w-8 h-8 text-zinc-200 dark:text-zinc-800" />
+                    <p className="text-sm text-zinc-500 font-medium italic">No accounts found.</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

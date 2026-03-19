@@ -562,7 +562,7 @@ const Invoices: React.FC = () => {
 
       {activeTab === 'history' ? (
         <div className="glass-card overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
@@ -639,6 +639,60 @@ const Invoices: React.FC = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile View */}
+          <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+            {pastInvoices.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="flex flex-col items-center gap-4 text-zinc-400">
+                  <div className="w-16 h-16 rounded-3xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center">
+                    <History className="w-8 h-8 opacity-20" />
+                  </div>
+                  <p className="text-sm italic">No invoices found</p>
+                </div>
+              </div>
+            ) : (
+              pastInvoices.map((inv) => (
+                <div key={inv.id} className="p-6 space-y-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-bold font-mono tracking-tighter text-zinc-900 dark:text-white">#{inv.invoice_number}</p>
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
+                        {new Date(inv.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handlePreview(inv)}
+                        className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDownload(inv)}
+                        className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <div>
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Client</p>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-white">{inv.customer_name || 'Walk-in'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total</p>
+                      <p className="text-sm font-bold font-mono text-brand">
+                        {formatCurrency(inv.total_amount, settings?.currency || '₦')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       ) : (

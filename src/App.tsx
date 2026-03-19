@@ -139,7 +139,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       </AnimatePresence>
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 w-64 flex flex-col z-50 transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen",
+        "fixed inset-y-0 left-0 w-64 flex flex-col z-50 transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
         isDarkMode ? "bg-[#0A0A0B] text-zinc-400 border-r border-white/[0.04]" : "bg-white text-zinc-500 border-r border-zinc-200",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>

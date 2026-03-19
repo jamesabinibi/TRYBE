@@ -152,7 +152,7 @@ export default function Users() {
       </div>
 
       <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
               <tr className="bg-zinc-50 border-b border-zinc-200">
@@ -228,6 +228,72 @@ export default function Users() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+          {isLoading ? (
+            <div className="p-12 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
+                <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Loading...</p>
+              </div>
+            </div>
+          ) : users.length > 0 ? (
+            users.map((user) => (
+              <div key={user.id} className="p-6 space-y-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-black text-lg">
+                      {user.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-zinc-900 dark:text-white">{user.name}</h3>
+                      <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">@{user.username}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => handleOpenModal(user)}
+                      className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteUser(user.id)}
+                      className="p-2.5 bg-red-500/10 text-red-500 rounded-xl active:scale-95 transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <div>
+                    <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Role</p>
+                    <div className="flex items-center gap-2">
+                      <Shield className={cn(
+                        "w-3 h-3",
+                        user.role === 'admin' ? "text-purple-500" : 
+                        user.role === 'manager' ? "text-blue-500" : "text-zinc-400"
+                      )} />
+                      <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-widest">{user.role}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Status</p>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-brand/10 text-brand">
+                      Active
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-12 text-center">
+              <p className="text-sm text-zinc-500 italic">No team members found.</p>
+            </div>
+          )}
         </div>
       </div>
 
