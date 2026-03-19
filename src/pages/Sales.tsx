@@ -691,7 +691,13 @@ export default function Sales() {
                         <motion.button 
                           key={product.id} 
                           whileHover={{ y: -4 }}
-                          onClick={() => setSelectedProduct(product)}
+                          onClick={() => {
+                            if (product.product_type === 'one' && product.variants && product.variants.length > 0) {
+                              addToCart(product, product.variants[0]);
+                            } else {
+                              setSelectedProduct(product);
+                            }
+                          }}
                           className="glass-card p-6 flex flex-col gap-4 text-left group"
                         >
                           <div className="flex items-start justify-between gap-4">
@@ -754,7 +760,11 @@ export default function Sales() {
                         >
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-zinc-900 dark:text-white truncate tracking-tight">{item.product.name}</p>
-                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{item.variant.size} {item.variant.color && `· ${item.variant.color}`}</p>
+                            {item.product.product_type !== 'one' && (item.variant.size || item.variant.color) && (
+                              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">
+                                {item.variant.size} {item.variant.color && `· ${item.variant.color}`}
+                              </p>
+                            )}
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-2xl overflow-hidden p-1.5 border border-zinc-200 dark:border-zinc-700">

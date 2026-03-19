@@ -97,3 +97,14 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Increase text contrast in light mode */
+html:not(.dark) .text-zinc-500 {
+  color: #52525b !important; /* zinc-600 */
+}
+html:not(.dark) .text-zinc-600 {
+  color: #3f3f46 !important; /* zinc-700 */
+}
+html:not(.dark) .text-zinc-400 {
+  color: #71717a !important; /* zinc-500 */
+}
