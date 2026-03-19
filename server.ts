@@ -71,8 +71,14 @@ try {
 }
 
 // Email transporter setup
+let smtpHost = process.env.SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com';
+// Fix common typos in the host
+if (smtpHost === 'emai-smtp.us.east-1.amazonaws.com' || smtpHost === 'email-smtp.us.east-1.amazonaws.com') {
+  smtpHost = 'email-smtp.us-east-1.amazonaws.com';
+}
+
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com',
+  host: smtpHost,
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: process.env.SMTP_SECURE === 'true',
   auth: {
@@ -1847,6 +1853,19 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       version: "2.5.2", 
       database: dbStatus,
       env: process.env.NODE_ENV 
+    });
+  });
+
+  // TEMPORARY: Debug endpoint to check SMTP
+  app.get("/api/debug/smtp", (req, res) => {
+    res.json({
+      hasUser: !!process.env.SMTP_USER,
+      user: process.env.SMTP_USER,
+      hasPass: !!process.env.SMTP_PASS,
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_SECURE,
+      from: process.env.SMTP_FROM
     });
   });
 
