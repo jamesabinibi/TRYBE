@@ -369,43 +369,38 @@ async function initAwsDb() {
       `);
       console.log('[DB] RDS Schema check complete.');
       
-      // FINAL AGGRESSIVE CLEANUP: Clear EVERYTHING to ensure a fresh start
-      console.log('[DB] Performing FINAL AGGRESSIVE CLEANUP of RDS...');
-      try {
-        await client.query('TRUNCATE bookkeeping, notifications, services, product_images, expenses, customers, sale_items, sales, product_variants, products, categories, settings, users, accounts CASCADE');
-        console.log('[DB] All RDS tables truncated.');
-      } catch (truncateErr) {
-        console.error('[DB] Truncate failed, attempting individual deletes:', truncateErr);
-        const tables = ['bookkeeping', 'notifications', 'services', 'product_images', 'expenses', 'customers', 'sale_items', 'sales', 'product_variants', 'products', 'categories', 'settings', 'users', 'accounts'];
-        for (const table of tables) {
-          await client.query(`DELETE FROM ${table}`).catch(e => console.error(`Failed to delete from ${table}:`, e));
-        }
-      }
-
       // Ensure superadmin exists with the correct hashed password
       const hashedSuperPass = await bcrypt.hash('superpassword123', 10);
-      console.log('[DB] Creating superadmin with password: superpassword123');
-      const { rows: sysAccs } = await client.query("INSERT INTO accounts (name) VALUES ('System Admin') RETURNING id");
-      await client.query(
-        'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
-        [sysAccs[0].id, 'superadmin', 'admin@stockflow.pro', hashedSuperPass, 'super_admin', 'System Admin']
-      );
+      
+      // Check if superadmin already exists to avoid duplicate errors
+      const { rows: existingSuper } = await client.query("SELECT id FROM users WHERE username = 'superadmin'");
+      if (existingSuper.length === 0) {
+        console.log('[DB] Creating superadmin with password: superpassword123');
+        const { rows: sysAccs } = await client.query("INSERT INTO accounts (name) VALUES ('System Admin') RETURNING id");
+        await client.query(
+          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
+          [sysAccs[0].id, 'superadmin', 'admin@stockflow.pro', hashedSuperPass, 'super_admin', 'System Admin']
+        );
+      }
 
       // Ensure default admin exists
       const hashedAdminPass = await bcrypt.hash('admin123', 10);
-      console.log('[DB] Creating admin with password: admin123');
-      const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
-      const accountId = accounts[0].id;
-      
-      await client.query(
-        'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
-        [accountId, 'admin', 'admin@gryndee.com', hashedAdminPass, 'admin', 'Demo Admin']
-      );
-      
-      await client.query(
-        'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
-        [accountId, 'Gryndee Demo', 'NGN']
-      );
+      const { rows: existingAdmin } = await client.query("SELECT id FROM users WHERE username = 'admin'");
+      if (existingAdmin.length === 0) {
+        console.log('[DB] Creating admin with password: admin123');
+        const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
+        const accountId = accounts[0].id;
+        
+        await client.query(
+          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
+          [accountId, 'admin', 'admin@gryndee.com', hashedAdminPass, 'admin', 'Demo Admin']
+        );
+        
+        await client.query(
+          'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
+          [accountId, 'Gryndee Demo', 'NGN']
+        );
+      }
       console.log('[DB] RDS Initialization complete.');
     } finally {
       client.release();
@@ -4448,13 +4443,30 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       console.log(`[ADMIN] Broadcasting message: "${message}"`);
 
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows: users } = await pool.query('SELECT id, account_id FROM users');
+        const { rows: users } = await pool.query('SELECT id, account_id, email FROM users');
         if (users && users.length > 0) {
           for (const user of users) {
             await pool.query(
               'INSERT INTO notifications (account_id, user_id, title, message, type, is_read) VALUES ($1, $2, $3, $4, $5, $6)',
               [user.account_id, user.id, title, message, 'info', false]
             );
+            
+            // Send email broadcast if user has an email
+            if (user.email) {
+              sendEmail(
+                user.email, 
+                title, 
+                message,
+                `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                  <h2 style="color: #10b981; margin-top: 0;">${title}</h2>
+                  <p style="color: #374151; font-size: 16px; line-height: 1.5; white-space: pre-wrap;">${message}</p>
+                  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                  <p style="color: #9ca3af; font-size: 12px; text-align: center;">This is an automated broadcast message from Gryndee.</p>
+                </div>
+                `
+              ).catch(e => console.error(`[ADMIN] Broadcast email failed for ${user.email}:`, e));
+            }
           }
         }
         return res.json({ success: true, count: users.length });
@@ -4463,7 +4475,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!supabase) return res.status(503).json({ error: "Database not available" });
       
       // Get all users to send notifications to
-      const { data: users, error: userError } = await supabase.from('users').select('id, account_id');
+      const { data: users, error: userError } = await supabase.from('users').select('id, account_id, email');
       if (userError) {
         console.error('[ADMIN] Failed to fetch users for broadcast:', userError);
         throw userError;
@@ -4483,6 +4495,25 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         if (notifyError) {
           console.error('[ADMIN] Failed to insert broadcast notifications:', notifyError);
           throw notifyError;
+        }
+        
+        // Send email broadcasts
+        for (const user of users) {
+          if (user.email) {
+            sendEmail(
+              user.email, 
+              title, 
+              message,
+              `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                <h2 style="color: #10b981; margin-top: 0;">${title}</h2>
+                <p style="color: #374151; font-size: 16px; line-height: 1.5; white-space: pre-wrap;">${message}</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                <p style="color: #9ca3af; font-size: 12px; text-align: center;">This is an automated broadcast message from Gryndee.</p>
+              </div>
+              `
+            ).catch(e => console.error(`[ADMIN] Broadcast email failed for ${user.email}:`, e));
+          }
         }
       }
 
