@@ -708,7 +708,7 @@ const Invoices: React.FC = () => {
                           />
                         </div>
                       </div>
-                      <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                      <div className="max-h-80">
                         {filteredItems.length > 0 ? (
                           filteredItems.map((item) => (
                             <button
@@ -963,7 +963,7 @@ const Invoices: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-12 space-y-12 custom-scrollbar">
+          <div className="flex-1 p-12 space-y-12">
             {/* Invoice Content Preview */}
             <div className="flex justify-between items-start">
               <div className="space-y-6">

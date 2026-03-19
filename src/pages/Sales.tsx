@@ -502,7 +502,7 @@ export default function Sales() {
   });
 
   return (
-    <div className="lg:h-full flex flex-col gap-4 lg:gap-8 lg:overflow-hidden max-w-[1600px] mx-auto">
+    <div className="flex flex-col gap-4 lg:gap-8 max-w-[1600px] mx-auto">
       {/* Tabs */}
       <div className="flex items-center gap-8 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
         <button 
@@ -1200,7 +1200,7 @@ export default function Sales() {
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-10 space-y-12 custom-scrollbar">
+                <div className="flex-1 p-10 space-y-12">
                   <div className="flex justify-between items-start">
                     <div className="space-y-8">
                       {settings?.logo_url ? (

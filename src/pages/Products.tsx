@@ -885,7 +885,7 @@ export default function Products() {
 
               <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
                 {/* Main Form Area */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-10 custom-scrollbar bg-white dark:bg-zinc-900 order-2 lg:order-1">
+                <div className="flex-1 p-4 sm:p-10 bg-white dark:bg-zinc-900 order-2 lg:order-1">
                   <form onSubmit={handleAddProduct} id="product-form" className="max-w-4xl mx-auto space-y-8 sm:space-y-10">
                     {/* Basic Info Section */}
                     <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-8 sm:space-y-10">

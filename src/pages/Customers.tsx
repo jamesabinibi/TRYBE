@@ -531,7 +531,7 @@ export default function Customers() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+              <div className="flex-1 p-8">
                 {isLoadingHistory ? (
                   <div className="flex items-center justify-center py-20">
                     <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
