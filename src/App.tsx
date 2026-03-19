@@ -139,7 +139,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       </AnimatePresence>
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 w-64 flex flex-col z-50 transition-all duration-300 ease-in-out lg:translate-x-0 lg:static",
+        "fixed inset-y-0 left-0 w-64 flex flex-col z-50 transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen",
         isDarkMode ? "bg-[#0A0A0B] text-zinc-400 border-r border-white/[0.04]" : "bg-white text-zinc-500 border-r border-zinc-200",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
@@ -251,12 +251,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className={cn(
-      "flex h-screen w-full overflow-hidden font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300",
+      "flex min-h-screen w-full font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300",
       isDarkMode ? "bg-[#050505] text-white" : "bg-zinc-50 text-zinc-900"
     )}>
       <Walkthrough />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+      <main className="flex-1 flex flex-col min-w-0 relative">
         <header className={cn(
           "h-16 border-b flex items-center justify-between px-6 sticky top-0 z-30 transition-colors duration-300",
           isDarkMode 
@@ -306,7 +306,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar main-content">
+        <div className="flex-1 p-6 lg:p-8 main-content">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

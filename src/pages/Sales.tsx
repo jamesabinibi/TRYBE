@@ -527,7 +527,7 @@ export default function Sales() {
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 flex flex-col">
         <AnimatePresence mode="wait">
           {activeTab === 'pos' ? (
             <motion.div 
@@ -535,10 +535,10 @@ export default function Sales() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="flex-1 flex flex-col lg:flex-row gap-6 lg:gap-8 lg:min-h-0"
+              className="flex-1 flex flex-col lg:flex-row gap-6 lg:gap-8"
             >
               {/* Product Selection */}
-              <div className="flex-1 flex flex-col gap-8 min-h-0">
+              <div className="flex-1 flex flex-col gap-8">
                 <div className="glass-card p-8 space-y-8">
                   <div className="flex items-center justify-between gap-6">
                     <div className="flex-1 space-y-2">
@@ -685,7 +685,7 @@ export default function Sales() {
                 </div>
 
                 {!selectedProduct && (
-                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="flex-1 pr-2">
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                       {(filteredProducts || []).map((product) => (
                         <motion.button 
@@ -719,7 +719,7 @@ export default function Sales() {
               </div>
 
               {/* Cart & Checkout */}
-              <div className="w-full lg:w-[450px] glass-card p-0 flex flex-col overflow-hidden lg:h-full shadow-xl lg:shadow-2xl">
+              <div className="w-full lg:w-[450px] glass-card p-0 flex flex-col shadow-xl lg:shadow-2xl h-fit lg:sticky lg:top-8">
                 <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/30">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-brand rounded-2xl text-white shadow-lg shadow-brand/20">
@@ -741,7 +741,7 @@ export default function Sales() {
                   )}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar min-h-[400px] lg:min-h-0">
+                <div className="flex-1 p-8 space-y-8 min-h-[400px]">
                   {error && (
                     <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-2xl text-red-600 text-xs font-bold text-center">
                       {error}
@@ -890,7 +890,7 @@ export default function Sales() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-10 overflow-y-auto h-full pr-2 custom-scrollbar"
+              className="space-y-10 pr-2"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div>
