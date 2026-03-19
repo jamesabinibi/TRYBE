@@ -857,25 +857,42 @@ NOTIFY pgrst, 'reload schema';
 
             <div id="brand" className="space-y-4">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Brand Color</label>
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <input 
-                    type="color" 
-                    value={settings.brand_color} 
-                    onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border-none cursor-pointer bg-transparent" 
-                  />
-                  <div className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none border-4 border-white dark:border-zinc-800 shadow-inner" style={{ backgroundColor: settings.brand_color }} />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 sm:p-0 bg-zinc-50 dark:bg-zinc-800/50 sm:bg-transparent rounded-3xl sm:rounded-none border border-zinc-200/50 dark:border-zinc-700/50 sm:border-none relative overflow-hidden">
+                {/* Web3 decorative glow on mobile */}
+                <div 
+                  className="absolute -top-10 -right-10 w-32 h-32 blur-3xl rounded-full sm:hidden pointer-events-none opacity-30 dark:opacity-20" 
+                  style={{ backgroundColor: settings.brand_color }} 
+                />
+                
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className="relative group">
+                    <input 
+                      type="color" 
+                      value={settings.brand_color} 
+                      onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
+                      className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border-none cursor-pointer bg-transparent opacity-0 absolute inset-0 z-20" 
+                    />
+                    <div 
+                      className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] border border-white/20 dark:border-white/10 flex items-center justify-center transition-transform group-hover:scale-105" 
+                      style={{ backgroundColor: settings.brand_color }} 
+                    >
+                      <div className="w-6 h-6 rounded-full border-2 border-white/50 mix-blend-overlay" />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">HEX</span>
+                      <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-white tracking-wider">{settings.brand_color.toUpperCase()}</p>
+                    </div>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium mt-1">Tap color box to change</p>
+                  </div>
                 </div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">{settings.brand_color}</p>
-                  <p className="text-[9px] sm:text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">Accent color for your brand</p>
-                </div>
+                
                 <button 
                   onClick={() => saveSettings()}
-                  className="px-4 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                  className="w-full sm:w-auto mt-2 sm:mt-0 px-6 py-3.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-zinc-900/20 dark:shadow-white/10 relative z-10"
                 >
-                  Save
+                  Apply Color
                 </button>
               </div>
             </div>
@@ -1207,7 +1224,7 @@ NOTIFY pgrst, 'reload schema';
       </section>
 
       {/* System Diagnostics Section - Admin and Superadmin only */}
-      {(user?.role === 'super_admin' || user?.role === 'admin') && (
+      {user?.role === 'super_admin' && (
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
