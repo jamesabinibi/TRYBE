@@ -3,7 +3,7 @@ runtime: nodejs22
 build:
   commands:
     build:
-      - npm install
+      - npm install --legacy-peer-deps
       - npm run build
 run:
   command: npm start
