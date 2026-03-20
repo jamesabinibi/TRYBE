@@ -920,155 +920,160 @@ NOTIFY pgrst, 'reload schema';
           </div>
           <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Update your business information and tax settings.</p>
         </div>
-        <div id="logo" className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-            <div className="space-y-4">
+        <div id="logo" className="lg:col-span-2 space-y-6">
+          <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
+            <div className="flex flex-col items-center text-center space-y-6">
               <label className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Business Logo</label>
-              <div className="flex flex-col gap-4">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl sm:rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 overflow-hidden bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center relative group">
+              <div className="flex flex-col items-center gap-6 w-full">
+                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl sm:rounded-[2.5rem] border-2 border-dashed border-zinc-200 dark:border-zinc-800 overflow-hidden bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center relative group shadow-inner">
                   {logoPreview ? (
                     <>
-                      <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-contain p-2" />
+                      <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-contain p-4" />
                       <button 
                         onClick={() => {
                           setLogoPreview(null);
                           setSettings(prev => ({ ...prev, logo_url: '' }));
                         }}
-                        className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all"
+                        className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
                       >
-                        <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <Trash2 className="w-6 h-6" />
                       </button>
                     </>
                   ) : (
-                    <label className="cursor-pointer flex flex-col items-center gap-2">
-                      <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-300 dark:text-zinc-600" />
-                      <span className="text-[9px] sm:text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Upload Logo</span>
+                    <label className="cursor-pointer flex flex-col items-center gap-3 w-full h-full justify-center hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors">
+                      <div className="p-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
+                        <Plus className="w-6 h-6 text-brand" />
+                      </div>
+                      <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Upload Logo</span>
                       <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                     </label>
                   )}
                 </div>
-                <button 
-                  onClick={() => saveSettings()}
-                  disabled={isSaving}
-                  className="w-full sm:w-auto px-6 py-3 bg-zinc-900 dark:bg-zinc-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
-                >
-                  {isSaving ? '...' : 'Save Logo'}
-                </button>
+                <div className="space-y-3 w-full max-w-xs">
+                  <button 
+                    onClick={() => saveSettings()}
+                    disabled={isSaving}
+                    className="w-full px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-zinc-900/20 dark:shadow-white/10 disabled:opacity-50"
+                  >
+                    {isSaving ? '...' : 'Save Business Logo'}
+                  </button>
+                  <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest">Recommended: Square PNG or SVG</p>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div id="brand" className="space-y-4">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Brand Colour</label>
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-200/50 dark:border-zinc-700/50 relative overflow-visible">
-                {/* Web3 decorative glow on mobile */}
-                <div 
-                  className="absolute -top-10 -right-10 w-32 h-32 blur-3xl rounded-full lg:hidden pointer-events-none opacity-30 dark:opacity-20" 
-                  style={{ backgroundColor: settings.brand_color }} 
-                />
-                
-                <div className="flex flex-col sm:flex-row items-center gap-6 relative z-20 w-full lg:w-auto">
-                  <div className="relative group">
-                    <div 
-                      className="w-20 h-20 rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] border border-white/20 dark:border-white/10 flex items-center justify-center transition-transform group-hover:scale-105 cursor-pointer" 
-                      style={{ background: settings.brand_color }}
-                      onClick={() => {
-                        const el = document.getElementById('color-palette');
-                        if (el) el.classList.toggle('hidden');
-                      }}
-                    >
-                      <div className="w-8 h-8 rounded-full border-2 border-white/50 mix-blend-overlay" />
+          <div id="brand" className="space-y-4">
+            <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Brand Colour</label>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-200/50 dark:border-zinc-700/50 relative overflow-visible">
+              {/* Web3 decorative glow on mobile */}
+              <div 
+                className="absolute -top-10 -right-10 w-32 h-32 blur-3xl rounded-full lg:hidden pointer-events-none opacity-30 dark:opacity-20" 
+                style={{ backgroundColor: settings.brand_color }} 
+              />
+              
+              <div className="flex flex-col sm:flex-row items-center gap-6 relative z-20 w-full lg:w-auto">
+                <div className="relative group">
+                  <div 
+                    className="w-20 h-20 rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] border border-white/20 dark:border-white/10 flex items-center justify-center transition-transform group-hover:scale-105 cursor-pointer" 
+                    style={{ background: settings.brand_color }}
+                    onClick={() => {
+                      const el = document.getElementById('color-palette');
+                      if (el) el.classList.toggle('hidden');
+                    }}
+                  >
+                    <div className="w-8 h-8 rounded-full border-2 border-white/50 mix-blend-overlay" />
+                  </div>
+                  
+                  {/* Custom Colour Palette Popup */}
+                  <div id="color-palette" className="hidden absolute top-full left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 mt-4 p-4 bg-white dark:bg-[#121821] border border-zinc-200 dark:border-white/10 rounded-3xl shadow-2xl z-50 w-[280px] sm:w-[320px] backdrop-blur-xl">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-widest">Select Colour</span>
+                      <button 
+                        onClick={() => document.getElementById('color-palette')?.classList.add('hidden')}
+                        className="p-1.5 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors"
+                      >
+                        <X className="w-4 h-4 text-zinc-500" />
+                      </button>
                     </div>
                     
-                    {/* Custom Colour Palette Popup */}
-                    <div id="color-palette" className="hidden absolute top-full left-0 mt-4 p-4 bg-white dark:bg-[#121821] border border-zinc-200 dark:border-white/10 rounded-3xl shadow-2xl z-50 w-[280px] sm:w-[320px] backdrop-blur-xl">
-                      <div className="flex justify-between items-center mb-4">
-                        <span className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-widest">Select Colour</span>
-                        <button 
-                          onClick={() => document.getElementById('color-palette')?.classList.add('hidden')}
-                          className="p-1.5 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors"
-                        >
-                          <X className="w-4 h-4 text-zinc-500" />
-                        </button>
-                      </div>
-                      
-                      <div className="grid grid-cols-4 gap-3 mb-4">
-                        {['#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#14b8a6', '#6366f1'].map(color => (
-                          <button
-                            key={color}
-                            onClick={() => {
-                              setSettings({...settings, brand_color: color});
-                              document.getElementById('color-palette')?.classList.add('hidden');
-                            }}
-                            className={cn(
-                              "w-12 h-12 rounded-2xl shadow-inner border border-white/10 transition-transform hover:scale-110 active:scale-95",
-                              settings.brand_color === color ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[#121821] ring-zinc-900 dark:ring-white" : ""
-                            )}
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
-                      
-                      <div className="pt-4 border-t border-zinc-100 dark:border-white/10">
-                        <div className="flex flex-col gap-3">
-                          <div>
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">
-                              Custom HEX
-                            </label>
-                            <div className="flex gap-2">
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                      {['#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#14b8a6', '#6366f1'].map(color => (
+                        <button
+                          key={color}
+                          onClick={() => {
+                            setSettings({...settings, brand_color: color});
+                            document.getElementById('color-palette')?.classList.add('hidden');
+                          }}
+                          className={cn(
+                            "w-12 h-12 rounded-2xl shadow-inner border border-white/10 transition-transform hover:scale-110 active:scale-95",
+                            settings.brand_color === color ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[#121821] ring-zinc-900 dark:ring-white" : ""
+                          )}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                    
+                    <div className="pt-4 border-t border-zinc-100 dark:border-white/10">
+                      <div className="flex flex-col gap-3">
+                        <div>
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">
+                            Custom HEX
+                          </label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="text" 
+                              value={settings.brand_color}
+                              onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
+                              placeholder="#000000"
+                              className="flex-1 bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-[11px] font-mono focus:outline-none focus:border-brand"
+                            />
+                            <div className="relative w-10 h-10 shrink-0 group/picker">
                               <input 
-                                type="text" 
-                                value={settings.brand_color}
+                                type="color"
+                                value={settings.brand_color.startsWith('#') ? settings.brand_color : '#10b981'}
                                 onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
-                                placeholder="#000000"
-                                className="flex-1 bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-[11px] font-mono focus:outline-none focus:border-brand"
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                               />
-                              <div className="relative w-10 h-10 shrink-0 group/picker">
-                                <input 
-                                  type="color"
-                                  value={settings.brand_color.startsWith('#') ? settings.brand_color : '#10b981'}
-                                  onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                />
-                                <div 
-                                  className="w-full h-full rounded-xl border border-zinc-200 dark:border-white/10 shadow-sm flex items-center justify-center group-hover/picker:scale-105 transition-transform"
-                                  style={{ backgroundColor: settings.brand_color.startsWith('#') ? settings.brand_color : '#10b981' }}
-                                >
-                                  <div className="w-4 h-4 rounded-full border border-white/30 mix-blend-difference" />
-                                </div>
+                              <div 
+                                className="w-full h-full rounded-xl border border-zinc-200 dark:border-white/10 shadow-sm flex items-center justify-center group-hover/picker:scale-105 transition-transform"
+                                style={{ backgroundColor: settings.brand_color.startsWith('#') ? settings.brand_color : '#10b981' }}
+                              >
+                                <div className="w-4 h-4 rounded-full border border-white/30 mix-blend-difference" />
                               </div>
                             </div>
                           </div>
-                          
-                          <div className="p-3 bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-100 dark:border-white/5">
-                            <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed">
-                              <span className="text-brand mr-1">💡 Tip:</span> 
-                              Click the box above to use the visual colour picker, or type a HEX code directly.
-                            </p>
-                          </div>
+                        </div>
+                        
+                        <div className="p-3 bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-100 dark:border-white/5">
+                          <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed">
+                            <span className="text-brand mr-1">💡 Tip:</span> 
+                            Click the green box on the right to use the visual colour picker.
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex-1 text-center sm:text-left">
-                    <div className="flex items-center justify-center sm:justify-start gap-2">
-                      <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-                        HEX
-                      </span>
-                      <p className="text-[11px] sm:text-xs font-black text-zinc-900 dark:text-white tracking-wider truncate max-w-[150px]">
-                        {settings.brand_color.toUpperCase()}
-                      </p>
-                    </div>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium mt-1">Tap colour box to change</p>
-                  </div>
                 </div>
-                
-                <button 
-                  onClick={() => saveSettings()}
-                  className="w-full lg:w-auto px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-zinc-900/20 dark:shadow-white/10 relative z-10"
-                >
-                  Apply Colour
-                </button>
+                <div className="flex-1 flex flex-col items-center sm:items-start">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                      HEX
+                    </span>
+                    <p className="text-[11px] sm:text-xs font-black text-zinc-900 dark:text-white tracking-wider">
+                      {settings.brand_color.toUpperCase()}
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium mt-1">Tap colour box to change</p>
+                </div>
               </div>
+              
+              <button 
+                onClick={() => saveSettings()}
+                className="w-full lg:w-auto px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-zinc-900/20 dark:shadow-white/10 relative z-10"
+              >
+                Apply Colour
+              </button>
             </div>
           </div>
 
@@ -1144,8 +1149,10 @@ NOTIFY pgrst, 'reload schema';
               />
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="pt-8 flex justify-end">
+      <div className="pt-8 flex justify-end">
             <button 
               onClick={() => saveSettings()}
               disabled={isSaving}
@@ -1215,9 +1222,7 @@ NOTIFY pgrst, 'reload schema';
             </div>
           </div>
         </div>
-      </section>
-    </div>
-  )}
+      )}
 
       {activeTab === 'categories' && (
         <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">

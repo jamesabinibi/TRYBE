@@ -952,7 +952,7 @@ const Invoices: React.FC = () => {
               <h2 className="text-xl font-bold mb-4 font-display tracking-tight text-white">Invoice Summary</h2>
               <div className="flex items-center justify-between text-zinc-400">
                 <span className="text-[10px] font-bold uppercase tracking-widest">Subtotal</span>
-                <span className="font-bold font-mono text-white">{settings?.currency || '₦'}{calculateSubtotal().toLocaleString()}</span>
+                <span className="font-bold text-white">{settings?.currency || '₦'}{calculateSubtotal().toLocaleString()}</span>
               </div>
               
               <div className="flex items-center justify-between text-zinc-400">
@@ -970,7 +970,7 @@ const Invoices: React.FC = () => {
               {settings?.vat_enabled && (
                 <div className="flex items-center justify-between text-zinc-400">
                   <span className="text-[10px] font-bold uppercase tracking-widest">VAT (7.5%)</span>
-                  <span className="font-bold font-mono text-white">
+                  <span className="font-bold text-white">
                     <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
                     {calculateVAT().toLocaleString()}
                   </span>
@@ -980,7 +980,7 @@ const Invoices: React.FC = () => {
               <div className="pt-8 border-t border-white/5 flex justify-between items-end">
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Total Amount</p>
-                  <p className="text-5xl font-black font-mono tracking-tighter text-white">
+                  <p className="text-5xl font-black tracking-tighter text-white">
                     <span className="opacity-30 mr-2 text-xl">{settings?.currency || '₦'}</span>
                     {calculateTotal().toLocaleString()}
                   </p>
@@ -1118,20 +1118,20 @@ const Invoices: React.FC = () => {
               <div className="w-80 space-y-4">
                 <div className="flex justify-between items-center text-zinc-500">
                   <span className="text-[10px] font-bold uppercase tracking-widest">Subtotal</span>
-                  <span className="font-bold font-mono">
+                  <span className="font-bold">
                     {formatCurrency((previewInvoice.total_amount || 0) + (previewInvoice.discount_amount || 0) - (previewInvoice.vat_amount || 0), settings?.currency || 'NGN')}
                   </span>
                 </div>
                 {previewInvoice.discount_amount > 0 && (
                   <div className="flex justify-between items-center text-red-500">
                     <span className="text-[10px] font-bold uppercase tracking-widest">Discount ({previewInvoice.discount_percentage}%)</span>
-                    <span className="font-bold font-mono">-{formatCurrency(previewInvoice.discount_amount, settings?.currency || 'NGN')}</span>
+                    <span className="font-bold">-{formatCurrency(previewInvoice.discount_amount, settings?.currency || 'NGN')}</span>
                   </div>
                 )}
                 {previewInvoice.vat_amount > 0 && (
                   <div className="flex justify-between items-center text-zinc-500">
                     <span className="text-[10px] font-bold uppercase tracking-widest">VAT (7.5%)</span>
-                    <span className="font-bold font-mono">{formatCurrency(previewInvoice.vat_amount, settings?.currency || 'NGN')}</span>
+                    <span className="font-bold">{formatCurrency(previewInvoice.vat_amount, settings?.currency || 'NGN')}</span>
                   </div>
                 )}
                 <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
