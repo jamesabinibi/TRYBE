@@ -152,7 +152,7 @@ export default function Dashboard() {
                   <div>
                     <h3 className="text-zinc-900 dark:text-white font-bold">Complete Your Business Setup</h3>
                     <p className="text-[13px] text-zinc-600 dark:text-zinc-400 mt-1">
-                      To get the most out of Gryndee, please finish setting up your business profile and email templates.
+                      To get the most out of Gryndee, please finish setting up your business profile.
                     </p>
                     <div className="flex flex-wrap gap-4 mt-4">
                       <div className="flex items-center gap-2">
@@ -179,26 +179,10 @@ export default function Dashboard() {
                         )}
                         <span className="text-[11px] font-medium text-zinc-500">Contact Details</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {globalSettings?.welcome_email_subject ? (
-                          <CheckCircle2 className="w-4 h-4 text-brand" />
-                        ) : (
-                          <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700" />
-                        )}
-                        <span className="text-[11px] font-medium text-zinc-500">Email Templates</span>
-                      </div>
                     </div>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                  {user?.role === 'super_admin' && (
-                    <Link
-                      to="/settings#email-templates"
-                      className="flex-1 md:flex-none px-6 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-xl text-[13px] font-bold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all text-center"
-                    >
-                      Edit Email
-                    </Link>
-                  )}
                   <Link
                     to="/settings"
                     className="flex-1 md:flex-none px-6 py-2.5 bg-brand text-white rounded-xl text-[13px] font-bold hover:opacity-90 transition-all shadow-lg shadow-brand/20 text-center"

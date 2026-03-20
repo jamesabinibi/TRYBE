@@ -1006,11 +1006,11 @@ const Invoices: React.FC = () => {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => handleDownload(previewInvoice)}
-                className="flex items-center gap-3 px-8 py-4 rounded-2xl text-white font-bold shadow-2xl transition-all hover:scale-105 active:scale-95"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-6 sm:px-8 py-4 rounded-2xl text-white font-bold shadow-2xl transition-all hover:scale-105 active:scale-95"
                 style={{ backgroundColor: brandColor, boxShadow: `0 20px 40px ${brandColor}33` }}
               >
                 <Download className="w-5 h-5" />
-                <span className="text-xs uppercase tracking-widest">Download PDF</span>
+                <span className="text-[10px] sm:text-xs uppercase tracking-widest whitespace-nowrap">Download PDF</span>
               </button>
               <button
                 onClick={() => setPreviewInvoice(null)}
@@ -1135,8 +1135,8 @@ const Invoices: React.FC = () => {
                   </div>
                 )}
                 <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
-                  <span className="text-xs font-bold text-zinc-950 dark:text-white uppercase tracking-[0.2em]">Total Amount</span>
-                  <span className="text-3xl font-black font-mono tracking-tighter text-zinc-950 dark:text-white">
+                  <span className="text-xs font-bold text-zinc-950 dark:text-white uppercase tracking-[0.2em]">Total Cost</span>
+                  <span className="text-3xl font-black tracking-tighter text-zinc-950 dark:text-white">
                     {formatCurrency(previewInvoice.total_amount || 0, settings?.currency || 'NGN')}
                   </span>
                 </div>

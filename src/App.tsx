@@ -445,6 +445,7 @@ export default function App() {
           <SearchProvider>
             <Toaster position="top-right" richColors />
             <BrowserRouter>
+              <Walkthrough />
               <Routes>
                 <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
                 <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
