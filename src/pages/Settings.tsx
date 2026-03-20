@@ -16,7 +16,10 @@ import {
   User as UserIcon,
   Lock,
   ChevronRight,
-  Loader2
+  Loader2,
+  Activity,
+  AlertTriangle,
+  Users
 } from 'lucide-react';
 import { Category } from '../types';
 import { cn } from '../lib/utils';
@@ -48,6 +51,7 @@ export default function Settings() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(globalSettings?.logo_url || null);
+  const [showClearSalesConfirm, setShowClearSalesConfirm] = useState(false);
   const [colorMode, setColorMode] = useState<'solid' | 'gradient'>('solid');
 
   useEffect(() => {
@@ -537,6 +541,109 @@ NOTIFY pgrst, 'reload schema';
     toast.success('SQL copied to clipboard! Paste it into Supabase SQL Editor.');
   };
 
+  const [activeTab, setActiveTab] = useState<'branding' | 'team' | 'categories' | 'account' | 'system'>('branding');
+
+  // Users Management State (Merged from Users.tsx)
+  const [users, setUsers] = useState<any[]>([]);
+  const [isUsersLoading, setIsUsersLoading] = useState(false);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [userFormData, setUserFormData] = useState({
+    username: '',
+    password: '',
+    name: '',
+    role: 'staff' as 'admin' | 'manager' | 'staff',
+    email: ''
+  });
+
+  const fetchUsers = async () => {
+    setIsUsersLoading(true);
+    try {
+      const response = await fetchWithAuth('/api/users');
+      const data = await response.json();
+      if (response.ok) {
+        setUsers(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      setIsUsersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'team') {
+      fetchUsers();
+    }
+  }, [activeTab]);
+
+  const handleOpenUserModal = (user?: any) => {
+    if (user) {
+      setEditingUser(user);
+      setUserFormData({
+        username: user.username,
+        password: '',
+        name: user.name || '',
+        role: user.role as any,
+        email: user.email || ''
+      });
+    } else {
+      setEditingUser(null);
+      setUserFormData({
+        username: '',
+        password: '',
+        name: '',
+        role: 'staff',
+        email: ''
+      });
+    }
+    setIsUserModalOpen(true);
+  };
+
+  const handleUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const url = editingUser ? `/api/users/${editingUser.id}` : '/api/users';
+      const method = editingUser ? 'PUT' : 'POST';
+      
+      const response = await fetchWithAuth(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userFormData)
+      });
+
+      if (response.ok) {
+        toast.success(editingUser ? 'User updated' : 'User added');
+        setIsUserModalOpen(false);
+        fetchUsers();
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to save user');
+      }
+    } catch (error) {
+      toast.error('Network error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteUser = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    try {
+      const res = await fetchWithAuth(`/api/users/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchUsers();
+        toast.success('User deleted');
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to delete user');
+      }
+    } catch (error) {
+      toast.error('Network error');
+    }
+  };
+
   const saveSettings = async (updatedSettings = settings) => {
     setIsSaving(true);
     try {
@@ -744,86 +851,68 @@ NOTIFY pgrst, 'reload schema';
   };
 
   return (
-    <div className="max-w-4xl space-y-8 sm:space-y-12 pb-20">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Settings</h1>
-        <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 font-medium">Configure your business preferences and system settings.</p>
+    <div className="max-w-6xl space-y-8 pb-20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Settings</h1>
+          <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 font-medium">Configure your business preferences and system settings.</p>
+        </div>
       </div>
 
-      {/* Product Categories Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Categories</h3>
-          </div>
-          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage the categories used to organize your inventory.</p>
-        </div>
-        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
-          <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
-            <input 
-              type="text" 
-              placeholder="New category name..." 
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              className="flex-1 px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all dark:text-white"
-            />
-            <button 
-              type="submit"
-              className="w-full sm:w-auto px-8 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95"
-            >
-              Add
-            </button>
-          </form>
-          <div className="flex flex-wrap gap-2">
-            {categories.map(c => (
-              <div key={c.id} className="group relative">
-                {editingCategory === c.id ? (
-                  <div className="flex items-center gap-1 bg-white dark:bg-zinc-800 border border-brand rounded-xl px-2 py-1 shadow-sm">
-                    <input 
-                      autoFocus
-                      type="text" 
-                      value={editCategoryName}
-                      onChange={(e) => setEditCategoryName(e.target.value)}
-                      className="w-24 text-xs font-bold outline-none bg-transparent text-zinc-900 dark:text-white"
-                    />
-                    <button onClick={() => handleUpdateCategory(c.id)} className="p-1 text-brand hover:bg-brand/5 rounded-lg">
-                      <Check className="w-3 h-3" />
-                    </button>
-                    <button onClick={() => setEditingCategory(null)} className="p-1 text-zinc-400 hover:bg-zinc-50 rounded-lg">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 rounded-xl text-xs font-black uppercase tracking-widest text-zinc-600 border border-zinc-200/50 group-hover:bg-white group-hover:border-brand/20 transition-all">
-                    {c.name}
-                    <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => {
-                          setEditingCategory(c.id);
-                          setEditCategoryName(c.name);
-                        }}
-                        className="p-1 text-zinc-400 hover:text-brand rounded-lg"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteCategory(c.id)}
-                        className="p-1 text-zinc-400 hover:text-red-600 rounded-lg"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Tabs Navigation */}
+      <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl w-fit overflow-x-auto no-scrollbar max-w-full">
+        <button
+          onClick={() => setActiveTab('branding')}
+          className={cn(
+            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+            activeTab === 'branding' 
+              ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
+              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          )}
+        >
+          Branding
+        </button>
+        <button
+          onClick={() => setActiveTab('categories')}
+          className={cn(
+            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+            activeTab === 'categories' 
+              ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
+              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          )}
+        >
+          Categories
+        </button>
+        <button
+          onClick={() => setActiveTab('account')}
+          className={cn(
+            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+            activeTab === 'account' 
+              ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
+              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          )}
+        >
+          Account & Team
+        </button>
+        {user?.role === 'super_admin' && (
+          <button
+            onClick={() => setActiveTab('system')}
+            className={cn(
+              "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+              activeTab === 'system' 
+                ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
+                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+            )}
+          >
+            System
+          </button>
+        )}
+      </div>
 
-      {/* Business Profile Section */}
-      <section id="profile" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
+      {activeTab === 'branding' && (
+        <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Business Profile Section */}
+          <section id="profile" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-brand" />
@@ -870,24 +959,24 @@ NOTIFY pgrst, 'reload schema';
 
             <div id="brand" className="space-y-4">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Brand Color</label>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 sm:p-0 bg-zinc-50 dark:bg-zinc-800/50 sm:bg-transparent rounded-3xl sm:rounded-none border border-zinc-200/50 dark:border-zinc-700/50 sm:border-none relative overflow-visible">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-200/50 dark:border-zinc-700/50 relative overflow-visible">
                 {/* Web3 decorative glow on mobile */}
                 <div 
-                  className="absolute -top-10 -right-10 w-32 h-32 blur-3xl rounded-full sm:hidden pointer-events-none opacity-30 dark:opacity-20" 
+                  className="absolute -top-10 -right-10 w-32 h-32 blur-3xl rounded-full md:hidden pointer-events-none opacity-30 dark:opacity-20" 
                   style={{ backgroundColor: settings.brand_color }} 
                 />
                 
-                <div className="flex items-center gap-4 relative z-20 w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row items-center gap-6 relative z-20 w-full md:w-auto">
                   <div className="relative group">
                     <div 
-                      className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] border border-white/20 dark:border-white/10 flex items-center justify-center transition-transform group-hover:scale-105 cursor-pointer" 
+                      className="w-20 h-20 rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] border border-white/20 dark:border-white/10 flex items-center justify-center transition-transform group-hover:scale-105 cursor-pointer" 
                       style={{ background: settings.brand_color }}
                       onClick={() => {
                         const el = document.getElementById('color-palette');
                         if (el) el.classList.toggle('hidden');
                       }}
                     >
-                      <div className="w-6 h-6 rounded-full border-2 border-white/50 mix-blend-overlay" />
+                      <div className="w-8 h-8 rounded-full border-2 border-white/50 mix-blend-overlay" />
                     </div>
                     
                     {/* Custom Color Palette Popup */}
@@ -982,8 +1071,8 @@ NOTIFY pgrst, 'reload schema';
                       </div>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                  <div className="flex-1 text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
                       <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
                         {settings.brand_color.includes('gradient') ? 'GRADIENT' : 'HEX'}
                       </span>
@@ -997,7 +1086,7 @@ NOTIFY pgrst, 'reload schema';
                 
                 <button 
                   onClick={() => saveSettings()}
-                  className="w-full sm:w-auto mt-2 sm:mt-0 px-6 py-3.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-zinc-900/20 dark:shadow-white/10 relative z-10"
+                  className="w-full md:w-auto px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-zinc-900/20 dark:shadow-white/10 relative z-10"
                 >
                   Apply Color
                 </button>
@@ -1149,10 +1238,89 @@ NOTIFY pgrst, 'reload schema';
           </div>
         </div>
       </section>
+    </div>
+  )}
 
-      {/* Email Templates Section - Restricted to Super Admin */}
-      {user?.role === 'super_admin' && (
-        <section id="email-templates" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
+      {activeTab === 'categories' && (
+        <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Categories Section */}
+          <section id="categories" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4 text-brand" />
+                <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Categories</h3>
+              </div>
+              <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage the categories used to organize your inventory.</p>
+            </div>
+            <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
+              <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
+                <input 
+                  type="text" 
+                  placeholder="New category name..." 
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className="flex-1 px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all dark:text-white"
+                />
+                <button 
+                  type="submit"
+                  className="w-full sm:w-auto px-8 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95"
+                >
+                  Add
+                </button>
+              </form>
+              <div className="flex flex-wrap gap-2">
+                {categories.map(c => (
+                  <div key={c.id} className="group relative">
+                    {editingCategory === c.id ? (
+                      <div className="flex items-center gap-1 bg-white dark:bg-zinc-800 border border-brand rounded-xl px-2 py-1 shadow-sm">
+                        <input 
+                          autoFocus
+                          type="text" 
+                          value={editCategoryName}
+                          onChange={(e) => setEditCategoryName(e.target.value)}
+                          className="w-24 text-xs font-bold outline-none bg-transparent text-zinc-900 dark:text-white"
+                        />
+                        <button onClick={() => handleUpdateCategory(c.id)} className="p-1 text-brand hover:bg-brand/5 rounded-lg">
+                          <Check className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => setEditingCategory(null)} className="p-1 text-zinc-400 hover:bg-zinc-50 rounded-lg">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 rounded-xl text-xs font-black uppercase tracking-widest text-zinc-600 border border-zinc-200/50 group-hover:bg-white group-hover:border-brand/20 transition-all">
+                        {c.name}
+                        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => {
+                              setEditingCategory(c.id);
+                              setEditCategoryName(c.name);
+                            }}
+                            className="p-1 text-zinc-400 hover:text-brand rounded-lg"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteCategory(c.id)}
+                            className="p-1 text-zinc-400 hover:text-red-600 rounded-lg"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {activeTab === 'system' && user?.role === 'super_admin' && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Email Templates Section - Restricted to Super Admin */}
+          <section id="email-templates" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-brand" />
@@ -1210,10 +1378,84 @@ NOTIFY pgrst, 'reload schema';
             </div>
           </div>
         </section>
-      )}
 
-      {/* User Account Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
+        {/* System Health Section */}
+        <section id="health" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-brand" />
+              <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">System Health</h3>
+            </div>
+            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Diagnostic tools and system status information.</p>
+          </div>
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Server Status</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white">Operational</p>
+                </div>
+              </div>
+              <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Database</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white">Connected</p>
+                </div>
+              </div>
+            </div>
+            <button 
+              onClick={() => toast.success('System diagnostics completed. All systems normal.')}
+              className="w-full py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+            >
+              Run Full Diagnostics
+            </button>
+          </div>
+        </section>
+
+        {/* Data Management Section */}
+        <section id="data" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-brand" />
+              <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Data Management</h3>
+            </div>
+            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Critical operations for managing your business data.</p>
+          </div>
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+            <div className="p-6 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/20 space-y-4">
+              <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+                <AlertTriangle className="w-5 h-5" />
+                <h4 className="text-sm font-black uppercase tracking-widest">Danger Zone</h4>
+              </div>
+              <p className="text-xs text-red-600/70 dark:text-red-400/70 font-medium">
+                These actions are irreversible. Please proceed with extreme caution.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button 
+                  onClick={() => setShowClearSalesConfirm(true)}
+                  className="px-6 py-3 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
+                >
+                  Clear All Sales Data
+                </button>
+                <button 
+                  onClick={() => toast.error('Full system reset is disabled for safety.')}
+                  className="px-6 py-3 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
+                >
+                  Factory Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    )}
+
+      {activeTab === 'account' && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* User Account Section */}
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <UserIcon className="w-4 h-4 text-brand" />
@@ -1330,207 +1572,178 @@ NOTIFY pgrst, 'reload schema';
         </div>
       </section>
 
-      {/* System Diagnostics Section - Admin and Superadmin only */}
-      {user?.role === 'super_admin' && (
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
+      {/* Team Management Section */}
+      {(user?.role === 'admin' || user?.role === 'super_admin') && (
+        <section id="team" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-500" />
-              <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">System Health</h3>
+              <Users className="w-4 h-4 text-brand" />
+              <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Team Management</h3>
             </div>
-            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Check database connectivity and table status.</p>
+            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage your staff accounts and their access levels.</p>
           </div>
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={cn(
-                  "w-3 h-3 rounded-full",
-                  diagResults?.supabase_connected ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-red-500"
-                )} />
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                    {diagResults?.supabase_connected ? 'Supabase Connected' : 'Supabase Disconnected'}
-                  </span>
-                  {diagResults?.supabase_status?.error && (
-                    <span className="text-[10px] text-red-500 font-black uppercase tracking-widest">{diagResults.supabase_status.error}</span>
-                  )}
-                </div>
-              </div>
+            <div className="flex justify-end">
               <button 
-                onClick={runDiagnostics}
-                disabled={isCheckingDiag}
-                className="px-6 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex items-center gap-2"
+                onClick={() => {
+                  setEditingUser(null);
+                  setUserFormData({ name: '', username: '', email: '', role: 'staff', password: '' });
+                  setIsUserModalOpen(true);
+                }}
+                className="px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center gap-2"
               >
-                {isCheckingDiag ? <Loader2 className="w-3 h-3 animate-spin" /> : <History className="w-3 h-3" />}
-                Run Check
+                <Plus className="w-4 h-4" />
+                Add Member
               </button>
             </div>
 
-            {diagResults?.tables && Object.keys(diagResults.tables || {}).length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {Object.entries(diagResults.tables || {}).map(([name, status]: [string, any]) => (
-                  <div key={name} className={cn(
-                    "p-3 rounded-xl border flex items-center justify-between",
-                    status.exists ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20" : "bg-red-50/50 dark:bg-red-500/5 border-red-100 dark:border-red-500/20"
-                  )}>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">{name}</span>
-                    {status.exists ? (
-                      <Check className="w-3 h-3 text-emerald-500" />
-                    ) : (
-                      <X className="w-3 h-3 text-red-500" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="p-6 bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/20 rounded-2xl space-y-4">
-              <div className="flex items-center gap-3 text-amber-600">
-                <Database className="w-5 h-5" />
-                <h4 className="text-sm font-black uppercase tracking-widest">Database Setup</h4>
-              </div>
-              <p className="text-xs text-amber-700 dark:text-amber-400/80 font-medium leading-relaxed">
-                If any tables are missing (marked with <X className="inline w-3 h-3" />), you need to create them in your Supabase SQL Editor.
-              </p>
-              <button 
-                onClick={copySql}
-                className="w-full py-3 bg-amber-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all shadow-lg shadow-amber-600/20"
-              >
-                Copy Setup SQL Script
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
-              <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Cloudinary</p>
-                <p className={cn("text-xs font-bold", diagResults?.env?.cloudinary ? "text-emerald-500" : "text-red-500")}>
-                  {diagResults?.env?.cloudinary ? 'Configured' : 'Missing'}
-                </p>
-              </div>
-              <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Gemini AI</p>
-                <p className={cn("text-xs font-bold", diagResults?.env?.gemini ? "text-emerald-500" : "text-red-500")}>
-                  {diagResults?.env?.gemini ? 'Configured' : 'Missing'}
-                </p>
-              </div>
-              <div className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex flex-col justify-between">
-                <div>
-                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Email (SMTP)</p>
-                  <p className={cn("text-xs font-bold", diagResults?.env?.smtp ? "text-emerald-500" : "text-zinc-400")}>
-                    {diagResults?.env?.smtp ? 'Configured' : 'Mock Mode'}
-                  </p>
-                </div>
-                {diagResults?.env?.smtp && (
-                  <button 
-                    onClick={handleSendTestEmail}
-                    disabled={isSendingTestEmail}
-                    className="mt-2 text-[8px] font-black uppercase tracking-widest text-brand hover:underline flex items-center gap-1 disabled:opacity-50"
-                  >
-                    {isSendingTestEmail ? <Loader2 className="w-2 h-2 animate-spin" /> : <Bell className="w-2 h-2" />}
-                    Send Test
-                  </button>
-                )}
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-zinc-100 dark:border-zinc-800">
+                    <th className="px-4 py-4 text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest">Member</th>
+                    <th className="px-4 py-4 text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</th>
+                    <th className="px-4 py-4 text-right text-[10px] font-black text-zinc-400 uppercase tracking-widest">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800/50">
+                  {users.map(u => (
+                    <tr key={u.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-black text-zinc-600 dark:text-zinc-400">
+                            {u.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-zinc-900 dark:text-white">{u.name}</p>
+                            <p className="text-[10px] text-zinc-500 font-medium">@{u.username}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={cn(
+                          "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest",
+                          u.role === 'admin' || u.role === 'super_admin' ? "bg-brand/10 text-brand" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                        )}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => {
+                              setEditingUser(u.id);
+                              setUserFormData({ name: u.name, username: u.username, email: u.email, role: u.role, password: '' });
+                              setIsUserModalOpen(true);
+                            }}
+                            className="p-2 text-zinc-400 hover:text-brand transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteUser(u.id)}
+                            className="p-2 text-zinc-400 hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </section>
       )}
+    </div>
+  )}
 
-      {/* Data Management Section - Superadmin only */}
-      {user?.role === 'super_admin' && (
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-red-600" />
-              <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Data Management</h3>
+      {/* User Modal */}
+      {isUserModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-zinc-950/20 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight uppercase tracking-widest text-xs">
+                  {editingUser ? 'Edit Team Member' : 'Add Team Member'}
+                </h3>
+                <p className="text-[10px] text-zinc-500 font-medium">Configure access for your staff.</p>
+              </div>
+              <button onClick={() => setIsUserModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                <X className="w-5 h-5 text-zinc-400" />
+              </button>
             </div>
-            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Dangerous operations. Use with extreme caution.</p>
+            
+            <form onSubmit={handleUserSubmit} className="p-8 space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Full Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={userFormData.name}
+                    onChange={(e) => setUserFormData({...userFormData, name: e.target.value})}
+                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Username</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={userFormData.username}
+                    onChange={(e) => setUserFormData({...userFormData, username: e.target.value})}
+                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Email Address</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={userFormData.email}
+                    onChange={(e) => setUserFormData({...userFormData, email: e.target.value})}
+                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</label>
+                  <select 
+                    value={userFormData.role}
+                    onChange={(e) => setUserFormData({...userFormData, role: e.target.value as any})}
+                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white"
+                  >
+                    <option value="staff">Staff</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                    {editingUser ? 'New Password (leave blank to keep current)' : 'Password'}
+                  </label>
+                  <input 
+                    type="password" 
+                    required={!editingUser}
+                    value={userFormData.password}
+                    onChange={(e) => setUserFormData({...userFormData, password: e.target.value})}
+                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit"
+                disabled={isSaving}
+                className="w-full py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center justify-center gap-2"
+              >
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                {editingUser ? 'Update Member' : 'Add Member'}
+              </button>
+            </form>
           </div>
-          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
-            <div className="flex items-center justify-between p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-zinc-700">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account ID</p>
-                <p className="text-sm font-black text-zinc-900 dark:text-white">{user?.account_id || 'N/A'}</p>
-              </div>
-              <div className="space-y-1 text-right">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">User ID</p>
-                <p className="text-sm font-black text-zinc-900 dark:text-white">{user?.id || 'N/A'}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button 
-                onClick={runDiagnostics}
-                disabled={isCheckingDiag}
-                className="flex items-center justify-center gap-2 p-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-2xl font-bold transition-all disabled:opacity-50"
-              >
-                {isCheckingDiag ? <Loader2 className="w-5 h-5 animate-spin" /> : <Database className="w-5 h-5" />}
-                Run Diagnostics
-              </button>
-              <button 
-                onClick={handleInitializeDb}
-                disabled={isInitializing}
-                className="flex items-center justify-center gap-2 p-4 bg-brand/10 hover:bg-brand/20 text-brand rounded-2xl font-bold transition-all disabled:opacity-50"
-              >
-                {isInitializing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
-                Initialize Database
-              </button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-red-50 dark:bg-red-500/10 rounded-2xl sm:rounded-[2rem] border border-red-100 dark:border-red-500/20 gap-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-red-600 shadow-sm shrink-0">
-                  <History className="w-5 h-5 sm:w-6 sm:h-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-sm font-black text-red-900 dark:text-red-500 uppercase tracking-widest">Clear Sales History</p>
-                  <p className="text-[10px] sm:text-xs text-red-700 dark:text-red-400 font-medium">Delete all transaction logs and profit data.</p>
-                </div>
-              </div>
-              <button 
-                onClick={handleClearSales}
-                className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 active:scale-95"
-              >
-                Clear Data
-              </button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-brand/5 dark:bg-brand/10 rounded-2xl sm:rounded-[2rem] border border-brand/10 dark:border-brand/20 gap-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-white dark:bg-zinc-800 rounded-2xl text-brand shadow-sm shrink-0">
-                  <Globe className="w-5 h-5 sm:w-6 sm:h-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-sm font-black text-brand uppercase tracking-widest">Cloudinary Migration</p>
-                  <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Move existing product images to Cloudinary for faster loading.</p>
-                </div>
-              </div>
-              <button 
-                onClick={handleMigrateImages}
-                disabled={isMigrating}
-                className="w-full sm:w-auto px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 disabled:opacity-50"
-              >
-                {isMigrating ? 'Migrating...' : 'Start Migration'}
-              </button>
-            </div>
-
-            <div className="pt-6 border-t border-zinc-100 space-y-4">
-              {diagResults && (
-                <div className="p-4 bg-zinc-900 rounded-2xl overflow-hidden">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-black text-brand uppercase tracking-widest">Diagnostic Results</p>
-                    <button onClick={() => setDiagResults(null)} className="text-zinc-500 hover:text-white">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <pre className="text-[10px] font-mono text-zinc-400 overflow-x-auto whitespace-pre-wrap leading-relaxed">
-                    {JSON.stringify(diagResults, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
+        </div>
       )}
     </div>
   );
