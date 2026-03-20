@@ -28,7 +28,7 @@ import {
   Download,
   Calendar
 } from 'lucide-react';
-import { Product, Variant, Sale, Customer } from '../types';
+import { Product, Variant, Sale, Customer, Service } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
@@ -41,8 +41,10 @@ import { AlertCircle } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 interface CartItem {
-  variant: Variant;
-  product: Product;
+  type: 'product' | 'service';
+  variant?: Variant;
+  product?: Product;
+  service?: Service;
   quantity: number;
   price_override?: number;
 }
@@ -54,6 +56,7 @@ export default function Sales() {
   const { searchQuery } = useSearch();
   const [activeTab, setActiveTab] = useState<'pos' | 'history'>('pos');
   const [products, setProducts] = useState<Product[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -65,12 +68,14 @@ export default function Sales() {
   const [selectedSaleForPreview, setSelectedSaleForPreview] = useState<any>(null);
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('month');
+  const [itemType, setItemType] = useState<'product' | 'service'>('product');
 
   const brandColor = settings?.brand_color || '#10b981';
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
 
@@ -107,9 +112,25 @@ export default function Sales() {
 
   useEffect(() => {
     fetchProducts();
+    fetchServices();
     fetchSales();
     fetchCustomers();
   }, []);
+
+  const fetchServices = async () => {
+    try {
+      const res = await fetchWithAuth('/api/services');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setServices(data);
+      } else {
+        setServices([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch services');
+      setServices([]);
+    }
+  };
 
   const fetchCustomers = async () => {
     try {
@@ -168,43 +189,68 @@ export default function Sales() {
     }
     
     setCart(prev => {
-      const existing = prev.find(item => item.variant.id === variant.id);
+      const existing = prev.find(item => item.type === 'product' && item.variant?.id === variant.id);
       if (existing) {
         if (existing.quantity >= variant.quantity) {
           toast.warning('Maximum stock reached');
           return prev;
         }
         return prev.map(item => 
-          item.variant.id === variant.id 
+          item.type === 'product' && item.variant?.id === variant.id 
             ? { ...item, quantity: item.quantity + 1 } 
             : item
         );
       }
       toast.success(`Added ${product.name} to cart`);
-      return [...prev, { product, variant, quantity: 1 }];
+      return [...prev, { type: 'product', product, variant, quantity: 1 }];
     });
   };
 
-  const removeFromCart = (variantId: number) => {
-    setCart(prev => prev.filter(item => item.variant.id !== variantId));
+  const addServiceToCart = (service: Service) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.type === 'service' && item.service?.id === service.id);
+      if (existing) {
+        return prev.map(item => 
+          item.type === 'service' && item.service?.id === service.id 
+            ? { ...item, quantity: item.quantity + 1 } 
+            : item
+        );
+      }
+      toast.success(`Added ${service.name} to cart`);
+      return [...prev, { type: 'service', service, quantity: 1 }];
+    });
   };
 
-  const updateQuantity = (variantId: number, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.variant.id === variantId) {
-        const newQty = Math.max(1, Math.min(item.variant.quantity, item.quantity + delta));
-        if (newQty === item.variant.quantity && delta > 0) {
-          toast.warning('Maximum stock reached');
+  const removeFromCart = (index: number) => {
+    setCart(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateQuantity = (index: number, delta: number) => {
+    setCart(prev => prev.map((item, i) => {
+      if (i === index) {
+        if (item.type === 'product' && item.variant) {
+          const newQty = Math.max(1, Math.min(item.variant.quantity, item.quantity + delta));
+          if (newQty === item.variant.quantity && delta > 0) {
+            toast.warning('Maximum stock reached');
+          }
+          return { ...item, quantity: newQty };
+        } else {
+          const newQty = Math.max(1, item.quantity + delta);
+          return { ...item, quantity: newQty };
         }
-        return { ...item, quantity: newQty };
       }
       return item;
     }));
   };
 
-  const subtotal = cart.reduce((acc, item) => 
-    acc + (item.price_override || item.variant.price_override || item.product.selling_price) * item.quantity, 0
-  );
+  const subtotal = cart.reduce((acc, item) => {
+    if (item.type === 'product' && item.product && item.variant) {
+      return acc + (item.price_override || item.variant.price_override || item.product.selling_price) * item.quantity;
+    } else if (item.type === 'service' && item.service) {
+      return acc + (item.price_override || item.service.price) * item.quantity;
+    }
+    return acc;
+  }, 0);
 
   const discountAmount = (subtotal * discountPercent) / 100;
   const total = subtotal - discountAmount;
@@ -220,11 +266,23 @@ export default function Sales() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            items: cart.map(item => ({
-              variant_id: item.variant.id,
-              quantity: item.quantity,
-              price_override: item.price_override
-            })),
+            items: cart.map(item => {
+              if (item.type === 'product') {
+                return {
+                  type: 'product',
+                  variant_id: item.variant?.id,
+                  quantity: item.quantity,
+                  price_override: item.price_override
+                };
+              } else {
+                return {
+                  type: 'service',
+                  service_id: item.service?.id,
+                  quantity: item.quantity,
+                  price_override: item.price_override
+                };
+              }
+            }),
             payment_method: paymentMethod,
             staff_id: user?.id,
             customer_id: selectedCustomer?.id,
@@ -354,8 +412,9 @@ export default function Sales() {
           body: JSON.stringify({ image: base64 })
         });
         
+        const data = await response.json();
+        
         if (response.ok) {
-          const data = await response.json();
           toast.success(`AI Extracted: ${formatCurrency(data.amount, currency)}`);
           // For now, we just show the data. In a real app, we'd add a generic "AI Sale" item to cart
           // or pre-fill the checkout amount.
@@ -364,7 +423,11 @@ export default function Sales() {
             toast.info(`Narration: ${data.narration}`);
           }
         } else {
-          toast.error('AI failed to process image');
+          if (data.error?.includes('API key not valid')) {
+            toast.error('Invalid Gemini API Key. Please check your settings.');
+          } else {
+            toast.error(data.error || 'AI failed to process image');
+          }
         }
       } catch (err) {
         toast.error('Network error during AI processing');
@@ -476,6 +539,12 @@ export default function Sales() {
            (p.supplier_name || '').toLowerCase().includes(search);
   });
 
+  const filteredServices = (services || []).filter(s => {
+    const search = (searchQuery || '').toLowerCase();
+    return (s.name || '').toLowerCase().includes(search) ||
+           (s.category || '').toLowerCase().includes(search);
+  });
+
   const filteredSales = (sales || []).filter(s => {
     const search = (historySearchQuery || '').toLowerCase();
     const matchesSearch = (s.invoice_number || '').toLowerCase().includes(search) ||
@@ -537,31 +606,81 @@ export default function Sales() {
               exit={{ opacity: 0, x: 20 }}
               className="flex-1 flex flex-col lg:flex-row gap-6 lg:gap-8"
             >
-              {/* Product Selection */}
+              {/* Item Selection */}
               <div className="flex-1 flex flex-col gap-8">
                 <div className="glass-card p-8 space-y-8">
-                  <div className="flex items-center justify-between gap-6">
-                    <div className="flex-1 space-y-2">
-                      <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Select Product</label>
-                      <ProductSelect 
-                        products={products}
-                        selectedProduct={selectedProduct}
-                        onSelect={setSelectedProduct}
-                        formatCurrency={formatCurrency}
-                      />
-                    </div>
-                    <button 
-                      onClick={startScanner}
-                      className="mt-6 p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95 border border-zinc-200 dark:border-zinc-700 shadow-sm"
-                      title="Scan Barcode"
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setItemType('product')}
+                      className={cn(
+                        "flex-1 py-3 text-sm font-bold rounded-xl transition-all",
+                        itemType === 'product' ? "bg-brand text-white shadow-md shadow-brand/20" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                      )}
                     >
-                      <Scan className="w-5 h-5" />
+                      Products
+                    </button>
+                    <button
+                      onClick={() => setItemType('service')}
+                      className={cn(
+                        "flex-1 py-3 text-sm font-bold rounded-xl transition-all",
+                        itemType === 'service' ? "bg-brand text-white shadow-md shadow-brand/20" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                      )}
+                    >
+                      Services
                     </button>
                   </div>
 
+                  {itemType === 'product' ? (
+                    <div className="flex items-center justify-between gap-6">
+                      <div className="flex-1 space-y-2">
+                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Select Product</label>
+                        <ProductSelect 
+                          products={products}
+                          selectedProduct={selectedProduct}
+                          onSelect={setSelectedProduct}
+                          formatCurrency={formatCurrency}
+                        />
+                      </div>
+                      <button 
+                        onClick={startScanner}
+                        className="mt-6 p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95 border border-zinc-200 dark:border-zinc-700 shadow-sm"
+                        title="Scan Barcode"
+                      >
+                        <Scan className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex-1 space-y-2">
+                      <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Select Service</label>
+                      <div className="relative">
+                        <select
+                          value={selectedService?.id || ''}
+                          onChange={(e) => {
+                            const svc = services.find(s => s.id === parseInt(e.target.value));
+                            setSelectedService(svc || null);
+                          }}
+                          className="w-full pl-4 pr-10 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-base font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none cursor-pointer"
+                        >
+                          <option value="">Choose a service...</option>
+                          {services.map(s => (
+                            <option key={s.id} value={s.id}>{s.name} - {formatCurrency(s.price)}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Customer (Optional)</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Customer (Optional)</label>
+                        {selectedCustomer && (
+                          <span className="text-[10px] font-bold text-brand uppercase tracking-widest bg-brand/10 px-2 py-1 rounded-full">
+                            {selectedCustomer.loyalty_points || 0} Points
+                          </span>
+                        )}
+                      </div>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                         <select 
@@ -612,109 +731,178 @@ export default function Sales() {
                   </div>
 
                   <AnimatePresence mode="wait">
-                    {selectedProduct ? (
-                      <motion.div 
-                        key={selectedProduct.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-8 pt-8 border-t border-zinc-100 dark:border-zinc-800"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="flex items-center gap-3 mb-2">
-                              <button
-                                onClick={() => setSelectedProduct(null)}
-                                className="p-2 -ml-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all"
-                                title="Back to Products"
-                              >
-                                <ArrowRight className="w-5 h-5 rotate-180" />
-                              </button>
-                              <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedProduct.name}</h2>
+                    {itemType === 'product' ? (
+                      selectedProduct ? (
+                        <motion.div 
+                          key={selectedProduct.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="space-y-8 pt-8 border-t border-zinc-100 dark:border-zinc-800"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-3 mb-2">
+                                <button
+                                  onClick={() => setSelectedProduct(null)}
+                                  className="p-2 -ml-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all"
+                                  title="Back to Products"
+                                >
+                                  <ArrowRight className="w-5 h-5 rotate-180" />
+                                </button>
+                                <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedProduct.name}</h2>
+                              </div>
+                              <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1 ml-10">{selectedProduct.category_name}</p>
                             </div>
-                            <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1 ml-10">{selectedProduct.category_name}</p>
+                            <div className="text-right">
+                              <p className="text-2xl font-bold text-brand tracking-tight">{formatCurrency(selectedProduct.selling_price, currency)}</p>
+                              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">Base Price</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-brand tracking-tight">{formatCurrency(selectedProduct.selling_price, currency)}</p>
-                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">Base Price</p>
-                          </div>
-                        </div>
 
-                        <div className="space-y-4">
-                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Pick Size & Color</p>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {(selectedProduct.variants || []).map((variant) => (
-                              <button
-                                key={variant.id}
-                                disabled={variant.quantity <= 0}
-                                onClick={() => addToCart(selectedProduct, variant)}
-                                className={cn(
-                                  "p-5 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 text-center group relative overflow-hidden",
-                                  variant.quantity > 0 
-                                    ? "border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:border-brand hover:bg-white dark:hover:bg-zinc-800 text-zinc-900 dark:text-white active:scale-95 shadow-sm" 
-                                    : "border-zinc-50 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
-                                )}
-                              >
-                                <span className="text-xs font-bold uppercase tracking-widest">{variant.size}</span>
-                                {variant.color && <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500">{variant.color}</span>}
-                                <span className={cn(
-                                  "text-[9px] font-bold mt-2",
-                                  variant.quantity > 0 ? "text-brand" : "text-zinc-300 dark:text-zinc-700"
-                                )}>
-                                  {variant.quantity > 0 ? `${variant.quantity} in stock` : 'Out of stock'}
-                                </span>
-                                {variant.quantity > 0 && (
-                                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Plus className="w-3 h-3 text-brand" />
-                                  </div>
-                                )}
-                              </button>
-                            ))}
+                          <div className="space-y-4">
+                            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Pick Size & Color</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                              {(selectedProduct.variants || []).map((variant) => (
+                                <button
+                                  key={variant.id}
+                                  disabled={variant.quantity <= 0}
+                                  onClick={() => addToCart(selectedProduct, variant)}
+                                  className={cn(
+                                    "p-5 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 text-center group relative overflow-hidden",
+                                    variant.quantity > 0 
+                                      ? "border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:border-brand hover:bg-white dark:hover:bg-zinc-800 text-zinc-900 dark:text-white active:scale-95 shadow-sm" 
+                                      : "border-zinc-50 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
+                                  )}
+                                >
+                                  <span className="text-xs font-bold uppercase tracking-widest">{variant.size}</span>
+                                  {variant.color && <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500">{variant.color}</span>}
+                                  <span className={cn(
+                                    "text-[9px] font-bold mt-2",
+                                    variant.quantity > 0 ? "text-brand" : "text-zinc-300 dark:text-zinc-700"
+                                  )}>
+                                    {variant.quantity > 0 ? `${variant.quantity} in stock` : 'Out of stock'}
+                                  </span>
+                                  {variant.quantity > 0 && (
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Plus className="w-3 h-3 text-brand" />
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
                           </div>
+                        </motion.div>
+                      ) : (
+                        <div className="py-20 text-center space-y-4">
+                          <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 rounded-3xl flex items-center justify-center mx-auto border border-zinc-100 dark:border-zinc-700 shadow-sm">
+                            <Package className="w-10 h-10 text-zinc-200 dark:text-zinc-700" />
+                          </div>
+                          <p className="text-sm font-bold text-zinc-400 dark:text-zinc-500 tracking-tight">Select a product to see available sizes</p>
                         </div>
-                      </motion.div>
+                      )
                     ) : (
-                      <div className="py-20 text-center space-y-4">
-                        <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 rounded-3xl flex items-center justify-center mx-auto border border-zinc-100 dark:border-zinc-700 shadow-sm">
-                          <Package className="w-10 h-10 text-zinc-200 dark:text-zinc-700" />
+                      selectedService ? (
+                        <motion.div 
+                          key={selectedService.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="space-y-8 pt-8 border-t border-zinc-100 dark:border-zinc-800"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-3 mb-2">
+                                <button
+                                  onClick={() => setSelectedService(null)}
+                                  className="p-2 -ml-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all"
+                                  title="Back to Services"
+                                >
+                                  <ArrowRight className="w-5 h-5 rotate-180" />
+                                </button>
+                                <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedService.name}</h2>
+                              </div>
+                              <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1 ml-10">{selectedService.category}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-bold text-brand tracking-tight">{formatCurrency(selectedService.price, currency)}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => addServiceToCart(selectedService)}
+                            className="w-full py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+                          >
+                            Add to Cart
+                          </button>
+                        </motion.div>
+                      ) : (
+                        <div className="py-20 text-center space-y-4">
+                          <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 rounded-3xl flex items-center justify-center mx-auto border border-zinc-100 dark:border-zinc-700 shadow-sm">
+                            <Package className="w-10 h-10 text-zinc-200 dark:text-zinc-700" />
+                          </div>
+                          <p className="text-sm font-bold text-zinc-400 dark:text-zinc-500 tracking-tight">Select a service to add it to the cart</p>
                         </div>
-                        <p className="text-sm font-bold text-zinc-400 dark:text-zinc-500 tracking-tight">Select a product to see available sizes</p>
-                      </div>
+                      )
                     )}
                   </AnimatePresence>
                 </div>
 
-                {!selectedProduct && (
-                  <div className="flex-1 pr-2">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {(filteredProducts || []).map((product) => (
-                        <motion.button 
-                          key={product.id} 
-                          whileHover={{ y: -4 }}
-                          onClick={() => {
-                            if (product.product_type === 'one' && product.variants && product.variants.length > 0) {
-                              addToCart(product, product.variants[0]);
-                            } else {
-                              setSelectedProduct(product);
-                            }
-                          }}
-                          className="glass-card p-6 flex flex-col gap-4 text-left group"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0">
-                              <h4 className="font-bold text-zinc-900 dark:text-white truncate tracking-tight group-hover:text-brand transition-colors">{product.name}</h4>
-                              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{product.category_name}</p>
+                {itemType === 'product' ? (
+                  !selectedProduct && (
+                    <div className="flex-1 pr-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {(filteredProducts || []).map((product) => (
+                          <motion.button 
+                            key={product.id} 
+                            whileHover={{ y: -4 }}
+                            onClick={() => {
+                              if (product.product_type === 'one' && product.variants && product.variants.length > 0) {
+                                addToCart(product, product.variants[0]);
+                              } else {
+                                setSelectedProduct(product);
+                              }
+                            }}
+                            className="glass-card p-6 flex flex-col gap-4 text-left group"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="min-w-0">
+                                <h4 className="font-bold text-zinc-900 dark:text-white truncate tracking-tight group-hover:text-brand transition-colors">{product.name}</h4>
+                                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{product.category_name}</p>
+                              </div>
+                              <span className="text-sm font-bold text-brand whitespace-nowrap">{formatCurrency(product.selling_price, currency)}</span>
                             </div>
-                            <span className="text-sm font-bold text-brand whitespace-nowrap">{formatCurrency(product.selling_price, currency)}</span>
-                          </div>
-                          <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                            <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{(product.variants || []).length} variants</span>
-                            <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-brand group-hover:translate-x-1 transition-all" />
-                          </div>
-                        </motion.button>
-                      ))}
+                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                              <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{(product.variants || []).length} variants</span>
+                              <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-brand group-hover:translate-x-1 transition-all" />
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )
+                ) : (
+                  !selectedService && (
+                    <div className="flex-1 pr-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {(filteredServices || []).map((service) => (
+                          <motion.button 
+                            key={service.id} 
+                            whileHover={{ y: -4 }}
+                            onClick={() => setSelectedService(service)}
+                            className="glass-card p-6 flex flex-col gap-4 text-left group"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="min-w-0">
+                                <h4 className="font-bold text-zinc-900 dark:text-white truncate tracking-tight group-hover:text-brand transition-colors">{service.name}</h4>
+                                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{service.category}</p>
+                              </div>
+                              <span className="text-sm font-bold text-brand whitespace-nowrap">{formatCurrency(service.price, currency)}</span>
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
 
@@ -748,35 +936,52 @@ export default function Sales() {
                     </div>
                   )}
                   <AnimatePresence initial={false}>
-                    {(cart || []).map((item) => {
-                      if (!item || !item.variant || !item.product) return null;
+                    {(cart || []).map((item, index) => {
+                      if (!item) return null;
+                      
+                      const isProduct = item.type === 'product' && item.product && item.variant;
+                      const isService = item.type === 'service' && item.service;
+                      
+                      if (!isProduct && !isService) return null;
+
+                      const id = isProduct ? `prod-${item.variant?.id}` : `srv-${item.service?.id}`;
+                      const name = isProduct ? item.product?.name : item.service?.name;
+                      const price = isProduct 
+                        ? (item.price_override || item.variant?.price_override || item.product?.selling_price || 0)
+                        : (item.price_override || item.service?.price || 0);
+
                       return (
                         <motion.div 
-                          key={item.variant.id}
+                          key={`${id}-${index}`}
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -20 }}
                           className="flex items-center gap-4 group"
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-zinc-900 dark:text-white truncate tracking-tight">{item.product.name}</p>
-                            {item.product.product_type !== 'one' && (item.variant.size || item.variant.color) && (
+                            <p className="text-sm font-bold text-zinc-900 dark:text-white truncate tracking-tight">{name}</p>
+                            {isProduct && item.product?.product_type !== 'one' && (item.variant?.size || item.variant?.color) && (
                               <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">
                                 {item.variant.size} {item.variant.color && `· ${item.variant.color}`}
+                              </p>
+                            )}
+                            {isService && (
+                              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">
+                                Service
                               </p>
                             )}
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-2xl overflow-hidden p-1.5 border border-zinc-200 dark:border-zinc-700">
                               <button 
-                                onClick={() => updateQuantity(item.variant.id, -1)}
+                                onClick={() => updateQuantity(index, -1)}
                                 className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-xl text-zinc-500 dark:text-zinc-400 transition-all active:scale-90"
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
                               <span className="w-10 text-center text-sm font-bold text-zinc-900 dark:text-white">{item.quantity}</span>
                               <button 
-                                onClick={() => updateQuantity(item.variant.id, 1)}
+                                onClick={() => updateQuantity(index, 1)}
                                 className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-xl text-zinc-500 dark:text-zinc-400 transition-all active:scale-90"
                               >
                                 <Plus className="w-3.5 h-3.5" />
@@ -784,11 +989,11 @@ export default function Sales() {
                             </div>
                             <div className="text-right min-w-[90px]">
                               <p className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">
-                                {formatCurrency(((item.price_override || item.variant.price_override || item.product.selling_price) || 0) * item.quantity, currency)}
+                                {formatCurrency(price * item.quantity, currency)}
                               </p>
                             </div>
                             <button 
-                              onClick={() => removeFromCart(item.variant.id)}
+                              onClick={() => removeFromCart(index)}
                               className="p-2.5 text-zinc-300 dark:text-zinc-700 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -804,7 +1009,7 @@ export default function Sales() {
                         <Package className="w-12 h-12 text-zinc-200 dark:text-zinc-700" />
                       </div>
                       <p className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Your cart is empty</p>
-                      <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500 mt-2">Add products to start a sale</p>
+                      <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500 mt-2">Add products or services to start a sale</p>
                     </div>
                   )}
                 </div>

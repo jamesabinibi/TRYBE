@@ -1027,43 +1027,33 @@ NOTIFY pgrst, 'reload schema';
                               placeholder="#000000"
                               className="flex-1 bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-[11px] font-mono focus:outline-none focus:border-brand"
                             />
-                            <div className="relative w-10 h-10 shrink-0 group/picker">
-                              <input 
-                                type="color"
-                                value={settings.brand_color.startsWith('#') ? settings.brand_color : '#10b981'}
-                                onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                              />
-                              <div 
-                                className="w-full h-full rounded-xl border border-zinc-200 dark:border-white/10 shadow-sm flex items-center justify-center group-hover/picker:scale-105 transition-transform"
-                                style={{ backgroundColor: settings.brand_color.startsWith('#') ? settings.brand_color : '#10b981' }}
-                              >
-                                <div className="w-4 h-4 rounded-full border border-white/30 mix-blend-difference" />
-                              </div>
-                            </div>
                           </div>
                         </div>
                         
                         <div className="p-3 bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-100 dark:border-white/5">
                           <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed">
                             <span className="text-brand mr-1">💡 Tip:</span> 
-                            Click the green box on the right to use the visual colour picker.
+                            Enter a valid HEX code (e.g. #10b981) to use a custom brand colour.
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="flex-1 flex flex-col items-center sm:items-start">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                <div className="flex-1 flex flex-col items-center sm:items-start w-full sm:w-auto mt-4 sm:mt-0">
+                  <div className="flex items-center gap-3 w-full max-w-[200px]">
+                    <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">
                       HEX
                     </span>
-                    <p className="text-[11px] sm:text-xs font-black text-zinc-900 dark:text-white tracking-wider">
-                      {settings.brand_color.toUpperCase()}
-                    </p>
+                    <input 
+                      type="text" 
+                      value={settings.brand_color}
+                      onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
+                      placeholder="#000000"
+                      className="w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-[11px] font-mono focus:outline-none focus:border-brand text-center sm:text-left uppercase"
+                    />
                   </div>
-                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium mt-1">Tap colour box to change</p>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium mt-2">Tap colour box for presets</p>
                 </div>
               </div>
               

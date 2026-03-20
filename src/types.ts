@@ -24,6 +24,14 @@ export interface Variant {
   price_override?: number;
 }
 
+export interface Service {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+}
+
 export interface Product {
   id: number;
   name: string;

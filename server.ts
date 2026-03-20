@@ -306,8 +306,17 @@ async function initAwsDb() {
           email TEXT,
           phone TEXT,
           address TEXT,
+          loyalty_points INTEGER DEFAULT 0,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+
+        -- Ensure customers columns exist
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='customers' AND column_name='loyalty_points') THEN
+            ALTER TABLE customers ADD COLUMN loyalty_points INTEGER DEFAULT 0;
+          END IF;
+        END $$;
 
         CREATE TABLE IF NOT EXISTS expenses (
           id SERIAL PRIMARY KEY,
@@ -904,6 +913,9 @@ BEGIN
       ALTER TABLE sales ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
       UPDATE sales SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='invoice_number') THEN
+      ALTER TABLE sales ADD COLUMN invoice_number TEXT;
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='discount_amount') THEN
       ALTER TABLE sales ADD COLUMN discount_amount DECIMAL(12,2) DEFAULT 0;
     END IF;
@@ -927,6 +939,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='cost_price_total') THEN
       ALTER TABLE sales ADD COLUMN cost_price_total DECIMAL(12,2) DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='total_profit') THEN
+      ALTER TABLE sales ADD COLUMN total_profit DECIMAL(12,2) DEFAULT 0;
     END IF;
     -- Add foreign keys if they are missing their constraints
     DO $$ 
@@ -1037,6 +1052,12 @@ BEGIN
 
   -- Sales Migration
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='sales') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='invoice_number') THEN
+      ALTER TABLE sales ADD COLUMN invoice_number TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='total_profit') THEN
+      ALTER TABLE sales ADD COLUMN total_profit DECIMAL(12,2) DEFAULT 0;
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='cost_price_total') THEN
       ALTER TABLE sales ADD COLUMN cost_price_total DECIMAL(12,2) DEFAULT 0;
     END IF;
@@ -1518,7 +1539,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           await client.query('BEGIN');
           const { rows } = await client.query(
             'INSERT INTO expenses (account_id, category, amount, description, date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [userInfo.account_id, category, amount, description, finalDate]
+            [userInfo.account_id, category, parseFloat(amount), description, finalDate]
           );
           
           await client.query(
@@ -1747,7 +1768,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   // AI Bank Transaction Processing
   app.post("/api/ai/process-transaction", async (req, res) => {
     console.log('[API] POST /api/ai/process-transaction called');
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -3496,6 +3516,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             [final_total_amount, final_total_profit, cost_price_total, saleId]
           );
 
+          // Loyalty Points logic
+          if (finalCustomerId) {
+            const pointsEarned = Math.floor(final_total_amount / 100);
+            await client.query('UPDATE customers SET loyalty_points = COALESCE(loyalty_points, 0) + $1 WHERE id = $2', [pointsEarned, finalCustomerId]);
+          }
+
           await client.query(
             'INSERT INTO bookkeeping (account_id, type, nature, amount, description, date) VALUES ($1, $2, $3, $4, $5, $6)',
             [userInfo.account_id, 'Income', 'sale', final_total_amount, `Sale - Invoice #${invoice_number}`, new Date().toISOString().split('T')[0]]
@@ -3593,37 +3619,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (saleError) throw saleError;
       const saleId = sale.id;
-
-      // Notify admin of new sale
-      const { data: adminUser } = await supabase
-        .from('users')
-        .select('email, name')
-        .eq('account_id', userInfo.account_id)
-        .eq('role', 'admin')
-        .limit(1)
-        .maybeSingle();
-
-      if (adminUser && adminUser.email) {
-        sendEmail(
-          adminUser.email,
-          `New Sale Recorded: ${invoice_number}`,
-          `A new sale of ${total_amount} NGN has been recorded. Invoice: ${invoice_number}`,
-          `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #10b981;">New Sale Recorded</h2>
-            <p>Hi ${adminUser.name},</p>
-            <p>A new transaction has been completed in your store.</p>
-            <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
-              <p style="margin: 0;">Invoice: <strong>${invoice_number}</strong></p>
-              <p style="margin: 0;">Total Amount: <strong>${total_amount} NGN</strong></p>
-              <p style="margin: 0;">Payment Method: ${payment_method}</p>
-            </div>
-            <p>You can view the full details in your Gryndee dashboard.</p>
-            <p>Best regards,<br>Gryndee System</p>
-          </div>
-          `
-        ).catch(err => console.error('Failed to send sale notification email:', err));
-      }
 
       for (const item of items) {
         let sellingPrice = 0;
@@ -3795,6 +3790,45 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .eq('id', saleId);
 
       if (updateError) throw updateError;
+
+      // Update customer loyalty points
+      if (finalCustomerId) {
+        const pointsEarned = Math.floor(final_total_amount / 100);
+        const { data: customer } = await supabase.from('customers').select('loyalty_points').eq('id', finalCustomerId).single();
+        const currentPoints = customer?.loyalty_points || 0;
+        await supabase.from('customers').update({ loyalty_points: currentPoints + pointsEarned }).eq('id', finalCustomerId);
+      }
+
+      // Notify admin of new sale
+      const { data: adminUser } = await supabase
+        .from('users')
+        .select('email, name')
+        .eq('account_id', userInfo.account_id)
+        .eq('role', 'admin')
+        .limit(1)
+        .maybeSingle();
+
+      if (adminUser && adminUser.email) {
+        sendEmail(
+          adminUser.email,
+          `New Sale Recorded: ${invoice_number}`,
+          `A new sale of ${final_total_amount} NGN has been recorded. Invoice: ${invoice_number}`,
+          `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #10b981;">New Sale Recorded</h2>
+            <p>Hi ${adminUser.name},</p>
+            <p>A new transaction has been completed in your store.</p>
+            <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0;">Invoice: <strong>${invoice_number}</strong></p>
+              <p style="margin: 0;">Total Amount: <strong>${final_total_amount} NGN</strong></p>
+              <p style="margin: 0;">Payment Method: ${payment_method}</p>
+            </div>
+            <p>You can view the full details in your Gryndee dashboard.</p>
+            <p>Best regards,<br>Gryndee System</p>
+          </div>
+          `
+        ).catch(err => console.error('Failed to send sale notification email:', err));
+      }
 
       res.json({ saleId, invoice_number });
     } catch (e: any) {
@@ -4239,17 +4273,26 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const lowStockCount = variants?.filter(v => v.quantity <= (v.low_stock_threshold || 0)).length || 0;
 
         const { rows: todaySalesData } = await pool.query(
-          'SELECT total_amount FROM sales WHERE account_id = $1 AND created_at::date = $2',
+          'SELECT total_amount, total_profit FROM sales WHERE account_id = $1 AND created_at::date = $2',
           [userInfo.account_id, today]
         );
         const todaySales = todaySalesData?.reduce((acc, s) => acc + (parseFloat(s.total_amount) || 0), 0) || 0;
+        const todayProfit = todaySalesData?.reduce((acc, s) => acc + (parseFloat(s.total_profit) || 0), 0) || 0;
+
+        const { rows: todayExpensesData } = await pool.query(
+          'SELECT amount FROM expenses WHERE account_id = $1 AND date = $2',
+          [userInfo.account_id, today]
+        );
+        const todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0) || 0;
 
         return res.json({
-          totalProducts,
-          totalSales: totalSalesCount,
-          totalStock,
-          lowStockCount,
-          todaySales
+          total_products: totalProducts,
+          total_sales_count: totalSalesCount,
+          total_stock: totalStock,
+          low_stock_count: lowStockCount,
+          today_sales: todaySales,
+          today_profit: todayProfit,
+          today_expenses: todayExpenses
         });
       }
 
@@ -4298,13 +4341,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
-      const { data, error } = await supabase
-        .from('sales')
-        .select('created_at, total_amount, total_profit')
-        .eq('account_id', userInfo.account_id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
+      let data: any[] = [];
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'SELECT created_at, total_amount, total_profit FROM sales WHERE account_id = $1 ORDER BY created_at ASC',
+          [userInfo.account_id]
+        );
+        data = rows;
+      } else if (supabase) {
+        const { data: supabaseData, error } = await supabase
+          .from('sales')
+          .select('created_at, total_amount, total_profit')
+          .eq('account_id', userInfo.account_id)
+          .order('created_at', { ascending: true });
+        if (error) throw error;
+        data = supabaseData || [];
+      }
 
       // Group by date
       const trendsMap = new Map();
@@ -4312,8 +4364,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const date = new Date(s.created_at).toISOString().split('T')[0];
         const existing = trendsMap.get(date) || { revenue: 0, profit: 0 };
         trendsMap.set(date, {
-          revenue: existing.revenue + s.total_amount,
-          profit: existing.profit + s.total_profit
+          revenue: existing.revenue + (parseFloat(s.total_amount) || 0),
+          profit: existing.profit + (parseFloat(s.total_profit) || 0)
         });
       });
 
@@ -4329,37 +4381,44 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.get("/api/analytics/top-sales", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
-      // Fetch sale items with product info
-      // We use a more robust approach by fetching variants separately if needed, 
-      // but let's try to fix the join first by ensuring the query is correct.
-      const { data, error } = await supabase
-        .from('sale_items')
-        .select(`
-          quantity, 
-          unit_price, 
-          total_price,
-          product_variants(
-            products(name)
-          )
-        `)
-        .eq('account_id', userInfo.account_id)
-        .limit(200);
-      
-      if (error) {
-        console.error('[ANALYTICS] Top sales fetch error:', error);
-        // Fallback: try without !inner
-        const fallback = await supabase
+      let data: any[] = [];
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(`
+          SELECT si.quantity, si.unit_price, si.total_price, si.product_name, si.service_name
+          FROM sale_items si
+          WHERE si.account_id = $1
+          LIMIT 200
+        `, [userInfo.account_id]);
+        data = rows.map(item => ({
+          ...item,
+          product_variants: {
+            products: {
+              name: item.product_name || item.service_name || 'Unknown'
+            }
+          }
+        }));
+      } else if (supabase) {
+        const { data: supabaseData, error } = await supabase
           .from('sale_items')
-          .select('quantity, unit_price, total_price, product_variants(products(name))')
+          .select(`
+            quantity, 
+            unit_price, 
+            total_price,
+            product_name,
+            service_name,
+            product_variants(
+              products(name)
+            )
+          `)
           .eq('account_id', userInfo.account_id)
           .limit(200);
-        if (fallback.error) throw fallback.error;
-        return res.json(processTopSales(fallback.data));
+        
+        if (error) throw error;
+        data = supabaseData || [];
       }
       
       res.json(processTopSales(data));
@@ -4372,17 +4431,20 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   function processTopSales(data: any[]) {
     const topSalesMap = new Map();
     data.forEach((item: any) => {
-      // Handle both object and array formats for relations
-      const variant = Array.isArray(item.product_variants) ? item.product_variants[0] : item.product_variants;
-      const product = Array.isArray(variant?.products) ? variant.products[0] : variant?.products;
-      const name = product?.name || 'Unknown Product';
+      let name = item.product_name || item.service_name;
+      
+      if (!name) {
+        const variant = Array.isArray(item.product_variants) ? item.product_variants[0] : item.product_variants;
+        const product = Array.isArray(variant?.products) ? variant.products[0] : variant?.products;
+        name = product?.name || 'Unknown Product';
+      }
       
       const existing = topSalesMap.get(name) || { name, quantity: 0, revenue: 0 };
       const price = parseFloat(item.unit_price) || (parseFloat(item.total_price) / item.quantity) || 0;
       topSalesMap.set(name, {
         name,
-        quantity: existing.quantity + item.quantity,
-        revenue: existing.revenue + (item.quantity * price)
+        quantity: existing.quantity + (parseInt(item.quantity) || 0),
+        revenue: existing.revenue + ((parseInt(item.quantity) || 0) * price)
       });
     });
     
@@ -4392,20 +4454,28 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   }
 
   app.get("/api/analytics/top-expenses", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('category, amount')
-        .eq('account_id', userInfo.account_id)
-        .order('amount', { ascending: false })
-        .limit(5);
-        
-      if (error) throw error;
-      res.json(data || []);
+      let data: any[] = [];
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'SELECT category, amount FROM expenses WHERE account_id = $1 ORDER BY amount DESC LIMIT 5',
+          [userInfo.account_id]
+        );
+        data = rows;
+      } else if (supabase) {
+        const { data: supabaseData, error } = await supabase
+          .from('expenses')
+          .select('category, amount')
+          .eq('account_id', userInfo.account_id)
+          .order('amount', { ascending: false })
+          .limit(5);
+        if (error) throw error;
+        data = supabaseData || [];
+      }
+      res.json(data);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -4416,19 +4486,40 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Staff Performance API
   app.get("/api/analytics/staff-performance", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
-      const { data, error } = await supabase
-        .from('sales')
-        .select('staff_id, total_amount, total_profit')
-        .eq('account_id', userInfo.account_id);
-      
-      if (error) throw error;
+      let data: any[] = [];
+      let users: any[] = [];
 
-      const { data: users } = await supabase.from('users').select('id, name').eq('account_id', userInfo.account_id);
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: salesRows } = await pool.query(
+          'SELECT staff_id, total_amount, total_profit FROM sales WHERE account_id = $1',
+          [userInfo.account_id]
+        );
+        data = salesRows;
+
+        const { rows: usersRows } = await pool.query(
+          'SELECT id, name FROM users WHERE account_id = $1',
+          [userInfo.account_id]
+        );
+        users = usersRows;
+      } else if (supabase) {
+        const { data: supabaseData, error } = await supabase
+          .from('sales')
+          .select('staff_id, total_amount, total_profit')
+          .eq('account_id', userInfo.account_id);
+        
+        if (error) throw error;
+        data = supabaseData || [];
+
+        const { data: supabaseUsers } = await supabase.from('users').select('id, name').eq('account_id', userInfo.account_id);
+        users = supabaseUsers || [];
+      } else {
+        return res.status(503).json({ error: "Database not available" });
+      }
+
       const userMap = new Map(users?.map(u => [u.id, u.name]));
 
       const performanceMap = new Map();
@@ -4436,8 +4527,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const staffName = userMap.get(s.staff_id) || `Staff #${s.staff_id}`;
         const existing = performanceMap.get(staffName) || { sales: 0, profit: 0, count: 0 };
         performanceMap.set(staffName, {
-          sales: existing.sales + s.total_amount,
-          profit: existing.profit + s.total_profit,
+          sales: existing.sales + (parseFloat(s.total_amount) || 0),
+          profit: existing.profit + (parseFloat(s.total_profit) || 0),
           count: existing.count + 1
         });
       });
