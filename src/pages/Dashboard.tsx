@@ -198,7 +198,7 @@ export default function Dashboard() {
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-zinc-900 dark:text-white">Dashboard</h1>
+          <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Dashboard</h1>
           <p className="body-text text-zinc-500 dark:text-zinc-400">Welcome back, here's what's happening today.</p>
         </div>
         <div className="flex gap-2">

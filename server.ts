@@ -1881,10 +1881,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
 
     try {
-      // Fetch data for AI context
-      const { data: sales } = await supabase.from('sales').select('*, sale_items(*)').order('created_at', { ascending: false }).limit(50);
-      const { data: products } = await supabase.from('products').select('*, product_variants(*)');
-      const { data: expenses } = await supabase.from('expenses').select('*').order('date', { ascending: false }).limit(20);
+      // Fetch data for AI context using AWS RDS
+      const { rows: sales } = await pool.query('SELECT * FROM sales WHERE account_id = $1 ORDER BY created_at DESC LIMIT 50', [userInfo.account_id]);
+      const { rows: products } = await pool.query('SELECT * FROM products WHERE account_id = $1', [userInfo.account_id]);
+      const { rows: expenses } = await pool.query('SELECT * FROM expenses WHERE account_id = $1 ORDER BY date DESC LIMIT 20', [userInfo.account_id]);
 
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
@@ -4395,11 +4395,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!process.env.AWS_DB_PASSWORD) {
         return res.status(503).json({ error: "Database not available (AWS RDS not configured)" });
       }
-      const { rows } = await pool.query(
+      const { rows: data } = await pool.query(
         'SELECT created_at, total_amount, total_profit FROM sales WHERE account_id = $1 ORDER BY created_at ASC',
         [userInfo.account_id]
       );
-      data = rows;
 
       // Group by date
       const trendsMap = new Map();

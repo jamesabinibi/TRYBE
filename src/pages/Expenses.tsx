@@ -299,11 +299,11 @@ export default function Expenses() {
           <table className="w-full text-left border-collapse">
             <thead className="hidden sm:table-header-group">
               <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
-                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date</th>
-                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Category</th>
-                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Description</th>
-                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Amount</th>
-                <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Actions</th>
+                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Date</th>
+                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Category</th>
+                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Description</th>
+                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Amount</th>
+                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
