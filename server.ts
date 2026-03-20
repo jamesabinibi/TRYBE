@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import fs from 'fs';
 import nodemailer from 'nodemailer';
-import { createClient } from '@supabase/supabase-js';
+// Supabase removed
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -26,6 +26,7 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
   console.log('[INIT] Cloudinary initialized');
 }
 
+// Supabase removed
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 
@@ -57,7 +58,6 @@ console.log(`[INIT] NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`[INIT] VERCEL: ${process.env.VERCEL}`);
 
 // Supabase removed
-let supabase: any = null;
 
 // Email transporter setup
 let smtpHost = process.env.SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com';
@@ -2001,25 +2001,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.get("/api/categories", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo) return res.json([]);
-
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT * FROM categories WHERE account_id = $1 ORDER BY name', [userInfo.account_id]);
-        return res.json(rows || []);
-      }
-
-      if (!supabase) return res.json([]);
-      let { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('account_id', userInfo.account_id)
-        .order('name');
-
-      if (error) {
-        console.error('[CATEGORIES] Fetch error:', error);
-        return res.status(500).json({ error: error.message });
-      }
-      res.json(data || []);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+      
+      const { rows } = await pool.query('SELECT * FROM categories WHERE account_id = $1 ORDER BY name', [userInfo.account_id]);
+      res.json(rows || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -2031,19 +2016,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('INSERT INTO categories (account_id, name) VALUES ($1, $2) RETURNING *', [userInfo.account_id, name]);
-        return res.json(rows[0]);
-      }
-
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      const { data, error } = await supabase
-        .from('categories')
-        .insert([{ account_id: userInfo.account_id, name }])
-        .select()
-        .single();
-      if (error) throw error;
-      res.json(data);
+      const { rows } = await pool.query('INSERT INTO categories (account_id, name) VALUES ($1, $2) RETURNING *', [userInfo.account_id, name]);
+      res.json(rows[0]);
     } catch (e: any) {
       res.status(400).json({ error: e.message || "Category already exists" });
     }
@@ -2056,21 +2030,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('UPDATE categories SET name = $1 WHERE id = $2 AND account_id = $3 RETURNING *', [name, id, userInfo.account_id]);
-        return res.json(rows[0]);
-      }
-
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      const { data, error } = await supabase
-        .from('categories')
-        .update({ name })
-        .eq('id', id)
-        .eq('account_id', userInfo.account_id)
-        .select()
-        .single();
-      if (error) throw error;
-      res.json(data);
+      const { rows } = await pool.query('UPDATE categories SET name = $1 WHERE id = $2 AND account_id = $3 RETURNING *', [name, id, userInfo.account_id]);
+      res.json(rows[0]);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -2082,32 +2043,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows: products } = await pool.query('SELECT id FROM products WHERE category_id = $1 AND account_id = $2 LIMIT 1', [id, userInfo.account_id]);
-        if (products.length > 0) {
-          return res.status(400).json({ error: "Cannot delete category with associated products" });
-        }
-        await pool.query('DELETE FROM categories WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
-        return res.json({ success: true });
-      }
-
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      const { count } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('category_id', id)
-        .eq('account_id', userInfo.account_id);
-      
-      if (count && count > 0) {
+      const { rows: products } = await pool.query('SELECT id FROM products WHERE category_id = $1 AND account_id = $2 LIMIT 1', [id, userInfo.account_id]);
+      if (products.length > 0) {
         return res.status(400).json({ error: "Cannot delete category with associated products" });
       }
-
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id)
-        .eq('account_id', userInfo.account_id);
-      if (error) throw error;
+      await pool.query('DELETE FROM categories WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
