@@ -152,8 +152,8 @@ export default function Users() {
       </div>
 
       <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[600px]">
+        <div className="hidden lg:block">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-zinc-50 border-b border-zinc-200">
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">User</th>
@@ -230,8 +230,8 @@ export default function Users() {
           </table>
         </div>
 
-        {/* Mobile View */}
-        <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+        {/* Mobile & Tablet View */}
+        <div className="lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
           {isLoading ? (
             <div className="p-12 text-center">
               <div className="flex flex-col items-center gap-3">

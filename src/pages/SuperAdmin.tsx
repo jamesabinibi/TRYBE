@@ -9,6 +9,7 @@ import {
   Activity,
   ArrowUpRight,
   Search,
+  Key,
   Mail,
   Calendar,
   ExternalLink,
@@ -67,7 +68,8 @@ export default function SuperAdmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'accounts' | 'users'>('accounts');
-  
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
@@ -280,9 +282,10 @@ export default function SuperAdmin() {
   ) || [];
 
   const filteredUsers = users.filter(u => 
-    u.username.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    (u.username?.toLowerCase() || '').includes(userSearchQuery.toLowerCase()) || 
+    (u.email?.toLowerCase() || '').includes(userSearchQuery.toLowerCase()) ||
+    (u.name?.toLowerCase() || '').includes(userSearchQuery.toLowerCase()) ||
+    (u.account_name?.toLowerCase() || '').includes(userSearchQuery.toLowerCase())
   );
 
   return (
@@ -348,167 +351,310 @@ export default function SuperAdmin() {
           <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
             <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <h2 className="text-xl font-black text-zinc-900 dark:text-white">Accounts & Users</h2>
+                <button 
+                  onClick={() => setActiveTab('accounts')}
+                  className={cn(
+                    "px-6 py-2.5 rounded-xl text-sm font-black transition-all",
+                    activeTab === 'accounts' 
+                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" 
+                      : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                  )}
+                >
+                  Accounts
+                </button>
+                <button 
+                  onClick={() => setActiveTab('users')}
+                  className={cn(
+                    "px-6 py-2.5 rounded-xl text-sm font-black transition-all",
+                    activeTab === 'users' 
+                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" 
+                      : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                  )}
+                >
+                  Users
+                </button>
               </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input 
                   type="text"
-                  placeholder="Search accounts..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={activeTab === 'accounts' ? "Search accounts..." : "Search users..."}
+                  value={activeTab === 'accounts' ? searchQuery : userSearchQuery}
+                  onChange={(e) => activeTab === 'accounts' ? setSearchQuery(e.target.value) : setUserSearchQuery(e.target.value)}
                   className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white outline-none focus:border-emerald-500 transition-all"
                 />
               </div>
             </div>
 
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
-                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Name</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Owner</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Users</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Joined Date</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {filteredAccounts.map((account) => (
-                      <tr key={account.id} className={cn("hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group", !account.is_active && "opacity-50")}>
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
-                              {account.name.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                                {account.name}
-                                {!account.is_active && <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full uppercase tracking-wider">Inactive</span>}
-                              </p>
-                              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">ID: #{account.id}</p>
-                            </div>
+            {activeTab === 'accounts' ? (
+              <>
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
+                          <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Name</th>
+                          <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Owner</th>
+                          <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Users</th>
+                          <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Joined Date</th>
+                          <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        {filteredAccounts.map((account) => (
+                          <tr key={account.id} className={cn("hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group", !account.is_active && "opacity-50")}>
+                            <td className="px-8 py-5">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
+                                  {account.name.charAt(0)}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                                    {account.name}
+                                    {!account.is_active && <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full uppercase tracking-wider">Inactive</span>}
+                                  </p>
+                                  <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">ID: #{account.id}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-8 py-5">
+                              <div className="flex flex-col">
+                                <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">{account.users?.[0]?.name || 'N/A'}</span>
+                                <span className="text-xs text-zinc-400 flex items-center gap-1">
+                                  <Mail className="w-3 h-3" />
+                                  {account.users?.[0]?.email || 'N/A'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-8 py-5">
+                              <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
+                                <Users className="w-4 h-4 opacity-50" />
+                                {account.users?.length || 0}
+                              </div>
+                            </td>
+                            <td className="px-8 py-5">
+                              <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
+                                <Calendar className="w-4 h-4 opacity-50" />
+                                {new Date(account.created_at).toLocaleDateString()}
+                              </div>
+                            </td>
+                            <td className="px-8 py-5 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button 
+                                  onClick={() => handleToggleAccountStatus(account.id, account.is_active)}
+                                  className={cn("p-2 transition-colors", account.is_active ? "text-zinc-400 hover:text-amber-500" : "text-amber-500 hover:text-amber-600")}
+                                  title={account.is_active ? "Deactivate Account" : "Activate Account"}
+                                >
+                                  <Power className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteAccount(account.id)}
+                                  className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                                  title="Delete Account"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {filteredAccounts.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="px-8 py-12 text-center">
+                              <div className="flex flex-col items-center gap-2">
+                                <Building2 className="w-8 h-8 text-zinc-200 dark:text-zinc-800" />
+                                <p className="text-sm text-zinc-500 font-medium italic">No accounts found in the system.</p>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                </div>
+
+                {/* Mobile View */}
+                <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {filteredAccounts.map((account) => (
+                    <div key={account.id} className={cn("p-6 space-y-4", !account.is_active && "opacity-50")}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-black text-lg">
+                            {account.name.charAt(0)}
                           </div>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">{account.users?.[0]?.name || 'N/A'}</span>
-                            <span className="text-xs text-zinc-400 flex items-center gap-1">
-                              <Mail className="w-3 h-3" />
-                              {account.users?.[0]?.email || 'N/A'}
+                          <div>
+                            <h3 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                              {account.name}
+                              {!account.is_active && <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full uppercase tracking-wider">Inactive</span>}
+                            </h3>
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">ID: #{account.id}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={() => handleToggleAccountStatus(account.id, account.is_active)}
+                            className={cn("p-2.5 rounded-xl transition-all active:scale-95", account.is_active ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400" : "bg-amber-500/10 text-amber-500")}
+                          >
+                            <Power className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteAccount(account.id)}
+                            className="p-2.5 bg-red-500/10 text-red-500 rounded-xl active:scale-95 transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-1">
+                          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Owner</p>
+                          <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300 truncate">{account.users?.[0]?.name || 'N/A'}</p>
+                          <p className="text-[10px] text-zinc-400 truncate">{account.users?.[0]?.email || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest text-right">Stats</p>
+                          <div className="flex items-center justify-end gap-3 text-xs font-bold text-zinc-500">
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {account.users?.length || 0}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(account.created_at).toLocaleDateString()}
                             </span>
                           </div>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
-                            <Users className="w-4 h-4 opacity-50" />
-                            {account.users?.length || 0}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {filteredAccounts.length === 0 && (
+                    <div className="p-12 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Building2 className="w-8 h-8 text-zinc-200 dark:text-zinc-800" />
+                        <p className="text-sm text-zinc-500 font-medium italic">No accounts found.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
+                        <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">User</th>
+                        <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account</th>
+                        <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</th>
+                        <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th>
+                        <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                      {filteredUsers.map((user) => (
+                        <tr key={user.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
+                                {user.name.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-zinc-900 dark:text-white">{user.name}</p>
+                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{user.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-2 text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                              <Building2 className="w-4 h-4 opacity-50" />
+                              {user.account_name || 'N/A'}
+                            </div>
+                          </td>
+                          <td className="px-8 py-5">
+                            <span className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                              user.role === 'admin' ? "bg-purple-500/10 text-purple-500" : "bg-blue-500/10 text-blue-500"
+                            )}>
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="px-8 py-5">
+                            <span className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                              user.account_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                            )}>
+                              {user.account_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <button 
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setIsResetModalOpen(true);
+                              }}
+                              className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors"
+                              title="Reset Password"
+                            >
+                              <Key className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Users View */}
+                <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {filteredUsers.map((user) => (
+                    <div key={user.id} className="p-6 space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-black text-lg">
+                            {user.name.charAt(0)}
                           </div>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
-                            <Calendar className="w-4 h-4 opacity-50" />
-                            {new Date(account.created_at).toLocaleDateString()}
+                          <div>
+                            <h3 className="text-sm font-black text-zinc-900 dark:text-white">{user.name}</h3>
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{user.email}</p>
                           </div>
-                        </td>
-                        <td className="px-8 py-5 text-right">
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsResetModalOpen(true);
+                          }}
+                          className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl active:scale-95 transition-all"
+                        >
+                          <Key className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-1">
+                          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Account</p>
+                          <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300 truncate">{user.account_name || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1 text-right">
+                          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Role & Status</p>
                           <div className="flex items-center justify-end gap-2">
-                            <button 
-                              onClick={() => handleToggleAccountStatus(account.id, account.is_active)}
-                              className={cn("p-2 transition-colors", account.is_active ? "text-zinc-400 hover:text-amber-500" : "text-amber-500 hover:text-amber-600")}
-                              title={account.is_active ? "Deactivate Account" : "Activate Account"}
-                            >
-                              <Power className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteAccount(account.id)}
-                              className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
-                              title="Delete Account"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <span className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                              user.role === 'admin' ? "bg-purple-500/10 text-purple-500" : "bg-blue-500/10 text-blue-500"
+                            )}>
+                              {user.role}
+                            </span>
+                            <span className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                              user.account_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                            )}>
+                              {user.account_active ? 'Active' : 'Inactive'}
+                            </span>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredAccounts.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="px-8 py-12 text-center">
-                          <div className="flex flex-col items-center gap-2">
-                            <Building2 className="w-8 h-8 text-zinc-200 dark:text-zinc-800" />
-                            <p className="text-sm text-zinc-500 font-medium italic">No accounts found in the system.</p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-            </div>
-
-            {/* Mobile View */}
-            <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
-              {filteredAccounts.map((account) => (
-                <div key={account.id} className={cn("p-6 space-y-4", !account.is_active && "opacity-50")}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-black text-lg">
-                        {account.name.charAt(0)}
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                          {account.name}
-                          {!account.is_active && <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full uppercase tracking-wider">Inactive</span>}
-                        </h3>
-                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">ID: #{account.id}</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => handleToggleAccountStatus(account.id, account.is_active)}
-                        className={cn("p-2.5 rounded-xl transition-all active:scale-95", account.is_active ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400" : "bg-amber-500/10 text-amber-500")}
-                      >
-                        <Power className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteAccount(account.id)}
-                        className="p-2.5 bg-red-500/10 text-red-500 rounded-xl active:scale-95 transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 pt-2">
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Owner</p>
-                      <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300 truncate">{account.users?.[0]?.name || 'N/A'}</p>
-                      <p className="text-[10px] text-zinc-400 truncate">{account.users?.[0]?.email || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest text-right">Stats</p>
-                      <div className="flex items-center justify-end gap-3 text-xs font-bold text-zinc-500">
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3 h-3" />
-                          {account.users?.length || 0}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {new Date(account.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-              {filteredAccounts.length === 0 && (
-                <div className="p-12 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <Building2 className="w-8 h-8 text-zinc-200 dark:text-zinc-800" />
-                    <p className="text-sm text-zinc-500 font-medium italic">No accounts found.</p>
-                  </div>
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
 

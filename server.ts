@@ -382,11 +382,27 @@ async function initAwsDb() {
       const { rows: existingSuper } = await client.query("SELECT id FROM users WHERE username = 'superadmin'");
       if (existingSuper.length === 0) {
         console.log('[DB] Creating superadmin with password: superpassword123');
-        const { rows: sysAccs } = await client.query("INSERT INTO accounts (name) VALUES ('System Admin') RETURNING id");
-        await client.query(
-          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
-          [sysAccs[0].id, 'superadmin', 'admin@stockflow.pro', hashedSuperPass, 'super_admin', 'System Admin']
+        
+        // Check if a "System Admin" account already exists without an owner
+        const { rows: existingSysAccs } = await client.query("SELECT id FROM accounts WHERE name = 'System Admin' AND owner_id IS NULL LIMIT 1");
+        
+        let sysAccId;
+        if (existingSysAccs.length > 0) {
+          sysAccId = existingSysAccs[0].id;
+          console.log(`[DB] Using existing orphaned System Admin account (ID: ${sysAccId})`);
+        } else {
+          const { rows: sysAccs } = await client.query("INSERT INTO accounts (name) VALUES ('System Admin') RETURNING id");
+          sysAccId = sysAccs[0].id;
+          console.log(`[DB] Created new System Admin account (ID: ${sysAccId})`);
+        }
+
+        const { rows: newUser } = await client.query(
+          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+          [sysAccId, 'superadmin', 'admin@stockflow.pro', hashedSuperPass, 'super_admin', 'System Admin']
         );
+        
+        // Update account owner
+        await client.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser[0].id, sysAccId]);
       }
 
       // Ensure default admin exists
@@ -394,18 +410,36 @@ async function initAwsDb() {
       const { rows: existingAdmin } = await client.query("SELECT id FROM users WHERE username = 'admin'");
       if (existingAdmin.length === 0) {
         console.log('[DB] Creating admin with password: admin123');
-        const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
-        const accountId = accounts[0].id;
         
-        await client.query(
-          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
+        // Check if a "Gryndee Demo Account" already exists without an owner
+        const { rows: existingDemoAccs } = await client.query("SELECT id FROM accounts WHERE name = 'Gryndee Demo Account' AND owner_id IS NULL LIMIT 1");
+        
+        let accountId;
+        if (existingDemoAccs.length > 0) {
+          accountId = existingDemoAccs[0].id;
+          console.log(`[DB] Using existing orphaned Gryndee Demo account (ID: ${accountId})`);
+        } else {
+          const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
+          accountId = accounts[0].id;
+          console.log(`[DB] Created new Gryndee Demo account (ID: ${accountId})`);
+        }
+        
+        const { rows: newUser } = await client.query(
+          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
           [accountId, 'admin', 'admin@gryndee.com', hashedAdminPass, 'admin', 'Demo Admin']
         );
         
-        await client.query(
-          'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
-          [accountId, 'Gryndee Demo', 'NGN']
-        );
+        // Update account owner
+        await client.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser[0].id, accountId]);
+        
+        // Ensure settings exist
+        const { rows: existingSettings } = await client.query('SELECT id FROM settings WHERE account_id = $1', [accountId]);
+        if (existingSettings.length === 0) {
+          await client.query(
+            'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
+            [accountId, 'Gryndee Demo', 'NGN']
+          );
+        }
       }
       console.log('[DB] RDS Initialization complete.');
     } finally {
@@ -1871,55 +1905,25 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     });
   });
 
-  // TEMPORARY: Database Reset Endpoint
-  app.get("/api/debug/reset-rds", async (req, res) => {
-    if (req.query.confirm !== 'true') {
-      return res.status(400).send("Please add ?confirm=true to the URL to wipe the database.");
-    }
-
-    if (!process.env.AWS_DB_PASSWORD) {
-      return res.status(500).send("RDS not configured.");
-    }
-
+  // Debug endpoint to list users
+  app.get("/api/debug/list-users", requireSuperAdmin, async (req: any, res) => {
     try {
-      // Wipe all tables and restart IDs
-      await pool.query(`
-        TRUNCATE users, accounts, settings, products, product_variants, product_images, sales, sale_items, customers, expenses, bookkeeping, services, notifications, categories 
-        RESTART IDENTITY CASCADE
-      `);
-      
-      console.log('[DEBUG] Database wiped successfully via web endpoint');
-      res.send("<h1>Database Reset Successful!</h1><p>You can now go back to the <a href='/register'>Registration Page</a> and create your account fresh.</p>");
-    } catch (e: any) {
-      console.error('[DEBUG] Reset failed:', e);
-      res.status(500).send("Reset failed: " + e.message);
-    }
-  });
-
-  // TEMPORARY: Debug endpoint to list users
-  app.get("/api/debug/list-users", async (req, res) => {
-    const results: any = { rds: [], supabase: [] };
-    
-    if (process.env.AWS_DB_PASSWORD) {
-      try {
+      let rdsUsers = [];
+      if (process.env.AWS_DB_PASSWORD) {
         const { rows } = await pool.query('SELECT id, username, email, role, account_id FROM users');
-        results.rds = rows;
-      } catch (e: any) {
-        results.rds_error = e.message;
+        rdsUsers = rows;
       }
-    }
-    
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.from('users').select('id, username, email, role, account_id');
-        if (error) results.supabase_error = error.message;
-        else results.supabase = data;
-      } catch (e: any) {
-        results.supabase_error = e.message;
+      
+      let supabaseUsers = [];
+      if (supabase) {
+        const { data } = await supabase.from('users').select('id, username, email, role, account_id');
+        supabaseUsers = data || [];
       }
+
+      res.json({ rds: rdsUsers, supabase: supabaseUsers });
+    } catch (e: any) {
+      res.status(500).send(e.message);
     }
-    
-    res.json(results);
   });
 
   // Categories (Moved to top)
@@ -2051,7 +2055,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     console.log(`[AUTH] Login attempt for: "${normalizedUsername}"`);
     
     // Virtual superadmin login
-    const superAdminPass = process.env.SUPERADMIN_PASSWORD || 'admin123';
+    const superAdminPass = process.env.SUPERADMIN_PASSWORD || 'superpassword123';
     if ((normalizedUsername === 'superadmin' || normalizedUsername === 'admin@stockflow.pro') && password === superAdminPass) {
       console.log(`[AUTH] Virtual superadmin login success: "${normalizedUsername}"`);
       return res.json({ id: '0', username: 'superadmin', email: 'admin@stockflow.pro', role: 'super_admin', name: 'System Admin' });
@@ -2076,6 +2080,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           [normalizedUsername]
         );
         user = rows[0];
+        if (user) {
+          console.log(`[AUTH] User found in RDS: "${user.username}" (ID: ${user.id})`);
+        } else {
+          console.log(`[AUTH] User NOT found in RDS for: "${normalizedUsername}"`);
+        }
       }
 
       // Fallback to Supabase if not found in RDS
@@ -2091,10 +2100,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           console.error(`[AUTH] Supabase query error:`, supabaseError);
         }
         if (supabaseUser) {
+          console.log(`[AUTH] User found in Supabase: "${supabaseUser.username}" (ID: ${supabaseUser.id})`);
           user = {
             ...supabaseUser,
             account_active: supabaseUser.accounts?.is_active
           };
+        } else {
+          console.log(`[AUTH] User NOT found in Supabase for: "${normalizedUsername}"`);
         }
       }
 
