@@ -54,7 +54,6 @@ export default function Products() {
     name: '',
     description: '',
     price: '',
-    duration_minutes: '30',
     category: '',
     image_url: ''
   });
@@ -255,7 +254,6 @@ export default function Products() {
       name: '',
       description: '',
       price: '',
-      duration_minutes: '60',
       category: '',
       image_url: ''
     });
@@ -268,7 +266,6 @@ export default function Products() {
       name: service.name,
       description: service.description || '',
       price: service.price.toString(),
-      duration_minutes: service.duration_minutes.toString(),
       category: service.category || '',
       image_url: service.image_url || ''
     });
@@ -285,15 +282,14 @@ export default function Products() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newService,
-          price: parseFloat(newService.price) || 0,
-          duration_minutes: parseInt(newService.duration_minutes) || 30
+          price: parseFloat(newService.price) || 0
         })
       });
       if (response.ok) {
         toast.success(editingService ? 'Service updated' : 'Service added');
         setIsServiceModalOpen(false);
         setEditingService(null);
-        setNewService({ name: '', description: '', price: '', duration_minutes: '30', category: '', image_url: '' });
+        setNewService({ name: '', description: '', price: '', category: '', image_url: '' });
         fetchServices();
       } else {
         toast.error('Failed to save service');
@@ -810,7 +806,7 @@ export default function Products() {
                       className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Price ({currency === 'NGN' ? '₦' : currency})</label>
                       <input 
@@ -821,24 +817,19 @@ export default function Products() {
                         className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Duration (mins)</label>
-                      <input 
-                        required
-                        type="number"
-                        value={newService.duration_minutes}
-                        onChange={(e) => setNewService({...newService, duration_minutes: e.target.value})}
-                        className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
-                      />
-                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
-                    <input 
+                    <select
                       value={newService.category}
                       onChange={(e) => setNewService({...newService, category: e.target.value})}
                       className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
-                    />
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.name}>{cat.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Description</label>
