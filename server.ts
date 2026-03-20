@@ -56,19 +56,8 @@ console.log(`[INIT] Starting server at ${new Date().toISOString()}`);
 console.log(`[INIT] NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`[INIT] VERCEL: ${process.env.VERCEL}`);
 
-let supabase: any;
-try {
-  if (!supabaseUrl || !supabaseUrl.startsWith('http')) {
-    console.error('[INIT] ERROR: Invalid or missing SUPABASE_URL');
-  } else if (!supabaseAnonKey) {
-    console.error('[INIT] ERROR: Missing SUPABASE_ANON_KEY');
-  } else {
-    supabase = createClient(supabaseUrl, supabaseAnonKey);
-    console.log(`[INIT] Supabase client initialized with URL: ${supabaseUrl}`);
-  }
-} catch (err) {
-  console.error('[INIT] CRITICAL: Failed to initialize Supabase client:', err);
-}
+// Supabase removed
+let supabase: any = null;
 
 // Email transporter setup
 let smtpHost = process.env.SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com';
@@ -1884,9 +1873,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/ai/forecast", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     
     const apiKey = process.env.GEMINI_API_KEY;
+    console.log('[AI] GEMINI_API_KEY present:', !!apiKey);
     if (!apiKey) {
       return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing." });
     }
@@ -4402,22 +4391,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
-      let data: any[] = [];
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query(
-          'SELECT created_at, total_amount, total_profit FROM sales WHERE account_id = $1 ORDER BY created_at ASC',
-          [userInfo.account_id]
-        );
-        data = rows;
-      } else if (supabase) {
-        const { data: supabaseData, error } = await supabase
-          .from('sales')
-          .select('created_at, total_amount, total_profit')
-          .eq('account_id', userInfo.account_id)
-          .order('created_at', { ascending: true });
-        if (error) throw error;
-        data = supabaseData || [];
+      // Supabase fallback removed
+      if (!process.env.AWS_DB_PASSWORD) {
+        return res.status(503).json({ error: "Database not available (AWS RDS not configured)" });
       }
+      const { rows } = await pool.query(
+        'SELECT created_at, total_amount, total_profit FROM sales WHERE account_id = $1 ORDER BY created_at ASC',
+        [userInfo.account_id]
+      );
+      data = rows;
 
       // Group by date
       const trendsMap = new Map();
