@@ -126,7 +126,9 @@ export default function NotificationCenter({ userId }: { userId: number }) {
       >
         <Bell className="w-5 h-5 group-hover:rotate-12 transition-transform" />
         {unreadCount > 0 && (
-          <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-brand rounded-full border-2 border-white shadow-[0_0_8px_rgba(var(--brand-rgb),0.4)]"></span>
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shadow-sm">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
         )}
       </button>
 

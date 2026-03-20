@@ -880,7 +880,7 @@ NOTIFY pgrst, 'reload schema';
               : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
           )}
         >
-          Categories
+          PRODUCT/SERVICE CATEGORY
         </button>
         <button
           onClick={() => setActiveTab('account')}
@@ -978,11 +978,10 @@ NOTIFY pgrst, 'reload schema';
                       HEX
                     </span>
                     <input 
-                      type="text" 
+                      type="color" 
                       value={settings.brand_color}
                       onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
-                      placeholder="#000000"
-                      className="w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-[11px] font-mono focus:outline-none focus:border-brand text-center sm:text-left uppercase"
+                      className="w-full h-10 bg-white dark:bg-black/50 border border-zinc-200 dark:border-zinc-700 rounded-xl px-1 py-1 focus:outline-none focus:border-brand"
                     />
                   </div>
                   <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium mt-2">Enter a valid HEX code (e.g. #10b981)</p>
@@ -1152,7 +1151,7 @@ NOTIFY pgrst, 'reload schema';
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Tag className="w-4 h-4 text-brand" />
-                <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Categories</h3>
+                <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Product/Service Category</h3>
               </div>
               <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage the categories used to organize your inventory.</p>
             </div>
