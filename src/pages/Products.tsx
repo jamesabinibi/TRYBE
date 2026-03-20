@@ -249,6 +249,19 @@ export default function Products() {
     }
   };
 
+  const openAddServiceModal = () => {
+    setEditingService(null);
+    setNewService({
+      name: '',
+      description: '',
+      price: '',
+      duration_minutes: '60',
+      category: '',
+      image_url: ''
+    });
+    setIsServiceModalOpen(true);
+  };
+
   const handleEditService = (service: any) => {
     setEditingService(service);
     setNewService({
@@ -511,6 +524,13 @@ export default function Products() {
                 </select>
                 <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none group-hover:text-brand transition-colors" />
               </div>
+              <button 
+                onClick={() => activeSubTab === 'products' ? openAddModal() : openAddServiceModal()}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 whitespace-nowrap"
+              >
+                <Plus className="w-5 h-5" />
+                Add {activeSubTab === 'products' ? 'Product' : 'Service'}
+              </button>
             </div>
           </div>
         </div>
@@ -714,7 +734,7 @@ export default function Products() {
               <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-3">Add all your products</h3>
               <p className="text-zinc-500 dark:text-zinc-400 font-medium mb-10 max-w-sm mx-auto">Start by adding your first product in seconds and manage your inventory with ease.</p>
               <button 
-                onClick={() => activeSubTab === 'products' ? openAddModal() : setIsServiceModalOpen(true)}
+                onClick={() => activeSubTab === 'products' ? openAddModal() : openAddServiceModal()}
                 className="inline-flex items-center gap-3 px-10 py-4 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
               >
                 <Plus className="w-5 h-5" />

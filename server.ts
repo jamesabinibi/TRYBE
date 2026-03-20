@@ -285,19 +285,71 @@ async function initAwsDb() {
           status TEXT DEFAULT 'completed',
           customer_name TEXT,
           customer_phone TEXT,
+          customer_email TEXT,
+          customer_address TEXT,
+          total_profit DECIMAL(12, 2) DEFAULT 0,
+          discount_percentage DECIMAL(12, 2) DEFAULT 0,
+          invoice_number TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
 
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='invoice_number') THEN
+            ALTER TABLE sales ADD COLUMN invoice_number TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='total_profit') THEN
+            ALTER TABLE sales ADD COLUMN total_profit DECIMAL(12, 2) DEFAULT 0;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='customer_email') THEN
+            ALTER TABLE sales ADD COLUMN customer_email TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='customer_address') THEN
+            ALTER TABLE sales ADD COLUMN customer_address TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='discount_percentage') THEN
+            ALTER TABLE sales ADD COLUMN discount_percentage DECIMAL(12, 2) DEFAULT 0;
+          END IF;
+        END $$;
+
         CREATE TABLE IF NOT EXISTS sale_items (
           id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
           sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
           product_id INTEGER REFERENCES products(id),
           variant_id INTEGER REFERENCES product_variants(id),
+          service_id INTEGER REFERENCES services(id),
+          product_name TEXT,
+          service_name TEXT,
           quantity INTEGER NOT NULL,
           unit_price DECIMAL(12, 2) NOT NULL,
+          cost_price DECIMAL(12, 2) DEFAULT 0,
           total_price DECIMAL(12, 2) NOT NULL,
+          profit DECIMAL(12, 2) DEFAULT 0,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sale_items' AND column_name='account_id') THEN
+            ALTER TABLE sale_items ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sale_items' AND column_name='service_id') THEN
+            ALTER TABLE sale_items ADD COLUMN service_id INTEGER REFERENCES services(id);
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sale_items' AND column_name='product_name') THEN
+            ALTER TABLE sale_items ADD COLUMN product_name TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sale_items' AND column_name='service_name') THEN
+            ALTER TABLE sale_items ADD COLUMN service_name TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sale_items' AND column_name='cost_price') THEN
+            ALTER TABLE sale_items ADD COLUMN cost_price DECIMAL(12, 2) DEFAULT 0;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sale_items' AND column_name='profit') THEN
+            ALTER TABLE sale_items ADD COLUMN profit DECIMAL(12, 2) DEFAULT 0;
+          END IF;
+        END $$;
 
         CREATE TABLE IF NOT EXISTS customers (
           id SERIAL PRIMARY KEY,
@@ -363,6 +415,7 @@ async function initAwsDb() {
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
           type TEXT NOT NULL, -- 'income' or 'expense'
+          nature TEXT DEFAULT 'other',
           category TEXT,
           amount DECIMAL(12, 2) NOT NULL,
           description TEXT,
@@ -370,6 +423,13 @@ async function initAwsDb() {
           date DATE DEFAULT CURRENT_DATE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookkeeping' AND column_name='nature') THEN
+            ALTER TABLE bookkeeping ADD COLUMN nature TEXT DEFAULT 'other';
+          END IF;
+        END $$;
 
         CREATE TABLE IF NOT EXISTS notifications (
           id SERIAL PRIMARY KEY,
@@ -1783,9 +1843,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       
       // Clean up base64 string if it contains prefix
       const base64Data = image.includes(',') ? image.split(',')[1] : image;
+      const mimeType = image.includes(',') ? image.split(',')[0].split(':')[1].split(';')[0] : 'image/png';
       
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-3.1-flash-preview",
         contents: {
           parts: [
             { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
@@ -1794,7 +1855,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
             - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
             Return as JSON.` },
-            { inlineData: { mimeType: "image/png", data: base64Data } }
+            { inlineData: { mimeType: mimeType, data: base64Data } }
           ]
         },
         config: {

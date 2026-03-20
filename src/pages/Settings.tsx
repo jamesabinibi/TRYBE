@@ -965,80 +965,12 @@ NOTIFY pgrst, 'reload schema';
           <div id="brand" className="space-y-4">
             <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Brand Colour</label>
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-200/50 dark:border-zinc-700/50 relative overflow-visible">
-              {/* Web3 decorative glow on mobile */}
-              <div 
-                className="absolute -top-10 -right-10 w-32 h-32 blur-3xl rounded-full lg:hidden pointer-events-none opacity-30 dark:opacity-20" 
-                style={{ backgroundColor: settings.brand_color }} 
-              />
-              
               <div className="flex flex-col sm:flex-row items-center gap-6 relative z-20 w-full lg:w-auto">
-                <div className="relative group">
-                  <div 
-                    className="w-20 h-20 rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] border border-white/20 dark:border-white/10 flex items-center justify-center transition-transform group-hover:scale-105 cursor-pointer" 
-                    style={{ background: settings.brand_color }}
-                    onClick={() => {
-                      const el = document.getElementById('color-palette');
-                      if (el) el.classList.toggle('hidden');
-                    }}
-                  >
-                    <div className="w-8 h-8 rounded-full border-2 border-white/50 mix-blend-overlay" />
-                  </div>
-                  
-                  {/* Custom Colour Palette Popup */}
-                  <div id="color-palette" className="hidden absolute top-full left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 mt-4 p-4 bg-white dark:bg-[#121821] border border-zinc-200 dark:border-white/10 rounded-3xl shadow-2xl z-50 w-[280px] sm:w-[320px] backdrop-blur-xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-widest">Select Colour</span>
-                      <button 
-                        onClick={() => document.getElementById('color-palette')?.classList.add('hidden')}
-                        className="p-1.5 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors"
-                      >
-                        <X className="w-4 h-4 text-zinc-500" />
-                      </button>
-                    </div>
-                    
-                    <div className="grid grid-cols-4 gap-3 mb-4">
-                      {['#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#14b8a6', '#6366f1'].map(color => (
-                        <button
-                          key={color}
-                          onClick={() => {
-                            setSettings({...settings, brand_color: color});
-                            document.getElementById('color-palette')?.classList.add('hidden');
-                          }}
-                          className={cn(
-                            "w-12 h-12 rounded-2xl shadow-inner border border-white/10 transition-transform hover:scale-110 active:scale-95",
-                            settings.brand_color === color ? "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[#121821] ring-zinc-900 dark:ring-white" : ""
-                          )}
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </div>
-                    
-                    <div className="pt-4 border-t border-zinc-100 dark:border-white/10">
-                      <div className="flex flex-col gap-3">
-                        <div>
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">
-                            Custom HEX
-                          </label>
-                          <div className="flex gap-2">
-                            <input 
-                              type="text" 
-                              value={settings.brand_color}
-                              onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
-                              placeholder="#000000"
-                              className="flex-1 bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-[11px] font-mono focus:outline-none focus:border-brand"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="p-3 bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-100 dark:border-white/5">
-                          <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed">
-                            <span className="text-brand mr-1">💡 Tip:</span> 
-                            Enter a valid HEX code (e.g. #10b981) to use a custom brand colour.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <div 
+                  className="w-20 h-20 rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] border border-white/20 dark:border-white/10 flex items-center justify-center shrink-0" 
+                  style={{ background: settings.brand_color }}
+                >
+                  <div className="w-8 h-8 rounded-full border-2 border-white/50 mix-blend-overlay" />
                 </div>
                 <div className="flex-1 flex flex-col items-center sm:items-start w-full sm:w-auto mt-4 sm:mt-0">
                   <div className="flex items-center gap-3 w-full max-w-[200px]">
@@ -1053,7 +985,7 @@ NOTIFY pgrst, 'reload schema';
                       className="w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-[11px] font-mono focus:outline-none focus:border-brand text-center sm:text-left uppercase"
                     />
                   </div>
-                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium mt-2">Tap colour box for presets</p>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium mt-2">Enter a valid HEX code (e.g. #10b981)</p>
                 </div>
               </div>
               
