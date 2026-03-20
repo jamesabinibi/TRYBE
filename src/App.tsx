@@ -29,7 +29,6 @@ import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Services from './pages/Services';
 import Sales from './pages/Sales';
-import UsersPage from './pages/Users';
 import SuperAdmin from './pages/SuperAdmin';
 import Settings from './pages/Settings';
 import Invoices from './pages/Invoices';
@@ -117,7 +116,6 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     { icon: FileText, label: 'Tax Report', path: '/tax' },
     { icon: FileText, label: 'Invoices', path: '/invoices' },
     { icon: Users, label: 'Customers', path: '/customers' },
-    ...(user?.role === 'admin' || user?.role === 'owner' ? [{ icon: UsersIcon, label: 'Team', path: '/users' }] : []),
     ...(user?.role === 'super_admin' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
     { icon: SettingsIcon, label: 'Settings', path: '/settings' },
   ];
@@ -464,7 +462,6 @@ export default function App() {
                           <Route path="/tax" element={<TaxReport />} />
                           <Route path="/invoices" element={<Invoices />} />
                           <Route path="/customers" element={<Customers />} />
-                          <Route path="/users" element={<UsersPage />} />
                           <Route path="/super-admin" element={<SuperAdmin />} />
                           <Route path="/settings" element={<Settings />} />
                           <Route path="*" element={<Navigate to="/" />} />

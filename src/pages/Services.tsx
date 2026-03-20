@@ -7,7 +7,6 @@ import {
   Trash2, 
   MoreVertical,
   Briefcase,
-  Clock,
   DollarSign,
   ChevronRight,
   Loader2,
@@ -24,7 +23,6 @@ interface Service {
   name: string;
   description: string;
   price: number;
-  duration_minutes: number;
   category: string;
   created_at: string;
 }
@@ -88,7 +86,6 @@ const Services = () => {
       name: formData.get('name') as string,
       description: formData.get('description') as string,
       price: parseFloat(formData.get('price') as string),
-      duration_minutes: parseInt(formData.get('duration_minutes') as string),
       category: formData.get('category') as string,
     };
 
@@ -203,11 +200,7 @@ const Services = () => {
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">{service.description}</p>
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                    <Clock className="w-4 h-4" />
-                    <span className="text-xs font-bold">{service.duration_minutes} mins</span>
-                  </div>
+                <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-end">
                   <span className="text-lg font-black text-brand">{formatCurrency(service.price, settings?.currency || 'NGN')}</span>
                 </div>
               </motion.div>
@@ -269,30 +262,17 @@ const Services = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Price (₦)</label>
-                      <input 
-                        name="price"
-                        type="number"
-                        step="0.01"
-                        required
-                        defaultValue={editingService?.price}
-                        placeholder="0.00"
-                        className="w-full px-6 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Duration (mins)</label>
-                      <input 
-                        name="duration_minutes"
-                        type="number"
-                        required
-                        defaultValue={editingService?.duration_minutes}
-                        placeholder="30"
-                        className="w-full px-6 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Price (₦)</label>
+                    <input 
+                      name="price"
+                      type="number"
+                      step="0.01"
+                      required
+                      defaultValue={editingService?.price}
+                      placeholder="0.00"
+                      className="w-full px-6 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                    />
                   </div>
 
                   <div className="space-y-2">

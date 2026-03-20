@@ -415,7 +415,6 @@ CREATE TABLE IF NOT EXISTS services (
   name TEXT NOT NULL,
   description TEXT,
   price DECIMAL(12,2) NOT NULL,
-  duration_minutes INTEGER DEFAULT 30,
   category TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

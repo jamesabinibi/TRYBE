@@ -343,7 +343,7 @@ const Invoices: React.FC = () => {
       toast.error('Please add at least one item to the invoice');
       return;
     }
-    if (!rec.name) {
+    if (!rec || !rec.name) {
       toast.error('Please add recipient name');
       return;
     }
@@ -357,7 +357,14 @@ const Invoices: React.FC = () => {
         format: 'letter'
       });
       const pageWidth = doc.internal.pageSize.getWidth();
-      const brandColor = settings?.brand_color || '#10b981';
+      
+      // Handle potential gradient brand color
+      let brandColor = settings?.brand_color || '#10b981';
+      if (brandColor.includes('gradient')) {
+        // Extract first hex color from gradient or fallback to default
+        const hexMatch = brandColor.match(/#[a-fA-F0-9]{3,6}/);
+        brandColor = hexMatch ? hexMatch[0] : '#10b981';
+      }
       
       // Header
       doc.setFillColor(brandColor);
@@ -389,7 +396,7 @@ const Invoices: React.FC = () => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.text('INVOICE', pageWidth - 15, 25, { align: 'right' });
-      doc.text(`#${num}`, pageWidth - 15, 32, { align: 'right' });
+      doc.text(`#${num || '---'}`, pageWidth - 15, 32, { align: 'right' });
 
       // Business Info & Recipient Info
       doc.setTextColor(0, 0, 0);
@@ -421,7 +428,7 @@ const Invoices: React.FC = () => {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       let toY = 62;
-      doc.text(rec.name, 120, toY);
+      doc.text(rec.name || '---', 120, toY);
       toY += 5;
       if (rec.email) {
         doc.text(rec.email, 120, toY);
@@ -441,19 +448,19 @@ const Invoices: React.FC = () => {
       doc.setFont('helvetica', 'bold');
       doc.text('Date:', 15, 85);
       doc.setFont('helvetica', 'normal');
-      doc.text(date, 35, 85);
+      doc.text(date || new Date().toISOString().split('T')[0], 35, 85);
 
       // Table
       const tableData = items.map((item: any) => [
-        item.name,
+        item.name || 'Item',
         item.type?.toUpperCase() || 'PRODUCT',
-        item.quantity.toString(),
-        `${settings?.currency || '₦'}${item.price.toLocaleString()}`,
-        `${settings?.currency || '₦'}${item.total.toLocaleString()}`
+        (item.quantity || 0).toString(),
+        `${settings?.currency || '₦'}${Number(item.price || 0).toLocaleString()}`,
+        `${settings?.currency || '₦'}${Number(item.total || 0).toLocaleString()}`
       ]);
 
-      const subtotal = items.reduce((sum: number, item: any) => sum + item.total, 0);
-      const discountAmount = (subtotal * disc) / 100;
+      const subtotal = items.reduce((sum: number, item: any) => sum + (Number(item.total) || 0), 0);
+      const discountAmount = (subtotal * (Number(disc) || 0)) / 100;
       const vatAmount = settings?.vat_enabled ? (subtotal - discountAmount) * 0.075 : 0;
       const total = subtotal - discountAmount + vatAmount;
 
@@ -464,7 +471,7 @@ const Invoices: React.FC = () => {
         headStyles: { fillColor: brandColor, textColor: 255 },
         foot: [
           ['', '', '', 'Subtotal', `${settings?.currency || '₦'}${subtotal.toLocaleString()}`],
-          ['', '', '', `Discount (${disc}%)`, `-${settings?.currency || '₦'}${discountAmount.toLocaleString()}`],
+          ['', '', '', `Discount (${disc || 0}%)`, `-${settings?.currency || '₦'}${discountAmount.toLocaleString()}`],
           ['', '', '', 'VAT (7.5%)', `${settings?.currency || '₦'}${vatAmount.toLocaleString()}`],
           ['', '', '', 'Total', `${settings?.currency || '₦'}${total.toLocaleString()}`]
         ],
@@ -477,7 +484,8 @@ const Invoices: React.FC = () => {
       doc.setTextColor(150, 150, 150);
       doc.text('Thank you for your business!', pageWidth / 2, finalY, { align: 'center' });
 
-      const fileName = `invoice-${num.toString().replace(/[^a-z0-9]/gi, '-')}.pdf`;
+      const safeNum = (num || 'INV-000000').toString().replace(/[^a-z0-9]/gi, '-');
+      const fileName = `invoice-${safeNum}.pdf`;
       doc.save(fileName);
       toast.success('Invoice generated successfully');
     } catch (error) {

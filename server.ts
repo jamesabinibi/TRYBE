@@ -1169,7 +1169,6 @@ CREATE TABLE IF NOT EXISTS services (
   name TEXT NOT NULL,
   description TEXT,
   price DECIMAL(12,2) NOT NULL,
-  duration_minutes INTEGER DEFAULT 30,
   category TEXT,
   image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -1219,6 +1218,8 @@ CREATE TABLE IF NOT EXISTS sale_items (
   product_id BIGINT REFERENCES products(id) ON DELETE SET NULL,
   variant_id BIGINT REFERENCES product_variants(id) ON DELETE SET NULL,
   service_id BIGINT REFERENCES services(id) ON DELETE SET NULL,
+  product_name TEXT,
+  service_name TEXT,
   quantity INTEGER NOT NULL,
   unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
   cost_price DECIMAL(12,2) NOT NULL DEFAULT 0,
