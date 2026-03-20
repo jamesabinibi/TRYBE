@@ -1067,6 +1067,22 @@ NOTIFY pgrst, 'reload schema';
                             placeholder={colorMode === 'solid' ? '#000000' : 'linear-gradient(...)'}
                             className="flex-1 bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-[11px] font-mono focus:outline-none focus:border-brand"
                           />
+                          {colorMode === 'solid' && (
+                            <div className="relative w-10 h-10 shrink-0 group/picker">
+                              <input 
+                                type="color"
+                                value={settings.brand_color.startsWith('#') ? settings.brand_color : '#10b981'}
+                                onChange={(e) => setSettings({...settings, brand_color: e.target.value})}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                              />
+                              <div 
+                                className="w-full h-full rounded-xl border border-zinc-200 dark:border-white/10 shadow-sm flex items-center justify-center group-hover/picker:scale-105 transition-transform"
+                                style={{ backgroundColor: settings.brand_color.startsWith('#') ? settings.brand_color : '#10b981' }}
+                              >
+                                <div className="w-4 h-4 rounded-full border border-white/30 mix-blend-difference" />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

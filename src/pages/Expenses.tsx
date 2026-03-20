@@ -295,9 +295,9 @@ export default function Expenses() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto sm:overflow-visible">
           <table className="w-full text-left border-collapse">
-            <thead>
+            <thead className="hidden sm:table-header-group">
               <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
                 <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date</th>
                 <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Category</th>
@@ -308,27 +308,32 @@ export default function Expenses() {
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {filteredExpenses.map((expense) => (
-                <tr key={expense.id} className="hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 transition-all group cursor-pointer">
-                  <td className="px-8 py-5">
+                <tr key={expense.id} className="flex flex-col sm:table-row hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 transition-all group cursor-pointer p-4 sm:p-0">
+                  <td className="px-4 sm:px-8 py-2 sm:py-5 flex justify-between items-center sm:table-cell">
+                    <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</span>
                     <div className="flex items-center gap-3 text-sm font-bold font-mono tracking-tighter">
                       <Calendar className="w-3.5 h-3.5 opacity-50" />
                       {new Date(expense.date).toLocaleDateString()}
                     </div>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 sm:px-8 py-2 sm:py-5 flex justify-between items-center sm:table-cell">
+                    <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Category</span>
                     <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 group-hover:bg-white/10 dark:group-hover:bg-black/10 transition-colors">
                       {expense.category}
                     </span>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 sm:px-8 py-2 sm:py-5 flex justify-between items-center sm:table-cell">
+                    <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Description</span>
                     <p className="text-sm font-medium opacity-70 line-clamp-1">{expense.description}</p>
                   </td>
-                  <td className="px-8 py-5 text-right">
+                  <td className="px-4 sm:px-8 py-2 sm:py-5 flex justify-between items-center sm:table-cell text-right">
+                    <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Amount</span>
                     <span className="text-sm font-bold font-mono tracking-tighter text-red-500 group-hover:text-red-400">
                       -{formatCurrency(expense.amount, currency)}
                     </span>
                   </td>
-                  <td className="px-8 py-5 text-right">
+                  <td className="px-4 sm:px-8 py-2 sm:py-5 flex justify-between items-center sm:table-cell text-right">
+                    <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Actions</span>
                     <button 
                       onClick={() => handleDeleteExpense(expense.id)}
                       className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-red-500/10 rounded-xl transition-all"

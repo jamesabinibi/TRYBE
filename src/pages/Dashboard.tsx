@@ -191,12 +191,14 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                  <Link
-                    to="/settings#email-templates"
-                    className="flex-1 md:flex-none px-6 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-xl text-[13px] font-bold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all text-center"
-                  >
-                    Edit Email
-                  </Link>
+                  {user?.role === 'super_admin' && (
+                    <Link
+                      to="/settings#email-templates"
+                      className="flex-1 md:flex-none px-6 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-xl text-[13px] font-bold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all text-center"
+                    >
+                      Edit Email
+                    </Link>
+                  )}
                   <Link
                     to="/settings"
                     className="flex-1 md:flex-none px-6 py-2.5 bg-brand text-white rounded-xl text-[13px] font-bold hover:opacity-90 transition-all shadow-lg shadow-brand/20 text-center"

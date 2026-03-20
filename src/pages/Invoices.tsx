@@ -503,12 +503,12 @@ const Invoices: React.FC = () => {
             {activeTab === 'create' ? 'Generate professional invoices for your clients' : 'View and manage your past invoices'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-2xl mr-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full">
+          <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-2xl w-full sm:w-auto">
             <button
               onClick={() => setActiveTab('create')}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-xs font-bold transition-all uppercase tracking-widest",
+                "flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em]",
                 activeTab === 'create' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               )}
             >
@@ -517,7 +517,7 @@ const Invoices: React.FC = () => {
             <button
               onClick={() => setActiveTab('history')}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-xs font-bold transition-all uppercase tracking-widest",
+                "flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em]",
                 activeTab === 'history' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               )}
             >
@@ -526,7 +526,7 @@ const Invoices: React.FC = () => {
           </div>
 
           {activeTab === 'create' && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={resetForm}
                 className="p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
@@ -537,15 +537,15 @@ const Invoices: React.FC = () => {
               <button
                 onClick={saveInvoice}
                 disabled={isSaving || invoiceItems.length === 0}
-                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all disabled:opacity-50 active:scale-95"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black uppercase tracking-[0.2em] hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all disabled:opacity-50 active:scale-95"
               >
                 {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                <span className="text-xs uppercase tracking-widest">Save</span>
+                <span className="text-[10px]">Save</span>
               </button>
               <button
                 onClick={generatePDF}
                 disabled={isGenerating}
-                className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-bold shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-white font-black uppercase tracking-[0.2em] shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
                 style={{ backgroundColor: brandColor, boxShadow: `0 20px 40px ${brandColor}33` }}
               >
                 {isGenerating ? (
@@ -553,7 +553,7 @@ const Invoices: React.FC = () => {
                 ) : (
                   <Download className="w-5 h-5" />
                 )}
-                <span className="text-xs uppercase tracking-widest">{isGenerating ? 'Generating...' : 'Download'}</span>
+                <span className="text-[10px]">{isGenerating ? 'Generating...' : 'Download'}</span>
               </button>
             </div>
           )}
@@ -798,9 +798,9 @@ const Invoices: React.FC = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto sm:overflow-visible">
               <table className="w-full">
-                <thead>
+                <thead className="hidden sm:table-header-group">
                   <tr className="text-left border-b border-zinc-100 dark:border-zinc-800">
                     <th className="pb-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Description</th>
                     <th className="pb-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] w-24">Qty</th>
@@ -812,8 +812,9 @@ const Invoices: React.FC = () => {
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                   {invoiceItems.length > 0 ? (
                     invoiceItems.map((item, index) => (
-                      <tr key={index} className="group">
-                        <td className="py-6">
+                      <tr key={index} className="group flex flex-col sm:table-row py-4 sm:py-0">
+                        <td className="py-2 sm:py-6 flex justify-between items-center sm:table-cell">
+                          <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Description</span>
                           <div className="flex items-center gap-4">
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.type === 'service' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'bg-orange-50 dark:bg-orange-900/20 text-orange-600'}`}>
                               {item.type === 'service' ? <Wrench className="w-4 h-4" /> : <Package className="w-4 h-4" />}
@@ -821,7 +822,8 @@ const Invoices: React.FC = () => {
                             <span className="text-sm font-bold tracking-tight">{item.name}</span>
                           </div>
                         </td>
-                        <td className="py-6">
+                        <td className="py-2 sm:py-6 flex justify-between items-center sm:table-cell">
+                          <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Qty</span>
                           <input
                             type="number"
                             value={item.quantity}
@@ -829,7 +831,8 @@ const Invoices: React.FC = () => {
                             className="w-20 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all font-mono"
                           />
                         </td>
-                        <td className="py-6">
+                        <td className="py-2 sm:py-6 flex justify-between items-center sm:table-cell">
+                          <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Price</span>
                           <div className="relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-bold font-mono">{settings?.currency || '₦'}</span>
                             <input
@@ -840,13 +843,14 @@ const Invoices: React.FC = () => {
                             />
                           </div>
                         </td>
-                        <td className="py-6">
+                        <td className="py-2 sm:py-6 flex justify-between items-center sm:table-cell">
+                          <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total</span>
                           <span className="text-sm font-bold font-mono tracking-tighter text-zinc-950 dark:text-white">
                             <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
                             {item.total.toLocaleString()}
                           </span>
                         </td>
-                        <td className="py-6">
+                        <td className="py-2 sm:py-6 flex justify-end sm:table-cell">
                           <button
                             onClick={() => removeItem(index)}
                             className="p-3 text-zinc-300 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all"
