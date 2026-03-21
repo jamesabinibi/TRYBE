@@ -2249,17 +2249,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           [user.id]
         );
 
-        // Generate token and login
-        const token = jwt.sign(
-          { id: user.id, username: user.username, role: user.role, account_id: user.account_id },
-          JWT_SECRET,
-          { expiresIn: '24h' }
-        );
-
-        return res.json({
-          token,
-          user: { id: user.id, username: user.username, email, role: user.role, account_id: user.account_id }
-        });
+        return res.json({ id: user.id, username: user.username, email, role: user.role, account_id: user.account_id, name: user.name });
       } else {
         return res.status(500).json({ error: "Supabase fallback not implemented for verification" });
       }

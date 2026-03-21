@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, User, ArrowRight, ShieldCheck, Mail, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useAuth } from '../App';
 
 export default function Register() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,8 +34,7 @@ export default function Register() {
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        login(data);
         setIsSuccess(true);
         setTimeout(() => {
           navigate('/');
@@ -337,6 +338,7 @@ export default function Register() {
               </>
             )}
           </form>
+          )}
         </div>
       </motion.div>
     </div>
