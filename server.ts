@@ -2074,8 +2074,26 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         await client.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser.id, account.id]);
 
         // 4. Create settings
-        const welcomeSubject = 'Verify your Gryndee Account';
-        const welcomeBody = `Hi ${name || normalizedUsername},\n\nYour account has been successfully created.\n\nPlease verify your email by entering the following 6-digit code:\n\n${verificationCode}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nThe Gryndee Team`;
+        let globalWelcomeSubject = 'Verify your Gryndee Account';
+        let globalWelcomeBody = `Hi {name},\n\nYour account has been successfully created.\n\nPlease verify your email by entering the following 6-digit code:\n\n{verification_code}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nThe Gryndee Team`;
+
+        try {
+          const { rows: superAdminRows } = await client.query(
+            "SELECT s.welcome_email_subject, s.welcome_email_body FROM settings s JOIN users u ON s.account_id = u.account_id WHERE u.role = 'super_admin' LIMIT 1"
+          );
+          if (superAdminRows.length > 0) {
+            if (superAdminRows[0].welcome_email_subject) globalWelcomeSubject = superAdminRows[0].welcome_email_subject;
+            if (superAdminRows[0].welcome_email_body) globalWelcomeBody = superAdminRows[0].welcome_email_body;
+          }
+        } catch (err) {
+          console.error('[AUTH] Failed to fetch global email template:', err);
+        }
+
+        const welcomeSubject = globalWelcomeSubject;
+        const welcomeBody = (globalWelcomeBody || '')
+          .replace(/{name}/g, name || normalizedUsername)
+          .replace(/{username}/g, normalizedUsername)
+          .replace(/{verification_code}/g, verificationCode);
         
         await client.query(
           'INSERT INTO settings (account_id, business_name, currency, brand_color, welcome_email_subject, welcome_email_body) VALUES ($1, $2, $3, $4, $5, $6)',
@@ -2089,14 +2107,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           welcomeBody,
           `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h1 style="color: #10b981;">${welcomeSubject}</h1>
-            <p>Hi ${name || normalizedUsername},</p>
-            <p>Your account has been successfully created. Please verify your email by entering the following 6-digit code:</p>
-            <div style="margin: 30px 0; text-align: center;">
-              <span style="background-color: #f3f4f6; color: #111827; padding: 16px 32px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 4px;">${verificationCode}</span>
-            </div>
-            <p>This code will expire in 10 minutes.</p>
-            <p>Best regards,<br>The Gryndee Team</p>
+            ${welcomeBody.replace(/\n/g, '<br/>')}
           </div>
           `
         );
@@ -2285,6 +2296,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     });
   });
 
+  app.get("/api/debug/users", async (req, res) => {
+    try {
+      const { rows } = await pool.query('SELECT id, username, email, role FROM users ORDER BY created_at DESC LIMIT 10');
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post("/api/auth/resend-verification", async (req: any, res: any) => {
     const { email } = req.body;
 
@@ -2319,8 +2339,26 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           [verificationCode, verificationExpires, user.id]
         );
 
-        const welcomeSubject = 'Verify your Gryndee Account';
-        const welcomeBody = `Hi ${user.name || user.username},\n\nPlease verify your email by entering the following 6-digit code:\n\n${verificationCode}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nThe Gryndee Team`;
+        let globalWelcomeSubject = 'Verify your Gryndee Account';
+        let globalWelcomeBody = `Hi {name},\n\nPlease verify your email by entering the following 6-digit code:\n\n{verification_code}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nThe Gryndee Team`;
+
+        try {
+          const { rows: superAdminRows } = await pool.query(
+            "SELECT s.welcome_email_subject, s.welcome_email_body FROM settings s JOIN users u ON s.account_id = u.account_id WHERE u.role = 'super_admin' LIMIT 1"
+          );
+          if (superAdminRows.length > 0) {
+            if (superAdminRows[0].welcome_email_subject) globalWelcomeSubject = superAdminRows[0].welcome_email_subject;
+            if (superAdminRows[0].welcome_email_body) globalWelcomeBody = superAdminRows[0].welcome_email_body;
+          }
+        } catch (err) {
+          console.error('[AUTH] Failed to fetch global email template:', err);
+        }
+
+        const welcomeSubject = globalWelcomeSubject;
+        const welcomeBody = (globalWelcomeBody || '')
+          .replace(/{name}/g, user.name || user.username)
+          .replace(/{username}/g, user.username)
+          .replace(/{verification_code}/g, verificationCode);
 
         await sendEmail(
           trimmedEmail,
@@ -2328,14 +2366,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           welcomeBody,
           `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h1 style="color: #10b981;">${welcomeSubject}</h1>
-            <p>Hi ${user.name || user.username},</p>
-            <p>Please verify your email by entering the following 6-digit code:</p>
-            <div style="margin: 30px 0; text-align: center;">
-              <span style="background-color: #f3f4f6; color: #111827; padding: 16px 32px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 4px;">${verificationCode}</span>
-            </div>
-            <p>This code will expire in 10 minutes.</p>
-            <p>Best regards,<br>The Gryndee Team</p>
+            ${welcomeBody.replace(/\n/g, '<br/>')}
           </div>
           `
         );
@@ -3077,7 +3108,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post(["/api/settings", "/api/settings/"], async (req, res) => {
     const { 
       business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
-      slogan, address, email, website, phone_number 
+      slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body 
     } = req.body;
     try {
       const userInfo = await getAccountId(req);
@@ -3088,14 +3119,14 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         
         if (existing.length > 0) {
           const { rows } = await pool.query(
-            'UPDATE settings SET business_name = $1, currency = $2, vat_enabled = $3, low_stock_threshold = $4, logo_url = $5, brand_color = $6, slogan = $7, address = $8, email = $9, website = $10, phone_number = $11 WHERE account_id = $12 RETURNING *',
-            [business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, userInfo.account_id]
+            'UPDATE settings SET business_name = $1, currency = $2, vat_enabled = $3, low_stock_threshold = $4, logo_url = $5, brand_color = $6, slogan = $7, address = $8, email = $9, website = $10, phone_number = $11, welcome_email_subject = $12, welcome_email_body = $13 WHERE account_id = $14 RETURNING *',
+            [business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, userInfo.account_id]
           );
           return res.json(rows[0]);
         } else {
           const { rows } = await pool.query(
-            'INSERT INTO settings (account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *',
-            [userInfo.account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number]
+            'INSERT INTO settings (account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *',
+            [userInfo.account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body]
           );
           return res.json(rows[0]);
         }

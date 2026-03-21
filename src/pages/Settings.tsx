@@ -1264,7 +1264,7 @@ NOTIFY pgrst, 'reload schema';
                   className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 resize-none" 
                 />
                 <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-medium italic">
-                  Use <code className="text-brand">{'{name}'}</code> and <code className="text-brand">{'{username}'}</code> as placeholders.
+                  Use <code className="text-brand">{'{name}'}</code>, <code className="text-brand">{'{username}'}</code>, and <code className="text-brand">{'{verification_code}'}</code> as placeholders.
                 </p>
               </div>
             </div>
