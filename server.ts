@@ -5,6 +5,22 @@ import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import fs from 'fs';
 import nodemailer from 'nodemailer';
+
+// IN-MEMORY LOGGING FOR DEBUGGING
+const logHistory: string[] = [];
+const originalLog = console.log;
+const originalError = console.error;
+console.log = (...args) => {
+  logHistory.push(`[LOG] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`);
+  if (logHistory.length > 200) logHistory.shift();
+  originalLog(...args);
+};
+console.error = (...args) => {
+  logHistory.push(`[ERR] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`);
+  if (logHistory.length > 200) logHistory.shift();
+  originalError(...args);
+};
+
 // Supabase removed
 const supabase: any = null;
 const supabase_status = 'disconnected';
@@ -60,7 +76,7 @@ console.log(`[INIT] VERCEL: ${process.env.VERCEL}`);
 // Email transporter setup
 let smtpHost = process.env.SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com';
 // Fix common typos in the host
-if (smtpHost === 'emai-smtp.us.east-1.amazonaws.com' || smtpHost === 'email-smtp.us.east-1.amazonaws.com') {
+if (smtpHost === 'emai-smtp.us.east-1.amazonaws.com' || smtpHost === 'email-smtp.us.east-1.amazonaws.com' || smtpHost === 'emai-smtp.us.east-1.amazonaws.com') {
   smtpHost = 'email-smtp.us-east-1.amazonaws.com';
 }
 
@@ -164,6 +180,15 @@ async function initAwsDb() {
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reset_expires') THEN
             ALTER TABLE users ADD COLUMN reset_expires TIMESTAMP WITH TIME ZONE;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_verified') THEN
+            ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT false;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verification_code') THEN
+            ALTER TABLE users ADD COLUMN verification_code TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verification_expires') THEN
+            ALTER TABLE users ADD COLUMN verification_expires TIMESTAMP WITH TIME ZONE;
           END IF;
         END $$;
 
@@ -521,7 +546,17 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
       return { messageId: 'mock-id-' + Date.now() };
     }
 
-    const fromAddress = process.env.SMTP_FROM || '"Gryndee" <connectabinibi@gmail.com>';
+    let fromAddress = process.env.SMTP_FROM || '"Gryndee" <connectabinibi@gmail.com>';
+    
+    // Sanitize fromAddress to remove escaped quotes if they exist
+    if (fromAddress.includes('\\"')) {
+      fromAddress = fromAddress.replace(/\\"/g, '"');
+    }
+    // If it's just a raw email, wrap it nicely
+    if (!fromAddress.includes('<') && fromAddress.includes('@')) {
+      fromAddress = `"Gryndee" <${fromAddress}>`;
+    }
+
     console.log(`[EMAIL] Sending from: ${fromAddress}`);
     
     const info = await transporter.sendMail({
@@ -578,6 +613,20 @@ async function createServer() {
     } catch (error) {
       console.error('[AUTH] SuperAdmin check error:', error);
       res.status(403).json({ error: "Forbidden" });
+    }
+  };
+
+  const requireAuth = async (req: any, res: any, next: any) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      req.user = userInfo;
+      next();
+    } catch (error) {
+      console.error('[AUTH] Auth check error:', error);
+      res.status(401).json({ error: "Unauthorized" });
     }
   };
 
@@ -1760,6 +1809,25 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     });
   });
 
+  // TEMPORARY: Debug endpoint to read logs
+  app.get("/api/debug/logs", async (req, res) => {
+    res.send(`<pre>${logHistory.join('\n')}</pre>`);
+  });
+
+  // TEMPORARY: Debug endpoint to test email
+  app.get("/api/debug/test-email", async (req, res) => {
+    try {
+      const info = await sendEmail(
+        'connectabinibi@gmail.com',
+        'Direct SMTP Test',
+        'This is a direct test bypassing the UI.'
+      );
+      res.json({ success: true, info });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message, code: e.code });
+    }
+  });
+
   // Debug endpoint to list users
   app.get("/api/debug/list-users", requireSuperAdmin, async (req: any, res) => {
     try {
@@ -1981,6 +2049,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
       // 1. Create Account
       const { rows: accountRows } = await pool.query(
@@ -1991,8 +2061,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       // 2. Create User
       const { rows: userRows } = await pool.query(
-        'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-        [account.id, normalizedUsername, trimmedEmail, hashedPassword, 'admin', name?.trim() || normalizedUsername]
+        'INSERT INTO users (account_id, username, email, password, role, name, verification_code, verification_expires, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false) RETURNING id',
+        [account.id, normalizedUsername, trimmedEmail, hashedPassword, 'admin', name?.trim() || normalizedUsername, verificationCode, verificationExpires]
       );
       const newUser = userRows[0];
 
@@ -2000,8 +2070,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       await pool.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser.id, account.id]);
 
       // 4. Create settings
-      const welcomeSubject = 'Welcome to Gryndee!';
-      const welcomeBody = 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nPlease verify your email by clicking the link below:\n{verification_link}\n\nBest regards,\nThe Gryndee Team';
+      const welcomeSubject = 'Verify your Gryndee Account';
+      const welcomeBody = `Hi ${name || normalizedUsername},\n\nYour account has been successfully created.\n\nPlease verify your email by entering the following 6-digit code:\n\n${verificationCode}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nThe Gryndee Team`;
       
       await pool.query(
         'INSERT INTO settings (account_id, business_name, currency, brand_color, welcome_email_subject, welcome_email_body) VALUES ($1, $2, $3, $4, $5, $6)',
@@ -2011,28 +2081,25 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       console.log(`[AUTH] Register success (RDS): "${normalizedUsername}" (ID: ${newUser.id}, Account: ${account.id}).`);
 
       // Send email
-      const verificationLink = `${req.protocol}://${req.get('host')}/verify-email?token=mock-token-${newUser.id}`;
-      const emailBody = welcomeBody
-        .replace('{name}', name || normalizedUsername)
-        .replace('{username}', normalizedUsername)
-        .replace('{verification_link}', verificationLink);
-
       sendEmail(
         trimmedEmail,
         welcomeSubject,
-        emailBody,
+        welcomeBody,
         `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <h1 style="color: #10b981;">${welcomeSubject}</h1>
-          <p>${emailBody.replace(/\n/g, '<br>')}</p>
-          <div style="margin-top: 20px; text-align: center;">
-            <a href="${verificationLink}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email Address</a>
+          <p>Hi ${name || normalizedUsername},</p>
+          <p>Your account has been successfully created. Please verify your email by entering the following 6-digit code:</p>
+          <div style="margin: 30px 0; text-align: center;">
+            <span style="background-color: #f3f4f6; color: #111827; padding: 16px 32px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 4px;">${verificationCode}</span>
           </div>
+          <p>This code will expire in 10 minutes.</p>
+          <p>Best regards,<br>The Gryndee Team</p>
         </div>
         `
       ).catch(err => console.error('Failed to send registration email:', err));
 
-      return res.json({ id: newUser.id, username: normalizedUsername, email: trimmedEmail, account_id: account.id, role: 'admin' });
+      return res.json({ success: true, requiresVerification: true, email: trimmedEmail });
     }
 
     // Fallback to Supabase
@@ -2147,6 +2214,60 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 };
 
   app.post(["/api/register", "/api/register/"], registerHandler);
+
+  // Verify Email Route
+  app.post("/api/auth/verify-email", async (req: any, res: any) => {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ error: "Email and code are required" });
+    }
+
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'SELECT id, username, role, account_id, verification_code, verification_expires FROM users WHERE email = $1',
+          [email]
+        );
+
+        if (rows.length === 0) {
+          return res.status(400).json({ error: "User not found" });
+        }
+
+        const user = rows[0];
+
+        if (user.verification_code !== code) {
+          return res.status(400).json({ error: "Invalid verification code" });
+        }
+
+        if (new Date(user.verification_expires) < new Date()) {
+          return res.status(400).json({ error: "Verification code expired" });
+        }
+
+        // Mark as verified
+        await pool.query(
+          'UPDATE users SET is_verified = true, verification_code = NULL, verification_expires = NULL WHERE id = $1',
+          [user.id]
+        );
+
+        // Generate token and login
+        const token = jwt.sign(
+          { id: user.id, username: user.username, role: user.role, account_id: user.account_id },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+
+        return res.json({
+          token,
+          user: { id: user.id, username: user.username, email, role: user.role, account_id: user.account_id }
+        });
+      } else {
+        return res.status(500).json({ error: "Supabase fallback not implemented for verification" });
+      }
+    } catch (error) {
+      console.error('Verify email error:', error);
+      res.status(500).json({ error: "Failed to verify email" });
+    }
+  });
 
   app.get("/verify-email", (req, res) => {
     res.send(`
@@ -2271,7 +2392,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   // Test Email Route
-  app.post("/api/admin/test-email", requireSuperAdmin, async (req: any, res) => {
+  app.post("/api/admin/test-email", requireAuth, async (req: any, res) => {
     const { email, subject, body } = req.body;
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
@@ -4960,14 +5081,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       `);
 
       // Add missing columns to users if they don't exist
-      const userCols = ['reset_code', 'reset_expires'];
+      const userCols = ['reset_code', 'reset_expires', 'is_verified', 'verification_code', 'verification_expires'];
       for (const col of userCols) {
         await runSql(`
           DO $$ 
           BEGIN 
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='${col}') THEN
-              IF '${col}' = 'reset_expires' THEN
-                ALTER TABLE users ADD COLUMN reset_expires TIMESTAMPTZ;
+              IF '${col}' = 'reset_expires' OR '${col}' = 'verification_expires' THEN
+                ALTER TABLE users ADD COLUMN ${col} TIMESTAMPTZ;
+              ELSIF '${col}' = 'is_verified' THEN
+                ALTER TABLE users ADD COLUMN ${col} BOOLEAN DEFAULT false;
               ELSE
                 ALTER TABLE users ADD COLUMN ${col} TEXT;
               END IF;

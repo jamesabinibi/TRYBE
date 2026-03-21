@@ -14,6 +14,40 @@ export default function Register() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [requiresVerification, setRequiresVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), code: verificationCode.trim() })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setIsSuccess(true);
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
+      } else {
+        setError(data.error || 'Verification failed');
+      }
+    } catch (err) {
+      console.error('Verification error:', err);
+      setError('Network error. Please check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,11 +73,15 @@ export default function Register() {
       });
       
       if (response.ok) {
-        setIsSuccess(true);
-        // Automatically redirect after 3 seconds
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
+        const data = await response.json();
+        if (data.requiresVerification) {
+          setRequiresVerification(true);
+        } else {
+          setIsSuccess(true);
+          setTimeout(() => {
+            navigate('/login');
+          }, 3000);
+        }
       } else {
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
@@ -78,39 +116,121 @@ export default function Register() {
             <p className="text-zinc-600 dark:text-zinc-400 font-medium">Join Gryndee to manage your inventory</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
-            {isSuccess ? (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="p-8 text-center space-y-4"
-              >
-                <div className="w-16 h-16 bg-brand/10 text-brand rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ShieldCheck className="w-8 h-8" />
-                </div>
-                <h2 className="text-xl font-black text-zinc-900 dark:text-white">Registration Successful!</h2>
-                <p className="text-zinc-500 dark:text-zinc-400 font-medium">
-                  We've sent a confirmation email to <span className="text-zinc-900 dark:text-white font-bold">{email}</span>.
-                </p>
-                <div className="pt-4">
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest">Redirecting to login...</p>
-                  <div className="w-full h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: '100%' }}
-                      transition={{ duration: 3 }}
-                      className="h-full bg-brand"
-                    />
+          {requiresVerification ? (
+            <form onSubmit={handleVerify} className="p-8 space-y-6">
+              {isSuccess ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-8 text-center space-y-4"
+                >
+                  <div className="w-16 h-16 bg-brand/10 text-brand rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ShieldCheck className="w-8 h-8" />
                   </div>
-                </div>
-              </motion.div>
-            ) : (
-              <>
-                {error && (
-                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl text-red-600 dark:text-red-400 text-sm font-medium text-center">
-                    {error}
+                  <h2 className="text-xl font-black text-zinc-900 dark:text-white">Verification Successful!</h2>
+                  <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+                    Your account has been verified.
+                  </p>
+                  <div className="pt-4">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest">Redirecting to dashboard...</p>
+                    <div className="w-full h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: 2 }}
+                        className="h-full bg-brand"
+                      />
+                    </div>
                   </div>
-                )}
+                </motion.div>
+              ) : (
+                <>
+                  <div className="text-center mb-6">
+                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Verify your email</h2>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                      We've sent a 6-digit code to <span className="font-bold text-zinc-900 dark:text-white">{email}</span>
+                    </p>
+                  </div>
+
+                  {error && (
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl text-red-600 dark:text-red-400 text-sm font-medium text-center">
+                      {error}
+                    </div>
+                  )}
+
+                  <div>
+                    <label htmlFor="code" className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">
+                      Verification Code
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <ShieldCheck className="h-5 w-5 text-zinc-400 group-focus-within:text-brand transition-colors" />
+                      </div>
+                      <input
+                        id="code"
+                        name="code"
+                        type="text"
+                        required
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value)}
+                        className="block w-full pl-11 pr-4 py-3 border-2 border-zinc-200 dark:border-zinc-800 rounded-2xl bg-zinc-50 dark:bg-zinc-900/50 text-zinc-900 dark:text-white placeholder-zinc-400 focus:ring-0 focus:border-brand transition-all duration-300 font-medium text-center tracking-widest text-lg"
+                        placeholder="000000"
+                        maxLength={6}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || verificationCode.length !== 6}
+                    className="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-2xl shadow-lg shadow-brand/20 text-sm font-bold text-white bg-brand hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-[0.98]"
+                  >
+                    {isLoading ? (
+                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        Verify Account
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+              {isSuccess ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-8 text-center space-y-4"
+                >
+                  <div className="w-16 h-16 bg-brand/10 text-brand rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ShieldCheck className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-xl font-black text-zinc-900 dark:text-white">Registration Successful!</h2>
+                  <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+                    We've sent a confirmation email to <span className="text-zinc-900 dark:text-white font-bold">{email}</span>.
+                  </p>
+                  <div className="pt-4">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest">Redirecting to login...</p>
+                    <div className="w-full h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: 3 }}
+                        className="h-full bg-brand"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <>
+                  {error && (
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl text-red-600 dark:text-red-400 text-sm font-medium text-center">
+                      {error}
+                    </div>
+                  )}
                 
                   <div className="space-y-4">
                     <div className="space-y-1.5">
