@@ -6,6 +6,8 @@ import dotenv from "dotenv";
 import fs from 'fs';
 import nodemailer from 'nodemailer';
 // Supabase removed
+const supabase: any = null;
+const supabase_status = 'disconnected';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -1652,6 +1654,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/ai/forecast", async (req, res) => {
+    const userInfo = await getAccountId(req);
+    if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
     
     const apiKey = process.env.GEMINI_API_KEY;
     console.log('[AI] GEMINI_API_KEY present:', !!apiKey);
