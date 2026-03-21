@@ -50,6 +50,31 @@ export default function Register() {
     }
   };
 
+  const handleResendCode = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert('Verification code resent! Please check your email.');
+      } else {
+        setError(data.error || 'Failed to resend code');
+      }
+    } catch (err) {
+      console.error('Resend error:', err);
+      setError('Network error. Please check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -195,6 +220,17 @@ export default function Register() {
                       </>
                     )}
                   </button>
+
+                  <div className="text-center mt-4">
+                    <button
+                      type="button"
+                      onClick={handleResendCode}
+                      disabled={isLoading}
+                      className="text-sm text-brand font-bold hover:underline disabled:opacity-50"
+                    >
+                      Didn't receive the code? Resend
+                    </button>
+                  </div>
                 </>
               )}
             </form>

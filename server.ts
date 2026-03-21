@@ -2052,54 +2052,72 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
       const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-      // 1. Create Account
-      const { rows: accountRows } = await pool.query(
-        'INSERT INTO accounts (name) VALUES ($1) RETURNING id',
-        [`${name || normalizedUsername}'s Business`]
-      );
-      const account = accountRows[0];
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
 
-      // 2. Create User
-      const { rows: userRows } = await pool.query(
-        'INSERT INTO users (account_id, username, email, password, role, name, verification_code, verification_expires, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false) RETURNING id',
-        [account.id, normalizedUsername, trimmedEmail, hashedPassword, 'admin', name?.trim() || normalizedUsername, verificationCode, verificationExpires]
-      );
-      const newUser = userRows[0];
+        // 1. Create Account
+        const { rows: accountRows } = await client.query(
+          'INSERT INTO accounts (name) VALUES ($1) RETURNING id',
+          [`${name || normalizedUsername}'s Business`]
+        );
+        const account = accountRows[0];
 
-      // 3. Update Account owner
-      await pool.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser.id, account.id]);
+        // 2. Create User
+        const { rows: userRows } = await client.query(
+          'INSERT INTO users (account_id, username, email, password, role, name, verification_code, verification_expires, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false) RETURNING id',
+          [account.id, normalizedUsername, trimmedEmail, hashedPassword, 'admin', name?.trim() || normalizedUsername, verificationCode, verificationExpires]
+        );
+        const newUser = userRows[0];
 
-      // 4. Create settings
-      const welcomeSubject = 'Verify your Gryndee Account';
-      const welcomeBody = `Hi ${name || normalizedUsername},\n\nYour account has been successfully created.\n\nPlease verify your email by entering the following 6-digit code:\n\n${verificationCode}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nThe Gryndee Team`;
-      
-      await pool.query(
-        'INSERT INTO settings (account_id, business_name, currency, brand_color, welcome_email_subject, welcome_email_body) VALUES ($1, $2, $3, $4, $5, $6)',
-        [account.id, name ? `${name}'s Business` : 'Gryndee', 'NGN', '#10b981', welcomeSubject, welcomeBody]
-      );
+        // 3. Update Account owner
+        await client.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser.id, account.id]);
 
-      console.log(`[AUTH] Register success (RDS): "${normalizedUsername}" (ID: ${newUser.id}, Account: ${account.id}).`);
+        // 4. Create settings
+        const welcomeSubject = 'Verify your Gryndee Account';
+        const welcomeBody = `Hi ${name || normalizedUsername},\n\nYour account has been successfully created.\n\nPlease verify your email by entering the following 6-digit code:\n\n${verificationCode}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nThe Gryndee Team`;
+        
+        await client.query(
+          'INSERT INTO settings (account_id, business_name, currency, brand_color, welcome_email_subject, welcome_email_body) VALUES ($1, $2, $3, $4, $5, $6)',
+          [account.id, name ? `${name}'s Business` : 'Gryndee', 'NGN', '#10b981', welcomeSubject, welcomeBody]
+        );
 
-      // Send email
-      sendEmail(
-        trimmedEmail,
-        welcomeSubject,
-        welcomeBody,
-        `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h1 style="color: #10b981;">${welcomeSubject}</h1>
-          <p>Hi ${name || normalizedUsername},</p>
-          <p>Your account has been successfully created. Please verify your email by entering the following 6-digit code:</p>
-          <div style="margin: 30px 0; text-align: center;">
-            <span style="background-color: #f3f4f6; color: #111827; padding: 16px 32px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 4px;">${verificationCode}</span>
+        // Send email BEFORE committing
+        await sendEmail(
+          trimmedEmail,
+          welcomeSubject,
+          welcomeBody,
+          `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h1 style="color: #10b981;">${welcomeSubject}</h1>
+            <p>Hi ${name || normalizedUsername},</p>
+            <p>Your account has been successfully created. Please verify your email by entering the following 6-digit code:</p>
+            <div style="margin: 30px 0; text-align: center;">
+              <span style="background-color: #f3f4f6; color: #111827; padding: 16px 32px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 4px;">${verificationCode}</span>
+            </div>
+            <p>This code will expire in 10 minutes.</p>
+            <p>Best regards,<br>The Gryndee Team</p>
           </div>
-          <p>This code will expire in 10 minutes.</p>
-          <p>Best regards,<br>The Gryndee Team</p>
-        </div>
-        `
-      ).catch(err => console.error('Failed to send registration email:', err));
+          `
+        );
 
-      return res.json({ success: true, requiresVerification: true, email: trimmedEmail });
+        await client.query('COMMIT');
+        console.log(`[AUTH] Register success (RDS): "${normalizedUsername}" (ID: ${newUser.id}, Account: ${account.id}).`);
+        return res.json({ success: true, requiresVerification: true, email: trimmedEmail });
+      } catch (error: any) {
+        await client.query('ROLLBACK');
+        console.error('Registration failed:', error);
+        
+        if (error.message && error.message.includes('Email address is not verified')) {
+          return res.status(400).json({ 
+            error: "AWS SES Sandbox Restriction: Your AWS SES account is in the sandbox. You can only send emails TO verified email addresses. Please verify your email address in the AWS SES console or request production access." 
+          });
+        }
+        
+        return res.status(500).json({ error: "Failed to send verification email: " + error.message });
+      } finally {
+        client.release();
+      }
     }
 
     // Fallback to Supabase
@@ -2256,6 +2274,84 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     } catch (error) {
       console.error('Verify email error:', error);
       res.status(500).json({ error: "Failed to verify email" });
+    }
+  });
+
+  app.get("/api/debug/env", (req, res) => {
+    res.json({
+      SMTP_USER: process.env.SMTP_USER ? 'SET' : 'NOT_SET',
+      SMTP_FROM: process.env.SMTP_FROM ? 'SET' : 'NOT_SET',
+      AWS_DB_HOST: process.env.AWS_DB_HOST ? 'SET' : 'NOT_SET'
+    });
+  });
+
+  app.post("/api/auth/resend-verification", async (req: any, res: any) => {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query(
+          'SELECT id, username, name, is_verified FROM users WHERE email = $1 LIMIT 1',
+          [trimmedEmail]
+        );
+
+        if (rows.length === 0) {
+          return res.status(400).json({ error: "User not found" });
+        }
+
+        const user = rows[0];
+
+        if (user.is_verified) {
+          return res.status(400).json({ error: "Account is already verified" });
+        }
+
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        await pool.query(
+          'UPDATE users SET verification_code = $1, verification_expires = $2 WHERE id = $3',
+          [verificationCode, verificationExpires, user.id]
+        );
+
+        const welcomeSubject = 'Verify your Gryndee Account';
+        const welcomeBody = `Hi ${user.name || user.username},\n\nPlease verify your email by entering the following 6-digit code:\n\n${verificationCode}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nThe Gryndee Team`;
+
+        await sendEmail(
+          trimmedEmail,
+          welcomeSubject,
+          welcomeBody,
+          `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h1 style="color: #10b981;">${welcomeSubject}</h1>
+            <p>Hi ${user.name || user.username},</p>
+            <p>Please verify your email by entering the following 6-digit code:</p>
+            <div style="margin: 30px 0; text-align: center;">
+              <span style="background-color: #f3f4f6; color: #111827; padding: 16px 32px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 4px;">${verificationCode}</span>
+            </div>
+            <p>This code will expire in 10 minutes.</p>
+            <p>Best regards,<br>The Gryndee Team</p>
+          </div>
+          `
+        );
+
+        return res.json({ success: true });
+      } else {
+        return res.status(500).json({ error: "Supabase fallback not implemented for verification" });
+      }
+    } catch (error: any) {
+      console.error('Resend verification error:', error);
+      if (error.message && error.message.includes('Email address is not verified')) {
+        return res.status(400).json({ 
+          error: "AWS SES Sandbox Restriction: Your AWS SES account is in the sandbox. You can only send emails TO verified email addresses. Please verify your email address in the AWS SES console or request production access." 
+        });
+      }
+      res.status(500).json({ error: "Failed to resend verification email: " + error.message });
     }
   });
 
