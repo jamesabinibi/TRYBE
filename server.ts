@@ -522,6 +522,7 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     }
 
     const fromAddress = process.env.SMTP_FROM || '"Gryndee" <connectabinibi@gmail.com>';
+    console.log(`[EMAIL] Sending from: ${fromAddress}`);
     
     const info = await transporter.sendMail({
       from: fromAddress,
