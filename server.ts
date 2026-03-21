@@ -26,10 +26,6 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
   console.log('[INIT] Cloudinary initialized');
 }
 
-// Supabase removed
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
-
 // Cloudinary Helper
 async function uploadToCloudinary(base64Data: string, folder: string = 'products') {
   if (!process.env.CLOUDINARY_CLOUD_NAME || !base64Data || !base64Data.startsWith('data:image')) {
@@ -583,146 +579,7 @@ async function createServer() {
   };
 
   // Data Migration Tool
-  app.post("/api/admin/migrate", requireSuperAdmin, async (req: any, res) => {
-    try {
-      const userInfo = req.user;
-
-      if (!supabase || !process.env.AWS_DB_PASSWORD) {
-        return res.status(500).json({ error: "Both Supabase and RDS must be configured" });
-      }
-
-      console.log('[MIGRATE] Starting data migration from Supabase to RDS...');
-      const results: any = {};
-
-      // 1. Migrate Accounts
-      const { data: accounts } = await supabase.from('accounts').select('*');
-      if (accounts) {
-        console.log(`[MIGRATE] Migrating ${accounts.length} accounts...`);
-        for (const acc of accounts) {
-          await pool.query(
-            'INSERT INTO accounts (id, name, owner_id, created_at) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, owner_id = EXCLUDED.owner_id',
-            [acc.id, acc.name, acc.owner_id, acc.created_at]
-          );
-        }
-        results.accounts = accounts.length;
-      }
-
-      // 2. Migrate Users
-      const { data: users } = await supabase.from('users').select('*');
-      if (users) {
-        console.log(`[MIGRATE] Migrating ${users.length} users...`);
-        for (const u of users) {
-          await pool.query(
-            'INSERT INTO users (id, email, username, password, name, role, account_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, username = EXCLUDED.username, password = EXCLUDED.password, name = EXCLUDED.name, role = EXCLUDED.role, account_id = EXCLUDED.account_id',
-            [u.id, u.email, u.username, u.password, u.name, u.role, u.account_id, u.created_at]
-          );
-        }
-        results.users = users.length;
-      }
-
-      // 3. Migrate Categories
-      const { data: categories } = await supabase.from('categories').select('*');
-      if (categories) {
-        for (const cat of categories) {
-          await pool.query(
-            'INSERT INTO categories (id, account_id, name, created_at) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING',
-            [cat.id, cat.account_id, cat.name, cat.created_at]
-          );
-        }
-        results.categories = categories.length;
-      }
-
-      // 4. Migrate Products
-      const { data: products } = await supabase.from('products').select('*');
-      if (products) {
-        for (const p of products) {
-          await pool.query(
-            'INSERT INTO products (id, account_id, category_id, name, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (id) DO NOTHING',
-            [p.id, p.account_id, p.category_id, p.name, p.description, p.cost_price, p.selling_price, p.supplier_name, p.unit, p.pieces_per_unit, p.created_at]
-          );
-        }
-        results.products = products.length;
-      }
-
-      // 5. Migrate Variants
-      const { data: variants } = await supabase.from('product_variants').select('*');
-      if (variants) {
-        for (const v of variants) {
-          await pool.query(
-            'INSERT INTO product_variants (id, product_id, size, color, sku, quantity, low_stock_threshold, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING',
-            [v.id, v.product_id, v.size, v.color, v.sku, v.quantity, v.low_stock_threshold, v.created_at]
-          );
-        }
-        results.variants = variants.length;
-      }
-
-      // 6. Migrate Settings
-      const { data: settings } = await supabase.from('settings').select('*');
-      if (settings) {
-        for (const s of settings) {
-          await pool.query(
-            'INSERT INTO settings (id, account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) ON CONFLICT (id) DO NOTHING',
-            [s.id, s.account_id, s.business_name, s.currency, s.vat_enabled, s.low_stock_threshold, s.logo_url, s.brand_color, s.slogan, s.address, s.email, s.website, s.phone_number, s.created_at]
-          );
-        }
-        results.settings = settings.length;
-      }
-
-      // 7. Migrate Customers
-      const { data: customers } = await supabase.from('customers').select('*');
-      if (customers) {
-        for (const c of customers) {
-          await pool.query(
-            'INSERT INTO customers (id, account_id, name, email, phone, address, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING',
-            [c.id, c.account_id, c.name, c.email, c.phone, c.address, c.created_at]
-          );
-        }
-        results.customers = customers.length;
-      }
-
-      // 8. Migrate Sales
-      const { data: sales } = await supabase.from('sales').select('*');
-      if (sales) {
-        for (const s of sales) {
-          await pool.query(
-            'INSERT INTO sales (id, account_id, customer_id, staff_id, total_amount, cost_price_total, discount_amount, vat_amount, payment_method, status, customer_name, customer_phone, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) ON CONFLICT (id) DO NOTHING',
-            [s.id, s.account_id, s.customer_id, s.staff_id, s.total_amount, s.cost_price_total, s.discount_amount, s.vat_amount, s.payment_method, s.status, s.customer_name, s.customer_phone, s.created_at]
-          );
-        }
-        results.sales = sales.length;
-      }
-
-      // 9. Migrate Sale Items
-      const { data: saleItems } = await supabase.from('sale_items').select('*');
-      if (saleItems) {
-        for (const si of saleItems) {
-          await pool.query(
-            'INSERT INTO sale_items (id, sale_id, product_id, variant_id, quantity, unit_price, total_price) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING',
-            [si.id, si.sale_id, si.product_id, si.variant_id, si.quantity, si.unit_price, si.total_price]
-          );
-        }
-        results.sale_items = saleItems.length;
-      }
-
-      // 10. Migrate Expenses
-      const { data: expenses } = await supabase.from('expenses').select('*');
-      if (expenses) {
-        for (const e of expenses) {
-          await pool.query(
-            'INSERT INTO expenses (id, account_id, category, amount, description, date, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING',
-            [e.id, e.account_id, e.category, e.amount, e.description, e.date, e.created_at]
-          );
-        }
-        results.expenses = expenses.length;
-      }
-
-      console.log('[MIGRATE] Migration completed successfully.');
-      res.json({ status: "success", results });
-    } catch (err: any) {
-      console.error('[MIGRATE] Migration failed:', err);
-      res.status(500).json({ error: err.message });
-    }
-  });
+  // Migration route removed as migration to AWS RDS is complete.
 
   // Health check
   app.get("/api/health", (req, res) => {
@@ -1361,12 +1218,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Diagnostics
   app.get("/api/diag", async (req, res) => {
-    const supabase_status = {
-      connected: !!supabase,
-      url_configured: !!supabaseUrl,
-      key_configured: !!supabaseAnonKey,
-      error: !supabaseUrl ? "Missing SUPABASE_URL" : (!supabaseAnonKey ? "Missing SUPABASE_ANON_KEY" : null)
-    };
 
     if (!supabase) {
       return res.json({
@@ -1420,25 +1271,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT * FROM services WHERE account_id = $1 ORDER BY name ASC', [userInfo.account_id]);
-        return res.json(rows || []);
-      }
-
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .eq('account_id', userInfo.account_id)
-        .order('name', { ascending: true });
-
-      if (error) {
-        if (error.code === 'PGRST116' || error.message.includes('relation "services" does not exist')) {
-          return res.json([]);
-        }
-        throw error;
-      }
-      res.json(data || []);
+      const { rows } = await pool.query('SELECT * FROM services WHERE account_id = $1 ORDER BY name ASC', [userInfo.account_id]);
+      return res.json(rows || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1455,28 +1289,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         finalImageUrl = await uploadToCloudinary(image_url, 'services');
       }
 
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query(
-          'INSERT INTO services (account_id, name, description, price, duration_minutes, category, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-          [userInfo.account_id, name, description, price, duration_minutes, category, finalImageUrl]
-        );
-        return res.json(rows[0]);
-      }
-
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      const { data, error } = await supabase
-        .from('services')
-        .insert([{ 
-          account_id: userInfo.account_id,
-          name, description, price, duration_minutes, category, image_url: finalImageUrl
-        }])
-        .select()
-        .single();
-      if (error) {
-        console.error('[SERVICES] Failed to save service:', error);
-        throw error;
-      }
-      res.json(data);
+      const { rows } = await pool.query(
+        'INSERT INTO services (account_id, name, description, price, duration_minutes, category, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [userInfo.account_id, name, description, price, duration_minutes, category, finalImageUrl]
+      );
+      return res.json(rows[0]);
     } catch (error: any) {
       console.error('[SERVICES] Error in POST /api/services:', error);
       res.status(500).json({ error: error.message });
@@ -1495,28 +1312,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         finalImageUrl = await uploadToCloudinary(image_url, 'services');
       }
 
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query(
-          'UPDATE services SET name = $1, description = $2, price = $3, duration_minutes = $4, category = $5, image_url = COALESCE($6, image_url) WHERE id = $7 AND account_id = $8 RETURNING *',
-          [name, description, price, duration_minutes, category, finalImageUrl, id, userInfo.account_id]
-        );
-        return res.json(rows[0]);
-      }
-
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      
-      const updateData: any = { name, description, price, duration_minutes, category };
-      if (finalImageUrl) updateData.image_url = finalImageUrl;
-
-      const { data, error } = await supabase
-        .from('services')
-        .update(updateData)
-        .eq('id', id)
-        .eq('account_id', userInfo.account_id)
-        .select()
-        .single();
-      if (error) throw error;
-      res.json(data);
+      const { rows } = await pool.query(
+        'UPDATE services SET name = $1, description = $2, price = $3, duration_minutes = $4, category = $5, image_url = COALESCE($6, image_url) WHERE id = $7 AND account_id = $8 RETURNING *',
+        [name, description, price, duration_minutes, category, finalImageUrl, id, userInfo.account_id]
+      );
+      return res.json(rows[0]);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1528,19 +1328,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
-      if (process.env.AWS_DB_PASSWORD) {
-        await pool.query('DELETE FROM services WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
-        return res.json({ success: true });
-      }
-
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      const { error } = await supabase
-        .from('services')
-        .delete()
-        .eq('id', id)
-        .eq('account_id', userInfo.account_id);
-      if (error) throw error;
-      res.json({ success: true });
+      await pool.query('DELETE FROM services WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+      return res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1644,19 +1433,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
-      if (process.env.AWS_DB_PASSWORD) {
-        await pool.query('DELETE FROM expenses WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
-        return res.json({ success: true });
-      }
-
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      const { error } = await supabase
-        .from('expenses')
-        .delete()
-        .eq('id', id)
-        .eq('account_id', userInfo.account_id);
-      if (error) throw error;
-      res.json({ success: true });
+      await pool.query('DELETE FROM expenses WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+      return res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1668,28 +1446,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT * FROM customers WHERE account_id = $1 ORDER BY name ASC', [userInfo.account_id]);
-        return res.json(rows || []);
-      }
-
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      let { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('account_id', userInfo.account_id)
-        .order('name', { ascending: true });
-
-      if (error) {
-        if (error.message?.includes('relation "customers" does not exist') || error.code === '42P01') {
-          console.warn('[CUSTOMERS] Table "customers" not found. Returning empty array.');
-          return res.json([]);
-        }
-        
-        console.error('[CUSTOMERS] Fetch error:', error);
-        return res.status(500).json({ error: error.message });
-      }
-      res.json(data || []);
+      const { rows } = await pool.query('SELECT * FROM customers WHERE account_id = $1 ORDER BY name ASC', [userInfo.account_id]);
+      return res.json(rows || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
