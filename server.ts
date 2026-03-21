@@ -581,9 +581,30 @@ async function createServer() {
   // Data Migration Tool
   // Migration route removed as migration to AWS RDS is complete.
 
-  // Health check
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", version: "2.5.2", time: new Date().toISOString() });
+  // Admin: Merge Accounts
+  app.post("/api/admin/merge-accounts", requireSuperAdmin, async (req: any, res) => {
+    const { sourceAccountId, targetAccountId } = req.body;
+    if (!sourceAccountId || !targetAccountId) return res.status(400).json({ error: "Missing account IDs" });
+
+    try {
+      await pool.query('BEGIN');
+
+      // Tables that have account_id
+      const tables = ['users', 'products', 'categories', 'product_variants', 'product_images', 'sales', 'sale_items', 'expenses', 'customers', 'services', 'settings', 'notifications'];
+
+      for (const table of tables) {
+        await pool.query(`UPDATE ${table} SET account_id = $1 WHERE account_id = $2`, [targetAccountId, sourceAccountId]);
+      }
+
+      // Delete the source account
+      await pool.query('DELETE FROM accounts WHERE id = $1', [sourceAccountId]);
+
+      await pool.query('COMMIT');
+      res.json({ success: true });
+    } catch (error: any) {
+      await pool.query('ROLLBACK');
+      res.status(500).json({ error: error.message });
+    }
   });
 
   // Helper to get account_id from headers or user_id
@@ -4572,6 +4593,50 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       return res.json({ success: true });
     } catch (error: any) {
       console.error('[ADMIN] Delete account failed:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Super Admin Toggle User Status
+  app.post("/api/admin/users/:id/toggle-status", requireSuperAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { is_active } = req.body;
+
+      if (process.env.AWS_DB_PASSWORD) {
+        // Ensure is_active column exists
+        await pool.query(`
+          DO $$ 
+          BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_active') THEN
+              ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+            END IF;
+          END $$;
+        `);
+        await pool.query('UPDATE users SET is_active = $1 WHERE id = $2', [is_active, id]);
+        return res.json({ success: true });
+      }
+
+      return res.status(503).json({ error: "Database not available" });
+    } catch (error: any) {
+      console.error('[ADMIN] Toggle user status failed:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Super Admin Delete User
+  app.delete("/api/admin/users/:id", requireSuperAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        return res.json({ success: true });
+      }
+
+      return res.status(503).json({ error: "Database not available" });
+    } catch (error: any) {
+      console.error('[ADMIN] Delete user failed:', error);
       res.status(500).json({ error: error.message });
     }
   });
