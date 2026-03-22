@@ -414,6 +414,7 @@ export default function SuperAdmin() {
                   <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">User</th>
                   <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account</th>
                   <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</th>
+                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Verified</th>
                   <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th>
                   <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
                 </tr>
@@ -449,6 +450,14 @@ export default function SuperAdmin() {
                     <td className="px-8 py-5">
                       <span className={cn(
                         "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                        user.is_verified ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                      )}>
+                        {user.is_verified ? 'Yes' : 'No'}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className={cn(
+                        "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
                         user.account_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
                       )}>
                         {user.account_active ? 'Active' : 'Inactive'}
@@ -466,6 +475,32 @@ export default function SuperAdmin() {
                         >
                           <Key className="w-4 h-4" />
                         </button>
+                        {!user.is_verified && (
+                          <button 
+                            onClick={async () => {
+                              try {
+                                toast.loading('Resending verification...', { id: 'resend-v' });
+                                const res = await fetchWithAuth('/api/auth/resend-verification', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ email: user.email })
+                                });
+                                if (res.ok) {
+                                  toast.success('Verification email sent', { id: 'resend-v' });
+                                } else {
+                                  const d = await res.json();
+                                  toast.error(d.error || 'Failed to resend', { id: 'resend-v' });
+                                }
+                              } catch (e) {
+                                toast.error('Network error', { id: 'resend-v' });
+                              }
+                            }}
+                            className="p-2 text-zinc-400 hover:text-blue-500 transition-colors"
+                            title="Resend Verification"
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleToggleUserStatus(user.id, user.account_active)}
                           className={cn("p-2 transition-colors", user.account_active ? "text-zinc-400 hover:text-amber-500" : "text-amber-500 hover:text-amber-600")}

@@ -154,6 +154,7 @@ async function initAwsDb() {
           name TEXT,
           role TEXT DEFAULT 'user',
           account_id INTEGER REFERENCES accounts(id),
+          is_active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -171,6 +172,9 @@ async function initAwsDb() {
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='account_id') THEN
             ALTER TABLE users ADD COLUMN account_id INTEGER REFERENCES accounts(id);
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_active') THEN
+            ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='created_at') THEN
             ALTER TABLE users ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
@@ -534,7 +538,8 @@ async function initAwsDb() {
 initAwsDb();
 
 async function sendEmail(to: string, subject: string, text: string, html?: string) {
-  console.log(`[EMAIL] Sending to ${to}: ${subject}`);
+  console.log(`[EMAIL] Attempting to send email to: ${to}`);
+  console.log(`[EMAIL] Subject: ${subject}`);
   try {
     // For demo purposes, we'll log the email content if no real credentials are provided
     if (!process.env.SMTP_USER || process.env.SMTP_USER === 'mock_user') {
@@ -557,7 +562,8 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
       fromAddress = `"Gryndee" <${fromAddress}>`;
     }
 
-    console.log(`[EMAIL] Sending from: ${fromAddress}`);
+    console.log(`[EMAIL] Using From Address: ${fromAddress}`);
+    console.log(`[EMAIL] SMTP Host: ${smtpHost}`);
     
     const info = await transporter.sendMail({
       from: fromAddress,
@@ -566,10 +572,13 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
       text,
       html: html || text,
     });
-    console.log(`[EMAIL] Sent: ${info.messageId}`);
+    console.log(`[EMAIL] Successfully sent! MessageId: ${info.messageId}`);
     return info;
-  } catch (error) {
-    console.error(`[EMAIL] Failed to send:`, error);
+  } catch (error: any) {
+    console.error(`[EMAIL] ERROR sending to ${to}:`, error);
+    if (error.code) console.error(`[EMAIL] Error Code: ${error.code}`);
+    if (error.command) console.error(`[EMAIL] SMTP Command: ${error.command}`);
+    if (error.response) console.error(`[EMAIL] SMTP Response: ${error.response}`);
     throw error;
   }
 }
@@ -4894,7 +4903,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         console.log(`[ADMIN] Querying RDS for all users...`);
         try {
           const { rows } = await pool.query(`
-            SELECT u.*, a.name as account_name 
+            SELECT u.*, a.name as account_name, a.is_active as account_active_status
             FROM users u 
             LEFT JOIN accounts a ON u.account_id = a.id 
             ORDER BY u.created_at DESC
@@ -4906,6 +4915,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             const { password, ...userWithoutPassword } = u;
             return {
               ...userWithoutPassword,
+              account_active: u.is_active !== undefined ? u.is_active : true, // Map users.is_active to account_active for frontend
               accounts: u.account_name ? { name: u.account_name } : null
             };
           });
@@ -4958,7 +4968,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // Remove passwords from Supabase results
       const safeUsers = sortedUsers.map((u: any) => {
         const { password, ...rest } = u;
-        return rest;
+        return {
+          ...rest,
+          account_active: u.is_active !== undefined ? u.is_active : true
+        };
       });
 
       res.json(safeUsers);
