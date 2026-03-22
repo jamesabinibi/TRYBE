@@ -80,16 +80,6 @@ if (smtpHost.includes('emai-smtp') || smtpHost.includes('us.east-1')) {
   smtpHost = 'email-smtp.us-east-1.amazonaws.com';
 }
 
-const transporter = nodemailer.createTransport({
-  host: smtpHost,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
 function isValidEmail(email: string) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
@@ -543,12 +533,8 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
   try {
     // For demo purposes, we'll log the email content if no real credentials are provided
     if (!process.env.SMTP_USER || process.env.SMTP_USER === 'mock_user') {
-      console.log('--- MOCK EMAIL START ---');
-      console.log(`To: ${to}`);
-      console.log(`Subject: ${subject}`);
-      console.log(`Body: ${text}`);
-      console.log('--- MOCK EMAIL END ---');
-      return { messageId: 'mock-id-' + Date.now() };
+      console.warn('[EMAIL] SMTP_USER not set. Cannot send real email.');
+      throw new Error('SMTP_USER is not configured in environment variables.');
     }
 
     let fromAddress = process.env.SMTP_FROM || '"Gryndee" <noreply@gryndee.com>';
@@ -565,6 +551,16 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     console.log(`[EMAIL] Using From Address: ${fromAddress}`);
     console.log(`[EMAIL] SMTP Host: ${smtpHost}`);
     
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
     const info = await transporter.sendMail({
       from: fromAddress,
       to,
