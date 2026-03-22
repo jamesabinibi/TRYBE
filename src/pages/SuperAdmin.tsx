@@ -78,6 +78,31 @@ export default function SuperAdmin() {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isSmtpModalOpen, setIsSmtpModalOpen] = useState(false);
   const [smtpStatus, setSmtpStatus] = useState<any>(null);
+  const [isTestingSmtp, setIsTestingSmtp] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+
+  const handleTestSmtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testEmail) return;
+    setIsTestingSmtp(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/test-smtp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Test email sent successfully!');
+      } else {
+        toast.error(data.error || 'Failed to send test email');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send test email');
+    } finally {
+      setIsTestingSmtp(false);
+    }
+  };
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -818,6 +843,26 @@ export default function SuperAdmin() {
                     <Activity className="w-4 h-4" />
                     <span>Ensure this domain is verified in your AWS SES console.</span>
                   </div>
+
+                  <form onSubmit={handleTestSmtp} className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Test SMTP Connection</p>
+                    <div className="flex gap-2">
+                      <input 
+                        type="email"
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                        placeholder="Recipient email"
+                        className="flex-1 px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                      />
+                      <button 
+                        type="submit"
+                        disabled={isTestingSmtp || !testEmail}
+                        className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all disabled:opacity-50"
+                      >
+                        {isTestingSmtp ? 'Sending...' : 'Test'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
 
                 <button 

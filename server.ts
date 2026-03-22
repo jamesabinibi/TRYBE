@@ -74,9 +74,9 @@ console.log(`[INIT] VERCEL: ${process.env.VERCEL}`);
 // Supabase removed
 
 // Email transporter setup
-let smtpHost = process.env.SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com';
+let smtpHost = (process.env.SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com').trim();
 // Fix common typos in the host
-if (smtpHost === 'emai-smtp.us.east-1.amazonaws.com' || smtpHost === 'email-smtp.us.east-1.amazonaws.com' || smtpHost === 'emai-smtp.us.east-1.amazonaws.com') {
+if (smtpHost.includes('emai-smtp') || smtpHost.includes('us.east-1')) {
   smtpHost = 'email-smtp.us-east-1.amazonaws.com';
 }
 
@@ -5021,6 +5021,28 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       from: process.env.SMTP_FROM || '"Gryndee" <noreply@gryndee.com>',
       user: process.env.SMTP_USER || 'Not set'
     });
+  });
+
+  app.post("/api/admin/test-smtp", requireSuperAdmin, async (req: any, res: any) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Recipient email is required" });
+
+    try {
+      console.log(`[SMTP_TEST] Sending test email to ${email}`);
+      await sendEmail(
+        email,
+        "Gryndee SMTP Test",
+        "This is a test email to verify your SMTP configuration is working correctly.",
+        "<h1>Gryndee SMTP Test</h1><p>This is a test email to verify your SMTP configuration is working correctly.</p>"
+      );
+      res.json({ success: true, message: "Test email sent successfully!" });
+    } catch (error: any) {
+      console.error('[SMTP_TEST] Failed:', error);
+      res.status(500).json({ 
+        error: error.message || "Failed to send test email",
+        details: error.response || error.code || "No additional details"
+      });
+    }
   });
 
   // API 404 handler
