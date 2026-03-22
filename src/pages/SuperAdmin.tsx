@@ -76,6 +76,8 @@ export default function SuperAdmin() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isSmtpModalOpen, setIsSmtpModalOpen] = useState(false);
+  const [smtpStatus, setSmtpStatus] = useState<any>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -95,6 +97,13 @@ export default function SuperAdmin() {
       }
       const data = await res.json();
       setStats(data);
+      
+      // Also fetch SMTP status
+      const smtpRes = await fetchWithAuth('/api/admin/smtp-status');
+      if (smtpRes.ok) {
+        const smtpData = await smtpRes.json();
+        setSmtpStatus(smtpData);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to load system statistics');
     } finally {
@@ -345,19 +354,29 @@ export default function SuperAdmin() {
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">Monitoring Gryndee system-wide performance</p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => { fetchStats(); fetchUsers(); }}
-            className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-emerald-500 transition-colors shadow-sm"
-          >
-            <Activity className="w-5 h-5" />
-          </button>
-          <div className="h-10 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-2 hidden sm:block" />
-          <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest">
-            <Database className="w-4 h-4" />
-            System Healthy
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSmtpModalOpen(true)}
+              className={cn(
+                "flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all",
+                smtpStatus?.configured ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+              )}
+            >
+              <Mail className="w-4 h-4" />
+              SMTP: {smtpStatus?.configured ? 'Ready' : 'Check Config'}
+            </button>
+            <button 
+              onClick={() => { fetchStats(); fetchUsers(); }}
+              className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-emerald-500 transition-colors shadow-sm"
+            >
+              <Activity className="w-5 h-5" />
+            </button>
+            <div className="h-10 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-2 hidden sm:block" />
+            <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest">
+              <Database className="w-4 h-4" />
+              System Healthy
+            </div>
           </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -756,15 +775,16 @@ export default function SuperAdmin() {
           </div>
         )}
       </AnimatePresence>
-      {/* Broadcast Modal */}
+
+      {/* SMTP Status Modal */}
       <AnimatePresence>
-        {isBroadcastModalOpen && (
+        {isSmtpModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsBroadcastModalOpen(false)}
+              onClick={() => setIsSmtpModalOpen(false)}
               className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
             />
             <motion.div 
@@ -774,145 +794,39 @@ export default function SuperAdmin() {
               className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Broadcast Message</h3>
-                <button onClick={() => setIsBroadcastModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleBroadcast} className="p-8 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Message Content</label>
-                  <textarea 
-                    required
-                    value={broadcastMessage}
-                    onChange={(e) => setBroadcastMessage(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all min-h-[120px] resize-none"
-                    placeholder="Enter message to send to all users..."
-                  />
-                </div>
-
-                <button 
-                  type="submit"
-                  disabled={isBroadcasting}
-                  className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
-                >
-                  {isBroadcasting ? 'Sending...' : 'Send Broadcast'}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* System Settings Modal */}
-      <AnimatePresence>
-        {isSettingsModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsSettingsModalOpen(false)}
-              className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
-            >
-              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">System Settings</h3>
-                <button onClick={() => setIsSettingsModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">SMTP Configuration</h3>
+                <button onClick={() => setIsSmtpModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="p-8 space-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                    <div>
-                      <p className="text-sm font-black text-zinc-900 dark:text-white">Maintenance Mode</p>
-                      <p className="text-[10px] text-zinc-500 font-medium">Disable access for all users</p>
-                    </div>
-                    <div className="w-12 h-6 bg-zinc-200 dark:bg-zinc-700 rounded-full relative cursor-not-allowed">
-                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full" />
-                    </div>
+                  <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Host</p>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">{smtpStatus?.host || 'Not set'}</p>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                    <div>
-                      <p className="text-sm font-black text-zinc-900 dark:text-white">New Registrations</p>
-                      <p className="text-[10px] text-zinc-500 font-medium">Allow new users to sign up</p>
-                    </div>
-                    <div className="w-12 h-6 bg-emerald-500 rounded-full relative cursor-not-allowed">
-                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
-                    </div>
+                  <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">From Address</p>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">{smtpStatus?.from || 'Not set'}</p>
+                  </div>
+                  <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">User</p>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">{smtpStatus?.user || 'Not set'}</p>
+                  </div>
+                  <div className="flex items-center gap-2 p-4 bg-blue-500/10 text-blue-500 rounded-2xl text-[10px] font-bold">
+                    <Activity className="w-4 h-4" />
+                    <span>Ensure this domain is verified in your AWS SES console.</span>
                   </div>
                 </div>
 
                 <button 
-                  onClick={() => setIsSettingsModalOpen(false)}
+                  onClick={() => setIsSmtpModalOpen(false)}
                   className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all"
                 >
-                  Close Settings
+                  Close
                 </button>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Reset Password Modal */}
-      <AnimatePresence>
-        {isResetModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsResetModalOpen(false)}
-              className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
-            >
-              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Reset Password</h3>
-                <button onClick={() => setIsResetModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleResetPassword} className="p-8 space-y-6">
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                  <p className="text-xs text-zinc-500 font-medium">Resetting password for:</p>
-                  <p className="text-sm font-black text-zinc-900 dark:text-white mt-1">@{selectedUser?.username}</p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">New Password</label>
-                  <input 
-                    required
-                    type="text" 
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
-                    placeholder="Enter new password"
-                  />
-                </div>
-
-                <button 
-                  type="submit"
-                  disabled={isResetting}
-                  className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
-                >
-                  {isResetting ? 'Resetting...' : 'Update Password'}
-                </button>
-              </form>
             </motion.div>
           </div>
         )}

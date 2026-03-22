@@ -483,7 +483,7 @@ async function initAwsDb() {
 
         const { rows: newUser } = await client.query(
           'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-          [sysAccId, 'superadmin', 'admin@stockflow.pro', hashedSuperPass, 'super_admin', 'System Admin']
+          [sysAccId, 'superadmin', 'noreply@gryndee.com', hashedSuperPass, 'super_admin', 'System Admin']
         );
         
         // Update account owner
@@ -551,7 +551,7 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
       return { messageId: 'mock-id-' + Date.now() };
     }
 
-    let fromAddress = process.env.SMTP_FROM || '"Gryndee" <connectabinibi@gmail.com>';
+    let fromAddress = process.env.SMTP_FROM || '"Gryndee" <noreply@gryndee.com>';
     
     // Sanitize fromAddress to remove escaped quotes if they exist
     if (fromAddress.includes('\\"')) {
@@ -1827,7 +1827,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.get("/api/debug/test-email", async (req, res) => {
     try {
       const info = await sendEmail(
-        'connectabinibi@gmail.com',
+        'admin@gryndee.com',
         'Direct SMTP Test',
         'This is a direct test bypassing the UI.'
       );
@@ -1928,9 +1928,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     
     // Virtual superadmin login
     const superAdminPass = process.env.SUPERADMIN_PASSWORD || 'superpassword123';
-    if ((normalizedUsername === 'superadmin' || normalizedUsername === 'admin@stockflow.pro') && password === superAdminPass) {
+    if ((normalizedUsername === 'superadmin' || normalizedUsername === 'admin@gryndee.com') && password === superAdminPass) {
       console.log(`[AUTH] Virtual superadmin login success: "${normalizedUsername}"`);
-      return res.json({ id: '0', username: 'superadmin', email: 'admin@stockflow.pro', role: 'super_admin', name: 'System Admin' });
+      return res.json({ id: '0', username: 'superadmin', email: 'admin@gryndee.com', role: 'super_admin', name: 'System Admin' });
     }
 
     if (!supabase) {
@@ -5013,6 +5013,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  // SMTP Status for SuperAdmin
+  app.get("/api/admin/smtp-status", requireSuperAdmin, async (req: any, res) => {
+    res.json({
+      configured: !!process.env.SMTP_USER && process.env.SMTP_USER !== 'mock_user',
+      host: smtpHost,
+      from: process.env.SMTP_FROM || '"Gryndee" <noreply@gryndee.com>',
+      user: process.env.SMTP_USER || 'Not set'
+    });
+  });
+
   // API 404 handler
   app.all("/api/*", (req, res) => {
     console.log(`[API 404] ${req.method} ${req.url} - No route matched`);
@@ -5498,10 +5508,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // 2. Check for superadmin (by username or email)
       let existingAdmin = null;
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT id FROM users WHERE username = $1 OR email = $2 LIMIT 1', ['superadmin', 'admin@stockflow.pro']);
+        const { rows } = await pool.query('SELECT id FROM users WHERE username = $1 OR email = $2 LIMIT 1', ['superadmin', 'admin@gryndee.com']);
         if (rows.length > 0) existingAdmin = rows[0];
       } else if (supabase) {
-        const { data } = await supabase.from('users').select('id').or('username.eq.superadmin,email.eq.admin@stockflow.pro').maybeSingle();
+        const { data } = await supabase.from('users').select('id').or('username.eq.superadmin,email.eq.admin@gryndee.com').maybeSingle();
         existingAdmin = data;
       }
 
@@ -5514,7 +5524,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           const account = accRows[0];
           await pool.query(
             'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
-            [account.id, 'superadmin', 'admin@stockflow.pro', hashedPassword, 'super_admin', 'System Admin']
+            [account.id, 'superadmin', 'admin@gryndee.com', hashedPassword, 'super_admin', 'System Admin']
           );
         }
         
@@ -5524,7 +5534,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             await supabase.from('users').insert([{
               account_id: account.id,
               username: 'superadmin',
-              email: 'admin@stockflow.pro',
+              email: 'admin@gryndee.com',
               password: hashedPassword,
               role: 'super_admin',
               name: 'System Admin'
