@@ -530,7 +530,7 @@ const Invoices: React.FC = () => {
             {activeTab === 'create' ? 'Generate professional invoices for your clients' : 'View and manage your past invoices'}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full md:w-auto">
           <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-2xl w-full sm:w-auto">
             <button
               onClick={() => setActiveTab('create')}

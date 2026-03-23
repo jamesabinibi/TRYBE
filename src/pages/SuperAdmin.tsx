@@ -25,7 +25,8 @@ import {
   RefreshCw,
   Smartphone,
   Download,
-  Image as ImageIcon
+  Image as ImageIcon,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
@@ -282,22 +283,43 @@ export default function SuperAdmin() {
   };
 
   const handleDeleteAccount = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this account? This will delete all associated users, products, and sales. This action cannot be undone.')) return;
-    try {
-      const res = await fetchWithAuth(`/api/admin/accounts/${id}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        toast.success('Account deleted successfully');
-        fetchAccounts();
-        fetchStats();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Failed to delete account');
-      }
-    } catch (err: any) {
-      toast.error('Network error');
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-red-600">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete Account</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this account? This will delete all associated users, products, and sales. This action cannot be undone.</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              try {
+                const res = await fetchWithAuth(`/api/admin/accounts/${id}`, {
+                  method: 'DELETE'
+                });
+                if (res.ok) {
+                  toast.success('Account deleted successfully');
+                  fetchAccounts();
+                  fetchStats();
+                } else {
+                  const data = await res.json();
+                  toast.error(data.error || 'Failed to delete account');
+                }
+              } catch (err: any) {
+                toast.error('Network error');
+              }
+            }}
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+          >
+            Delete
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const handleBroadcast = async (e: React.FormEvent) => {
@@ -328,44 +350,82 @@ export default function SuperAdmin() {
   };
 
   const handleSystemSetup = async () => {
-    const confirm = window.confirm("This will attempt to create missing database tables. Continue?");
-    if (!confirm) return;
-
-    toast.loading('Running system setup...', { id: 'setup' });
-    try {
-      const res = await fetchWithAuth('/api/diag/setup', { method: 'POST' });
-      if (res.ok) {
-        toast.success('System setup completed successfully', { id: 'setup' });
-        fetchStats();
-        fetchUsers();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Setup failed', { id: 'setup' });
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Network error during setup', { id: 'setup' });
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-brand">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">System Setup</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">This will attempt to create missing database tables. Continue?</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              toast.loading('Running system setup...', { id: 'setup' });
+              try {
+                const res = await fetchWithAuth('/api/diag/setup', { method: 'POST' });
+                if (res.ok) {
+                  toast.success('System setup completed successfully', { id: 'setup' });
+                  fetchStats();
+                  fetchUsers();
+                } else {
+                  const data = await res.json();
+                  toast.error(data.error || 'Setup failed', { id: 'setup' });
+                }
+              } catch (err: any) {
+                toast.error(err.message || 'Network error during setup', { id: 'setup' });
+              }
+            }}
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+          >
+            Continue
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const handleMigrate = async () => {
-    const confirm = window.confirm("This will copy all data from Supabase to AWS RDS. Existing data in RDS with same IDs will be updated. Continue?");
-    if (!confirm) return;
-
-    toast.loading('Migrating data to AWS RDS...', { id: 'migrate' });
-    try {
-      const res = await fetchWithAuth('/api/admin/migrate', { method: 'POST' });
-      const data = await res.json();
-      
-      if (res.ok) {
-        toast.success(`Migration successful! Migrated: ${Object.entries(data.results).map(([k, v]) => `${v} ${k}`).join(', ')}`, { id: 'migrate', duration: 5000 });
-        fetchStats();
-        fetchUsers();
-      } else {
-        toast.error(data.error || 'Migration failed', { id: 'migrate' });
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Network error during migration', { id: 'migrate' });
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-brand">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Migrate Data</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">This will copy all data from Supabase to AWS RDS. Existing data in RDS with same IDs will be updated. Continue?</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              toast.loading('Migrating data to AWS RDS...', { id: 'migrate' });
+              try {
+                const res = await fetchWithAuth('/api/admin/migrate', { method: 'POST' });
+                const data = await res.json();
+                
+                if (res.ok) {
+                  toast.success(`Migration successful! Migrated: ${Object.entries(data.results).map(([k, v]) => `${v} ${k}`).join(', ')}`, { id: 'migrate', duration: 5000 });
+                  fetchStats();
+                  fetchUsers();
+                } else {
+                  toast.error(data.error || 'Migration failed', { id: 'migrate' });
+                }
+              } catch (err: any) {
+                toast.error(err.message || 'Network error during migration', { id: 'migrate' });
+              }
+            }}
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+          >
+            Migrate
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const handleSaveGemini = async (e: React.FormEvent) => {
@@ -395,48 +455,86 @@ export default function SuperAdmin() {
 
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
-    const confirm = window.confirm(`Are you sure you want to ${newStatus ? 'activate' : 'deactivate'} this user?`);
-    if (!confirm) return;
-
-    toast.loading(`Updating user status...`, { id: 'user-status' });
-    try {
-      const res = await fetchWithAuth(`/api/admin/users/${userId}/toggle-status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: newStatus })
-      });
-      
-      if (res.ok) {
-        toast.success(`User ${newStatus ? 'activated' : 'deactivated'} successfully`, { id: 'user-status' });
-        fetchUsers();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Failed to update user status', { id: 'user-status' });
-      }
-    } catch (err) {
-      toast.error('Network error', { id: 'user-status' });
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-brand">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">{newStatus ? 'Activate' : 'Deactivate'} User</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to {newStatus ? 'activate' : 'deactivate'} this user?</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              toast.loading(`Updating user status...`, { id: 'user-status' });
+              try {
+                const res = await fetchWithAuth(`/api/admin/users/${userId}/toggle-status`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ is_active: newStatus })
+                });
+                
+                if (res.ok) {
+                  toast.success(`User ${newStatus ? 'activated' : 'deactivated'} successfully`, { id: 'user-status' });
+                  fetchUsers();
+                } else {
+                  const data = await res.json();
+                  toast.error(data.error || 'Failed to update user status', { id: 'user-status' });
+                }
+              } catch (err: any) {
+                toast.error(err.message || 'Network error', { id: 'user-status' });
+              }
+            }}
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+          >
+            {newStatus ? 'Activate' : 'Deactivate'}
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const handleDeleteUser = async (userId: string) => {
-    const confirm = window.confirm("Are you sure you want to delete this user? This action cannot be undone.");
-    if (!confirm) return;
-
-    toast.loading('Deleting user...', { id: 'delete-user' });
-    try {
-      const res = await fetchWithAuth(`/api/admin/users/${userId}`, { method: 'DELETE' });
-      
-      if (res.ok) {
-        toast.success('User deleted successfully', { id: 'delete-user' });
-        fetchUsers();
-        fetchStats();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Failed to delete user', { id: 'delete-user' });
-      }
-    } catch (err) {
-      toast.error('Network error', { id: 'delete-user' });
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-red-600">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete User</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this user? This action cannot be undone.</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              toast.loading('Deleting user...', { id: 'delete-user' });
+              try {
+                const res = await fetchWithAuth(`/api/admin/users/${userId}`, { method: 'DELETE' });
+                
+                if (res.ok) {
+                  toast.success('User deleted successfully', { id: 'delete-user' });
+                  fetchUsers();
+                  fetchStats();
+                } else {
+                  const data = await res.json();
+                  toast.error(data.error || 'Failed to delete user', { id: 'delete-user' });
+                }
+              } catch (err) {
+                toast.error('Network error', { id: 'delete-user' });
+              }
+            }}
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+          >
+            Delete
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {

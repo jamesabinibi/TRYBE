@@ -149,22 +149,42 @@ export default function Settings() {
   const [isMigrating, setIsMigrating] = useState(false);
 
   const handleMigrateImages = async () => {
-    if (!confirm('This will move all existing product images to Cloudinary for faster loading. Continue?')) return;
-    
-    setIsMigrating(true);
-    try {
-      const res = await fetchWithAuth('/api/admin/migrate-images', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(`Successfully migrated ${data.migratedCount} images!`);
-      } else {
-        throw new Error(data.error || 'Migration failed');
-      }
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setIsMigrating(false);
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-brand">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Migrate Images</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">This will move all existing product images to Cloudinary for faster loading. Continue?</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              setIsMigrating(true);
+              try {
+                const res = await fetchWithAuth('/api/admin/migrate-images', { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                  toast.success(`Successfully migrated ${data.migratedCount} images!`);
+                } else {
+                  throw new Error(data.error || 'Migration failed');
+                }
+              } catch (err: any) {
+                toast.error(err.message);
+              } finally {
+                setIsMigrating(false);
+              }
+            }}
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+          >
+            Migrate
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const fetchCategories = async () => {
@@ -329,21 +349,42 @@ export default function Settings() {
   };
 
   const handleInitializeDb = async () => {
-    if (!confirm('This will create all necessary tables. Existing data will be preserved. Continue?')) return;
-    setIsInitializing(true);
-    try {
-      const res = await fetchWithAuth('/api/diag/setup', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success('Database initialized successfully');
-      } else {
-        toast.error(data.error || 'Failed to initialize database');
-      }
-    } catch (err) {
-      toast.error('Network error during database initialization');
-    } finally {
-      setIsInitializing(false);
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-brand">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Initialize Database</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">This will create all necessary tables. Existing data will be preserved. Continue?</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              setIsInitializing(true);
+              try {
+                const res = await fetchWithAuth('/api/diag/setup', { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                  toast.success('Database initialized successfully');
+                } else {
+                  toast.error(data.error || 'Failed to initialize database');
+                }
+              } catch (err) {
+                toast.error('Network error during database initialization');
+              } finally {
+                setIsInitializing(false);
+              }
+            }}
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+          >
+            Initialize
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const setupSql = `
@@ -634,19 +675,40 @@ NOTIFY pgrst, 'reload schema';
   };
 
   const handleDeleteUser = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    try {
-      const res = await fetchWithAuth(`/api/users/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        fetchUsers();
-        toast.success('User deleted');
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Failed to delete user');
-      }
-    } catch (error) {
-      toast.error('Network error');
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-red-600">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete User</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this user? This action cannot be undone.</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              try {
+                const res = await fetchWithAuth(`/api/users/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                  fetchUsers();
+                  toast.success('User deleted');
+                } else {
+                  const data = await res.json();
+                  toast.error(data.error || 'Failed to delete user');
+                }
+              } catch (error) {
+                toast.error('Network error');
+              }
+            }}
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+          >
+            Delete
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const saveSettings = async (updatedSettings = settings) => {
@@ -865,7 +927,7 @@ NOTIFY pgrst, 'reload schema';
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl w-fit overflow-x-auto no-scrollbar max-w-full">
+      <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl w-full sm:w-fit overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab('branding')}
           className={cn(

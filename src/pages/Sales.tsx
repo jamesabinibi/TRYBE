@@ -573,7 +573,7 @@ export default function Sales() {
   return (
     <div className="flex flex-col gap-4 lg:gap-8 max-w-[1600px] mx-auto">
       {/* Tabs */}
-      <div className="flex items-center gap-8 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+      <div className="flex items-center gap-4 sm:gap-8 border-b border-zinc-200 dark:border-zinc-800 shrink-0 overflow-x-auto no-scrollbar max-w-full">
         <button 
           onClick={() => setActiveTab('pos')}
           className={cn(

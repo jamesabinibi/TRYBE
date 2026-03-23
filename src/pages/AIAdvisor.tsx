@@ -59,25 +59,26 @@ export default function AIAdvisor() {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: [
-          {
-            text: `You are Gryndee AI, a proactive business partner for an entrepreneur. 
-            Analyze the following business data and provide 3-4 actionable insights.
-            Focus on:
-            1. Profitability trends.
-            2. Inventory health (low stock or overstock).
-            3. Expense management.
-            4. Growth opportunities.
+        contents: `You are Gryndee AI, a proactive business partner for an entrepreneur. 
+        Look at the user's products/services in their inventory to understand their specific niche.
+        
+        Provide 3-4 SHORT, punchy, and highly personalized business tips based specifically on what they sell.
+        Vary your advice every time. Focus on areas like:
+        - Optimal price points and profit margins for their specific products.
+        - Marketing strategies (e.g., Facebook/Instagram ads, TikTok, local SEO) tailored to their niche.
+        - Upselling or bundling opportunities based on their catalog.
 
-            Business Data:
-            Sales: ${JSON.stringify(businessData.sales)}
-            Expenses: ${JSON.stringify(businessData.expenses)}
-            Inventory: ${JSON.stringify(businessData.inventory)}
+        If the data arrays are empty, give them 3 quick, high-impact tips on how to choose their first product and start marketing. Do NOT say the data was "left blank".
 
-            Format your response in Markdown with clear headings and bullet points. 
-            Be encouraging but direct and professional.`
-          }
-        ]
+        Business Data:
+        Sales: ${JSON.stringify(businessData.sales)}
+        Expenses: ${JSON.stringify(businessData.expenses)}
+        Inventory: ${JSON.stringify(businessData.inventory)}
+        
+        Random Seed to ensure fresh advice: ${Math.random()}
+
+        Format your response in Markdown with clear headings (use ## or ###), bullet points, and bold text for emphasis. 
+        Keep the tone encouraging, direct, and professional. No fluff.`
       });
 
       setInsight(response.text || "I couldn't generate insights at this moment. Please try again later.");
@@ -122,7 +123,7 @@ export default function AIAdvisor() {
           <p className="text-zinc-600 dark:text-zinc-400 font-medium">Your proactive business partner, powered by Gemini AI.</p>
         </div>
         
-        <div className="flex overflow-x-auto custom-scrollbar gap-2 p-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 w-fit">
+        <div className="flex overflow-x-auto custom-scrollbar gap-2 p-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 w-full md:w-fit">
           <button
             onClick={() => setActiveTab('pulse')}
             className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
@@ -180,7 +181,7 @@ export default function AIAdvisor() {
             ) : (
               <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden">
                 <div className="p-8 sm:p-12">
-                  <div className="prose dark:prose-invert max-w-none">
+                  <div className="prose prose-sm sm:prose-base prose-zinc dark:prose-invert max-w-none">
                     {insight ? (
                       <div className="markdown-body">
                         <Markdown>{insight}</Markdown>

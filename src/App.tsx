@@ -252,14 +252,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className={cn(
-      "flex min-h-screen w-full font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300",
+      "flex min-h-screen w-full font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300 overflow-x-hidden",
       isDarkMode ? "bg-[#050505] text-white" : "bg-zinc-50 text-zinc-900"
     )}>
       {user && <Walkthrough />}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="flex-1 flex flex-col min-w-0 relative">
         <header id="main-header" className={cn(
-          "h-16 border-b flex items-center justify-between px-6 sticky top-0 z-30 transition-colors duration-300",
+          "h-16 border-b flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 transition-colors duration-300",
           isDarkMode 
             ? "bg-[#050505]/80 backdrop-blur-md border-white/[0.04]" 
             : "bg-white/80 backdrop-blur-md border-zinc-100"
@@ -301,13 +301,23 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               </span>
             </Link>
 
-            <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05]">
-              {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
-            </div>
+            {user?.role === 'admin' || user?.role === 'super_admin' ? (
+              <Link 
+                to="/settings"
+                className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05] hover:bg-zinc-300 dark:hover:bg-white/[0.1] transition-colors cursor-pointer"
+                title="Settings"
+              >
+                {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
+              </Link>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05]">
+                {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
+              </div>
+            )}
           </div>
         </header>
 
-        <div id="main-content-area" className="flex-1 p-6 lg:p-8 main-content">
+        <div id="main-content-area" className="flex-1 p-4 sm:p-6 lg:p-8 main-content">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, X, Check, Info, AlertTriangle, Package } from 'lucide-react';
+import { Bell, X, Check, Info, AlertTriangle, Package, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../App';
+import { toast } from 'sonner';
 
 interface Notification {
   id: number;
@@ -96,16 +97,37 @@ export default function NotificationCenter({ userId }: { userId: number }) {
   };
 
   const clearAll = async () => {
-    if (!confirm('Are you sure you want to clear all notifications?')) return;
-    try {
-      const response = await fetchWithAuth(`/api/notifications/${userId}`, { method: 'DELETE' });
-      if (response.ok) {
-        setNotifications([]);
-        setUnreadCount(0);
-      }
-    } catch (error) {
-      console.error('Failed to clear notifications:', error);
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-red-600">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Clear Notifications</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to clear all notifications?</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              try {
+                const response = await fetchWithAuth(`/api/notifications/${userId}`, { method: 'DELETE' });
+                if (response.ok) {
+                  setNotifications([]);
+                  setUnreadCount(0);
+                }
+              } catch (error) {
+                console.error('Failed to clear notifications:', error);
+              }
+            }}
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+          >
+            Clear All
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const getIcon = (type: string) => {

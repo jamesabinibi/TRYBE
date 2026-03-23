@@ -16,7 +16,8 @@ import {
   Edit2,
   Calendar,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
@@ -162,19 +163,40 @@ export default function Customers() {
   };
 
   const handleDeleteCustomer = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this customer? This action cannot be undone.')) return;
-    try {
-      const response = await fetchWithAuth(`/api/customers/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        fetchCustomers();
-        toast.success('Customer deleted');
-      } else {
-        const data = await response.json();
-        toast.error(data.error || 'Failed to delete customer');
-      }
-    } catch (err) {
-      toast.error('Network error');
-    }
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-red-600">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete Customer</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this customer? This action cannot be undone.</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              try {
+                const response = await fetchWithAuth(`/api/customers/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                  fetchCustomers();
+                  toast.success('Customer deleted');
+                } else {
+                  const data = await response.json();
+                  toast.error(data.error || 'Failed to delete customer');
+                }
+              } catch (err) {
+                toast.error('Network error');
+              }
+            }}
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+          >
+            Delete
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
   };
 
   const fetchHistory = async (customer: Customer) => {
@@ -237,7 +259,7 @@ export default function Customers() {
           <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Customer CRM</h1>
           <p className="text-zinc-600 dark:text-zinc-400 font-medium">Manage your relationships and loyalty programs</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button 
             onClick={exportCSV}
             className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all active:scale-95"
