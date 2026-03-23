@@ -13,6 +13,7 @@ import {
   Bell,
   Search,
   Plus,
+  Brain,
   ChevronRight,
   Wallet,
   Users,
@@ -26,16 +27,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
 import { SearchProvider, useSearch } from './contexts/SearchContext';
 import Dashboard from './pages/Dashboard';
+import AIAdvisor from './pages/AIAdvisor';
+import Finance from './pages/Finance';
 import Products from './pages/Products';
 import Services from './pages/Services';
 import Sales from './pages/Sales';
 import SuperAdmin from './pages/SuperAdmin';
 import Settings from './pages/Settings';
 import Invoices from './pages/Invoices';
-import Expenses from './pages/Expenses';
 import Customers from './pages/Customers';
 import TaxReport from './pages/TaxReport';
-import Bookkeeping from './pages/Bookkeeping';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -109,10 +110,10 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: Brain, label: 'AI Intelligence', path: '/ai-advisor' },
+    { icon: Wallet, label: 'Finance', path: '/finance' },
     { icon: Package, label: 'Inventory', path: '/products' },
     { icon: ShoppingCart, label: 'Sales', path: '/sales' },
-    { icon: Wallet, label: 'Expenses', path: '/expenses' },
-    { icon: Briefcase, label: 'Bookkeeping', path: '/bookkeeping' },
     { icon: FileText, label: 'Tax Report', path: '/tax' },
     { icon: FileText, label: 'Invoices', path: '/invoices' },
     { icon: Users, label: 'Customers', path: '/customers' },
@@ -456,10 +457,10 @@ export default function App() {
                       <Layout>
                         <Routes>
                           <Route path="/" element={user?.role === 'super_admin' ? <Navigate to="/super-admin" /> : <Dashboard />} />
+                          <Route path="/ai-advisor" element={<AIAdvisor />} />
+                          <Route path="/finance" element={<Finance />} />
                           <Route path="/products" element={<Products />} />
                           <Route path="/sales" element={<Sales />} />
-                          <Route path="/expenses" element={<Expenses />} />
-                          <Route path="/bookkeeping" element={<Bookkeeping />} />
                           <Route path="/tax" element={<TaxReport />} />
                           <Route path="/invoices" element={<Invoices />} />
                           <Route path="/customers" element={<Customers />} />

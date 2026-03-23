@@ -894,9 +894,9 @@ export default function Products() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+              <div className="flex-1 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row">
                 {/* Main Form Area */}
-                <div className="flex-1 p-4 sm:p-10 bg-white dark:bg-zinc-900 order-2 lg:order-1">
+                <div className="flex-1 p-4 sm:p-10 bg-white dark:bg-zinc-900 order-2 lg:order-1 lg:overflow-y-auto">
                   <form onSubmit={handleAddProduct} id="product-form" className="max-w-4xl mx-auto space-y-8 sm:space-y-10">
                     {/* Basic Info Section */}
                     <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-8 sm:space-y-10">
@@ -1214,7 +1214,7 @@ export default function Products() {
                 </div>
 
                 {/* Summary Sidebar */}
-                <div className="w-full lg:w-80 bg-zinc-50/50 lg:bg-white dark:bg-zinc-900/50 border-b lg:border-b-0 lg:border-l border-zinc-100 dark:border-zinc-800 p-6 sm:p-8 flex flex-col order-1 lg:order-2 shrink-0">
+                <div className="w-full lg:w-80 bg-zinc-50/50 lg:bg-white dark:bg-zinc-900/50 border-b lg:border-b-0 lg:border-l border-zinc-100 dark:border-zinc-800 p-6 sm:p-8 flex flex-col order-1 lg:order-2 shrink-0 lg:overflow-y-auto">
                   <div className="flex-1 space-y-6 sm:space-y-8">
                     <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white tracking-tight">Summary</h3>
                     

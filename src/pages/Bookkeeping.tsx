@@ -28,7 +28,7 @@ interface Record {
   date: string;
 }
 
-export default function Bookkeeping() {
+export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boolean }) {
   const { fetchWithAuth } = useAuth();
   const { settings } = useSettings();
   const currency = settings?.currency || 'NGN';
@@ -166,13 +166,34 @@ export default function Bookkeeping() {
   };
 
   return (
-    <div className="space-y-8 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Financial Bookkeeping</h1>
-          <p className="text-zinc-600 dark:text-zinc-400 font-medium">Record non-sales inflows like loans and investments</p>
+    <div className={`space-y-8 ${hideHeader ? '' : 'pb-20'}`}>
+      {!hideHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Financial Bookkeeping</h1>
+            <p className="text-zinc-600 dark:text-zinc-400 font-medium">Record non-sales inflows like loans and investments</p>
+          </div>
+          <div className="flex gap-3">
+            <button 
+              onClick={exportToCSV}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              Record Inflow
+            </button>
+          </div>
         </div>
-        <div className="flex gap-3">
+      )}
+      
+      {hideHeader && (
+        <div className="flex justify-end mb-4 gap-3">
           <button 
             onClick={exportToCSV}
             className="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
@@ -188,7 +209,7 @@ export default function Bookkeeping() {
             Record Inflow
           </button>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">

@@ -26,7 +26,7 @@ interface Expense {
   date: string;
 }
 
-export default function Expenses() {
+export default function Expenses({ hideHeader = false }: { hideHeader?: boolean }) {
   const { fetchWithAuth } = useAuth();
   const { settings } = useSettings();
   const currency = settings?.currency || 'NGN';
@@ -95,7 +95,15 @@ export default function Expenses() {
         
         const data = await response.json();
         
-        if (!response.ok) {
+        if (response.ok && data) {
+          setNewExpense(prev => ({
+            ...prev,
+            amount: data.amount?.toString() || prev.amount,
+            description: data.narration || prev.description,
+            date: data.date || prev.date
+          }));
+          toast.success('Receipt scanned successfully!');
+        } else {
           console.error('AI Screenshot: API Error', data);
           if (data.error?.includes('API key not valid')) {
             toast.error('Invalid Gemini API Key. Please check your settings.');
@@ -230,20 +238,34 @@ export default function Expenses() {
   const totalExpenses = filteredExpenses.reduce((acc, e) => acc + Number(e.amount), 0);
 
   return (
-    <div className="space-y-8 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Business Expenses</h1>
-          <p className="text-zinc-600 dark:text-zinc-400 font-medium">Track your operational costs and overheads</p>
+    <div className={`space-y-8 ${hideHeader ? '' : 'pb-20'}`}>
+      {!hideHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Business Expenses</h1>
+            <p className="text-zinc-600 dark:text-zinc-400 font-medium">Track your operational costs and overheads</p>
+          </div>
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            Record Expense
+          </button>
         </div>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          Record Expense
-        </button>
-      </div>
+      )}
+      
+      {hideHeader && (
+        <div className="flex justify-end mb-4">
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            Record Expense
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div 
@@ -393,12 +415,12 @@ export default function Expenses() {
                     />
                     <button 
                       className={cn(
-                        "p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-brand transition-all",
-                        isProcessingAI && "animate-pulse text-brand"
+                        "flex items-center gap-2 px-4 py-2 bg-brand/10 text-brand rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand/20 transition-all",
+                        isProcessingAI && "animate-pulse"
                       )}
-                      title="Extract from Screenshot"
                     >
-                      {isProcessingAI ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {isProcessingAI ? 'Scanning...' : 'Snap & Track'}
                     </button>
                   </div>
                   <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">

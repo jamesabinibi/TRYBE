@@ -66,7 +66,6 @@ export default function Dashboard() {
   const [staffPerformance, setStaffPerformance] = useState<any[]>([]);
   const [topSales, setTopSales] = useState<any[]>([]);
   const [topExpenses, setTopExpenses] = useState<any[]>([]);
-  const [forecast, setForecast] = useState<any>(null);
   const [isForecasting, setIsForecasting] = useState(false);
 
   useEffect(() => {
@@ -101,24 +100,6 @@ export default function Dashboard() {
     };
     fetchData();
   }, []);
-
-  const generateForecast = async () => {
-    setIsForecasting(true);
-    try {
-      const res = await fetchWithAuth('/api/ai/forecast', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || 'Failed to generate forecast');
-        return;
-      }
-      setForecast(data);
-      toast.success('AI insights generated');
-    } catch (err) {
-      toast.error('Failed to generate forecast');
-    } finally {
-      setIsForecasting(false);
-    }
-  };
 
   if (!summary) return (
     <div className="flex items-center justify-center h-64">
@@ -202,14 +183,13 @@ export default function Dashboard() {
           <p className="body-text text-zinc-500 dark:text-zinc-400">Welcome back, here's what's happening today.</p>
         </div>
         <div className="flex gap-2">
-          <button 
-            onClick={generateForecast}
-            disabled={isForecasting}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-white/[0.05] text-zinc-900 dark:text-white rounded-xl text-[13px] font-semibold transition-all hover:bg-zinc-200 dark:hover:bg-white/[0.1] disabled:opacity-50"
+          <Link 
+            to="/ai-advisor"
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-white/[0.05] text-zinc-900 dark:text-white rounded-xl text-[13px] font-semibold transition-all hover:bg-zinc-200 dark:hover:bg-white/[0.1]"
           >
-            {isForecasting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-400" />}
-            AI Insights
-          </button>
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            AI Pulse
+          </Link>
           <Link 
             to="/sales"
             className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 shadow-lg shadow-brand/20"
@@ -244,58 +224,7 @@ export default function Dashboard() {
         />
       </div>
 
-      <AnimatePresence>
-        {forecast && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-gradient-to-br from-brand/10 via-transparent to-transparent p-8 rounded-[24px] border border-brand/20 relative overflow-hidden"
-          >
-            <div className="relative z-10 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-brand/20 rounded-xl text-brand">
-                  <BrainCircuit className="w-5 h-5" />
-                </div>
-                <h2 className="text-sm font-bold uppercase tracking-widest text-brand">AI Strategic Insights</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <p className="body-text text-zinc-600 dark:text-zinc-300 italic leading-relaxed">
-                    "{forecast.strategic_advice}"
-                  </p>
-                  <div>
-                    <p className="label-text text-zinc-500 uppercase tracking-widest">Forecasted Revenue</p>
-                    <p className="text-2xl font-bold text-brand">{formatCurrency(forecast.forecasted_revenue, currency)}</p>
-                  </div>
-                </div>
-                
-                <div className="bg-white/40 dark:bg-white/[0.02] backdrop-blur-sm rounded-2xl p-5 border border-white/20 dark:border-white/[0.05]">
-                  <h4 className="label-text uppercase tracking-widest text-zinc-500 mb-4">Inventory Recommendations</h4>
-                  <div className="space-y-3">
-                    {forecast.restock_suggestions?.map((item: any) => (
-                      <div key={item.product_name} className="flex items-center justify-between">
-                        <span className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">{item.product_name}</span>
-                        <span className="px-2 py-0.5 bg-brand/10 text-brand rounded-md text-[10px] font-bold">
-                          +{item.suggested_quantity}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              <button 
-                onClick={() => setForecast(null)}
-                className="label-text text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
-              >
-                Dismiss
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 glass-card p-8">

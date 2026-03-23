@@ -19,7 +19,8 @@ import {
   Loader2,
   Edit2,
   History,
-  X
+  X,
+  MessageCircle
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
 import { cn, formatCurrency } from '../lib/utils';
@@ -74,6 +75,24 @@ const Invoices: React.FC = () => {
     fetchInventory();
     fetchPastInvoices();
   }, []);
+
+  const handleShareWhatsApp = (invoice: any) => {
+    const currency = settings?.currency || 'NGN';
+    const items = JSON.parse(invoice.items || '[]');
+    const itemsText = items.map((item: any) => `${item.name} (x${item.quantity}) - ${currency}${Number(item.total).toLocaleString()}`).join('\n');
+    
+    const text = `*INVOICE: ${invoice.invoice_number}*\n\n` +
+                 `*Business:* ${settings?.business_name || 'Gryndee User'}\n` +
+                 `*Date:* ${new Date(invoice.created_at).toLocaleDateString()}\n` +
+                 `*Customer:* ${invoice.customer_name}\n\n` +
+                 `*Items:*\n${itemsText}\n\n` +
+                 `*Total:* ${currency}${Number(invoice.total_amount).toLocaleString()}\n\n` +
+                 `Thank you for your business!`;
+    
+    const encodedText = encodeURIComponent(text);
+    const whatsappUrl = `https://wa.me/${invoice.customer_phone?.replace(/\D/g, '') || ''}?text=${encodedText}`;
+    window.open(whatsappUrl, '_blank');
+  };
 
   const resetForm = () => {
     setInvoiceNumber(generateInvoiceNumber());
@@ -1012,6 +1031,13 @@ const Invoices: React.FC = () => {
               <p className="text-zinc-500 dark:text-zinc-400 font-bold font-mono text-sm mt-1 opacity-50">#{previewInvoice.invoice_number}</p>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => handleShareWhatsApp(previewInvoice)}
+                className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+                title="Share on WhatsApp"
+              >
+                <MessageCircle className="w-6 h-6" />
+              </button>
               <button
                 onClick={() => handleDownload(previewInvoice)}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-6 sm:px-8 py-4 rounded-2xl text-white font-bold shadow-2xl transition-all hover:scale-105 active:scale-95"
