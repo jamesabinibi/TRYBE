@@ -20,7 +20,8 @@ import {
   Shield,
   User as UserIcon,
   Trash2,
-  Power
+  Power,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
@@ -891,6 +892,7 @@ export default function SuperAdmin() {
 
                   <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
                     <button 
+                      type="button"
                       onClick={handleRefreshEnv}
                       disabled={isRefreshing}
                       className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
