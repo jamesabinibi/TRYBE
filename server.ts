@@ -5779,6 +5779,54 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     console.error('[INIT] Failed to ensure super admin:', e);
   }
 
+  app.post("/api/admin/generate-mobile-assets", async (req, res) => {
+    try {
+      const user = await getAccountId(req);
+      if (!user || user.role !== 'admin') {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { type } = req.body; // 'icon' or 'splash'
+      const prompt = type === 'icon' 
+        ? "A modern, minimalist app icon for a business management app named 'Gryndee'. Stylized letter 'G', professional, sleek, vibrant emerald green primary color, dark zinc background, 1024x1024, square."
+        : "A professional splash screen for a mobile app named 'Gryndee'. Minimalist, featuring the 'Gryndee' logo (stylized 'G') centered on a dark zinc background. Vibrant emerald green logo. Text 'Gryndee' below in modern bold sans-serif. 1920x1080, landscape.";
+
+      const apiKey = await getGeminiKey();
+      if (!apiKey) {
+        return res.status(400).json({ error: "Gemini API key not configured" });
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-image-preview',
+        contents: { parts: [{ text: prompt }] },
+        config: {
+          imageConfig: {
+            aspectRatio: type === 'icon' ? "1:1" : "16:9",
+            imageSize: "1K"
+          }
+        }
+      });
+
+      let base64Data = '';
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          base64Data = part.inlineData.data;
+          break;
+        }
+      }
+
+      if (!base64Data) {
+        return res.status(500).json({ error: "Failed to generate image" });
+      }
+
+      res.json({ base64: base64Data });
+    } catch (error: any) {
+      console.error('Asset generation error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[SERVER] Gryndee is running on port ${PORT}`);
     console.log(`[SERVER] Health check endpoint: http://localhost:${PORT}/api/test`);

@@ -22,7 +22,10 @@ import {
   User as UserIcon,
   Trash2,
   Power,
-  RefreshCw
+  RefreshCw,
+  Smartphone,
+  Download,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
@@ -87,6 +90,39 @@ export default function SuperAdmin() {
   const [testEmail, setTestEmail] = useState('');
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [isMobileAssetsModalOpen, setIsMobileAssetsModalOpen] = useState(false);
+  const [isGeneratingAsset, setIsGeneratingAsset] = useState(false);
+  const [mobileAssets, setMobileAssets] = useState<{ icon?: string, splash?: string }>({});
+
+  const handleGenerateAsset = async (type: 'icon' | 'splash') => {
+    setIsGeneratingAsset(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/generate-mobile-assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMobileAssets(prev => ({ ...prev, [type]: data.base64 }));
+        toast.success(`${type === 'icon' ? 'App Icon' : 'Splash Screen'} generated!`);
+      } else {
+        toast.error(data.error || 'Failed to generate asset');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    } finally {
+      setIsGeneratingAsset(false);
+    }
+  };
+
+  const downloadAsset = (base64: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = `data:image/png;base64,${base64}`;
+    link.download = filename;
+    link.click();
+  };
 
   const [isSmtpConfigModalOpen, setIsSmtpConfigModalOpen] = useState(false);
   const [smtpConfig, setSmtpConfig] = useState({
@@ -466,6 +502,13 @@ export default function SuperAdmin() {
         
           <div className="flex items-center gap-3">
             <button 
+              onClick={() => setIsMobileAssetsModalOpen(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
+            >
+              <Smartphone className="w-4 h-4" />
+              Mobile Assets
+            </button>
+            <button 
               onClick={() => setIsGeminiModalOpen(true)}
               className={cn(
                 "flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all",
@@ -732,6 +775,123 @@ export default function SuperAdmin() {
       {/* Modals here... */}
       <AnimatePresence>
         {/* Modals */}
+      </AnimatePresence>
+
+      {/* Mobile Assets Modal */}
+      <AnimatePresence>
+        {isMobileAssetsModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileAssetsModalOpen(false)}
+              className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <div>
+                  <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Native Mobile Assets</h3>
+                  <p className="text-xs text-zinc-500 font-medium mt-1">Generate high-resolution icons and splash screens for iOS & Android</p>
+                </div>
+                <button onClick={() => setIsMobileAssetsModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* App Icon */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">App Icon (1024x1024)</h4>
+                    {mobileAssets.icon && (
+                      <button 
+                        onClick={() => downloadAsset(mobileAssets.icon!, 'icon.png')}
+                        className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest hover:underline"
+                      >
+                        <Download className="w-3 h-3" />
+                        Download PNG
+                      </button>
+                    )}
+                  </div>
+                  <div className="aspect-square bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden group relative">
+                    {mobileAssets.icon ? (
+                      <img src={`data:image/png;base64,${mobileAssets.icon}`} alt="App Icon" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center p-6">
+                        <ImageIcon className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+                        <p className="text-xs text-zinc-400 font-medium">No icon generated yet</p>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                      <button 
+                        onClick={() => handleGenerateAsset('icon')}
+                        disabled={isGeneratingAsset}
+                        className="px-6 py-3 bg-white text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
+                      >
+                        {isGeneratingAsset ? 'Generating...' : mobileAssets.icon ? 'Regenerate Icon' : 'Generate Icon'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Splash Screen */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">Splash Screen (1920x1080)</h4>
+                    {mobileAssets.splash && (
+                      <button 
+                        onClick={() => downloadAsset(mobileAssets.splash!, 'splash.png')}
+                        className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest hover:underline"
+                      >
+                        <Download className="w-3 h-3" />
+                        Download PNG
+                      </button>
+                    )}
+                  </div>
+                  <div className="aspect-video bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden group relative">
+                    {mobileAssets.splash ? (
+                      <img src={`data:image/png;base64,${mobileAssets.splash}`} alt="Splash Screen" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center p-6">
+                        <ImageIcon className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+                        <p className="text-xs text-zinc-400 font-medium">No splash screen generated yet</p>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                      <button 
+                        onClick={() => handleGenerateAsset('splash')}
+                        disabled={isGeneratingAsset}
+                        className="px-6 py-3 bg-white text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
+                      >
+                        {isGeneratingAsset ? 'Generating...' : mobileAssets.splash ? 'Regenerate Splash' : 'Generate Splash'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 bg-zinc-50 dark:bg-zinc-800/30 border-t border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-widest mb-1">AI-Powered Assets</h5>
+                    <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
+                      These assets are generated using Gemini 3.1 Flash Image. Once downloaded, you can use them with the Capacitor Assets tool to automatically generate all required sizes for the App Store and Play Store.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Broadcast Modal */}
