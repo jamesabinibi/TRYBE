@@ -4428,6 +4428,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       );
 
       const trendsMap = new Map();
+      
+      // Pre-fill last 7 days with zeros to ensure a nice curve/line even with sparse data
+      const today = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        trendsMap.set(dateStr, { revenue: 0, expenses: 0 });
+      }
 
       sales.forEach(s => {
         const date = new Date(s.created_at).toISOString().split('T')[0];

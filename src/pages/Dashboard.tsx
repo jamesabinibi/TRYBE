@@ -345,19 +345,19 @@ export default function Dashboard() {
                     }}
                   />
                   <Area 
-                    type="monotone" 
+                    type="natural" 
                     dataKey="revenue" 
                     stroke={brandColor} 
                     fill="url(#colorRevenue)" 
-                    strokeWidth={2} 
+                    strokeWidth={3} 
                     animationDuration={1500}
                   />
                   <Area 
-                    type="monotone" 
+                    type="natural" 
                     dataKey="expenses" 
                     stroke="#ef4444" 
                     fill="transparent" 
-                    strokeWidth={2} 
+                    strokeWidth={3} 
                     strokeDasharray="5 5"
                     animationDuration={1500}
                   />
