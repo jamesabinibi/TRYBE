@@ -3,36 +3,40 @@ import Joyride, { Step } from 'react-joyride';
 
 const steps: Step[] = [
   {
-    target: 'nav',
-    content: 'Welcome to Gryndee! This is your main navigation menu where you can access all features.',
-    disableBeacon: true,
-    placement: 'right',
-  },
-  {
-    target: 'header',
-    content: 'Use the global search to quickly find products, or click the + button to create new transactions.',
-    placement: 'bottom',
-  },
-  {
-    target: '.main-content',
-    content: 'This is your main workspace. Here you will see your dashboard, manage inventory, and view reports.',
+    target: 'body',
+    content: 'Welcome to your Inventory Management System! Let us show you around.',
     placement: 'center',
   },
   {
-    target: 'a[href="/sales"]',
-    content: 'Record new sales and manage your transaction history here.',
+    target: '#sidebar-nav',
+    content: 'This is your main navigation menu. You can access all sections of the app from here.',
     placement: 'right',
   },
   {
-    target: 'a[href="/products"]',
-    content: 'Add and manage your products, track inventory, and set low stock alerts.',
+    target: '#nav-dashboard',
+    content: 'View your business overview and key performance indicators here.',
     placement: 'right',
   },
   {
-    target: 'a[href="/settings"]',
-    content: 'Customize your business profile, configure email templates, and manage staff accounts.',
+    target: '#nav-inventory',
+    content: 'Manage your products, stock levels, and categories in the inventory section.',
     placement: 'right',
-  }
+  },
+  {
+    target: '#nav-sales',
+    content: 'Track your sales transactions and revenue performance.',
+    placement: 'right',
+  },
+  {
+    target: '#main-header',
+    content: 'Use the header to switch between light and dark modes, and manage your profile.',
+    placement: 'bottom',
+  },
+  {
+    target: '#main-content-area',
+    content: 'This is where your data and tools will be displayed.',
+    placement: 'top',
+  },
 ];
 
 const Walkthrough = () => {
@@ -41,8 +45,9 @@ const Walkthrough = () => {
   useEffect(() => {
     const hasSeenWalkthrough = localStorage.getItem('hasSeenWalkthrough');
     if (!hasSeenWalkthrough) {
-      // Small delay to ensure elements are rendered
-      setTimeout(() => setRun(true), 1000);
+      // Increased delay to ensure all elements are rendered
+      const timer = setTimeout(() => setRun(true), 2000);
+      return () => clearTimeout(timer);
     }
   }, []);
 

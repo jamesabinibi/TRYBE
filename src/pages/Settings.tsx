@@ -1423,6 +1423,19 @@ NOTIFY pgrst, 'reload schema';
           </div>
 
           <div className="space-y-4">
+            <button 
+              onClick={() => {
+                localStorage.removeItem('hasSeenWalkthrough');
+                window.location.reload();
+              }}
+              className="w-full flex items-center justify-between p-4 border border-zinc-100 dark:border-zinc-800 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <History className="w-4 h-4 text-zinc-400 group-hover:text-brand" />
+                <span className="text-sm font-bold text-zinc-600 dark:text-zinc-400">Restart App Walkthrough</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600" />
+            </button>
             {isChangingPassword ? (
               <form onSubmit={handleChangePassword} className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-700/50 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
