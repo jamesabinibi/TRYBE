@@ -103,6 +103,12 @@ export default function Settings() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Check file type
+    if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+      toast.error('Please upload a PNG or JPEG image. SVG is not allowed.');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
@@ -944,7 +950,7 @@ NOTIFY pgrst, 'reload schema';
                         <Plus className="w-6 h-6 text-brand" />
                       </div>
                       <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Upload Logo</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                      <input type="file" accept="image/png, image/jpeg" className="hidden" onChange={handleLogoUpload} />
                     </label>
                   )}
                 </div>
@@ -956,7 +962,7 @@ NOTIFY pgrst, 'reload schema';
                   >
                     {isSaving ? '...' : 'Save Business Logo'}
                   </button>
-                  <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest">Recommended: Square PNG or SVG</p>
+                  <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest">Recommended: Square PNG or JPEG</p>
                 </div>
               </div>
             </div>

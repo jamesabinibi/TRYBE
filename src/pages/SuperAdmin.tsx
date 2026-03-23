@@ -10,6 +10,7 @@ import {
   ArrowUpRight,
   Search,
   Key,
+  Sparkles,
   Mail,
   Calendar,
   ExternalLink,
@@ -78,6 +79,9 @@ export default function SuperAdmin() {
 
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isSmtpModalOpen, setIsSmtpModalOpen] = useState(false);
+  const [isGeminiModalOpen, setIsGeminiModalOpen] = useState(false);
+  const [geminiKey, setGeminiKey] = useState('');
+  const [isSavingGemini, setIsSavingGemini] = useState(false);
   const [smtpStatus, setSmtpStatus] = useState<any>(null);
   const [isTestingSmtp, setIsTestingSmtp] = useState(false);
   const [testEmail, setTestEmail] = useState('');
@@ -328,6 +332,31 @@ export default function SuperAdmin() {
     }
   };
 
+  const handleSaveGemini = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingGemini(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/update-gemini-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: geminiKey })
+      });
+      
+      if (res.ok) {
+        toast.success('Gemini API Key updated successfully');
+        setIsGeminiModalOpen(false);
+        fetchStats();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to update Gemini key');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    } finally {
+      setIsSavingGemini(false);
+    }
+  };
+
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
     const confirm = window.confirm(`Are you sure you want to ${newStatus ? 'activate' : 'deactivate'} this user?`);
@@ -436,6 +465,16 @@ export default function SuperAdmin() {
         </div>
         
           <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsGeminiModalOpen(true)}
+              className={cn(
+                "flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all",
+                smtpStatus?.geminiConfigured ? "bg-purple-500/10 text-purple-500" : "bg-amber-500/10 text-amber-500"
+              )}
+            >
+              <Sparkles className="w-4 h-4" />
+              AI: {smtpStatus?.geminiConfigured ? 'Ready' : 'Check Config'}
+            </button>
             <button 
               onClick={() => setIsSmtpModalOpen(true)}
               className={cn(
@@ -975,6 +1014,70 @@ export default function SuperAdmin() {
       </AnimatePresence>
 
       {/* SMTP Status Modal */}
+      {/* Gemini Configuration Modal */}
+      <AnimatePresence>
+        {isGeminiModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsGeminiModalOpen(false)}
+              className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500/10 rounded-xl">
+                    <Sparkles className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Gemini AI Config</h3>
+                </div>
+                <button onClick={() => setIsGeminiModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveGemini} className="p-8 space-y-6">
+                <div className="p-4 bg-purple-500/5 border border-purple-500/10 rounded-2xl">
+                  <p className="text-[11px] font-bold text-purple-600 dark:text-purple-400 leading-relaxed">
+                    Enter your Google Gemini API Key to enable AI-powered insights, transaction extraction, and business forecasting.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Gemini API Key</label>
+                  <div className="relative">
+                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <input 
+                      required
+                      type="password"
+                      value={geminiKey}
+                      onChange={(e) => setGeminiKey(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      placeholder="AIzaSy..."
+                    />
+                  </div>
+                </div>
+
+                <button 
+                  type="submit"
+                  disabled={isSavingGemini || !geminiKey}
+                  className="w-full py-4 bg-purple-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-purple-600 transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
+                >
+                  {isSavingGemini ? 'Updating...' : 'Save Gemini Key'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {isSmtpModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

@@ -1334,6 +1334,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Diagnostics
   app.get("/api/diag", async (req, res) => {
+    let geminiKey = !!process.env.GEMINI_API_KEY;
+    if (process.env.AWS_DB_PASSWORD) {
+      const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'GEMINI_API_KEY' LIMIT 1");
+      if (rows.length > 0 && rows[0].value) geminiKey = true;
+    }
 
     if (!supabase) {
       return res.json({
@@ -1343,7 +1348,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         tables: {},
         env: {
           cloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,
-          gemini: !!process.env.GEMINI_API_KEY,
+          gemini: geminiKey,
           smtp: !!process.env.SMTP_USER
         }
       });
@@ -1692,7 +1697,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post("/api/ai/process-transaction", async (req, res) => {
     console.log('[API] POST /api/ai/process-transaction called');
     
-    const apiKey = process.env.GEMINI_API_KEY;
+    let apiKey = process.env.GEMINI_API_KEY;
+    if (process.env.AWS_DB_PASSWORD) {
+      const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'GEMINI_API_KEY' LIMIT 1");
+      if (rows.length > 0 && rows[0].value) apiKey = rows[0].value;
+    }
+
     if (!apiKey) {
       console.error('[AI] GEMINI_API_KEY is missing');
       return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing. Please add it to your environment variables." });
@@ -1979,7 +1989,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (process.env.AWS_DB_PASSWORD) {
         console.log(`[AUTH] Querying AWS RDS for: "${normalizedUsername}"`);
         const { rows } = await pool.query(
-          `SELECT u.id, u.username, u.email, u.role, u.name, u.password, u.account_id, a.is_active as account_active 
+          `SELECT u.id, u.username, u.email, u.role, u.name, u.password, u.account_id, u.is_active as user_active, a.is_active as account_active 
            FROM users u 
            LEFT JOIN accounts a ON u.account_id = a.id 
            WHERE u.username ILIKE $1 OR u.email ILIKE $1 LIMIT 1`,
@@ -1998,7 +2008,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         console.log(`[AUTH] Querying Supabase for: "${normalizedUsername}"`);
         let { data: supabaseUser, error: supabaseError } = await supabase
           .from('users')
-          .select('id, username, email, role, name, password, account_id, accounts(is_active)')
+          .select('id, username, email, role, name, password, account_id, is_active, accounts(is_active)')
           .or(`username.ilike."${normalizedUsername}",email.ilike."${normalizedUsername}"`)
           .maybeSingle();
 
@@ -2009,6 +2019,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           console.log(`[AUTH] User found in Supabase: "${supabaseUser.username}" (ID: ${supabaseUser.id})`);
           user = {
             ...supabaseUser,
+            user_active: supabaseUser.is_active,
             account_active: supabaseUser.accounts?.is_active
           };
         } else {
@@ -2017,8 +2028,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       if (user) {
-        if (user.account_active === false) {
-          console.log(`[AUTH] Login failed: "${normalizedUsername}" - Account is deactivated.`);
+        if (user.account_active === false || user.user_active === false) {
+          console.log(`[AUTH] Login failed: "${normalizedUsername}" - Account or User is deactivated.`);
           return res.status(403).json({ error: "Your account has been deactivated. Please contact support." });
         }
 
@@ -2102,7 +2113,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         // 1. Create Account
         const { rows: accountRows } = await client.query(
           'INSERT INTO accounts (name) VALUES ($1) RETURNING id',
-          [`${name || normalizedUsername}'s Business`]
+          [name || normalizedUsername]
         );
         const account = accountRows[0];
 
@@ -2140,7 +2151,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         
         await client.query(
           'INSERT INTO settings (account_id, business_name, currency, brand_color, welcome_email_subject, welcome_email_body) VALUES ($1, $2, $3, $4, $5, $6)',
-          [account.id, name ? `${name}'s Business` : 'Gryndee', 'NGN', '#10b981', welcomeSubject, welcomeBody]
+          [account.id, name || normalizedUsername || 'Gryndee', 'NGN', '#10b981', welcomeSubject, welcomeBody]
         );
 
         // Send email BEFORE committing
@@ -4714,8 +4725,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = req.user;
 
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows: accRows } = await pool.query('SELECT COUNT(*) FROM accounts');
-        const { rows: userRows } = await pool.query('SELECT COUNT(*) FROM users');
+        const { rows: userCountRows } = await pool.query('SELECT COUNT(*) FROM users');
+        const { rows: activeUserRows } = await pool.query('SELECT COUNT(*) FROM users WHERE is_verified = true');
         const { rows: prodRows } = await pool.query('SELECT COUNT(*) FROM products');
         const { rows: saleRows } = await pool.query('SELECT COUNT(*) FROM sales');
         const { rows: recentAccs } = await pool.query(`
@@ -4727,8 +4738,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         `);
 
         return res.json({
-          accounts: parseInt(accRows[0].count) || 0,
-          users: parseInt(userRows[0].count) || 0,
+          accounts: parseInt(userCountRows[0].count) || 0,
+          users: parseInt(activeUserRows[0].count) || 0,
           products: parseInt(prodRows[0].count) || 0,
           sales: parseInt(saleRows[0].count) || 0,
           recentAccounts: recentAccs.map((a: any) => ({

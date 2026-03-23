@@ -252,7 +252,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       "flex min-h-screen w-full font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300",
       isDarkMode ? "bg-[#050505] text-white" : "bg-zinc-50 text-zinc-900"
     )}>
-      <Walkthrough />
+      {user && <Walkthrough />}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="flex-1 flex flex-col min-w-0 relative">
         <header className={cn(
@@ -443,7 +443,6 @@ export default function App() {
           <SearchProvider>
             <Toaster position="top-right" richColors />
             <BrowserRouter>
-              <Walkthrough />
               <Routes>
                 <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
                 <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
