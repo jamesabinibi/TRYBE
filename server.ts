@@ -5015,13 +5015,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       configured: !!process.env.SMTP_USER && process.env.SMTP_USER !== 'mock_user',
       host: smtpHost,
       from: process.env.SMTP_FROM || '"Gryndee" <noreply@gryndee.com>',
-      user: process.env.SMTP_USER || 'Not set'
+      user: process.env.SMTP_USER || 'Not set',
+      env_keys: Object.keys(process.env).filter(k => k.startsWith('SMTP_'))
     });
   });
 
   app.post("/api/admin/test-smtp", requireSuperAdmin, async (req: any, res: any) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Recipient email is required" });
+
+    // Force a quick reload of .env if it exists (for local/custom setups)
+    dotenv.config();
 
     try {
       console.log(`[SMTP_TEST] Sending test email to ${email}`);
