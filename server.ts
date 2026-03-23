@@ -543,6 +543,14 @@ async function getSystemSetting(key: string): Promise<string | null> {
   }
 }
 
+async function getGeminiKey(): Promise<string | null> {
+  // Try database first
+  const dbKey = await getSystemSetting('GEMINI_API_KEY');
+  if (dbKey) return dbKey;
+  // Fallback to environment
+  return process.env.GEMINI_API_KEY || null;
+}
+
 async function setSystemSetting(key: string, value: string) {
   try {
     await pool.query(
@@ -4957,7 +4965,19 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const { id } = req.params;
 
       if (process.env.AWS_DB_PASSWORD) {
+        // Handle foreign key constraints manually to avoid violation errors
+        // 1. Set staff_id in sales to NULL
+        await pool.query('UPDATE sales SET staff_id = NULL WHERE staff_id = $1', [id]);
+        
+        // 2. Set owner_id in accounts to NULL (if they were the owner)
+        await pool.query('UPDATE accounts SET owner_id = NULL WHERE owner_id = $1', [id]);
+        
+        // 3. Delete notifications for this user
+        await pool.query('DELETE FROM notifications WHERE user_id = $1', [id]);
+        
+        // 4. Finally delete the user
         await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        
         return res.json({ success: true });
       }
 
