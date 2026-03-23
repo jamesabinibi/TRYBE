@@ -2297,7 +2297,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       if (process.env.AWS_DB_PASSWORD) {
         const { rows } = await pool.query(
-          'SELECT id, username, role, account_id, verification_code, verification_expires FROM users WHERE email = $1',
+          'SELECT id, username, role, account_id, name, verification_code, verification_expires FROM users WHERE email = $1',
           [email]
         );
 

@@ -209,7 +209,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
           )}>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold text-xs">
-                {user?.name.charAt(0)}
+                {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
               </div>
               <div className="flex-1 min-w-0">
                 <p className={cn("text-xs font-semibold truncate", isDarkMode ? "text-white" : "text-zinc-900")}>{user?.name}</p>
@@ -299,7 +299,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </Link>
 
             <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05]">
-              {user?.name.charAt(0)}
+              {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
             </div>
           </div>
         </header>

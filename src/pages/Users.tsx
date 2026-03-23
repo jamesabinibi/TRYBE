@@ -245,7 +245,7 @@ export default function Users() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-black text-lg">
-                      {user.name.charAt(0)}
+                      {user.name?.charAt(0) || user.username?.charAt(0) || '?'}
                     </div>
                     <div>
                       <h3 className="text-sm font-black text-zinc-900 dark:text-white">{user.name}</h3>

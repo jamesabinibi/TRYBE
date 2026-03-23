@@ -441,7 +441,7 @@ export default function Dashboard() {
               <div key={staff.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/[0.05] flex items-center justify-center text-zinc-500 font-bold text-xs">
-                    {staff.name.charAt(0)}
+                    {staff.name?.charAt(0) || '?'}
                   </div>
                   <div>
                     <p className="text-[13px] font-semibold text-zinc-900 dark:text-white">{staff.name}</p>

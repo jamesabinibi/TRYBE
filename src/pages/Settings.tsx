@@ -1515,7 +1515,7 @@ NOTIFY pgrst, 'reload schema';
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-black text-zinc-600 dark:text-zinc-400">
-                            {u.name.charAt(0)}
+                            {u.name?.charAt(0) || u.username?.charAt(0) || '?'}
                           </div>
                           <div>
                             <p className="text-sm font-bold text-zinc-900 dark:text-white">{u.name}</p>
