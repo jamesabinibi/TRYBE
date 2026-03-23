@@ -354,7 +354,7 @@ export default function Dashboard() {
                   />
                   <Area 
                     type="monotone" 
-                    dataKey="profit" 
+                    dataKey="expenses" 
                     stroke="#ef4444" 
                     fill="transparent" 
                     strokeWidth={2} 

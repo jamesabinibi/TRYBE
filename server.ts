@@ -1719,7 +1719,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const mimeType = image.includes(',') ? image.split(',')[0].split(':')[1].split(';')[0] : 'image/png';
       
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-preview",
+        model: "gemini-3-flash-preview",
         contents: {
           parts: [
             { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
@@ -4413,30 +4413,45 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
-      // Supabase fallback removed
       if (!process.env.AWS_DB_PASSWORD) {
         return res.status(503).json({ error: "Database not available (AWS RDS not configured)" });
       }
-      const { rows: data } = await pool.query(
-        'SELECT created_at, total_amount, total_profit FROM sales WHERE account_id = $1 ORDER BY created_at ASC',
+
+      const { rows: sales } = await pool.query(
+        'SELECT created_at, total_amount FROM sales WHERE account_id = $1 ORDER BY created_at ASC',
         [userInfo.account_id]
       );
 
-      // Group by date
+      const { rows: expenses } = await pool.query(
+        'SELECT date, amount FROM expenses WHERE account_id = $1 ORDER BY date ASC',
+        [userInfo.account_id]
+      );
+
       const trendsMap = new Map();
-      data.forEach(s => {
+
+      sales.forEach(s => {
         const date = new Date(s.created_at).toISOString().split('T')[0];
-        const existing = trendsMap.get(date) || { revenue: 0, profit: 0 };
+        const existing = trendsMap.get(date) || { revenue: 0, expenses: 0 };
         trendsMap.set(date, {
           revenue: existing.revenue + (parseFloat(s.total_amount) || 0),
-          profit: existing.profit + (parseFloat(s.total_profit) || 0)
+          expenses: existing.expenses
+        });
+      });
+
+      expenses.forEach(e => {
+        const date = new Date(e.date).toISOString().split('T')[0];
+        const existing = trendsMap.get(date) || { revenue: 0, expenses: 0 };
+        trendsMap.set(date, {
+          revenue: existing.revenue,
+          expenses: existing.expenses + (parseFloat(e.amount) || 0)
         });
       });
 
       const trends = Array.from(trendsMap.entries()).map(([date, values]) => ({
         date,
-        ...values
-      }));
+        ...values,
+        profit: values.revenue - values.expenses
+      })).sort((a, b) => a.date.localeCompare(b.date));
 
       res.json(trends);
     } catch (error: any) {
