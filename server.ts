@@ -1705,7 +1705,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
     if (!apiKey) {
       console.error('[AI] GEMINI_API_KEY is missing');
-      return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing. Please add it to your environment variables." });
+      return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing. Please add it in Super Admin settings." });
     }
 
     try {
@@ -1761,9 +1761,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
     
     const apiKey = process.env.GEMINI_API_KEY;
-    console.log('[AI] GEMINI_API_KEY present:', !!apiKey);
-    if (!apiKey) {
-      return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing." });
+    let finalApiKey = apiKey;
+    if (process.env.AWS_DB_PASSWORD) {
+      const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'GEMINI_API_KEY' LIMIT 1");
+      if (rows.length > 0 && rows[0].value) finalApiKey = rows[0].value;
+    }
+
+    console.log('[AI] GEMINI_API_KEY present:', !!finalApiKey);
+    if (!finalApiKey) {
+      return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing. Please add it in Super Admin settings." });
     }
 
     try {
@@ -1772,7 +1778,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const { rows: products } = await pool.query('SELECT * FROM products WHERE account_id = $1', [userInfo.account_id]);
       const { rows: expenses } = await pool.query('SELECT * FROM expenses WHERE account_id = $1 ORDER BY date DESC LIMIT 20', [userInfo.account_id]);
 
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: finalApiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: {
@@ -5063,15 +5069,29 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const dbUser = await getSystemSetting('SMTP_USER');
     const dbHost = await getSystemSetting('SMTP_HOST');
     const dbFrom = await getSystemSetting('SMTP_FROM');
+    const dbGemini = await getSystemSetting('GEMINI_API_KEY');
     
     res.json({
       configured: (!!process.env.SMTP_USER && process.env.SMTP_USER !== 'mock_user') || !!dbUser,
+      geminiConfigured: !!(process.env.GEMINI_API_KEY || dbGemini),
       host: process.env.SMTP_HOST || dbHost || smtpHost,
       from: process.env.SMTP_FROM || dbFrom || '"Gryndee" <noreply@gryndee.com>',
       user: process.env.SMTP_USER || dbUser || 'Not set',
       env_keys: Object.keys(process.env).filter(k => k.startsWith('SMTP_')),
       is_db_config: !!dbUser
     });
+  });
+
+  app.post("/api/admin/update-gemini-config", requireSuperAdmin, async (req: any, res: any) => {
+    try {
+      const { apiKey } = req.body;
+      if (!apiKey) return res.status(400).json({ error: "API Key is required" });
+      
+      await setSystemSetting('GEMINI_API_KEY', apiKey);
+      res.json({ success: true, message: "Gemini API Key updated in database" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to update Gemini key" });
+    }
   });
 
   app.post("/api/admin/update-smtp-config", requireSuperAdmin, async (req: any, res: any) => {
