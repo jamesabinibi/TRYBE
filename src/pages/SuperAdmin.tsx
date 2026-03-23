@@ -81,6 +81,26 @@ export default function SuperAdmin() {
   const [isTestingSmtp, setIsTestingSmtp] = useState(false);
   const [testEmail, setTestEmail] = useState('');
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshEnv = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/refresh-env', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Environment refreshed!');
+        fetchStats(); // Reload stats to see if keys appeared
+      } else {
+        toast.error(data.error || 'Refresh failed');
+      }
+    } catch (err) {
+      toast.error('Network error during refresh');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleTestSmtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!testEmail) return;
@@ -838,6 +858,11 @@ export default function SuperAdmin() {
                   <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">User</p>
                     <p className="text-sm font-bold text-zinc-900 dark:text-white">{smtpStatus?.user || 'Not set'}</p>
+                    {smtpStatus?.env_keys && smtpStatus.env_keys.length > 0 && (
+                      <p className="text-[8px] text-emerald-500 font-bold mt-1 uppercase tracking-widest">
+                        Keys Found: {smtpStatus.env_keys.join(', ')}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 p-4 bg-blue-500/10 text-blue-500 rounded-2xl text-[10px] font-bold">
                     <Activity className="w-4 h-4" />
@@ -863,6 +888,20 @@ export default function SuperAdmin() {
                       </button>
                     </div>
                   </form>
+
+                  <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <button 
+                      onClick={handleRefreshEnv}
+                      disabled={isRefreshing}
+                      className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw className={cn("w-3 h-3", isRefreshing && "animate-spin")} />
+                      {isRefreshing ? 'Refreshing...' : 'Refresh System Environment'}
+                    </button>
+                    <p className="text-[8px] text-zinc-400 text-center mt-2 font-bold uppercase tracking-wider">
+                      Click this after updating secrets in the panel
+                    </p>
+                  </div>
                 </div>
 
                 <button 

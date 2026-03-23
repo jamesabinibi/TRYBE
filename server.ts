@@ -5020,6 +5020,20 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     });
   });
 
+  app.post("/api/admin/refresh-env", requireSuperAdmin, async (req: any, res: any) => {
+    try {
+      // Force a reload of .env if it exists
+      dotenv.config();
+      console.log(`[ENV_REFRESH] Current keys: ${Object.keys(process.env).filter(k => k.startsWith('SMTP_')).join(', ')}`);
+      res.json({ 
+        success: true, 
+        keys: Object.keys(process.env).filter(k => k.startsWith('SMTP_')) 
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to refresh environment" });
+    }
+  });
+
   app.post("/api/admin/test-smtp", requireSuperAdmin, async (req: any, res: any) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Recipient email is required" });
