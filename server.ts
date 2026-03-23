@@ -2219,7 +2219,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     // 1. Create Account first
     const { data: account, error: accountError } = await supabase
       .from('accounts')
-      .insert([{ name: `${name || normalizedUsername}'s Business` }])
+      .insert([{ name: name?.trim() || normalizedUsername }])
       .select()
       .single();
 
@@ -2253,7 +2253,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
     await supabase.from('settings').insert([{
       account_id: account.id,
-      business_name: name ? `${name}'s Business` : 'Gryndee',
+      business_name: name?.trim() || normalizedUsername || 'Gryndee',
       currency: 'NGN',
       brand_color: '#10b981',
       welcome_email_subject: welcomeSubject,
@@ -4757,11 +4757,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (!supabase) return res.status(503).json({ error: "Database not available" });
       
-      const { count: accountCount, error: accErr } = await supabase.from('accounts').select('*', { count: 'exact', head: true });
-      if (accErr) console.warn('[ADMIN] Stats: Failed to count accounts:', accErr.message);
-      
-      const { count: userCount, error: userErr } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      const { count: totalUserCount, error: userErr } = await supabase.from('users').select('*', { count: 'exact', head: true });
       if (userErr) console.warn('[ADMIN] Stats: Failed to count users:', userErr.message);
+      
+      const { count: verifiedUserCount, error: verifiedErr } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_verified', true);
+      if (verifiedErr) console.warn('[ADMIN] Stats: Failed to count verified users:', verifiedErr.message);
       
       const { count: productCount, error: prodErr } = await supabase.from('products').select('*', { count: 'exact', head: true });
       if (prodErr) console.warn('[ADMIN] Stats: Failed to count products:', prodErr.message);
@@ -4779,8 +4779,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (recentAccErr) console.warn('[ADMIN] Stats: Failed to fetch recent accounts:', recentAccErr.message);
 
       res.json({
-        accounts: accountCount || 0,
-        users: userCount || 0,
+        accounts: totalUserCount || 0,
+        users: verifiedUserCount || 0,
         products: productCount || 0,
         sales: saleCount || 0,
         recentAccounts: recentAccounts || []
