@@ -148,6 +148,12 @@ async function initAwsDb() {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS system_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
         -- Ensure users columns exist
         DO $$ 
         BEGIN 
@@ -527,18 +533,50 @@ async function initAwsDb() {
 
 initAwsDb();
 
+async function getSystemSetting(key: string): Promise<string | null> {
+  try {
+    const res = await pool.query('SELECT value FROM system_settings WHERE key = $1', [key]);
+    return res.rows[0]?.value || null;
+  } catch (err) {
+    console.error(`[DB] Error getting system setting ${key}:`, err);
+    return null;
+  }
+}
+
+async function setSystemSetting(key: string, value: string) {
+  try {
+    await pool.query(
+      'INSERT INTO system_settings (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP',
+      [key, value]
+    );
+  } catch (err) {
+    console.error(`[DB] Error setting system setting ${key}:`, err);
+  }
+}
+
 async function sendEmail(to: string, subject: string, text: string, html?: string) {
   console.log(`[EMAIL] Attempting to send email to: ${to}`);
   console.log(`[EMAIL] Subject: ${subject}`);
   try {
-    // For demo purposes, we'll log the email content if no real credentials are provided
-    if (!process.env.SMTP_USER || process.env.SMTP_USER === 'mock_user') {
-      console.warn('[EMAIL] SMTP_USER not set. Cannot send real email.');
-      throw new Error('SMTP_USER is not configured in environment variables.');
+    // Check environment first, then database
+    let user = process.env.SMTP_USER;
+    let pass = process.env.SMTP_PASS;
+    let host = process.env.SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com';
+    let port = process.env.SMTP_PORT || '587';
+    let secure = process.env.SMTP_SECURE === 'true';
+    let fromAddress = process.env.SMTP_FROM || '"Gryndee" <noreply@gryndee.com>';
+
+    if (!user || user === 'mock_user') {
+      user = await getSystemSetting('SMTP_USER') || '';
+    }
+    if (!pass) {
+      pass = await getSystemSetting('SMTP_PASS') || '';
+    }
+    if (!user) {
+      console.warn('[EMAIL] SMTP_USER not set in ENV or DB. Cannot send real email.');
+      throw new Error('SMTP_USER is not configured.');
     }
 
-    let fromAddress = process.env.SMTP_FROM || '"Gryndee" <noreply@gryndee.com>';
-    
     // Sanitize fromAddress to remove escaped quotes if they exist
     if (fromAddress.includes('\\"')) {
       fromAddress = fromAddress.replace(/\\"/g, '"');
@@ -549,15 +587,15 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     }
 
     console.log(`[EMAIL] Using From Address: ${fromAddress}`);
-    console.log(`[EMAIL] SMTP Host: ${smtpHost}`);
+    console.log(`[EMAIL] SMTP Host: ${host}`);
     
     const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
+      host,
+      port: parseInt(port),
+      secure,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user,
+        pass,
       },
     });
 
@@ -5011,13 +5049,35 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // SMTP Status for SuperAdmin
   app.get("/api/admin/smtp-status", requireSuperAdmin, async (req: any, res) => {
+    const dbUser = await getSystemSetting('SMTP_USER');
+    const dbHost = await getSystemSetting('SMTP_HOST');
+    const dbFrom = await getSystemSetting('SMTP_FROM');
+    
     res.json({
-      configured: !!process.env.SMTP_USER && process.env.SMTP_USER !== 'mock_user',
-      host: smtpHost,
-      from: process.env.SMTP_FROM || '"Gryndee" <noreply@gryndee.com>',
-      user: process.env.SMTP_USER || 'Not set',
-      env_keys: Object.keys(process.env).filter(k => k.startsWith('SMTP_'))
+      configured: (!!process.env.SMTP_USER && process.env.SMTP_USER !== 'mock_user') || !!dbUser,
+      host: process.env.SMTP_HOST || dbHost || smtpHost,
+      from: process.env.SMTP_FROM || dbFrom || '"Gryndee" <noreply@gryndee.com>',
+      user: process.env.SMTP_USER || dbUser || 'Not set',
+      env_keys: Object.keys(process.env).filter(k => k.startsWith('SMTP_')),
+      is_db_config: !!dbUser
     });
+  });
+
+  app.post("/api/admin/update-smtp-config", requireSuperAdmin, async (req: any, res: any) => {
+    try {
+      const { user, pass, host, port, secure, from } = req.body;
+      
+      if (user) await setSystemSetting('SMTP_USER', user);
+      if (pass) await setSystemSetting('SMTP_PASS', pass);
+      if (host) await setSystemSetting('SMTP_HOST', host);
+      if (port) await setSystemSetting('SMTP_PORT', port.toString());
+      if (secure !== undefined) await setSystemSetting('SMTP_SECURE', secure.toString());
+      if (from) await setSystemSetting('SMTP_FROM', from);
+
+      res.json({ success: true, message: "SMTP configuration updated in database" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to update SMTP config" });
+    }
   });
 
   app.post("/api/admin/refresh-env", requireSuperAdmin, async (req: any, res: any) => {
@@ -5147,6 +5207,14 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           if (error) console.warn(`[INIT] Supabase Migration warning: ${error.message}`);
         }
       };
+
+      await runSql(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
 
       // Ensure tables exist with all required columns
       await runSql(`

@@ -84,6 +84,41 @@ export default function SuperAdmin() {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const [isSmtpConfigModalOpen, setIsSmtpConfigModalOpen] = useState(false);
+  const [smtpConfig, setSmtpConfig] = useState({
+    user: '',
+    pass: '',
+    host: '',
+    port: 587,
+    secure: false,
+    from: ''
+  });
+  const [isSavingSmtp, setIsSavingSmtp] = useState(false);
+
+  const handleUpdateSmtpConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSmtp(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/update-smtp-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(smtpConfig)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('SMTP configuration updated in database!');
+        setIsSmtpConfigModalOpen(false);
+        fetchStats(); // Refresh status
+      } else {
+        toast.error(data.error || 'Failed to update SMTP config');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    } finally {
+      setIsSavingSmtp(false);
+    }
+  };
+
   const handleRefreshEnv = async () => {
     setIsRefreshing(true);
     try {
@@ -822,6 +857,123 @@ export default function SuperAdmin() {
         )}
       </AnimatePresence>
 
+      {/* SMTP Manual Configuration Modal */}
+      <AnimatePresence>
+        {isSmtpConfigModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSmtpConfigModalOpen(false)}
+              className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Manual SMTP Setup</h3>
+                <button onClick={() => setIsSmtpConfigModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateSmtpConfig} className="p-8 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">SMTP Host</label>
+                  <input 
+                    required
+                    type="text"
+                    value={smtpConfig.host}
+                    onChange={(e) => setSmtpConfig({...smtpConfig, host: e.target.value})}
+                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    placeholder="e.g. email-smtp.us-east-1.amazonaws.com"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Port</label>
+                    <input 
+                      required
+                      type="number"
+                      value={smtpConfig.port}
+                      onChange={(e) => setSmtpConfig({...smtpConfig, port: parseInt(e.target.value)})}
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Secure (SSL/TLS)</label>
+                    <div className="flex items-center h-[44px]">
+                      <button
+                        type="button"
+                        onClick={() => setSmtpConfig({...smtpConfig, secure: !smtpConfig.secure})}
+                        className={cn(
+                          "w-12 h-6 rounded-full relative transition-colors",
+                          smtpConfig.secure ? "bg-emerald-500" : "bg-zinc-200 dark:bg-zinc-700"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
+                          smtpConfig.secure ? "right-1" : "left-1"
+                        )} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">SMTP User</label>
+                  <input 
+                    required
+                    type="text"
+                    value={smtpConfig.user}
+                    onChange={(e) => setSmtpConfig({...smtpConfig, user: e.target.value})}
+                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    placeholder="SMTP Username"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">SMTP Password</label>
+                  <input 
+                    required
+                    type="password"
+                    value={smtpConfig.pass}
+                    onChange={(e) => setSmtpConfig({...smtpConfig, pass: e.target.value})}
+                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    placeholder="SMTP Password"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">From Address</label>
+                  <input 
+                    required
+                    type="text"
+                    value={smtpConfig.from}
+                    onChange={(e) => setSmtpConfig({...smtpConfig, from: e.target.value})}
+                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    placeholder='"Gryndee" <noreply@gryndee.com>'
+                  />
+                </div>
+
+                <button 
+                  type="submit"
+                  disabled={isSavingSmtp}
+                  className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 mt-4"
+                >
+                  {isSavingSmtp ? 'Saving...' : 'Save Configuration'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* SMTP Status Modal */}
       <AnimatePresence>
         {isSmtpModalOpen && (
@@ -889,6 +1041,30 @@ export default function SuperAdmin() {
                       </button>
                     </div>
                   </form>
+
+                  <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setSmtpConfig({
+                          user: smtpStatus?.user === 'Not set' ? '' : smtpStatus?.user || '',
+                          pass: '',
+                          host: smtpStatus?.host || '',
+                          port: 587,
+                          secure: false,
+                          from: smtpStatus?.from || ''
+                        });
+                        setIsSmtpConfigModalOpen(true);
+                      }}
+                      className="w-full py-3 bg-emerald-500/10 text-emerald-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                    >
+                      <SettingsIcon className="w-3 h-3" />
+                      Manual Configuration (Database)
+                    </button>
+                    <p className="text-[8px] text-zinc-400 text-center font-bold uppercase tracking-wider">
+                      Use this if environment variables are not working
+                    </p>
+                  </div>
 
                   <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
                     <button 
