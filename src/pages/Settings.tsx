@@ -1721,7 +1721,7 @@ NOTIFY pgrst, 'reload schema';
                   </select>
                 </div>
 
-                {userFormData.role === 'staff' && (
+                {userFormData.role !== 'admin' && (
                   <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Permissions</label>
                     <div className="space-y-3">

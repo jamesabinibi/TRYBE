@@ -39,6 +39,28 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth, useSettings, useTheme } from '../App';
 
+const QuickAction = ({ to, icon: Icon, label, color, className }: any) => (
+  <Link 
+    to={to}
+    className={cn(
+      "flex items-center p-2 rounded-2xl border transition-all duration-300 active:scale-95 group flex-none overflow-hidden h-11",
+      color,
+      className
+    )}
+  >
+    <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:rotate-12">
+      <Icon className="w-4 h-4" />
+    </div>
+    <div className="grid transition-all duration-300 ease-in-out grid-cols-[0fr] opacity-0 group-hover:grid-cols-[1fr] group-hover:opacity-100 group-hover:ml-3">
+      <div className="overflow-hidden">
+        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap pr-2">
+          {label}
+        </span>
+      </div>
+    </div>
+  </Link>
+);
+
 const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any) => (
   <motion.div 
     initial={{ opacity: 0, y: 10 }}
@@ -219,6 +241,40 @@ export default function Dashboard() {
             New Sale
           </Link>
         </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-2">
+        <QuickAction 
+          to="/sales" 
+          icon={Plus} 
+          label="New Sale" 
+          color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
+        />
+        <QuickAction 
+          to="/inventory" 
+          icon={Package} 
+          label="Add Product" 
+          color="bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-500/5" 
+        />
+        <QuickAction 
+          to="/expenses" 
+          icon={DollarSign} 
+          label="Add Expense" 
+          color="bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-500/5" 
+        />
+        <QuickAction 
+          to="/customers" 
+          icon={Users} 
+          label="Customers" 
+          color="bg-purple-500/10 text-purple-500 border-purple-500/20 dark:bg-purple-500/5" 
+        />
+        <QuickAction 
+          to="/invoices" 
+          icon={ArrowUpRight} 
+          label="Invoices" 
+          color="bg-amber-500/10 text-amber-500 border-amber-500/20 dark:bg-amber-500/5" 
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
