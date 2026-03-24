@@ -14,6 +14,7 @@ import {
 import { motion } from 'motion/react';
 import { useAuth, useSettings } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
+import { TotalDisplay } from '../components/TotalDisplay';
 import { toast } from 'sonner';
 
 interface TaxData {
@@ -157,13 +158,12 @@ const TaxReport = () => {
               animate={{ opacity: 1, y: 0 }}
               className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-8 shadow-sm"
             >
-              <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400 mb-6">
-                <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-2xl">
-                  <TrendingUp className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-black uppercase tracking-widest">Total Turnover</span>
-              </div>
-              <div className="text-3xl font-black text-zinc-950 dark:text-white">{formatCurrency(taxData.turnover, settings?.currency)}</div>
+              <TotalDisplay 
+                label="Total Turnover" 
+                value={formatCurrency(taxData.turnover, settings?.currency)} 
+                icon={<TrendingUp className="w-6 h-6" />}
+                iconClassName="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              />
               <div className="mt-4">
                 {taxData.vat_exempt ? (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -183,18 +183,13 @@ const TaxReport = () => {
               transition={{ delay: 0.1 }}
               className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-8 shadow-sm"
             >
-              <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400 mb-6">
-                <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-2xl">
-                  <FileText className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-black uppercase tracking-widest">Net Profit / Loss</span>
-              </div>
-              <div className={cn(
-                "text-3xl font-black",
-                taxData.net_profit >= 0 ? "text-zinc-950 dark:text-white" : "text-red-600 dark:text-red-400"
-              )}>
-                {formatCurrency(taxData.net_profit, settings?.currency)}
-              </div>
+              <TotalDisplay 
+                label="Net Profit / Loss" 
+                value={formatCurrency(taxData.net_profit, settings?.currency)} 
+                icon={<FileText className="w-6 h-6" />}
+                iconClassName="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                valueClassName={taxData.net_profit >= 0 ? "text-zinc-950 dark:text-white" : "text-red-600 dark:text-red-400"}
+              />
               <div className="mt-4">
                 {taxData.net_profit >= 0 ? (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -214,13 +209,14 @@ const TaxReport = () => {
               transition={{ delay: 0.2 }}
               className="bg-brand text-white rounded-[2.5rem] p-8 shadow-xl shadow-brand/20"
             >
-              <div className="flex items-center gap-4 opacity-80 mb-6">
-                <div className="p-3 bg-white/20 rounded-2xl">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-black uppercase tracking-widest">Est. Tax Liability</span>
-              </div>
-              <div className="text-3xl font-black">{formatCurrency(taxData.total_tax_liability, settings?.currency)}</div>
+              <TotalDisplay 
+                label="Est. Tax Liability" 
+                value={formatCurrency(taxData.total_tax_liability, settings?.currency)} 
+                icon={<ShieldCheck className="w-6 h-6" />}
+                iconClassName="bg-white/20 text-white"
+                labelClassName="text-white opacity-80"
+                valueClassName="text-white"
+              />
               <p className="mt-4 text-[10px] font-black uppercase tracking-widest opacity-70">
                 CIT ({taxData.cit_rate}%) + EDU TAX ({taxData.edu_tax_rate}%)
               </p>

@@ -18,8 +18,10 @@ import {
   Briefcase,
   Upload
 } from 'lucide-react';
-import { Product, Category } from '../types';
-import { formatCurrency, cn } from '../lib/utils';
+import { Product, Category, Service } from '../types';
+import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
+import { CurrencyDisplay } from '../components/CurrencyDisplay';
+import { NumberDisplay } from '../components/NumberDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
@@ -444,7 +446,7 @@ export default function Products() {
     return acc + (cost * (p.total_stock || 0));
   }, 0);
   const totalSellingValue = filteredProducts.reduce((acc, p) => {
-    const price = activeSubTab === 'products' ? p.selling_price : p.price;
+    const price = activeSubTab === 'products' ? (p as unknown as Product).selling_price : (p as unknown as Service).price;
     const selling = typeof price === 'string' ? parseFloat(price) || 0 : price || 0;
     return acc + (selling * (p.total_stock || 0));
   }, 0);
@@ -634,10 +636,11 @@ export default function Products() {
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2">
                               <p className={cn(
-                                "text-sm font-bold font-mono tracking-tighter",
+                                NUMBER_STYLE,
+                                "text-sm",
                                 (item.total_stock || 0) <= (item.low_stock_threshold || 5) ? "text-red-500" : ""
                               )}>
-                                {item.total_stock || 0}
+                                <NumberDisplay value={item.total_stock || 0} size="sm" />
                               </p>
                               <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest">Units</span>
                             </div>
@@ -653,14 +656,12 @@ export default function Products() {
                           </div>
                         </td>
                       )}
-                      <td className="px-8 py-6 text-sm font-bold font-mono tracking-tighter">
-                        <span className="opacity-50 mr-1 text-xs">{currency === 'NGN' ? '₦' : currency}</span>
-                        {formatCurrency(activeSubTab === 'products' ? item.selling_price : item.price, currency).replace(/[^0-9.,]/g, '')}
+                      <td className="px-8 py-6">
+                        <CurrencyDisplay amount={activeSubTab === 'products' ? item.selling_price : item.price} currencyCode={currency} size="sm" />
                       </td>
                       {activeSubTab === 'products' && user?.role !== 'staff' && (
-                        <td className="px-8 py-6 text-sm font-bold font-mono tracking-tighter">
-                          <span className="opacity-50 mr-1 text-xs">{currency === 'NGN' ? '₦' : currency}</span>
-                          {formatCurrency((activeSubTab === 'products' ? (typeof item.selling_price === 'string' ? parseFloat(item.selling_price) : item.selling_price) || 0 : (typeof item.price === 'string' ? parseFloat(item.price) : item.price) || 0) * (item.total_stock || 0), currency).replace(/[^0-9.,]/g, '')}
+                        <td className="px-8 py-6">
+                          <CurrencyDisplay amount={(activeSubTab === 'products' ? (typeof item.selling_price === 'string' ? parseFloat(item.selling_price) : item.selling_price) || 0 : (typeof item.price === 'string' ? parseFloat(item.price) : item.price) || 0) * (item.total_stock || 0)} currencyCode={currency} size="sm" />
                         </td>
                       )}
                       {activeSubTab === 'services' && (

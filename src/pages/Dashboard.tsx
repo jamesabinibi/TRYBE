@@ -34,6 +34,9 @@ import {
   Cell
 } from 'recharts';
 import { formatCurrency, cn } from '../lib/utils';
+import { CurrencyDisplay } from '../components/CurrencyDisplay';
+import { NumberDisplay } from '../components/NumberDisplay';
+import { TotalDisplay } from '../components/TotalDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -76,10 +79,12 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any)
     whileHover={{ y: -4 }}
     className={cn("glass-card p-6 flex flex-col justify-between min-h-[140px]", className)}
   >
-    <div>
-      <p className="label-text text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1">{title}</p>
-      <h3 className={cn("card-number", color)}>{value}</h3>
-    </div>
+    <TotalDisplay 
+      label={title} 
+      value={value} 
+      icon={Icon ? <Icon className="w-5 h-5" /> : undefined}
+      valueClassName={color}
+    />
     {subtitle && <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mt-2">{subtitle}</p>}
   </motion.div>
 );
@@ -288,19 +293,19 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
           title="Revenue Today" 
-          value={formatCurrency(summary.today_sales || 0, currency)} 
+          value={<CurrencyDisplay amount={summary.today_sales || 0} currencyCode={currency} />} 
           color="text-brand"
         />
         {user?.role !== 'staff' && (
           <>
             <StatCard 
               title="Expenses Today" 
-              value={formatCurrency(summary.today_expenses || 0, currency)} 
+              value={<CurrencyDisplay amount={summary.today_expenses || 0} currencyCode={currency} />} 
               color="text-red-500"
             />
             <StatCard 
               title="Net Profit" 
-              value={formatCurrency((summary.today_sales || 0) - (summary.today_expenses || 0), currency)} 
+              value={<CurrencyDisplay amount={(summary.today_sales || 0) - (summary.today_expenses || 0)} currencyCode={currency} />} 
               color="text-zinc-900 dark:text-white"
             />
           </>
@@ -409,7 +414,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[13px] font-bold text-zinc-900 dark:text-white">{formatCurrency(sale.revenue, currency)}</p>
+                  <p className="text-[13px] font-bold text-zinc-900 dark:text-white"><CurrencyDisplay amount={sale.revenue} currencyCode={currency} /></p>
                   <div className="w-16 h-1 bg-zinc-100 dark:bg-white/[0.05] rounded-full mt-1 overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
@@ -448,7 +453,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[13px] font-bold text-brand">+{formatCurrency(sale.total_amount, currency)}</p>
+                  <p className="text-[13px] font-bold text-brand">+<CurrencyDisplay amount={sale.total_amount} currencyCode={currency} /></p>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{sale.payment_method}</p>
                 </div>
               </div>
@@ -471,10 +476,10 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[13px] font-bold text-zinc-900 dark:text-white">{formatCurrency(staff.total_sales, currency)}</p>
+                  <p className="text-[13px] font-bold text-zinc-900 dark:text-white"><CurrencyDisplay amount={staff.total_sales} currencyCode={currency} /></p>
                   <div className="flex items-center gap-1 justify-end mt-1">
                     <Trophy className={cn("w-3 h-3", i === 0 ? "text-amber-400" : "text-zinc-300")} />
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase">Rank #{i + 1}</span>
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase">Rank #<NumberDisplay value={i + 1} /></span>
                   </div>
                 </div>
               </div>

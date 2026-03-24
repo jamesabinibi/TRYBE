@@ -5,6 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export const NUMBER_STYLE = "font-sans font-bold tracking-tight";
+
 export function formatCurrency(amount: number | string | undefined | null, currencyCode?: string) {
   let value = 0;
   if (typeof amount === 'number') {

@@ -15,7 +15,9 @@ import {
   Shield
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
+import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { formatCurrency, cn } from '../lib/utils';
+import { TotalDisplay } from '../components/TotalDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
@@ -316,11 +318,11 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
             <TrendingDown className="w-24 h-24" />
           </div>
-          <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.2em] mb-4">Total Expenses</p>
-          <h3 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
-            <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
-            {totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </h3>
+          <TotalDisplay 
+            label="Total Expenses" 
+            value={totalExpenses} 
+            valueClassName="text-4xl font-display font-bold text-zinc-900 dark:text-white tracking-tight"
+          />
         </motion.div>
       </div>
 
@@ -392,7 +394,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                   <td className="px-4 sm:px-8 py-2 sm:py-5 flex justify-between items-center sm:table-cell text-right">
                     <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Amount</span>
                     <span className="text-sm font-bold font-mono tracking-tighter text-red-500 group-hover:text-red-400">
-                      -{formatCurrency(expense.amount, currency)}
+                      -<CurrencyDisplay amount={expense.amount} currencyCode={currency} />
                     </span>
                   </td>
                   <td className="px-4 sm:px-8 py-2 sm:py-5 flex justify-between items-center sm:table-cell text-right">

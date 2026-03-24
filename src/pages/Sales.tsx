@@ -32,7 +32,10 @@ import {
   MapPin
 } from 'lucide-react';
 import { Product, Variant, Sale, Customer, Service } from '../types';
+import { CurrencyDisplay } from '../components/CurrencyDisplay';
+import { NumberDisplay } from '../components/NumberDisplay';
 import { formatCurrency, cn } from '../lib/utils';
+import { TotalDisplay } from '../components/TotalDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
@@ -724,7 +727,7 @@ export default function Sales() {
                               <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1 ml-10">{selectedProduct.category_name}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-2xl font-bold text-brand tracking-tight">{formatCurrency(selectedProduct.selling_price, currency)}</p>
+                              <p className="text-2xl font-bold text-brand tracking-tight"><CurrencyDisplay amount={selectedProduct.selling_price} currencyCode={currency} size="xl" /></p>
                               <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">Base Price</p>
                             </div>
                           </div>
@@ -1008,10 +1011,14 @@ export default function Sales() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center justify-between pt-6 border-t border-zinc-200 dark:border-zinc-700">
-                      <span className="text-sm font-bold text-zinc-950 dark:text-white uppercase tracking-widest">Total Amount</span>
-                      <span className="text-4xl font-display font-bold text-brand tracking-tight">{formatCurrency(total, currency)}</span>
-                    </div>
+<TotalDisplay 
+                      label="Total Amount" 
+                      value={formatCurrency(total, currency)} 
+                      direction="row"
+                      labelClassName="text-sm font-bold text-zinc-950 dark:text-white uppercase tracking-widest"
+                      valueClassName="text-4xl font-display font-bold text-brand tracking-tight"
+                      className="pt-6 border-t border-zinc-200 dark:border-zinc-700"
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

@@ -15,7 +15,9 @@ import {
   Download
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
+import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { formatCurrency, cn } from '../lib/utils';
+import { TotalDisplay } from '../components/TotalDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
@@ -233,16 +235,13 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl">
-              <ArrowUpRight className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-zinc-500 uppercase tracking-widest">Total Inflows</p>
-              <h3 className="text-2xl font-black text-zinc-900 dark:text-white">{formatCurrency(totalInflows, currency)}</h3>
-            </div>
-          </div>
+<div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+          <TotalDisplay 
+            label="Total Inflows" 
+            value={totalInflows} 
+            icon={<ArrowUpRight className="w-6 h-6" />}
+            iconClassName="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+          />
         </div>
       </div>
 
@@ -326,7 +325,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                       record.nature === 'expense' ? "text-red-600 dark:text-red-400" :
                       "text-zinc-950 dark:text-white"
                     )}>
-                      {record.nature === 'expense' ? '-' : '+'}{formatCurrency(record.amount, currency)}
+                      {record.nature === 'expense' ? '-' : '+'}<CurrencyDisplay amount={record.amount} currencyCode={currency} />
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">

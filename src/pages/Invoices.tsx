@@ -24,7 +24,7 @@ import {
   Building2
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, NUMBER_STYLE } from '../lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { generatePDF as generatePDFUtil } from '../utils/pdfGenerator';
@@ -530,7 +530,7 @@ const Invoices: React.FC = () => {
                   pastInvoices.map((inv) => (
                     <tr key={inv.id} className="hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 transition-all group cursor-pointer">
                       <td className="px-8 py-6">
-                        <span className="font-bold font-mono tracking-tighter">#{inv.invoice_number}</span>
+                        <span className={cn(NUMBER_STYLE, "tracking-tighter")}>#{inv.invoice_number}</span>
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-2 text-sm font-bold opacity-70">
@@ -545,7 +545,7 @@ const Invoices: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <span className="text-sm font-bold font-mono tracking-tighter">
+                        <span className={cn(NUMBER_STYLE, "text-sm")}>
                           <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
                           {inv.total_amount?.toLocaleString()}
                         </span>
@@ -598,7 +598,7 @@ const Invoices: React.FC = () => {
                 <div key={inv.id} className="p-6 space-y-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm font-bold font-mono tracking-tighter text-zinc-900 dark:text-white">#{inv.invoice_number}</p>
+                      <p className={cn(NUMBER_STYLE, "tracking-tighter text-zinc-900 dark:text-white")}>#{inv.invoice_number}</p>
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
                         {new Date(inv.created_at).toLocaleDateString()}
                       </p>
@@ -626,7 +626,7 @@ const Invoices: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total</p>
-                      <p className="text-sm font-bold font-mono text-brand">
+                      <p className={cn(NUMBER_STYLE, "text-brand")}>
                         {formatCurrency(inv.total_amount, settings?.currency || '₦')}
                       </p>
                     </div>
@@ -650,7 +650,7 @@ const Invoices: React.FC = () => {
                   type="text"
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all font-mono"
+                  className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all font-sans"
                 />
               </div>
             </div>
