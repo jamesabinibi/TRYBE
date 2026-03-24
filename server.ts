@@ -2768,7 +2768,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // Products
   const hasPermission = (userInfo: any, permission: string) => {
-    if (userInfo.role === 'admin' || userInfo.role === 'super_admin' || userInfo.role === 'owner') return true;
+    if (userInfo.role === 'admin' || userInfo.role === 'super_admin' || userInfo.role === 'owner' || userInfo.role === 'manager') return true;
     if (!userInfo.permissions) return false;
     const perms = typeof userInfo.permissions === 'string' ? JSON.parse(userInfo.permissions) : userInfo.permissions;
     return !!perms[permission];

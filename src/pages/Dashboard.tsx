@@ -60,7 +60,7 @@ export default function Dashboard() {
   const { settings: globalSettings } = useSettings();
   const { isDarkMode } = useTheme();
 
-  if (user?.role === 'staff' && user?.permissions && !user.permissions.can_view_dashboard) {
+  if (user?.role === 'staff' && !user?.permissions?.can_view_dashboard) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <div className="p-4 bg-zinc-100 dark:bg-zinc-800 rounded-full">

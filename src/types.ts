@@ -7,6 +7,14 @@ export interface User {
   name: string;
   email?: string;
   account_id?: number;
+  permissions?: {
+    can_view_dashboard: boolean;
+    can_view_account_data: boolean;
+    can_manage_products: boolean;
+    can_manage_sales: boolean;
+    can_view_expenses: boolean;
+    can_manage_expenses: boolean;
+  };
 }
 
 export interface Category {

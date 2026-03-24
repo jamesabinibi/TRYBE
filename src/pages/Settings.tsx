@@ -626,7 +626,7 @@ NOTIFY pgrst, 'reload schema';
   };
 
   useEffect(() => {
-    if (activeTab === 'team') {
+    if (activeTab === 'account') {
       fetchUsers();
     }
   }, [activeTab]);
@@ -640,13 +640,14 @@ NOTIFY pgrst, 'reload schema';
         name: user.name || '',
         role: user.role as any,
         email: user.email || '',
-        permissions: user.permissions || {
+        permissions: {
           can_view_dashboard: true,
           can_view_account_data: false,
           can_manage_products: false,
           can_manage_sales: false,
           can_view_expenses: false,
           can_manage_expenses: false,
+          ...(user.permissions || {})
         }
       });
     } else {
@@ -1593,11 +1594,7 @@ NOTIFY pgrst, 'reload schema';
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
             <div className="flex justify-end">
               <button 
-                onClick={() => {
-                  setEditingUser(null);
-                  setUserFormData({ name: '', username: '', email: '', role: 'staff', password: '' });
-                  setIsUserModalOpen(true);
-                }}
+                onClick={() => handleOpenUserModal()}
                 className="px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
@@ -1639,24 +1636,7 @@ NOTIFY pgrst, 'reload schema';
                       <td className="px-4 py-4 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
-                            onClick={() => {
-                              setEditingUser(u.id);
-                              setUserFormData({ 
-                                name: u.name, 
-                                username: u.username, 
-                                email: u.email, 
-                                role: u.role, 
-                                password: '',
-                                permissions: u.permissions || {
-                                  can_view_dashboard: true,
-                                  can_view_account_data: false,
-                                  can_manage_products: false,
-                                  can_view_expenses: false,
-                                  can_manage_expenses: false
-                                }
-                              });
-                              setIsUserModalOpen(true);
-                            }}
+                            onClick={() => handleOpenUserModal(u)}
                             className="p-2 text-zinc-400 hover:text-brand transition-colors"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -1758,7 +1738,7 @@ NOTIFY pgrst, 'reload schema';
                           <input 
                             type="checkbox"
                             className="w-4 h-4 rounded border-zinc-300 text-brand focus:ring-brand"
-                            checked={(userFormData.permissions as any)[perm.id]}
+                            checked={!!userFormData.permissions?.[perm.id as keyof typeof userFormData.permissions]}
                             onChange={(e) => setUserFormData({
                               ...userFormData,
                               permissions: {

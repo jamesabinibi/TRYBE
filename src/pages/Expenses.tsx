@@ -31,7 +31,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
   const { fetchWithAuth, user } = useAuth();
   const { settings } = useSettings();
 
-  if (user?.role === 'staff' && user?.permissions && !user.permissions.can_view_expenses) {
+  if (user?.role === 'staff' && !user?.permissions?.can_view_expenses) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <div className="p-4 bg-zinc-100 dark:bg-zinc-800 rounded-full">
