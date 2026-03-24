@@ -260,7 +260,7 @@ export default function Dashboard() {
           color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
         />
         <QuickAction 
-          to="/inventory" 
+          to="/products" 
           icon={Package} 
           label="Add Product" 
           color="bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-500/5" 

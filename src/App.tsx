@@ -35,6 +35,7 @@ import Sales from './pages/Sales';
 import SuperAdmin from './pages/SuperAdmin';
 import Settings from './pages/Settings';
 import Invoices from './pages/Invoices';
+import Expenses from './pages/Expenses';
 import Customers from './pages/Customers';
 import TaxReport from './pages/TaxReport';
 import Login from './pages/Login';
@@ -473,6 +474,7 @@ export default function App() {
                           <Route path="/finance" element={user?.role === 'staff' ? <Navigate to="/" /> : <Finance />} />
                           <Route path="/products" element={<Products />} />
                           <Route path="/sales" element={<Sales />} />
+                          <Route path="/expenses" element={<Expenses />} />
                           <Route path="/tax" element={user?.role === 'staff' ? <Navigate to="/" /> : <TaxReport />} />
                           <Route path="/invoices" element={<Invoices />} />
                           <Route path="/customers" element={<Customers />} />
