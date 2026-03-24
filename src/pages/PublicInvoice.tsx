@@ -92,94 +92,103 @@ export default function PublicInvoice() {
   const currency = settings.currency || 'NGN';
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 py-12 px-4 sm:px-6 lg:px-8 font-sans selection:bg-zinc-900 selection:text-white dark:selection:bg-white dark:selection:text-zinc-900">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-end mb-8">
+          <button
+            onClick={handleDownload}
+            className="inline-flex items-center gap-2 px-8 py-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl font-bold text-sm transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0"
+          >
+            <Download className="w-5 h-5" />
+            Download PDF Invoice
+          </button>
+        </div>
+
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-zinc-900 rounded-3xl shadow-xl overflow-hidden border border-zinc-200 dark:border-zinc-800"
+          className="bg-white dark:bg-zinc-900 rounded-[40px] shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 relative"
         >
-          {/* Header */}
-          <div className="p-8 sm:p-12 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-              <div>
-                <h1 className="text-4xl font-black tracking-tight text-zinc-900 dark:text-white uppercase">Invoice</h1>
-                <p className="text-zinc-500 dark:text-zinc-400 font-bold font-mono text-sm mt-1 opacity-50">#{invoice.invoice_number}</p>
-              </div>
-              <button
-                onClick={handleDownload}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-bold text-sm transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-              >
-                <Download className="w-4 h-4" />
-                Download PDF
-              </button>
-            </div>
+          {/* Decorative Brand Bar */}
+          <div 
+            className="h-3 w-full" 
+            style={{ backgroundColor: settings.brand_color?.includes('gradient') ? '#10b981' : (settings.brand_color || '#10b981') }} 
+          />
 
-            <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-12">
-              <div>
-                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">From</p>
-                <h3 className="font-bold text-xl text-zinc-950 dark:text-white tracking-tight">{settings.business_name || 'Business Name'}</h3>
-                <div className="mt-4 space-y-2">
-                  {settings.email && (
-                    <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-sm font-medium">
-                      <Mail className="w-4 h-4 opacity-50" />
-                      {settings.email}
-                    </div>
-                  )}
-                  {settings.phone_number && (
-                    <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-sm font-medium">
-                      <Phone className="w-4 h-4 opacity-50" />
-                      {settings.phone_number}
-                    </div>
-                  )}
+          {/* Header Section */}
+          <div className="p-10 sm:p-16">
+            <div className="flex flex-col md:flex-row justify-between items-start gap-12">
+              <div className="space-y-6">
+                {settings.logo_url ? (
+                  <img src={settings.logo_url} alt="Logo" className="h-20 w-auto object-contain" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center">
+                    <Building2 className="w-8 h-8 text-zinc-400" />
+                  </div>
+                )}
+                <div>
+                  <h1 className="text-4xl font-black tracking-tighter text-zinc-900 dark:text-white uppercase leading-none">
+                    Invoice
+                  </h1>
+                  <p className="text-zinc-400 dark:text-zinc-500 font-mono text-sm mt-2 tracking-widest">
+                    NO. {invoice.invoice_number}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-left md:text-right space-y-4">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Issued By</p>
+                  <h3 className="font-bold text-2xl text-zinc-950 dark:text-white tracking-tight">{settings.business_name || 'Business Name'}</h3>
+                </div>
+                <div className="space-y-1.5 text-zinc-500 dark:text-zinc-400 text-sm font-medium">
+                  {settings.email && <p className="flex items-center md:justify-end gap-2"><Mail className="w-3.5 h-3.5 opacity-50" /> {settings.email}</p>}
+                  {settings.phone_number && <p className="flex items-center md:justify-end gap-2"><Phone className="w-3.5 h-3.5 opacity-50" /> {settings.phone_number}</p>}
                   {settings.address && (
-                    <div className="flex items-start gap-2 text-zinc-500 dark:text-zinc-400 text-sm font-medium">
-                      <MapPin className="w-4 h-4 opacity-50 mt-0.5" />
-                      <span className="max-w-[200px] leading-relaxed">{settings.address}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">Billed To</p>
-                <h4 className="font-bold text-xl text-zinc-950 dark:text-white tracking-tight">{invoice.customer_name || invoice.customers?.name || invoice.customer_name_from_table || 'Walk-in Customer'}</h4>
-                <div className="mt-4 space-y-2">
-                  {(invoice.customer_email || invoice.customers?.email) && (
-                    <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">{invoice.customer_email || invoice.customers?.email}</p>
-                  )}
-                  {(invoice.customer_phone || invoice.customers?.phone) && (
-                    <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">{invoice.customer_phone || invoice.customers?.phone}</p>
-                  )}
-                  {(invoice.customer_address || invoice.customers?.address) && (
-                    <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium max-w-[250px] leading-relaxed">{invoice.customer_address || invoice.customers?.address}</p>
+                    <p className="flex items-start md:justify-end gap-2">
+                      <MapPin className="w-3.5 h-3.5 opacity-50 mt-1" />
+                      <span className="max-w-[240px] leading-relaxed">{settings.address}</span>
+                    </p>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="mt-12 grid grid-cols-2 gap-8 pt-8 border-t border-zinc-200 dark:border-zinc-800">
+            {/* Meta Info Grid */}
+            <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-10 p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-[32px] border border-zinc-100 dark:border-zinc-800">
               <div>
-                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Date</p>
-                <p className="font-bold text-zinc-950 dark:text-white text-lg">{new Date(invoice.created_at).toLocaleDateString()}</p>
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Billed To</p>
+                <h4 className="font-bold text-lg text-zinc-950 dark:text-white tracking-tight leading-tight">
+                  {invoice.customer_name || invoice.customers?.name || invoice.customer_name_from_table || 'Walk-in Customer'}
+                </h4>
+                <div className="mt-2 space-y-1 text-zinc-500 dark:text-zinc-400 text-xs font-medium">
+                  {(invoice.customer_email || invoice.customers?.email) && <p>{invoice.customer_email || invoice.customers?.email}</p>}
+                  {(invoice.customer_phone || invoice.customers?.phone) && <p>{invoice.customer_phone || invoice.customers?.phone}</p>}
+                </div>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Payment Method</p>
-                <p className="font-bold text-zinc-950 dark:text-white text-sm uppercase tracking-widest">{invoice.payment_method || 'Invoice'}</p>
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Date Issued</p>
+                <p className="font-bold text-zinc-950 dark:text-white text-lg tracking-tight">
+                  {new Date(invoice.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Payment Status</p>
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+                  {invoice.payment_method || 'Paid'}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Items */}
-          <div className="p-8 sm:p-12">
-            <div className="overflow-x-auto">
+            {/* Items Table */}
+            <div className="mt-16">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b-2 border-zinc-950 dark:border-white">
-                    <th className="py-4 text-[10px] font-black uppercase tracking-widest text-zinc-950 dark:text-white w-1/2">Description</th>
-                    <th className="py-4 text-[10px] font-black uppercase tracking-widest text-zinc-950 dark:text-white text-right">Qty</th>
-                    <th className="py-4 text-[10px] font-black uppercase tracking-widest text-zinc-950 dark:text-white text-right">Price</th>
-                    <th className="py-4 text-[10px] font-black uppercase tracking-widest text-zinc-950 dark:text-white text-right">Total</th>
+                  <tr className="border-b border-zinc-200 dark:border-zinc-800">
+                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 w-1/2">Description</th>
+                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Qty</th>
+                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Price</th>
+                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
@@ -191,18 +200,19 @@ export default function PublicInvoice() {
                     
                     return (
                       <tr key={idx} className="group">
-                        <td className="py-6 pr-4">
-                          <p className="font-bold text-zinc-950 dark:text-white text-sm">{fullName}</p>
+                        <td className="py-8 pr-4">
+                          <p className="font-bold text-zinc-950 dark:text-white text-base tracking-tight">{fullName}</p>
+                          <p className="text-xs text-zinc-400 mt-1 font-medium">{item.service_id ? 'Service' : 'Product'}</p>
                         </td>
-                        <td className="py-6 px-4 text-right">
-                          <span className="font-mono text-sm font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-md">
-                            x{item.quantity}
+                        <td className="py-8 px-4 text-center">
+                          <span className="font-mono text-sm font-bold text-zinc-950 dark:text-white">
+                            {item.quantity}
                           </span>
                         </td>
-                        <td className="py-6 px-4 text-right font-mono text-sm text-zinc-500 dark:text-zinc-400">
+                        <td className="py-8 px-4 text-right font-mono text-sm text-zinc-500 dark:text-zinc-400">
                           {formatCurrency(item.unit_price || item.price_at_sale || 0, currency)}
                         </td>
-                        <td className="py-6 pl-4 text-right font-mono font-bold text-zinc-950 dark:text-white">
+                        <td className="py-8 pl-4 text-right font-mono font-bold text-zinc-950 dark:text-white text-base">
                           {formatCurrency(item.total_price || (item.quantity * (item.unit_price || item.price_at_sale || 0)), currency)}
                         </td>
                       </tr>
@@ -212,38 +222,56 @@ export default function PublicInvoice() {
               </table>
             </div>
 
-            {/* Totals */}
-            <div className="mt-12 flex justify-end">
-              <div className="w-full sm:w-1/2 lg:w-1/3 space-y-4">
+            {/* Summary Section */}
+            <div className="mt-12 flex flex-col sm:flex-row justify-between items-start gap-12 pt-12 border-t border-zinc-100 dark:border-zinc-800">
+              <div className="max-w-xs">
+                <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Note</h5>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium italic">
+                  "Thank you for your business. We appreciate your trust in {settings.business_name || 'us'}."
+                </p>
+              </div>
+
+              <div className="w-full sm:w-80 space-y-4">
                 <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Subtotal</span>
-                  <span className="font-mono text-sm">{formatCurrency((invoice.total_amount || 0) + (invoice.discount_amount || 0) - (invoice.vat_amount || 0), currency)}</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Subtotal</span>
+                  <span className="font-mono font-bold">{formatCurrency((invoice.total_amount || 0) + (invoice.discount_amount || 0) - (invoice.vat_amount || 0), currency)}</span>
                 </div>
                 
                 {invoice.discount_amount > 0 && (
                   <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Discount ({invoice.discount_percentage}%)</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Discount ({invoice.discount_percentage}%)</span>
                     <span className="font-mono font-bold">-{formatCurrency(invoice.discount_amount, currency)}</span>
                   </div>
                 )}
 
                 {invoice.vat_amount > 0 && (
                   <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                    <span className="text-[10px] font-bold uppercase tracking-widest">VAT</span>
-                    <span className="font-mono text-sm">{formatCurrency(invoice.vat_amount, currency)}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">VAT</span>
+                    <span className="font-mono font-bold">{formatCurrency(invoice.vat_amount, currency)}</span>
                   </div>
                 )}
 
-                <div className="pt-4 border-t-2 border-zinc-950 dark:border-white flex justify-between items-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-zinc-950 dark:text-white">Total</span>
-                  <span className="text-2xl font-black tracking-tight text-zinc-950 dark:text-white">
+                <div className="pt-6 border-t-4 border-zinc-950 dark:border-white flex justify-between items-center">
+                  <span className="text-sm font-black uppercase tracking-[0.3em] text-zinc-950 dark:text-white">Total</span>
+                  <span className="text-4xl font-black tracking-tighter text-zinc-950 dark:text-white">
                     {formatCurrency(invoice.total_amount || 0, currency)}
                   </span>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Footer Branding */}
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 p-8 text-center border-t border-zinc-100 dark:border-zinc-800">
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em]">
+              Generated by {settings.business_name || 'StockFlow'}
+            </p>
+          </div>
         </motion.div>
+
+        <p className="mt-12 text-center text-zinc-400 dark:text-zinc-600 text-[10px] font-bold uppercase tracking-[0.2em]">
+          &copy; {new Date().getFullYear()} {settings.business_name || 'StockFlow'}. All rights reserved.
+        </p>
       </div>
     </div>
   );
