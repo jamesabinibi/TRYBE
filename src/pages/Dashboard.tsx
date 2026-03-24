@@ -263,25 +263,25 @@ export default function Dashboard() {
           to="/products" 
           icon={Package} 
           label="Add Product" 
-          color="bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-500/5" 
+          color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
         />
         <QuickAction 
           to="/expenses" 
           icon={DollarSign} 
           label="Add Expense" 
-          color="bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-500/5" 
+          color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
         />
         <QuickAction 
           to="/customers" 
           icon={Users} 
           label="Customers" 
-          color="bg-purple-500/10 text-purple-500 border-purple-500/20 dark:bg-purple-500/5" 
+          color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
         />
         <QuickAction 
           to="/invoices" 
           icon={ArrowUpRight} 
           label="Invoices" 
-          color="bg-amber-500/10 text-amber-500 border-amber-500/20 dark:bg-amber-500/5" 
+          color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
         />
       </div>
 

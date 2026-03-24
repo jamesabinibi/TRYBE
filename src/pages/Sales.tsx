@@ -12,7 +12,6 @@ import {
   ChevronRight,
   ChevronDown,
   Maximize,
-  Scan,
   User,
   Image as ImageIcon,
   Sparkles,
@@ -42,7 +41,6 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
 
 interface CartItem {
   type: 'product' | 'service';
@@ -68,7 +66,7 @@ export default function Sales() {
   const [paymentMethod, setPaymentMethod] = useState('Transfer');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
+
   const [selectedSaleForPreview, setSelectedSaleForPreview] = useState<any>(null);
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('month');
@@ -375,32 +373,6 @@ export default function Sales() {
     doc.save(`invoice-${sale.invoice_number}.pdf`);
   };
 
-  const startScanner = () => {
-    setIsScanning(true);
-    setTimeout(() => {
-      const scanner = new Html5QrcodeScanner(
-        "reader", 
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        false
-      );
-      
-      scanner.render((decodedText) => {
-        // Find product by SKU or name (mocking SKU search with name for now)
-        const product = products.find(p => String(p.name || '').toLowerCase() === String(decodedText || '').toLowerCase());
-        if (product && product.variants.length > 0) {
-          addToCart(product, product.variants[0]);
-          scanner.clear();
-          setIsScanning(false);
-          toast.success(`Scanned: ${product.name}`);
-        } else {
-          toast.error(`Product not found: ${decodedText}`);
-        }
-      }, (err) => {
-        // console.warn(err);
-      });
-    }, 100);
-  };
-
   const handleAIScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -645,13 +617,6 @@ export default function Sales() {
                           formatCurrency={formatCurrency}
                         />
                       </div>
-                      <button 
-                        onClick={startScanner}
-                        className="mt-6 p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95 border border-zinc-200 dark:border-zinc-700 shadow-sm"
-                        title="Scan Barcode"
-                      >
-                        <Scan className="w-5 h-5" />
-                      </button>
                     </div>
                   ) : (
                     <div className="flex-1 space-y-2">
@@ -1553,34 +1518,6 @@ export default function Sales() {
         </AnimatePresence>
 
         <AnimatePresence>
-          {isScanning && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsScanning(false)}
-                className="absolute inset-0 bg-zinc-900/90 backdrop-blur-md"
-              />
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl"
-              >
-                <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                  <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Scan Barcode</h3>
-                  <button onClick={() => setIsScanning(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
-                    <X className="w-5 h-5 text-zinc-400" />
-                  </button>
-                </div>
-                <div id="reader" className="w-full aspect-square bg-black"></div>
-                <div className="p-6 text-center">
-                  <p className="text-xs text-zinc-500 font-medium">Point your camera at a product barcode</p>
-                </div>
-              </motion.div>
-            </div>
-          )}
         </AnimatePresence>
       </div>
     </div>
