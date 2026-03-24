@@ -321,7 +321,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
           <TotalDisplay 
             label="Total Expenses" 
             value={totalExpenses.toLocaleString()} 
-            valueClassName="text-4xl font-display font-bold text-zinc-900 dark:text-white tracking-tight"
+            valueClassName="text-6xl font-display font-bold text-zinc-900 dark:text-white tracking-tight"
           />
         </motion.div>
       </div>

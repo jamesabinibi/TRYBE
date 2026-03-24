@@ -1,12 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Wallet, Briefcase, TrendingDown, LayoutDashboard } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import CashFlowRunway from './CashFlowRunway';
 import Bookkeeping from './Bookkeeping';
 import Expenses from './Expenses';
 
 export default function Finance() {
-  const [activeTab, setActiveTab] = useState<'cashflow' | 'bookkeeping' | 'expenses'>('cashflow');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') as 'cashflow' | 'bookkeeping' | 'expenses' || 'cashflow';
+  const [activeTab, setActiveTab] = useState<'cashflow' | 'bookkeeping' | 'expenses'>(tab);
+
+  useEffect(() => {
+    setActiveTab(tab);
+  }, [tab]);
+
+  const handleTabChange = (newTab: 'cashflow' | 'bookkeeping' | 'expenses') => {
+    setSearchParams({ tab: newTab });
+    setActiveTab(newTab);
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
@@ -25,7 +37,7 @@ export default function Finance() {
       {/* Tabs */}
       <div className="flex overflow-x-auto custom-scrollbar gap-2 p-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 w-full md:w-fit">
         <button
-          onClick={() => setActiveTab('cashflow')}
+          onClick={() => handleTabChange('cashflow')}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'cashflow'
               ? 'bg-white dark:bg-zinc-900 text-brand shadow-sm border border-zinc-200 dark:border-zinc-700'
@@ -36,7 +48,7 @@ export default function Finance() {
           Cash Flow
         </button>
         <button
-          onClick={() => setActiveTab('bookkeeping')}
+          onClick={() => handleTabChange('bookkeeping')}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'bookkeeping'
               ? 'bg-white dark:bg-zinc-900 text-brand shadow-sm border border-zinc-200 dark:border-zinc-700'
@@ -47,7 +59,7 @@ export default function Finance() {
           Bookkeeping
         </button>
         <button
-          onClick={() => setActiveTab('expenses')}
+          onClick={() => handleTabChange('expenses')}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'expenses'
               ? 'bg-white dark:bg-zinc-900 text-brand shadow-sm border border-zinc-200 dark:border-zinc-700'

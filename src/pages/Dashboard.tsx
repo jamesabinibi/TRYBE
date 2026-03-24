@@ -271,7 +271,7 @@ export default function Dashboard() {
           color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
         />
         <QuickAction 
-          to="/expenses" 
+          to="/finance?tab=expenses" 
           icon={DollarSign} 
           label="Add Expense" 
           color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
