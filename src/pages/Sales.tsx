@@ -74,6 +74,9 @@ export default function Sales() {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const canViewAccountData = user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data);
+  const canManageSales = user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_sales);
+
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [customerName, setCustomerName] = useState('');
@@ -1072,20 +1075,22 @@ export default function Sales() {
                     </button>
                   </div>
 
-                  <button 
-                    onClick={handleCheckout}
-                    disabled={cart.length === 0 || isProcessing}
-                    className="w-full py-6 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white rounded-3xl font-display font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-2xl shadow-brand/20 active:scale-[0.98]"
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="w-6 h-6 animate-spin" />
-                    ) : (
-                      <>
-                        Complete Checkout
-                        <ArrowRight className="w-6 h-6" />
-                      </>
-                    )}
-                  </button>
+                  {canManageSales && (
+                    <button 
+                      onClick={handleCheckout}
+                      disabled={cart.length === 0 || isProcessing}
+                      className="w-full py-6 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white rounded-3xl font-display font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-2xl shadow-brand/20 active:scale-[0.98]"
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : (
+                        <>
+                          Complete Checkout
+                          <ArrowRight className="w-6 h-6" />
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -1097,96 +1102,100 @@ export default function Sales() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-10 pr-2"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                <div>
-                  <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Reports & Analytics</h1>
-                  <p className="text-zinc-500 dark:text-zinc-400 font-medium mt-1">Track your business performance and export data.</p>
-                </div>
-                <div className="flex flex-wrap gap-4">
-                  <button 
-                    onClick={exportExcel}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    Excel
-                  </button>
-                  <button 
-                    onClick={exportPDF}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-zinc-800 text-white rounded-2xl text-sm font-bold hover:bg-zinc-800 dark:hover:bg-zinc-700 transition-all shadow-lg shadow-zinc-200 dark:shadow-none active:scale-95"
-                  >
-                    <FileText className="w-4 h-4" />
-                    PDF Report
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="glass-card p-6 group relative overflow-hidden">
-                  <div className="relative z-10 flex flex-col h-full justify-between">
+              {canViewAccountData && (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                     <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="p-2 bg-brand/10 rounded-lg">
-                          <TrendingUp className="w-4 h-4 text-brand" />
-                        </div>
-                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+12.5%</span>
-                      </div>
-                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Revenue</p>
-                      <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
-                        {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0), currency)}
-                      </h3>
+                      <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Reports & Analytics</h1>
+                      <p className="text-zinc-500 dark:text-zinc-400 font-medium mt-1">Track your business performance and export data.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-4">
+                      <button 
+                        onClick={exportExcel}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Excel
+                      </button>
+                      <button 
+                        onClick={exportPDF}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-zinc-800 text-white rounded-2xl text-sm font-bold hover:bg-zinc-800 dark:hover:bg-zinc-700 transition-all shadow-lg shadow-zinc-200 dark:shadow-none active:scale-95"
+                      >
+                        <FileText className="w-4 h-4" />
+                        PDF Report
+                      </button>
                     </div>
                   </div>
-                </div>
 
-                <div className="glass-card p-6 group relative overflow-hidden">
-                  <div className="relative z-10 flex flex-col h-full justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="p-2 bg-emerald-500/10 rounded-lg">
-                          <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="glass-card p-6 group relative overflow-hidden">
+                      <div className="relative z-10 flex flex-col h-full justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="p-2 bg-brand/10 rounded-lg">
+                              <TrendingUp className="w-4 h-4 text-brand" />
+                            </div>
+                            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+12.5%</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Revenue</p>
+                          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                            {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0), currency)}
+                          </h3>
                         </div>
-                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+8.2%</span>
                       </div>
-                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Profit</p>
-                      <h3 className="text-2xl font-bold text-emerald-500 tracking-tight">
-                        {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0), currency)}
-                      </h3>
+                    </div>
+
+                    <div className="glass-card p-6 group relative overflow-hidden">
+                      <div className="relative z-10 flex flex-col h-full justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="p-2 bg-emerald-500/10 rounded-lg">
+                              <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+                            </div>
+                            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+8.2%</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Profit</p>
+                          <h3 className="text-2xl font-bold text-emerald-500 tracking-tight">
+                            {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0), currency)}
+                          </h3>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="glass-card p-6 group relative overflow-hidden">
+                      <div className="relative z-10 flex flex-col h-full justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="p-2 bg-blue-500/10 rounded-lg">
+                              <ShoppingCart className="w-4 h-4 text-blue-500" />
+                            </div>
+                            <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">Active</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Transactions</p>
+                          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{filteredSales.length}</h3>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="glass-card p-6 group relative overflow-hidden">
+                      <div className="relative z-10 flex flex-col h-full justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="p-2 bg-purple-500/10 rounded-lg">
+                              <CreditCard className="w-4 h-4 text-purple-500" />
+                            </div>
+                            <span className="text-[10px] font-bold text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full">Stable</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Avg. Order Value</p>
+                          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                            {formatCurrency(filteredSales.length > 0 ? (filteredSales.reduce((acc, s) => acc + (s.total_amount || 0), 0) / filteredSales.length) : 0, currency)}
+                          </h3>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="glass-card p-6 group relative overflow-hidden">
-                  <div className="relative z-10 flex flex-col h-full justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="p-2 bg-blue-500/10 rounded-lg">
-                          <ShoppingCart className="w-4 h-4 text-blue-500" />
-                        </div>
-                        <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">Active</span>
-                      </div>
-                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Transactions</p>
-                      <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{filteredSales.length}</h3>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="glass-card p-6 group relative overflow-hidden">
-                  <div className="relative z-10 flex flex-col h-full justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="p-2 bg-purple-500/10 rounded-lg">
-                          <CreditCard className="w-4 h-4 text-purple-500" />
-                        </div>
-                        <span className="text-[10px] font-bold text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full">Stable</span>
-                      </div>
-                      <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Avg. Order Value</p>
-                      <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
-                        {formatCurrency(filteredSales.length > 0 ? (filteredSales.reduce((acc, s) => acc + (s.total_amount || 0), 0) / filteredSales.length) : 0, currency)}
-                      </h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
 
               <div className="glass-card p-0 overflow-hidden border-zinc-200/50 dark:border-white/[0.02]">
                 <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-zinc-50/30 dark:bg-zinc-800/20">

@@ -40,8 +40,10 @@ const getInitialProductState = () => ({
 });
 
 export default function Products() {
-  const { fetchWithAuth } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const { settings } = useSettings();
+
+  const canManageProducts = user?.role === 'admin' || user?.role === 'manager' || (user?.role === 'staff' && user?.permissions?.can_manage_products);
   const currency = settings?.currency || 'NGN';
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
@@ -455,20 +457,25 @@ export default function Products() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <motion.div 
-          whileHover={{ y: -4 }}
-          className="glass-card p-8 group relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Package className="w-24 h-24" />
-          </div>
-          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Stock value @ cost price</p>
-          <h3 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
-            <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
-            {totalCostValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </h3>
-        </motion.div>
+      <div className={cn(
+        "grid gap-6",
+        user?.role === 'staff' ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
+      )}>
+        {user?.role !== 'staff' && (
+          <motion.div 
+            whileHover={{ y: -4 }}
+            className="glass-card p-8 group relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Package className="w-24 h-24" />
+            </div>
+            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Stock value @ cost price</p>
+            <h3 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
+              <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
+              {totalCostValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </h3>
+          </motion.div>
+        )}
         <motion.div 
           whileHover={{ y: -4 }}
           className="glass-card p-8 group relative overflow-hidden"
@@ -541,13 +548,15 @@ export default function Products() {
                 </select>
                 <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none group-hover:text-brand transition-colors" />
               </div>
-              <button 
-                onClick={() => activeSubTab === 'products' ? openAddModal() : openAddServiceModal()}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 whitespace-nowrap"
-              >
-                <Plus className="w-5 h-5" />
-                Add {activeSubTab === 'products' ? 'Product' : 'Service'}
-              </button>
+              {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_products)) && (
+                <button 
+                  onClick={() => activeSubTab === 'products' ? openAddModal() : openAddServiceModal()}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 whitespace-nowrap"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add {activeSubTab === 'products' ? 'Product' : 'Service'}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -567,13 +576,15 @@ export default function Products() {
                       <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Stock Status</th>
                     )}
                     <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Unit Price</th>
-                    {activeSubTab === 'products' && (
+                    {activeSubTab === 'products' && (user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data)) && (
                       <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Inventory Value</th>
                     )}
                     {activeSubTab === 'services' && (
                       <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Duration</th>
                     )}
-                    <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Actions</th>
+                    {user?.role !== 'staff' && (
+                      <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Actions</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -637,7 +648,7 @@ export default function Products() {
                         <span className="opacity-50 mr-1 text-xs">{currency === 'NGN' ? '₦' : currency}</span>
                         {(activeSubTab === 'products' ? item.selling_price : item.price).toLocaleString()}
                       </td>
-                      {activeSubTab === 'products' && (
+                      {activeSubTab === 'products' && user?.role !== 'staff' && (
                         <td className="px-8 py-6 text-sm font-bold font-mono tracking-tighter">
                           <span className="opacity-50 mr-1 text-xs">{currency === 'NGN' ? '₦' : currency}</span>
                           {((item.selling_price || 0) * (item.total_stock || 0)).toLocaleString()}
@@ -648,16 +659,18 @@ export default function Products() {
                           <span className="text-xs font-bold opacity-70">{item.duration_minutes} mins</span>
                         </td>
                       )}
-                      <td className="px-8 py-6 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+                      {user?.role !== 'staff' && (
+                        <td className="px-8 py-6 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -690,14 +703,16 @@ export default function Products() {
                         <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{activeSubTab === 'products' ? item.category_name : item.category}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {user?.role !== 'staff' && (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">

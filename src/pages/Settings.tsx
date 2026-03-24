@@ -599,7 +599,15 @@ NOTIFY pgrst, 'reload schema';
     password: '',
     name: '',
     role: 'staff' as 'admin' | 'manager' | 'staff',
-    email: ''
+    email: '',
+    permissions: {
+      can_view_dashboard: true,
+      can_view_account_data: false,
+      can_manage_products: false,
+      can_manage_sales: false,
+      can_view_expenses: false,
+      can_manage_expenses: false,
+    }
   });
 
   const fetchUsers = async () => {
@@ -631,7 +639,15 @@ NOTIFY pgrst, 'reload schema';
         password: '',
         name: user.name || '',
         role: user.role as any,
-        email: user.email || ''
+        email: user.email || '',
+        permissions: user.permissions || {
+          can_view_dashboard: true,
+          can_view_account_data: false,
+          can_manage_products: false,
+          can_manage_sales: false,
+          can_view_expenses: false,
+          can_manage_expenses: false,
+        }
       });
     } else {
       setEditingUser(null);
@@ -640,7 +656,15 @@ NOTIFY pgrst, 'reload schema';
         password: '',
         name: '',
         role: 'staff',
-        email: ''
+        email: '',
+        permissions: {
+          can_view_dashboard: true,
+          can_view_account_data: false,
+          can_manage_products: false,
+          can_manage_sales: false,
+          can_view_expenses: false,
+          can_manage_expenses: false,
+        }
       });
     }
     setIsUserModalOpen(true);
@@ -1617,7 +1641,20 @@ NOTIFY pgrst, 'reload schema';
                           <button 
                             onClick={() => {
                               setEditingUser(u.id);
-                              setUserFormData({ name: u.name, username: u.username, email: u.email, role: u.role, password: '' });
+                              setUserFormData({ 
+                                name: u.name, 
+                                username: u.username, 
+                                email: u.email, 
+                                role: u.role, 
+                                password: '',
+                                permissions: u.permissions || {
+                                  can_view_dashboard: true,
+                                  can_view_account_data: false,
+                                  can_manage_products: false,
+                                  can_view_expenses: false,
+                                  can_manage_expenses: false
+                                }
+                              });
                               setIsUserModalOpen(true);
                             }}
                             className="p-2 text-zinc-400 hover:text-brand transition-colors"
@@ -1703,6 +1740,38 @@ NOTIFY pgrst, 'reload schema';
                     <option value="admin">Admin</option>
                   </select>
                 </div>
+
+                {userFormData.role === 'staff' && (
+                  <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Permissions</label>
+                    <div className="space-y-3">
+                      {[
+                        { id: 'can_view_dashboard', label: 'View Dashboard' },
+                        { id: 'can_view_account_data', label: 'View All Account Data' },
+                        { id: 'can_manage_products', label: 'Manage Products' },
+                        { id: 'can_manage_sales', label: 'Manage Sales & Invoices' },
+                        { id: 'can_view_expenses', label: 'View Expenses' },
+                        { id: 'can_manage_expenses', label: 'Manage Expenses' },
+                      ].map((perm) => (
+                        <label key={perm.id} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                          <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{perm.label}</span>
+                          <input 
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-zinc-300 text-brand focus:ring-brand"
+                            checked={(userFormData.permissions as any)[perm.id]}
+                            onChange={(e) => setUserFormData({
+                              ...userFormData,
+                              permissions: {
+                                ...userFormData.permissions,
+                                [perm.id]: e.target.checked
+                              }
+                            })}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                     {editingUser ? 'New Password (leave blank to keep current)' : 'Password'}

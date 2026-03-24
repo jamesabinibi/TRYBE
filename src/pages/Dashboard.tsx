@@ -18,7 +18,8 @@ import {
   Plus,
   Settings as SettingsIcon,
   Image as ImageIcon,
-  CheckCircle2
+  CheckCircle2,
+  Shield
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -58,6 +59,26 @@ export default function Dashboard() {
   const { fetchWithAuth, user } = useAuth();
   const { settings: globalSettings } = useSettings();
   const { isDarkMode } = useTheme();
+
+  if (user?.role === 'staff' && user?.permissions && !user.permissions.can_view_dashboard) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <div className="p-4 bg-zinc-100 dark:bg-zinc-800 rounded-full">
+          <Shield className="w-12 h-12 text-zinc-400" />
+        </div>
+        <h2 className="text-xl font-black text-zinc-900 dark:text-white uppercase tracking-widest">Access Denied</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 font-medium text-center max-w-md">
+          You do not have permission to view the dashboard. Please contact your administrator.
+        </p>
+        <button 
+          onClick={() => navigate('/sales')}
+          className="px-8 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
+        >
+          Go to Sales
+        </button>
+      </div>
+    );
+  }
   const brandColor = globalSettings?.brand_color || '#10b981';
   const currency = globalSettings?.currency || 'NGN';
   const [summary, setSummary] = useState<any>(null);
@@ -206,21 +227,25 @@ export default function Dashboard() {
           value={formatCurrency(summary.today_sales || 0, currency)} 
           color="text-brand"
         />
-        <StatCard 
-          title="Expenses Today" 
-          value={formatCurrency(summary.today_expenses || 0, currency)} 
-          color="text-red-500"
-        />
-        <StatCard 
-          title="Net Profit" 
-          value={formatCurrency((summary.today_sales || 0) - (summary.today_expenses || 0), currency)} 
-          color="text-zinc-900 dark:text-white"
-        />
+        {user?.role !== 'staff' && (
+          <>
+            <StatCard 
+              title="Expenses Today" 
+              value={formatCurrency(summary.today_expenses || 0, currency)} 
+              color="text-red-500"
+            />
+            <StatCard 
+              title="Net Profit" 
+              value={formatCurrency((summary.today_sales || 0) - (summary.today_expenses || 0), currency)} 
+              color="text-zinc-900 dark:text-white"
+            />
+          </>
+        )}
         <StatCard 
           title="Total Sales" 
           value={summary.total_sales_count || 0} 
           color="text-zinc-900 dark:text-white"
-          subtitle="Lifetime transactions"
+          subtitle={user?.role === 'staff' ? "Your lifetime transactions" : "Lifetime transactions"}
         />
       </div>
 
@@ -235,10 +260,12 @@ export default function Dashboard() {
                 <div className="w-2 h-2 rounded-full bg-brand" />
                 <span className="text-[11px] font-medium text-zinc-500">Revenue</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500" />
-                <span className="text-[11px] font-medium text-zinc-500">Expenses</span>
-              </div>
+              {user?.role !== 'staff' && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  <span className="text-[11px] font-medium text-zinc-500">Expenses</span>
+                </div>
+              )}
             </div>
           </div>
           
@@ -281,15 +308,17 @@ export default function Dashboard() {
                     strokeWidth={3} 
                     animationDuration={1500}
                   />
-                  <Area 
-                    type="natural" 
-                    dataKey="expenses" 
-                    stroke="#ef4444" 
-                    fill="transparent" 
-                    strokeWidth={3} 
-                    strokeDasharray="5 5"
-                    animationDuration={1500}
-                  />
+                  {user?.role !== 'staff' && (
+                    <Area 
+                      type="natural" 
+                      dataKey="expenses" 
+                      stroke="#ef4444" 
+                      fill="transparent" 
+                      strokeWidth={3} 
+                      strokeDasharray="5 5"
+                      animationDuration={1500}
+                    />
+                  )}
                 </AreaChart>
               </ResponsiveContainer>
             ) : (

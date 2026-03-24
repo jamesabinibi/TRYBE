@@ -63,8 +63,11 @@ interface SaleHistory {
 }
 
 export default function Customers() {
-  const { fetchWithAuth } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const { settings } = useSettings();
+
+  const canManageCustomers = user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_sales);
+
   const currency = settings?.currency || 'NGN';
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -363,37 +366,39 @@ export default function Customers() {
                 </div>
               </div>
 
-              <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
-                <button 
-                  onClick={() => fetchHistory(customer)}
-                  className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-950 hover:text-white dark:hover:bg-white dark:hover:text-zinc-950 transition-all"
-                >
-                  History
-                </button>
-                <div className="flex gap-2">
+              {canManageCustomers && (
+                <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
                   <button 
-                    onClick={() => {
-                      setSelectedCustomer(customer);
-                      setNewCustomer({
-                        name: customer.name,
-                        phone: customer.phone,
-                        email: customer.email || '',
-                        address: customer.address || ''
-                      });
-                      setIsEditModalOpen(true);
-                    }}
-                    className="p-3 bg-brand/10 text-brand rounded-2xl hover:bg-brand hover:text-white transition-all"
+                    onClick={() => fetchHistory(customer)}
+                    className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-950 hover:text-white dark:hover:bg-white dark:hover:text-zinc-950 transition-all"
                   >
-                    <Edit2 className="w-4 h-4" />
+                    History
                   </button>
-                  <button 
-                    onClick={() => handleDeleteCustomer(customer.id)}
-                    className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        setSelectedCustomer(customer);
+                        setNewCustomer({
+                          name: customer.name,
+                          phone: customer.phone,
+                          email: customer.email || '',
+                          address: customer.address || ''
+                        });
+                        setIsEditModalOpen(true);
+                      }}
+                      className="p-3 bg-brand/10 text-brand rounded-2xl hover:bg-brand hover:text-white transition-all"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteCustomer(customer.id)}
+                      className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </motion.div>
           ))}
           {filteredCustomers.length === 0 && (

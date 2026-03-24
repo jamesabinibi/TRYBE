@@ -26,8 +26,7 @@ import { useAuth, useSettings } from '../App';
 import { cn, formatCurrency } from '../lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { generatePDF as generatePDFUtil } from '../utils/pdfGenerator';
 
 interface InvoiceItem {
   id: string;
@@ -46,8 +45,11 @@ interface Recipient {
 }
 
 const Invoices: React.FC = () => {
-  const { fetchWithAuth } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const { settings } = useSettings();
+
+  const canManageInvoices = user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_sales);
+
   const [products, setProducts] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
@@ -78,19 +80,54 @@ const Invoices: React.FC = () => {
 
   const handleShareWhatsApp = (invoice: any) => {
     const currency = settings?.currency || 'NGN';
-    const items = JSON.parse(invoice.items || '[]');
-    const itemsText = items.map((item: any) => `${item.name} (x${item.quantity}) - ${currency}${Number(item.total).toLocaleString()}`).join('\n');
+    
+    // Handle both JSON string (from local state) and array of objects (from DB)
+    let items = [];
+    if (typeof invoice.items === 'string') {
+      try {
+        items = JSON.parse(invoice.items);
+      } catch (e) {
+        items = [];
+      }
+    } else if (Array.isArray(invoice.sale_items)) {
+      items = invoice.sale_items.map((si: any) => {
+        const baseName = si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || si.product_name_from_table || si.service_name_from_table || 'Item';
+        const variant = si.product_variants ? ` (${si.product_variants.size || ''}${si.product_variants.color ? ' - ' + si.product_variants.color : ''})` : 
+                        (si.size ? ` (${si.size}${si.color ? ' - ' + si.color : ''})` : '');
+        return {
+          name: baseName.includes('(') ? baseName : baseName + variant,
+          quantity: si.quantity || 0,
+          total: si.total_price || (si.quantity * (si.unit_price || si.price_at_sale || 0))
+        };
+      });
+    } else if (Array.isArray(invoice.items)) {
+      items = invoice.items;
+    }
+
+    const maxItems = 10;
+    const displayItems = items.slice(0, maxItems);
+    let itemsText = displayItems.map((item: any) => `${item.name} (x${item.quantity}) - ${currency}${Number(item.total).toLocaleString()}`).join('\n');
+    
+    if (items.length > maxItems) {
+      itemsText += `\n...and ${items.length - maxItems} more item(s)`;
+    }
+    
+    const invoiceUrl = `${window.location.origin}/invoice/${invoice.id}`;
     
     const text = `*INVOICE: ${invoice.invoice_number}*\n\n` +
+                 `*View Invoice Online:*\n${invoiceUrl}\n\n` +
                  `*Business:* ${settings?.business_name || 'Gryndee User'}\n` +
                  `*Date:* ${new Date(invoice.created_at).toLocaleDateString()}\n` +
-                 `*Customer:* ${invoice.customer_name}\n\n` +
+                 `*Customer:* ${invoice.customer_name || invoice.customers?.name || invoice.customer_name_from_table || 'Walk-in Customer'}\n\n` +
                  `*Items:*\n${itemsText}\n\n` +
                  `*Total:* ${currency}${Number(invoice.total_amount).toLocaleString()}\n\n` +
                  `Thank you for your business!`;
     
+    // Use a simpler encoding or check if the URL is properly formatted
     const encodedText = encodeURIComponent(text);
-    const whatsappUrl = `https://wa.me/${invoice.customer_phone?.replace(/\D/g, '') || ''}?text=${encodedText}`;
+    const customerPhone = invoice.customer_phone || invoice.customers?.phone || '';
+    // Use api.whatsapp.com for better compatibility sometimes
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${customerPhone.replace(/\D/g, '')}&text=${encodedText}`;
     window.open(whatsappUrl, '_blank');
   };
 
@@ -368,148 +405,18 @@ const Invoices: React.FC = () => {
     }
 
     setIsGenerating(true);
-    console.log('Starting PDF generation...', { num, date, itemsCount: items.length });
     try {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'letter'
-      });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      
-      // Handle potential gradient brand color
-      let brandColor = settings?.brand_color || '#10b981';
-      if (brandColor.includes('gradient')) {
-        // Extract first hex color from gradient or fallback to default
-        const hexMatch = brandColor.match(/#[a-fA-F0-9]{3,6}/);
-        brandColor = hexMatch ? hexMatch[0] : '#10b981';
-      }
-      
-      // Header
-      doc.setFillColor(brandColor);
-      doc.rect(0, 0, pageWidth, 40, 'F');
-      
-      // Logo handling
-      if (settings?.logo_url) {
-        try {
-          const img = new Image();
-          img.src = settings.logo_url;
-          img.crossOrigin = "anonymous";
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            // Timeout after 3 seconds
-            setTimeout(() => reject(new Error('Logo load timeout')), 3000);
-          });
-          doc.addImage(img, 'PNG', 15, 8, 24, 24);
-        } catch (e) {
-          console.warn('Could not add logo to PDF:', e);
-        }
-      }
-
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(24);
-      doc.setFont('helvetica', 'bold');
-      doc.text(settings?.business_name || 'StockFlow', 45, 25);
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text('INVOICE', pageWidth - 15, 25, { align: 'right' });
-      doc.text(`#${num || '---'}`, pageWidth - 15, 32, { align: 'right' });
-
-      // Business Info & Recipient Info
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('From:', 15, 55);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      let fromY = 62;
-      doc.text(settings?.business_name || 'StockFlow', 15, fromY);
-      fromY += 5;
-      if (settings?.email) {
-        doc.text(`Email: ${settings.email}`, 15, fromY);
-        fromY += 5;
-      }
-      if (settings?.phone_number) {
-        doc.text(`Phone: ${settings.phone_number}`, 15, fromY);
-        fromY += 5;
-      }
-      if (settings?.address) {
-        const splitFromAddress = doc.splitTextToSize(settings.address, 75);
-        doc.text(splitFromAddress, 15, fromY);
-        fromY += (splitFromAddress.length * 5);
-      }
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('Bill To:', 120, 55);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      let toY = 62;
-      doc.text(rec.name || '---', 120, toY);
-      toY += 5;
-      if (rec.email) {
-        doc.text(rec.email, 120, toY);
-        toY += 5;
-      }
-      if (rec.phone) {
-        doc.text(rec.phone, 120, toY);
-        toY += 5;
-      }
-      if (rec.address) {
-        const splitAddress = doc.splitTextToSize(rec.address, 75);
-        doc.text(splitAddress, 120, toY);
-        toY += (splitAddress.length * 5);
-      }
-
-      // Invoice Details
-      doc.setFont('helvetica', 'bold');
-      doc.text('Date:', 15, 85);
-      doc.setFont('helvetica', 'normal');
-      doc.text(date || new Date().toISOString().split('T')[0], 35, 85);
-
-      // Table
-      const tableData = items.map((item: any) => [
-        item.name || 'Item',
-        item.type?.toUpperCase() || 'PRODUCT',
-        (item.quantity || 0).toString(),
-        `${settings?.currency || '₦'}${Number(item.price || 0).toLocaleString()}`,
-        `${settings?.currency || '₦'}${Number(item.total || 0).toLocaleString()}`
-      ]);
-
-      const subtotal = items.reduce((sum: number, item: any) => sum + (Number(item.total) || 0), 0);
-      const discountAmount = (subtotal * (Number(disc) || 0)) / 100;
-      const vatAmount = settings?.vat_enabled ? (subtotal - discountAmount) * 0.075 : 0;
-      const total = subtotal - discountAmount + vatAmount;
-
-      autoTable(doc, {
-        startY: 100,
-        head: [['Description', 'Type', 'Qty', 'Unit Price', 'Amount']],
-        body: tableData,
-        headStyles: { fillColor: brandColor, textColor: 255 },
-        foot: [
-          ['', '', '', 'Subtotal', `${settings?.currency || '₦'}${subtotal.toLocaleString()}`],
-          ['', '', '', `Discount (${disc || 0}%)`, `-${settings?.currency || '₦'}${discountAmount.toLocaleString()}`],
-          ['', '', '', 'VAT (7.5%)', `${settings?.currency || '₦'}${vatAmount.toLocaleString()}`],
-          ['', '', '', 'Total', `${settings?.currency || '₦'}${total.toLocaleString()}`]
-        ],
-        footStyles: { fillColor: [245, 245, 245], textColor: 0, fontStyle: 'bold' }
-      });
-
-      // Footer
-      const finalY = (doc as any).lastAutoTable.finalY + 20;
-      doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text('Thank you for your business!', pageWidth / 2, finalY, { align: 'center' });
-
-      const safeNum = (num || 'INV-000000').toString().replace(/[^a-z0-9]/gi, '-');
-      const fileName = `invoice-${safeNum}.pdf`;
-      doc.save(fileName);
+      await generatePDFUtil({
+        items,
+        recipient: rec,
+        invoiceNumber: num,
+        invoiceDate: date,
+        discount: disc
+      }, settings);
       toast.success('Invoice generated successfully');
     } catch (error) {
-      console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDF. Check console for details.');
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF');
     } finally {
       setIsGenerating(false);
     }
@@ -552,7 +459,7 @@ const Invoices: React.FC = () => {
             </button>
           </div>
 
-          {activeTab === 'create' && (
+          {activeTab === 'create' && canManageInvoices && (
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={resetForm}

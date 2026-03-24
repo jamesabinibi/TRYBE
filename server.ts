@@ -378,9 +378,12 @@ async function initAwsDb() {
         DO $$ 
         BEGIN 
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='customers' AND column_name='loyalty_points') THEN
-            ALTER TABLE customers ADD COLUMN loyalty_points INTEGER DEFAULT 0;
-          END IF;
-        END $$;
+          ALTER TABLE customers ADD COLUMN loyalty_points INTEGER DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='permissions') THEN
+          ALTER TABLE users ADD COLUMN permissions JSONB DEFAULT '{}'::jsonb;
+        END IF;
+      END $$;
 
         CREATE TABLE IF NOT EXISTS expenses (
           id SERIAL PRIMARY KEY,
@@ -774,7 +777,7 @@ async function createServer() {
       // Try RDS first
       if (process.env.AWS_DB_PASSWORD && !isNaN(Number(userId))) {
         console.log(`[AUTH] Querying RDS for user ID: ${userId}`);
-        const { rows } = await pool.query('SELECT id, account_id, role FROM users WHERE id = $1', [userId]);
+        const { rows } = await pool.query('SELECT id, account_id, role, permissions FROM users WHERE id = $1', [userId]);
         if (rows.length > 0) {
           console.log(`[AUTH] User ${userId} found in RDS. Role: ${rows[0].role}`);
           return rows[0];
@@ -784,7 +787,7 @@ async function createServer() {
 
       // Fallback to Supabase
       if (supabase) {
-        let { data: user, error } = await supabase.from('users').select('id, account_id, role').eq('id', userId).single();
+        let { data: user, error } = await supabase.from('users').select('id, account_id, role, permissions').eq('id', userId).single();
         if (error || !user) {
           if (error?.code === 'PGRST116' || !user) {
             console.log(`[AUTH] User ID ${userId} not found in users table.`);
@@ -1469,6 +1472,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
+      
+      if (!hasPermission(userInfo, 'can_view_expenses')) return res.status(403).json({ error: "Forbidden" });
 
       if (process.env.AWS_DB_PASSWORD) {
         const { rows } = await pool.query('SELECT * FROM expenses WHERE account_id = $1 ORDER BY date DESC', [userInfo.account_id]);
@@ -1495,7 +1500,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post("/api/expenses", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo || !hasPermission(userInfo, 'can_manage_expenses')) return res.status(403).json({ error: "Forbidden" });
 
       const { category, amount, description, date } = req.body;
       const finalDate = date || new Date().toISOString();
@@ -1560,7 +1565,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo || !hasPermission(userInfo, 'can_manage_expenses')) return res.status(403).json({ error: "Forbidden" });
 
       await pool.query('DELETE FROM expenses WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
       return res.json({ success: true });
@@ -2629,7 +2634,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT id, username, email, role, name FROM users WHERE account_id = $1', [userInfo.account_id]);
+        const { rows } = await pool.query('SELECT id, username, email, role, name, permissions FROM users WHERE account_id = $1', [userInfo.account_id]);
         return res.json(rows || []);
       }
 
@@ -2637,7 +2642,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       // Try selecting specific columns first
       let { data, error } = await supabase
         .from('users')
-        .select('id, username, email, role, name')
+        .select('id, username, email, role, name, permissions')
         .eq('account_id', userInfo.account_id);
       
       if (error) {
@@ -2656,7 +2661,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post(["/api/users", "/api/users/"], async (req, res) => {
-    const { username, password, name, role, email } = req.body;
+    const { username, password, name, role, email, permissions } = req.body;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'super_admin' && userInfo.role !== 'owner')) return res.status(403).json({ error: "Forbidden" });
@@ -2666,8 +2671,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (process.env.AWS_DB_PASSWORD) {
         const { rows } = await pool.query(
-          'INSERT INTO users (account_id, username, password, name, role, email) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, email, role, name',
-          [userInfo.account_id, username, hashedPassword, name, role, email]
+          'INSERT INTO users (account_id, username, password, name, role, email, permissions) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, username, email, role, name, permissions',
+          [userInfo.account_id, username, hashedPassword, name, role, email, JSON.stringify(permissions || {})]
         );
         return res.json(rows[0]);
       }
@@ -2679,9 +2684,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           account_id: userInfo.account_id,
           username, 
           password: hashedPassword, 
-          name, role, email 
+          name, role, email,
+          permissions: permissions || {}
         }])
-        .select('id, username, email, role, name')
+        .select('id, username, email, role, name, permissions')
         .single();
       if (error) throw error;
       res.json(data);
@@ -2692,12 +2698,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   app.put(["/api/users/:id", "/api/users/:id/"], async (req, res) => {
     const { id } = req.params;
-    const { username, password, name, role, email } = req.body;
+    const { username, password, name, role, email, permissions } = req.body;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'super_admin' && userInfo.role !== 'owner')) return res.status(403).json({ error: "Forbidden" });
 
       const updateData: any = { username, name, role, email };
+      if (permissions) updateData.permissions = permissions;
       if (password) {
         updateData.password = await bcrypt.hash(password, 10);
       }
@@ -2705,12 +2712,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (process.env.AWS_DB_PASSWORD) {
         let query = 'UPDATE users SET username = $1, name = $2, role = $3, email = $4';
         const params = [username, name, role, email];
+        if (permissions) {
+          params.push(JSON.stringify(permissions));
+          query += `, permissions = $${params.length}`;
+        }
         if (password) {
           params.push(updateData.password);
           query += `, password = $${params.length}`;
         }
         params.push(id, userInfo.account_id);
-        query += ` WHERE id = $${params.length - 1} AND account_id = $${params.length} RETURNING id, username, email, role, name`;
+        query += ` WHERE id = $${params.length - 1} AND account_id = $${params.length} RETURNING id, username, email, role, name, permissions`;
         
         const { rows } = await pool.query(query, params);
         return res.json(rows[0]);
@@ -2722,7 +2733,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .update(updateData)
         .eq('id', id)
         .eq('account_id', userInfo.account_id)
-        .select('id, username, email, role, name')
+        .select('id, username, email, role, name, permissions')
         .single();
       if (error) throw error;
       res.json(data);
@@ -2756,6 +2767,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   // Products
+  const hasPermission = (userInfo: any, permission: string) => {
+    if (userInfo.role === 'admin' || userInfo.role === 'super_admin' || userInfo.role === 'owner') return true;
+    if (!userInfo.permissions) return false;
+    const perms = typeof userInfo.permissions === 'string' ? JSON.parse(userInfo.permissions) : userInfo.permissions;
+    return !!perms[permission];
+  };
+
   app.get("/api/products", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
@@ -2835,7 +2853,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post("/api/products", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo || !hasPermission(userInfo, 'can_manage_products')) return res.status(403).json({ error: "Forbidden" });
 
       const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
            // Try RDS first
@@ -2925,7 +2943,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+      if (!userInfo || !hasPermission(userInfo, 'can_manage_products')) return res.status(403).json({ error: "Forbidden" });
 
       if (process.env.AWS_DB_PASSWORD) {
         const client = await pool.connect();
@@ -3059,7 +3077,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo || !hasPermission(userInfo, 'can_manage_products')) return res.status(403).json({ error: "Forbidden" });
 
       if (process.env.AWS_DB_PASSWORD) {
         const client = await pool.connect();
@@ -3917,6 +3935,71 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.get("/api/public/invoice/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: sales } = await pool.query(`
+          SELECT s.*, c.name as customer_name_from_table, u.name as staff_name 
+          FROM sales s 
+          LEFT JOIN customers c ON s.customer_id = c.id 
+          LEFT JOIN users u ON s.staff_id = u.id 
+          WHERE s.id = $1
+        `, [id]);
+
+        if (sales.length === 0) return res.status(404).json({ error: "Invoice not found" });
+        const sale = sales[0];
+
+        const { rows: items } = await pool.query(`
+          SELECT si.*, pv.size, pv.color, p.name as product_name_from_table, sv.name as service_name_from_table
+          FROM sale_items si
+          LEFT JOIN product_variants pv ON si.variant_id = pv.id
+          LEFT JOIN products p ON pv.product_id = p.id
+          LEFT JOIN services sv ON si.service_id = sv.id
+          WHERE si.sale_id = $1
+        `, [id]);
+
+        sale.sale_items = items;
+
+        const { rows: settings } = await pool.query('SELECT * FROM settings WHERE account_id = $1', [sale.account_id]);
+        sale.settings = settings[0] || {};
+
+        return res.json(sale);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
+      
+      const { data: sale, error } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          customers ( name, email, phone, address ),
+          users ( name ),
+          sale_items (
+            *,
+            product_variants ( size, color, products ( name ) ),
+            services ( name )
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error || !sale) return res.status(404).json({ error: "Invoice not found" });
+
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('account_id', sale.account_id)
+        .single();
+
+      sale.settings = settings || {};
+
+      res.json(sale);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get("/api/sales", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
@@ -3927,14 +4010,24 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (process.env.AWS_DB_PASSWORD) {
         console.log(`[SALES] Fetching sales from AWS RDS for account: ${userInfo.account_id}`);
-        const { rows: sales } = await pool.query(`
+        
+        let query = `
           SELECT s.*, c.name as customer_name_from_table, u.name as staff_name 
           FROM sales s 
           LEFT JOIN customers c ON s.customer_id = c.id 
           LEFT JOIN users u ON s.staff_id = u.id 
           WHERE s.account_id = $1 
-          ORDER BY s.created_at DESC
-        `, [userInfo.account_id]);
+        `;
+        const params: any[] = [userInfo.account_id];
+
+        if (!hasPermission(userInfo, 'can_view_account_data')) {
+          query += ` AND s.staff_id = $2 `;
+          params.push(userInfo.id);
+        }
+
+        query += ` ORDER BY s.created_at DESC `;
+
+        const { rows: sales } = await pool.query(query, params);
 
         if (sales.length > 0) {
           const saleIds = sales.map(s => s.id);
@@ -3964,7 +4057,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (!supabase) return res.status(503).json({ error: "Database not available" });
       console.log(`[SALES] Fetching sales for account: ${userInfo.account_id}`);
-      let { data, error } = await supabase
+      let query = supabase
         .from('sales')
         .select(`
           *,
@@ -3979,8 +4072,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             services!service_id (name)
           )
         `)
-        .eq('account_id', userInfo.account_id)
-        .order('created_at', { ascending: false });
+        .eq('account_id', userInfo.account_id);
+
+      if (!hasPermission(userInfo, 'can_view_account_data')) {
+        query = query.eq('staff_id', userInfo.id);
+      }
+
+      let { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         if (error.message?.includes('relation "sales" does not exist') || error.code === '42P01') {
@@ -4344,32 +4442,45 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       
       if (process.env.AWS_DB_PASSWORD) {
         const { rows: productsCount } = await pool.query('SELECT COUNT(*) FROM products WHERE account_id = $1', [userInfo.account_id]);
-        const { rows: salesCount } = await pool.query('SELECT COUNT(*) FROM sales WHERE account_id = $1', [userInfo.account_id]);
+        
+        let salesCountQuery = 'SELECT COUNT(*) FROM sales WHERE account_id = $1';
+        let todaySalesQuery = 'SELECT total_amount, total_profit FROM sales WHERE account_id = $1 AND created_at::date = $2';
+        const salesParams: any[] = [userInfo.account_id];
+        const todayParams: any[] = [userInfo.account_id, today];
+
+        if (hasPermission(userInfo, 'can_view_account_data')) {
+          salesCountQuery += ' AND staff_id = $2';
+          todaySalesQuery += ' AND staff_id = $3';
+          salesParams.push(userInfo.id);
+          todayParams.push(userInfo.id);
+        }
+
+        const { rows: salesCount } = await pool.query(salesCountQuery, salesParams);
         const { rows: variants } = await pool.query('SELECT quantity, low_stock_threshold FROM product_variants WHERE account_id = $1', [userInfo.account_id]);
         
         const totalProducts = parseInt(productsCount[0].count);
         const totalSalesCount = parseInt(salesCount[0].count);
         const totalStock = variants?.reduce((acc, v) => acc + (v.quantity || 0), 0) || 0;
-        const lowStockCount = variants?.filter(v => v.quantity <= (v.low_stock_threshold || 0)).length || 0;
+        const low_stock_count = variants?.filter(v => v.quantity <= (v.low_stock_threshold || 0)).length || 0;
 
-        const { rows: todaySalesData } = await pool.query(
-          'SELECT total_amount, total_profit FROM sales WHERE account_id = $1 AND created_at::date = $2',
-          [userInfo.account_id, today]
-        );
+        const { rows: todaySalesData } = await pool.query(todaySalesQuery, todayParams);
         const todaySales = todaySalesData?.reduce((acc, s) => acc + (parseFloat(s.total_amount) || 0), 0) || 0;
         const todayProfit = todaySalesData?.reduce((acc, s) => acc + (parseFloat(s.total_profit) || 0), 0) || 0;
 
-        const { rows: todayExpensesData } = await pool.query(
-          'SELECT amount FROM expenses WHERE account_id = $1 AND date = $2',
-          [userInfo.account_id, today]
-        );
-        const todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0) || 0;
+        let todayExpenses = 0;
+        if (hasPermission(userInfo, 'can_view_expenses')) {
+          const { rows: todayExpensesData } = await pool.query(
+            'SELECT amount FROM expenses WHERE account_id = $1 AND date = $2',
+            [userInfo.account_id, today]
+          );
+          todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0) || 0;
+        }
 
         return res.json({
           total_products: totalProducts,
           total_sales_count: totalSalesCount,
           total_stock: totalStock,
-          low_stock_count: lowStockCount,
+          low_stock_count: low_stock_count,
           today_sales: todaySales,
           today_profit: todayProfit,
           today_expenses: todayExpenses
@@ -4379,27 +4490,35 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!supabase) return res.status(503).json({ error: "Database not available" });
 
       const { count: totalProducts } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('account_id', userInfo.account_id);
-      const { count: totalSalesCount } = await supabase.from('sales').select('*', { count: 'exact', head: true }).eq('account_id', userInfo.account_id);
+      
+      let salesCountQuery = supabase.from('sales').select('*', { count: 'exact', head: true }).eq('account_id', userInfo.account_id);
+      let todaySalesQuery = supabase.from('sales').select('total_amount, total_profit').eq('account_id', userInfo.account_id).gte('created_at', today);
+
+      if (!hasPermission(userInfo, 'can_view_account_data')) {
+        salesCountQuery = salesCountQuery.eq('staff_id', userInfo.id);
+        todaySalesQuery = todaySalesQuery.eq('staff_id', userInfo.id);
+      }
+
+      const { count: totalSalesCount } = await salesCountQuery;
       
       const { data: variants } = await supabase.from('product_variants').select('quantity, low_stock_threshold').eq('account_id', userInfo.account_id);
       const totalStock = variants?.reduce((acc, v) => acc + (v.quantity || 0), 0) || 0;
       const lowStockCount = variants?.filter(v => v.quantity <= (v.low_stock_threshold || 0)).length || 0;
 
-      const { data: todaySalesData } = await supabase
-        .from('sales')
-        .select('total_amount, total_profit')
-        .eq('account_id', userInfo.account_id)
-        .gte('created_at', today);
+      const { data: todaySalesData } = await todaySalesQuery;
 
       const todaySales = todaySalesData?.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0) || 0;
       const todayProfit = todaySalesData?.reduce((acc, s) => acc + (Number(s.total_profit) || 0), 0) || 0;
 
-      const { data: todayExpensesData } = await supabase
-        .from('expenses')
-        .select('amount')
-        .eq('account_id', userInfo.account_id)
-        .gte('date', today);
-      const todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (Number(e.amount) || 0), 0) || 0;
+      let todayExpenses = 0;
+      if (hasPermission(userInfo, 'can_view_expenses')) {
+        const { data: todayExpensesData } = await supabase
+          .from('expenses')
+          .select('amount')
+          .eq('account_id', userInfo.account_id)
+          .gte('date', today);
+        todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (Number(e.amount) || 0), 0) || 0;
+      }
 
       res.json({
         version: "2.5.2",
@@ -4421,19 +4540,33 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      if (!hasPermission(userInfo, 'can_view_dashboard')) return res.status(403).json({ error: "Forbidden" });
+
       if (!process.env.AWS_DB_PASSWORD) {
         return res.status(503).json({ error: "Database not available (AWS RDS not configured)" });
       }
 
+      let salesQuery = 'SELECT created_at, total_amount FROM sales WHERE account_id = $1';
+      const salesParams: any[] = [userInfo.account_id];
+
+      if (!hasPermission(userInfo, 'can_view_account_data')) {
+        salesQuery += ' AND staff_id = $2';
+        salesParams.push(userInfo.id);
+      }
+
       const { rows: sales } = await pool.query(
-        'SELECT created_at, total_amount FROM sales WHERE account_id = $1 ORDER BY created_at ASC',
-        [userInfo.account_id]
+        salesQuery + ' ORDER BY created_at ASC',
+        salesParams
       );
 
-      const { rows: expenses } = await pool.query(
-        'SELECT date, amount FROM expenses WHERE account_id = $1 ORDER BY date ASC',
-        [userInfo.account_id]
-      );
+      let expenses: any[] = [];
+      if (hasPermission(userInfo, 'can_view_expenses')) {
+        const { rows: expensesRows } = await pool.query(
+          'SELECT date, amount FROM expenses WHERE account_id = $1 ORDER BY date ASC',
+          [userInfo.account_id]
+        );
+        expenses = expensesRows;
+      }
 
       const trendsMap = new Map();
       
@@ -4481,14 +4614,26 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      if (!hasPermission(userInfo, 'can_view_dashboard')) return res.status(403).json({ error: "Forbidden" });
+
       let data: any[] = [];
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query(`
+        let query = `
           SELECT si.quantity, si.unit_price, si.total_price, si.product_name, si.service_name
           FROM sale_items si
+          JOIN sales s ON si.sale_id = s.id
           WHERE si.account_id = $1
-          LIMIT 200
-        `, [userInfo.account_id]);
+        `;
+        const params: any[] = [userInfo.account_id];
+
+        if (!hasPermission(userInfo, 'can_view_account_data')) {
+          query += ' AND s.staff_id = $2';
+          params.push(userInfo.id);
+        }
+
+        query += ' LIMIT 200';
+
+        const { rows } = await pool.query(query, params);
         data = rows.map(item => ({
           ...item,
           product_variants: {
@@ -4498,7 +4643,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           }
         }));
       } else if (supabase) {
-        const { data: supabaseData, error } = await supabase
+        let query = supabase
           .from('sale_items')
           .select(`
             quantity, 
@@ -4506,12 +4651,18 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             total_price,
             product_name,
             service_name,
+            sales!inner(staff_id),
             product_variants(
               products(name)
             )
           `)
-          .eq('account_id', userInfo.account_id)
-          .limit(200);
+          .eq('account_id', userInfo.account_id);
+
+        if (!hasPermission(userInfo, 'can_view_account_data')) {
+          query = query.eq('sales.staff_id', userInfo.id);
+        }
+
+        const { data: supabaseData, error } = await query.limit(200);
         
         if (error) throw error;
         data = supabaseData || [];
@@ -4553,6 +4704,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+      
+      if (userInfo.role === 'staff') return res.status(403).json({ error: "Forbidden" });
 
       let data: any[] = [];
       if (process.env.AWS_DB_PASSWORD) {
@@ -4590,27 +4743,42 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       let users: any[] = [];
 
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows: salesRows } = await pool.query(
-          'SELECT staff_id, total_amount, total_profit FROM sales WHERE account_id = $1',
-          [userInfo.account_id]
-        );
+        let salesQuery = 'SELECT staff_id, total_amount, total_profit FROM sales WHERE account_id = $1';
+        let usersQuery = 'SELECT id, name FROM users WHERE account_id = $1';
+        const params: any[] = [userInfo.account_id];
+
+        if (userInfo.role === 'staff') {
+          salesQuery += ' AND staff_id = $2';
+          usersQuery += ' AND id = $2';
+          params.push(userInfo.id);
+        }
+
+        const { rows: salesRows } = await pool.query(salesQuery, params);
         data = salesRows;
 
-        const { rows: usersRows } = await pool.query(
-          'SELECT id, name FROM users WHERE account_id = $1',
-          [userInfo.account_id]
-        );
+        const { rows: usersRows } = await pool.query(usersQuery, params);
         users = usersRows;
       } else if (supabase) {
-        const { data: supabaseData, error } = await supabase
+        let salesQuery = supabase
           .from('sales')
           .select('staff_id, total_amount, total_profit')
           .eq('account_id', userInfo.account_id);
         
+        let usersQuery = supabase
+          .from('users')
+          .select('id, name')
+          .eq('account_id', userInfo.account_id);
+
+        if (userInfo.role === 'staff') {
+          salesQuery = salesQuery.eq('staff_id', userInfo.id);
+          usersQuery = usersQuery.eq('id', userInfo.id);
+        }
+
+        const { data: supabaseData, error } = await salesQuery;
         if (error) throw error;
         data = supabaseData || [];
 
-        const { data: supabaseUsers } = await supabase.from('users').select('id, name').eq('account_id', userInfo.account_id);
+        const { data: supabaseUsers } = await usersQuery;
         users = supabaseUsers || [];
       } else {
         return res.status(503).json({ error: "Database not available" });

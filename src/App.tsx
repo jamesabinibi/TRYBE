@@ -40,6 +40,7 @@ import TaxReport from './pages/TaxReport';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
+import PublicInvoice from './pages/PublicInvoice';
 import { cn } from './lib/utils';
 import NotificationCenter from './components/NotificationCenter';
 import Walkthrough from './components/Walkthrough';
@@ -110,15 +111,15 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Brain, label: 'AI Intelligence', path: '/ai-advisor' },
-    { icon: Wallet, label: 'Finance', path: '/finance' },
+    ...(user?.role !== 'staff' ? [{ icon: Brain, label: 'AI Intelligence', path: '/ai-advisor' }] : []),
+    ...(user?.role !== 'staff' ? [{ icon: Wallet, label: 'Finance', path: '/finance' }] : []),
     { icon: Package, label: 'Inventory', path: '/products' },
     { icon: ShoppingCart, label: 'Sales', path: '/sales' },
-    { icon: FileText, label: 'Tax Report', path: '/tax' },
+    ...(user?.role !== 'staff' ? [{ icon: FileText, label: 'Tax Report', path: '/tax' }] : []),
     { icon: FileText, label: 'Invoices', path: '/invoices' },
     { icon: Users, label: 'Customers', path: '/customers' },
     ...(user?.role === 'super_admin' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
-    { icon: SettingsIcon, label: 'Settings', path: '/settings' },
+    ...(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data) ? [{ icon: SettingsIcon, label: 'Settings', path: '/settings' }] : []),
   ];
 
   const brandColor = settings?.brand_color || '#10b981';
@@ -460,6 +461,7 @@ export default function App() {
                 <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
                 <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
                 <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
+                <Route path="/invoice/:id" element={<PublicInvoice />} />
                 <Route 
                   path="/*" 
                   element={
@@ -467,15 +469,15 @@ export default function App() {
                       <Layout>
                         <Routes>
                           <Route path="/" element={user?.role === 'super_admin' ? <Navigate to="/super-admin" /> : <Dashboard />} />
-                          <Route path="/ai-advisor" element={<AIAdvisor />} />
-                          <Route path="/finance" element={<Finance />} />
+                          <Route path="/ai-advisor" element={user?.role === 'staff' ? <Navigate to="/" /> : <AIAdvisor />} />
+                          <Route path="/finance" element={user?.role === 'staff' ? <Navigate to="/" /> : <Finance />} />
                           <Route path="/products" element={<Products />} />
                           <Route path="/sales" element={<Sales />} />
-                          <Route path="/tax" element={<TaxReport />} />
+                          <Route path="/tax" element={user?.role === 'staff' ? <Navigate to="/" /> : <TaxReport />} />
                           <Route path="/invoices" element={<Invoices />} />
                           <Route path="/customers" element={<Customers />} />
                           <Route path="/super-admin" element={<SuperAdmin />} />
-                          <Route path="/settings" element={<Settings />} />
+                          <Route path="/settings" element={(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data)) ? <Settings /> : <Navigate to="/" />} />
                           <Route path="*" element={<Navigate to="/" />} />
                         </Routes>
                       </Layout>

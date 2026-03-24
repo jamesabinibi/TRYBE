@@ -11,7 +11,8 @@ import {
   TrendingDown,
   X,
   Loader2,
-  Sparkles
+  Sparkles,
+  Shield
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
@@ -27,8 +28,23 @@ interface Expense {
 }
 
 export default function Expenses({ hideHeader = false }: { hideHeader?: boolean }) {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
   const { settings } = useSettings();
+
+  if (user?.role === 'staff' && user?.permissions && !user.permissions.can_view_expenses) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <div className="p-4 bg-zinc-100 dark:bg-zinc-800 rounded-full">
+          <Shield className="w-12 h-12 text-zinc-400" />
+        </div>
+        <h2 className="text-xl font-black text-zinc-900 dark:text-white uppercase tracking-widest">Access Denied</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 font-medium text-center max-w-md">
+          You do not have permission to view expenses. Please contact your administrator.
+        </p>
+      </div>
+    );
+  }
+
   const currency = settings?.currency || 'NGN';
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -266,25 +282,29 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
             <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Business Expenses</h1>
             <p className="text-zinc-600 dark:text-zinc-400 font-medium">Track your operational costs and overheads</p>
           </div>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            Record Expense
-          </button>
+          {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_expenses)) && (
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              Record Expense
+            </button>
+          )}
         </div>
       )}
       
       {hideHeader && (
         <div className="flex justify-end mb-4">
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            Record Expense
-          </button>
+          {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_expenses)) && (
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              Record Expense
+            </button>
+          )}
         </div>
       )}
 
