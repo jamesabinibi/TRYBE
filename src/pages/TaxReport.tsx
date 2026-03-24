@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth, useSettings } from '../App';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
+import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { TotalDisplay } from '../components/TotalDisplay';
 import { toast } from 'sonner';
 
@@ -238,7 +239,9 @@ const TaxReport = () => {
                       <div className="text-sm font-bold text-zinc-950 dark:text-white">Total Turnover</div>
                       <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">All Sales Revenue</div>
                     </div>
-                    <div className="text-lg font-black text-zinc-950 dark:text-white">{formatCurrency(taxData.turnover, settings?.currency)}</div>
+                    <div className={cn(NUMBER_STYLE, "text-lg text-zinc-950 dark:text-white")}>
+                      <CurrencyDisplay amount={taxData.turnover} currencyCode={settings?.currency} />
+                    </div>
                   </div>
                   
                   <div className="flex justify-between items-center">
@@ -246,7 +249,9 @@ const TaxReport = () => {
                       <div className="text-sm font-bold text-zinc-950 dark:text-white">Total Expenses</div>
                       <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Operational Costs</div>
                     </div>
-                    <div className="text-lg font-black text-red-600 dark:text-red-400">-{formatCurrency(taxData.total_expenses, settings?.currency)}</div>
+                    <div className={cn(NUMBER_STYLE, "text-lg text-red-600 dark:text-red-400")}>
+                      -<CurrencyDisplay amount={taxData.total_expenses} currencyCode={settings?.currency} />
+                    </div>
                   </div>
 
                   <div className="flex justify-between items-center">
@@ -254,7 +259,9 @@ const TaxReport = () => {
                       <div className="text-sm font-bold text-zinc-950 dark:text-white">Other Inflows</div>
                       <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Loans, Investments, etc.</div>
                     </div>
-                    <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">+{formatCurrency(taxData.total_inflows, settings?.currency)}</div>
+                    <div className={cn(NUMBER_STYLE, "text-lg text-emerald-600 dark:text-emerald-400")}>
+                      +<CurrencyDisplay amount={taxData.total_inflows} currencyCode={settings?.currency} />
+                    </div>
                   </div>
 
                   <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
@@ -263,10 +270,11 @@ const TaxReport = () => {
                       <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Real Money in Bank</div>
                     </div>
                     <div className={cn(
-                      "text-2xl font-black",
+                      NUMBER_STYLE,
+                      "text-2xl",
                       taxData.net_cash_flow >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
                     )}>
-                      {formatCurrency(taxData.net_cash_flow, settings?.currency)}
+                      <CurrencyDisplay amount={taxData.net_cash_flow} currencyCode={settings?.currency} />
                     </div>
                   </div>
                 </div>

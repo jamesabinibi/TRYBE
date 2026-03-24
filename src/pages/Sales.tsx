@@ -34,7 +34,7 @@ import {
 import { Product, Variant, Sale, Customer, Service } from '../types';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { NumberDisplay } from '../components/NumberDisplay';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
 import { TotalDisplay } from '../components/TotalDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
@@ -1248,10 +1248,10 @@ export default function Sales() {
                               {sale.payment_method}
                             </span>
                           </td>
-                          <td className="px-8 py-5 text-sm font-mono font-bold text-right tracking-tighter">
+                          <td className={cn(NUMBER_STYLE, "px-8 py-5 text-sm text-right tracking-tighter")}>
                             {formatCurrency(sale.total_amount, currency)}
                           </td>
-                          <td className="px-8 py-5 text-sm font-mono font-bold text-brand text-right tracking-tighter group-hover:text-white dark:group-hover:text-brand">
+                          <td className={cn(NUMBER_STYLE, "px-8 py-5 text-sm text-brand text-right tracking-tighter group-hover:text-white dark:group-hover:text-brand")}>
                             {formatCurrency(sale.total_profit, currency)}
                           </td>
                           <td className="px-8 py-5 text-right">
@@ -1368,7 +1368,7 @@ export default function Sales() {
                 <div className="p-10 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/30">
                   <div>
                     <h2 className="text-3xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">Invoice Preview</h2>
-                    <p className="text-zinc-400 dark:text-zinc-500 font-mono text-sm mt-1 tracking-widest uppercase">NO. {selectedSaleForPreview.invoice_number}</p>
+                    <p className={cn(NUMBER_STYLE, "text-zinc-400 dark:text-zinc-500 text-sm mt-1 tracking-widest uppercase")}>NO. {selectedSaleForPreview.invoice_number}</p>
                   </div>
                   <div className="flex items-center gap-4">
                     <button
@@ -1464,14 +1464,14 @@ export default function Sales() {
                                 <p className="text-xs text-zinc-400 mt-1 font-medium">{item.service_id ? 'Service' : 'Product'}</p>
                               </td>
                               <td className="py-8 px-4 text-center">
-                                <span className="font-mono text-sm font-bold text-zinc-950 dark:text-white">
+                                <span className={cn(NUMBER_STYLE, "text-sm text-zinc-950 dark:text-white")}>
                                   {item.quantity}
                                 </span>
                               </td>
-                              <td className="py-8 px-4 text-right font-mono text-sm text-zinc-500 dark:text-zinc-400">
+                              <td className={cn(NUMBER_STYLE, "py-8 px-4 text-right text-sm text-zinc-500 dark:text-zinc-400")}>
                                 {formatCurrency(item.unit_price || 0, currency)}
                               </td>
-                              <td className="py-8 pl-4 text-right font-mono font-bold text-zinc-950 dark:text-white text-base">
+                              <td className={cn(NUMBER_STYLE, "py-8 pl-4 text-right text-zinc-950 dark:text-white text-base")}>
                                 {formatCurrency(item.total_price || 0, currency)}
                               </td>
                             </tr>
@@ -1493,20 +1493,20 @@ export default function Sales() {
                     <div className="w-full sm:w-80 space-y-4">
                       <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                         <span className="text-[10px] font-black uppercase tracking-[0.2em]">Subtotal</span>
-                        <span className="font-mono font-bold">{formatCurrency((selectedSaleForPreview.total_amount || 0) + (selectedSaleForPreview.discount_amount || 0) - (selectedSaleForPreview.vat_amount || 0), currency)}</span>
+                        <span className={NUMBER_STYLE}>{formatCurrency((selectedSaleForPreview.total_amount || 0) + (selectedSaleForPreview.discount_amount || 0) - (selectedSaleForPreview.vat_amount || 0), currency)}</span>
                       </div>
                       
                       {selectedSaleForPreview.discount_amount > 0 && (
                         <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Discount ({selectedSaleForPreview.discount_percentage}%)</span>
-                          <span className="font-mono font-bold">-{formatCurrency(selectedSaleForPreview.discount_amount, currency)}</span>
+                          <span className={NUMBER_STYLE}>-{formatCurrency(selectedSaleForPreview.discount_amount, currency)}</span>
                         </div>
                       )}
 
                       {selectedSaleForPreview.vat_amount > 0 && (
                         <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">VAT (7.5%)</span>
-                          <span className="font-mono font-bold">{formatCurrency(selectedSaleForPreview.vat_amount, currency)}</span>
+                          <span className={NUMBER_STYLE}>{formatCurrency(selectedSaleForPreview.vat_amount, currency)}</span>
                         </div>
                       )}
 

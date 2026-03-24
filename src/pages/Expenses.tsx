@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
 import { TotalDisplay } from '../components/TotalDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -320,7 +320,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
           </div>
           <TotalDisplay 
             label="Total Expenses" 
-            value={totalExpenses} 
+            value={totalExpenses.toLocaleString()} 
             valueClassName="text-4xl font-display font-bold text-zinc-900 dark:text-white tracking-tight"
           />
         </motion.div>
@@ -376,7 +376,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                 <tr key={expense.id} className="flex flex-col sm:table-row hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 transition-all group cursor-pointer p-4 sm:p-0">
                   <td className="px-4 sm:px-8 py-2 sm:py-5 flex justify-between items-center sm:table-cell">
                     <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</span>
-                    <div className="flex items-center gap-3 text-sm font-bold font-mono tracking-tighter">
+                    <div className={cn(NUMBER_STYLE, "flex items-center gap-3 text-sm tracking-tighter")}>
                       <Calendar className="w-3.5 h-3.5 opacity-50" />
                       {new Date(expense.date).toLocaleDateString()}
                     </div>
@@ -393,8 +393,8 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                   </td>
                   <td className="px-4 sm:px-8 py-2 sm:py-5 flex justify-between items-center sm:table-cell text-right">
                     <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Amount</span>
-                    <span className="text-sm font-bold font-mono tracking-tighter text-red-500 group-hover:text-red-400">
-                      -<CurrencyDisplay amount={expense.amount} currencyCode={currency} />
+                    <span className={cn(NUMBER_STYLE, "text-sm text-red-500 group-hover:text-red-400")}>
+                      -<CurrencyDisplay amount={expense.amount} currencyCode={currency} size="sm" />
                     </span>
                   </td>
                   <td className="px-4 sm:px-8 py-2 sm:py-5 flex justify-between items-center sm:table-cell text-right">

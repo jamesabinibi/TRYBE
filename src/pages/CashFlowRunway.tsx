@@ -4,6 +4,9 @@ import { useAuth, useSettings } from '../App';
 import { motion } from 'motion/react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { cn, NUMBER_STYLE } from '../lib/utils';
+import { CurrencyDisplay } from '../components/CurrencyDisplay';
+import { NumberDisplay } from '../components/NumberDisplay';
 
 export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: boolean }) {
   const { fetchWithAuth } = useAuth();
@@ -177,8 +180,8 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
             </div>
             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Avg. Monthly Burn</span>
           </div>
-          <h3 className="text-3xl font-black text-zinc-950 dark:text-white">
-            {settings?.currency} {avgBurn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          <h3 className={cn(NUMBER_STYLE, "text-3xl text-zinc-950 dark:text-white")}>
+            <CurrencyDisplay amount={avgBurn} currencyCode={settings?.currency} size="xl" />
           </h3>
           <p className="text-xs text-zinc-500 font-medium mt-2">Based on last 3 months of expenses.</p>
         </motion.div>
@@ -195,8 +198,8 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
             </div>
             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Avg. Monthly Revenue</span>
           </div>
-          <h3 className="text-3xl font-black text-zinc-950 dark:text-white">
-            {settings?.currency} {avgRev.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          <h3 className={cn(NUMBER_STYLE, "text-3xl text-zinc-950 dark:text-white")}>
+            <CurrencyDisplay amount={avgRev} currencyCode={settings?.currency} size="xl" />
           </h3>
           <p className="text-xs text-zinc-500 font-medium mt-2">Based on last 3 months of sales.</p>
         </motion.div>
@@ -291,6 +294,4 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
   );
 }
 
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
-}
+

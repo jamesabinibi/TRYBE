@@ -921,7 +921,7 @@ const Invoices: React.FC = () => {
               <div className="pt-8 border-t border-white/5 flex justify-between items-end">
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Total Amount</p>
-                  <p className="text-5xl font-black tracking-tighter text-white">
+                  <p className={cn(NUMBER_STYLE, "text-5xl tracking-tighter text-white")}>
                     <span className="opacity-30 mr-2 text-xl">{settings?.currency || '₦'}</span>
                     {calculateTotal().toLocaleString()}
                   </p>

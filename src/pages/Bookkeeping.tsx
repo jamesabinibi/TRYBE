@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
 import { TotalDisplay } from '../components/TotalDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -320,12 +320,13 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                   </td>
                   <td className="px-6 py-4 text-right">
                     <span className={cn(
-                      "text-sm font-black",
+                      NUMBER_STYLE,
+                      "text-sm",
                       record.nature === 'income' ? "text-emerald-600 dark:text-emerald-400" :
                       record.nature === 'expense' ? "text-red-600 dark:text-red-400" :
                       "text-zinc-950 dark:text-white"
                     )}>
-                      {record.nature === 'expense' ? '-' : '+'}<CurrencyDisplay amount={record.amount} currencyCode={currency} />
+                      {record.nature === 'expense' ? '-' : '+'}<CurrencyDisplay amount={record.amount} currencyCode={currency} size="sm" />
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
