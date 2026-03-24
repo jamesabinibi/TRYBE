@@ -16,8 +16,8 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const filteredProducts = (products || []).filter(p => 
-    (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.category_name || '').toLowerCase().includes(search.toLowerCase())
+    String(p.name || '').toLowerCase().includes(String(search || '').toLowerCase()) ||
+    String(p.category_name || '').toLowerCase().includes(String(search || '').toLowerCase())
   );
 
   useEffect(() => {

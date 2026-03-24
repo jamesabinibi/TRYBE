@@ -75,8 +75,14 @@ const Invoices: React.FC = () => {
   const brandColor = settings?.brand_color || '#10b981';
 
   useEffect(() => {
-    fetchInventory();
-    fetchPastInvoices();
+    const fetchData = async () => {
+      try {
+        await Promise.all([fetchInventory(), fetchPastInvoices()]);
+      } catch (err) {
+        console.error('Failed to fetch initial data:', err);
+      }
+    };
+    fetchData();
   }, []);
 
   const handleShareWhatsApp = (invoice: any) => {
@@ -424,7 +430,7 @@ const Invoices: React.FC = () => {
   };
 
   const filteredItems = [...products, ...services].filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    String(item.name || '').toLowerCase().includes(String(searchTerm || '').toLowerCase())
   );
 
   return (

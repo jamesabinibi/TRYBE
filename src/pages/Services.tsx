@@ -137,8 +137,8 @@ const Services = () => {
   };
 
   const filteredServices = services.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.category.toLowerCase().includes(searchQuery.toLowerCase())
+    String(s.name || '').toLowerCase().includes(String(searchQuery || '').toLowerCase()) ||
+    String(s.category || '').toLowerCase().includes(String(searchQuery || '').toLowerCase())
   );
 
   if (isLoading) {

@@ -713,6 +713,51 @@ async function createServer() {
     }
   });
 
+  // Debug route for searching users
+  app.get("/api/debug/search-users/:query", async (req: any, res) => {
+    const { query } = req.params;
+    try {
+      const { rows: users } = await pool.query("SELECT id, email, account_id, role, name FROM users WHERE email ILIKE $1", [`%${query}%`]);
+      res.json({ users });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Debug route for users and accounts
+  app.get("/api/debug/users", async (req: any, res) => {
+    try {
+      const { rows: users } = await pool.query("SELECT id, email, account_id, role, name FROM users ORDER BY account_id");
+      const { rows: accounts } = await pool.query("SELECT id, name FROM accounts");
+      res.json({ users, accounts });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Debug route for inventory visibility
+  app.get("/api/debug/inventory/:email", async (req: any, res) => {
+    const { email } = req.params;
+    try {
+      const { rows: users } = await pool.query("SELECT id, email, account_id, role, name FROM users WHERE email = $1", [email]);
+      if (users.length === 0) return res.json({ error: "User not found" });
+
+      const user = users[0];
+      const { rows: accountUsers } = await pool.query("SELECT id, email, role, name FROM users WHERE account_id = $1", [user.account_id]);
+      const { rows: products } = await pool.query("SELECT id, name, created_at FROM products WHERE account_id = $1 LIMIT 50", [user.account_id]);
+      const { rows: productCount } = await pool.query("SELECT count(*) as count FROM products WHERE account_id = $1", [user.account_id]);
+
+      res.json({
+        user,
+        accountUsers,
+        products,
+        totalProducts: productCount[0].count
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Helper to get account_id from headers or user_id
   const getAccountId = async (req: any) => {
     let userId = req.headers['x-user-id'];
@@ -4345,25 +4390,33 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   };
 
   app.get("/api/notifications/:userId", async (req, res) => {
+    console.log(`[API] GET /api/notifications/${req.params.userId} called`);
     const { userId } = req.params;
     
     if (!userId || userId === 'undefined' || userId === 'null' || userId === '[object Object]') {
+      console.log('[API] Invalid userId');
       return res.json([]);
     }
 
     try {
       if (process.env.AWS_DB_PASSWORD) {
+        console.log('[API] Using PostgreSQL');
         const { rows } = await pool.query(
           'SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
           [userId]
         );
+        console.log(`[API] Found ${rows.length} notifications`);
         return res.json(rows || []);
       }
 
-      if (!supabase) return res.json([]);
+      if (!supabase) {
+        console.log('[API] Supabase not initialized');
+        return res.json([]);
+      }
       // Run low stock check in background - don't await to keep response fast
       checkLowStock(userId).catch(err => console.error('[NOTIFICATIONS] Background check failed:', err));
 
+      console.log('[API] Using Supabase');
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -4371,14 +4424,18 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .order('created_at', { ascending: false })
         .limit(50); // Limit to avoid huge responses
         
-      if (error) throw error;
+      if (error) {
+        console.error('[API] Supabase error:', error);
+        throw error;
+      }
+      console.log(`[API] Found ${data?.length || 0} notifications`);
       res.json(data || []);
     } catch (error: any) {
+      console.error('[NOTIFICATIONS] Fetch error:', error);
       // If the table doesn't exist yet, just return an empty array instead of 500
       if (error?.code === 'PGRST116' || error?.message?.includes('relation "notifications" does not exist')) {
         return res.json([]);
       }
-      console.error('[NOTIFICATIONS] Fetch error:', error);
       res.status(500).json({ error: "Failed to fetch notifications" });
     }
   });

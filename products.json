@@ -1,0 +1,45 @@
+Total users: 6
+Users: [
+  {
+    "id": 197,
+    "email": "admin@stockflow.pro",
+    "account_id": 206,
+    "role": "super_admin",
+    "name": "System Admin"
+  },
+  {
+    "id": 198,
+    "email": "admin@gryndee.com",
+    "account_id": 207,
+    "role": "admin",
+    "name": "Demo Admin"
+  },
+  {
+    "id": 210,
+    "email": "abinibimultimedia@yahoo.com",
+    "account_id": 222,
+    "role": "admin",
+    "name": "james alabi"
+  },
+  {
+    "id": 211,
+    "email": "keshinroolaore@gmail.com",
+    "account_id": 223,
+    "role": "admin",
+    "name": "KESHINRO OLAORE"
+  },
+  {
+    "id": 213,
+    "email": "connectabinibi@gmail.com",
+    "account_id": 225,
+    "role": "admin",
+    "name": "TRYBE Originals"
+  },
+  {
+    "id": 215,
+    "email": "mails@trybeoriginals.com",
+    "account_id": 225,
+    "role": "manager",
+    "name": "TRYBE Manager"
+  }
+]

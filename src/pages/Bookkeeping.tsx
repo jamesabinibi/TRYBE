@@ -151,8 +151,8 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
 
   const filteredRecords = records.filter(r => {
     const matchesSearch = 
-      r.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.type.toLowerCase().includes(searchQuery.toLowerCase());
+      String(r.description || '').toLowerCase().includes(String(searchQuery || '').toLowerCase()) ||
+      String(r.type || '').toLowerCase().includes(String(searchQuery || '').toLowerCase());
     
     const matchesType = filterType === 'All' || r.type === filterType;
     

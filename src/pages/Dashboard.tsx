@@ -39,27 +39,35 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth, useSettings, useTheme } from '../App';
 
-const QuickAction = ({ to, icon: Icon, label, color, className }: any) => (
-  <Link 
-    to={to}
-    className={cn(
-      "flex items-center p-2 rounded-2xl border transition-all duration-300 active:scale-95 group flex-none overflow-hidden h-11",
-      color,
-      className
-    )}
-  >
-    <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:rotate-12">
-      <Icon className="w-4 h-4" />
-    </div>
-    <div className="grid transition-all duration-300 ease-in-out grid-cols-[0fr] opacity-0 group-hover:grid-cols-[1fr] group-hover:opacity-100 group-hover:ml-3">
-      <div className="overflow-hidden">
+const QuickAction = ({ to, icon: Icon, label, color, className, onClick }: any) => {
+  const handleClick = (e: React.MouseEvent) => {
+    if (onClick) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
+  return (
+    <Link 
+      to={to}
+      onClick={onClick ? handleClick : undefined}
+      className={cn(
+        "flex items-center p-2 rounded-2xl border transition-all duration-300 active:scale-95 group flex-none overflow-hidden h-11 cursor-pointer",
+        color,
+        className
+      )}
+    >
+      <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:rotate-12" title={label}>
+        <Icon className="w-4 h-4" />
+      </div>
+      <div className="ml-3">
         <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap pr-2">
           {label}
         </span>
       </div>
-    </div>
-  </Link>
-);
+    </Link>
+  );
+};
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any) => (
   <motion.div 

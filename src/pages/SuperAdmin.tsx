@@ -576,14 +576,14 @@ export default function SuperAdmin() {
   }
 
   const filteredAccounts = accounts.filter(acc => 
-    acc.name.toLowerCase().includes(searchQuery.toLowerCase())
+    String(acc.name || '').toLowerCase().includes(String(searchQuery || '').toLowerCase())
   ) || [];
 
   const filteredUsers = users.filter(u => 
-    (u.username?.toLowerCase() || '').includes(userSearchQuery.toLowerCase()) || 
-    (u.email?.toLowerCase() || '').includes(userSearchQuery.toLowerCase()) ||
-    (u.name?.toLowerCase() || '').includes(userSearchQuery.toLowerCase()) ||
-    (u.account_name?.toLowerCase() || '').includes(userSearchQuery.toLowerCase())
+    String(u.username || '').toLowerCase().includes(String(userSearchQuery || '').toLowerCase()) || 
+    String(u.email || '').toLowerCase().includes(String(userSearchQuery || '').toLowerCase()) ||
+    String(u.name || '').toLowerCase().includes(String(userSearchQuery || '').toLowerCase()) ||
+    String(u.account_name || '').toLowerCase().includes(String(userSearchQuery || '').toLowerCase())
   );
 
   return (

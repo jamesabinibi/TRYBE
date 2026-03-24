@@ -249,8 +249,8 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
 
   const filteredExpenses = expenses.filter(e => {
     const matchesSearch = 
-      e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.category.toLowerCase().includes(searchQuery.toLowerCase());
+      String(e.description || '').toLowerCase().includes(String(searchQuery || '').toLowerCase()) ||
+      String(e.category || '').toLowerCase().includes(String(searchQuery || '').toLowerCase());
     
     const matchesCategory = filterCategory === 'All' || e.category === filterCategory;
     

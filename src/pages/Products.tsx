@@ -110,56 +110,56 @@ export default function Products() {
   const totalQuantity = newProduct.variants.reduce((acc, v) => acc + (Number(v.quantity) || 0), 0);
 
   useEffect(() => {
-    fetchProducts();
-    fetchServices();
-    fetchCategories();
-  }, []);
+    if (user) {
+      Promise.all([fetchProducts(), fetchServices(), fetchCategories()]);
+    }
+  }, [user]);
 
-  const fetchServices = () => {
-    fetchWithAuth('/api/services')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setServices(data);
-        } else {
-          setServices([]);
-        }
-      })
-      .catch(() => setServices([]));
+  const fetchServices = async () => {
+    try {
+      const res = await fetchWithAuth('/api/services');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setServices(data);
+      } else {
+        setServices([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch services:', err);
+      setServices([]);
+    }
   };
 
-  const fetchProducts = () => {
-    fetchWithAuth('/api/products')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setProducts(data);
-        } else {
-          console.error("Failed to fetch products:", data);
-          setProducts([]);
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching products:", err);
+  const fetchProducts = async () => {
+    try {
+      const res = await fetchWithAuth('/api/products');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setProducts(data);
+      } else {
+        console.error("Failed to fetch products:", data);
         setProducts([]);
-      });
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setProducts([]);
+    }
   };
 
-  const fetchCategories = () => {
-    fetchWithAuth('/api/categories')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setCategories(data);
-        } else {
-          console.error("Failed to fetch categories:", data);
-          setCategories([]);
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching categories:", err);
+  const fetchCategories = async () => {
+    try {
+      const res = await fetchWithAuth('/api/categories');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setCategories(data);
+      } else {
+        console.error("Failed to fetch categories:", data);
         setCategories([]);
-      });
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      setCategories([]);
+    }
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -417,10 +417,11 @@ export default function Products() {
   };
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = (p.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (p.supplier_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (p.category_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (p.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+    const search = String(searchQuery || '').toLowerCase();
+    const matchesSearch = String(p.name || '').toLowerCase().includes(search) ||
+      String(p.supplier_name || '').toLowerCase().includes(search) ||
+      String(p.category_name || '').toLowerCase().includes(search) ||
+      String(p.description || '').toLowerCase().includes(search);
     
     const catFilter = searchParams.get('category');
     const matchesCategory = !catFilter || catFilter === 'all' || p.category_id?.toString() === catFilter;
@@ -429,16 +430,24 @@ export default function Products() {
   });
 
   const filteredServices = services.filter(s => {
-    const matchesSearch = (s.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (s.description?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (s.category?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+    const search = String(searchQuery || '').toLowerCase();
+    const matchesSearch = String(s.name || '').toLowerCase().includes(search) ||
+      String(s.description || '').toLowerCase().includes(search) ||
+      String(s.category || '').toLowerCase().includes(search);
     return matchesSearch;
   });
 
   const displayItems = activeSubTab === 'products' ? filteredProducts : filteredServices;
 
-  const totalCostValue = filteredProducts.reduce((acc, p) => acc + ((p.cost_price || 0) * (p.total_stock || 0)), 0);
-  const totalSellingValue = filteredProducts.reduce((acc, p) => acc + ((p.selling_price || 0) * (p.total_stock || 0)), 0);
+  const totalCostValue = filteredProducts.reduce((acc, p) => {
+    const cost = typeof p.cost_price === 'string' ? parseFloat(p.cost_price) || 0 : p.cost_price || 0;
+    return acc + (cost * (p.total_stock || 0));
+  }, 0);
+  const totalSellingValue = filteredProducts.reduce((acc, p) => {
+    const price = activeSubTab === 'products' ? p.selling_price : p.price;
+    const selling = typeof price === 'string' ? parseFloat(price) || 0 : price || 0;
+    return acc + (selling * (p.total_stock || 0));
+  }, 0);
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
@@ -646,12 +655,12 @@ export default function Products() {
                       )}
                       <td className="px-8 py-6 text-sm font-bold font-mono tracking-tighter">
                         <span className="opacity-50 mr-1 text-xs">{currency === 'NGN' ? '₦' : currency}</span>
-                        {(activeSubTab === 'products' ? item.selling_price : item.price).toLocaleString()}
+                        {formatCurrency(activeSubTab === 'products' ? item.selling_price : item.price, currency).replace(/[^0-9.,]/g, '')}
                       </td>
                       {activeSubTab === 'products' && user?.role !== 'staff' && (
                         <td className="px-8 py-6 text-sm font-bold font-mono tracking-tighter">
                           <span className="opacity-50 mr-1 text-xs">{currency === 'NGN' ? '₦' : currency}</span>
-                          {((item.selling_price || 0) * (item.total_stock || 0)).toLocaleString()}
+                          {formatCurrency((activeSubTab === 'products' ? (typeof item.selling_price === 'string' ? parseFloat(item.selling_price) : item.selling_price) || 0 : (typeof item.price === 'string' ? parseFloat(item.price) : item.price) || 0) * (item.total_stock || 0), currency).replace(/[^0-9.,]/g, '')}
                         </td>
                       )}
                       {activeSubTab === 'services' && (

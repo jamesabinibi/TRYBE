@@ -118,11 +118,10 @@ export default function Sales() {
   };
 
   useEffect(() => {
-    fetchProducts();
-    fetchServices();
-    fetchSales();
-    fetchCustomers();
-  }, []);
+    if (user) {
+      Promise.all([fetchProducts(), fetchServices(), fetchSales(), fetchCustomers()]);
+    }
+  }, [user]);
 
   const fetchServices = async () => {
     try {
@@ -134,7 +133,7 @@ export default function Sales() {
         setServices([]);
       }
     } catch (err) {
-      console.error('Failed to fetch services');
+      console.error('Failed to fetch services:', err);
       setServices([]);
     }
   };
@@ -150,43 +149,41 @@ export default function Sales() {
         setCustomers([]);
       }
     } catch (err) {
-      console.error('Failed to fetch customers');
+      console.error('Failed to fetch customers:', err);
       setCustomers([]);
     }
   };
 
-  const fetchProducts = () => {
-    fetchWithAuth('/api/products')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setProducts(data);
-        } else {
-          console.error("Failed to fetch products:", data);
-          setProducts([]);
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching products:", err);
+  const fetchProducts = async () => {
+    try {
+      const res = await fetchWithAuth('/api/products');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setProducts(data);
+      } else {
+        console.error("Failed to fetch products:", data);
         setProducts([]);
-      });
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setProducts([]);
+    }
   };
 
-  const fetchSales = () => {
-    fetchWithAuth('/api/sales')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setSales(data);
-        } else {
-          console.error("Failed to fetch sales:", data);
-          setSales([]);
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching sales:", err);
+  const fetchSales = async () => {
+    try {
+      const res = await fetchWithAuth('/api/sales');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setSales(data);
+      } else {
+        console.error("Failed to fetch sales:", data);
         setSales([]);
-      });
+      }
+    } catch (err) {
+      console.error("Error fetching sales:", err);
+      setSales([]);
+    }
   };
 
   const addToCart = (product: Product, variant: Variant) => {
@@ -389,7 +386,7 @@ export default function Sales() {
       
       scanner.render((decodedText) => {
         // Find product by SKU or name (mocking SKU search with name for now)
-        const product = products.find(p => p.name.toLowerCase() === decodedText.toLowerCase());
+        const product = products.find(p => String(p.name || '').toLowerCase() === String(decodedText || '').toLowerCase());
         if (product && product.variants.length > 0) {
           addToCart(product, product.variants[0]);
           scanner.clear();
@@ -541,23 +538,23 @@ export default function Sales() {
 
   const filteredProducts = (products || []).filter(p => {
     const search = (searchQuery || '').toLowerCase();
-    return (p.name || '').toLowerCase().includes(search) ||
-           (p.category_name || '').toLowerCase().includes(search) ||
-           (p.supplier_name || '').toLowerCase().includes(search);
+    return String(p.name || '').toLowerCase().includes(search) ||
+           String(p.category_name || '').toLowerCase().includes(search) ||
+           String(p.supplier_name || '').toLowerCase().includes(search);
   });
 
   const filteredServices = (services || []).filter(s => {
     const search = (searchQuery || '').toLowerCase();
-    return (s.name || '').toLowerCase().includes(search) ||
-           (s.category || '').toLowerCase().includes(search);
+    return String(s.name || '').toLowerCase().includes(search) ||
+           String(s.category || '').toLowerCase().includes(search);
   });
 
   const filteredSales = (sales || []).filter(s => {
     const search = (historySearchQuery || '').toLowerCase();
-    const matchesSearch = (s.invoice_number || '').toLowerCase().includes(search) ||
-           (s.staff_name || '').toLowerCase().includes(search) ||
-           (s.customer_name || '').toLowerCase().includes(search) ||
-           (s.payment_method || '').toLowerCase().includes(search);
+    const matchesSearch = String(s.invoice_number || '').toLowerCase().includes(search) ||
+           String(s.staff_name || '').toLowerCase().includes(search) ||
+           String(s.customer_name || '').toLowerCase().includes(search) ||
+           String(s.payment_method || '').toLowerCase().includes(search);
 
     if (!matchesSearch) return false;
 

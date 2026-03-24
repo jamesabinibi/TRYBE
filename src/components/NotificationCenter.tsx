@@ -45,20 +45,24 @@ export default function NotificationCenter({ userId }: { userId: number }) {
       const response = await fetchWithAuth(`/api/notifications/${userId}`);
       
       if (!response.ok) {
+        console.error(`[UI] Response not ok: ${response.status}`);
         return;
       }
 
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error(`[UI] Failed to parse JSON: ${text.substring(0, 100)}`);
+        return;
+      }
+
       if (Array.isArray(data)) {
         setNotifications(data);
         setUnreadCount(data.filter((n: Notification) => !n.is_read).length);
       }
     } catch (error) {
-      // Silently fail for transient network errors (common during server restarts or sleep)
-      const isFetchError = error instanceof TypeError || (error as any)?.message?.includes('fetch');
-      if (isFetchError) {
-        return;
-      }
       console.error('Failed to fetch notifications:', error);
     }
   };
