@@ -98,7 +98,7 @@ const Invoices: React.FC = () => {
       }
     } else if (Array.isArray(invoice.sale_items)) {
       items = invoice.sale_items.map((si: any) => {
-        const baseName = si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || si.product_name_from_table || si.service_name_from_table || 'Item';
+        const baseName = si.product?.name || si.service?.name || si.product_variants?.products?.name || si.services?.name || si.product_name || si.service_name || si.product_name_from_table || si.service_name_from_table || 'Item';
         const variant = si.product_variants ? ` (${si.product_variants.size || ''}${si.product_variants.color ? ' - ' + si.product_variants.color : ''})` : 
                         (si.size ? ` (${si.size}${si.color ? ' - ' + si.color : ''})` : '');
         return {
@@ -1036,7 +1036,7 @@ const Invoices: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
                   {previewInvoice.sale_items?.map((item: any, idx: number) => {
-                    const name = item.product_variants?.products?.name || item.services?.name || item.product_name || item.service_name || 'Item';
+                    const name = item.product?.name || item.service?.name || item.product_variants?.products?.name || item.services?.name || item.product_name || item.service_name || 'Item';
                     const variant = item.product_variants ? ` (${item.product_variants.size || ''}${item.product_variants.color ? ' - ' + item.product_variants.color : ''})` : '';
                     return (
                       <tr key={idx} className="group">

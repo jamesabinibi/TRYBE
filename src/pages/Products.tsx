@@ -27,6 +27,36 @@ import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
 import { toast } from 'sonner';
 
+const getOptimizedImageUrl = (url: string, width: number = 300) => {
+  if (!url) return '';
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+  
+  let key = url;
+  if (url.startsWith('http')) {
+    try {
+      const urlObj = new URL(url);
+      key = urlObj.pathname.substring(1);
+      
+      if (url.includes('cloudinary.com')) {
+        const uploadIndex = url.indexOf('/upload/');
+        if (uploadIndex !== -1) {
+           const afterUpload = url.substring(uploadIndex + 8);
+           const parts = afterUpload.split('/');
+           if (parts.length > 1 && parts[0].startsWith('v')) {
+             key = parts.slice(1).join('/');
+           } else {
+             key = afterUpload;
+           }
+        }
+      }
+    } catch (e) {
+      // fallback
+    }
+  }
+  
+  return `https://pmp323myg6rsao42jsmdzpidb40xhakc.lambda-url.us-east-1.on.aws/?key=${encodeURIComponent(key)}&w=${width}`;
+};
+
 const getInitialProductState = () => ({
   name: '',
   category_id: '',
@@ -50,6 +80,7 @@ export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
@@ -113,7 +144,7 @@ export default function Products() {
 
   useEffect(() => {
     if (user) {
-      Promise.all([fetchProducts(), fetchServices(), fetchCategories()]);
+      Promise.all([fetchProducts(), fetchServices(), fetchCategories()]).finally(() => setIsLoading(false));
     }
   }, [user]);
 
@@ -572,7 +603,11 @@ export default function Products() {
           </div>
         </div>
 
-        {displayItems.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : displayItems.length > 0 ? (
           <div className="overflow-hidden">
             {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto">
@@ -606,13 +641,13 @@ export default function Products() {
                           <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700 group-hover:border-white/20 dark:group-hover:border-black/20 transition-colors">
                             {activeSubTab === 'products' ? (
                               item.images && item.images.length > 0 ? (
-                                <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <img src={getOptimizedImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
                                 <Package className="w-6 h-6" />
                               )
                             ) : (
                               item.image_url ? (
-                                <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <img src={getOptimizedImageUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
                                 <Briefcase className="w-6 h-6" />
                               )
@@ -696,13 +731,13 @@ export default function Products() {
                       <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
                         {activeSubTab === 'products' ? (
                           item.images && item.images.length > 0 ? (
-                            <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <img src={getOptimizedImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
                             <ImageIcon className="w-6 h-6" />
                           )
                         ) : (
                           item.image_url ? (
-                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <img src={getOptimizedImageUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
                             <Briefcase className="w-6 h-6" />
                           )
@@ -757,32 +792,11 @@ export default function Products() {
             </div>
           </div>
         ) : (
-            <div className="py-32 text-center">
-              <div className="w-72 h-72 mx-auto mb-8 relative">
-                <div className="absolute inset-0 bg-brand/5 rounded-full opacity-50 blur-3xl" />
-                <div className="relative bg-white dark:bg-zinc-900 rounded-[2.5rem] p-10 shadow-2xl border border-zinc-100 dark:border-zinc-800">
-                  <div className="space-y-6">
-                    <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full w-3/4" />
-                    <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full w-1/2" />
-                    <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full w-2/3" />
-                    <div className="pt-6 flex justify-center">
-                      <div className="w-20 h-20 bg-brand/10 rounded-3xl flex items-center justify-center">
-                        <Package className="w-10 h-10 text-brand" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-3">Add all your products</h3>
-              <p className="text-zinc-500 dark:text-zinc-400 font-medium mb-10 max-w-sm mx-auto">Start by adding your first product in seconds and manage your inventory with ease.</p>
-              <button 
-                onClick={() => activeSubTab === 'products' ? openAddModal() : openAddServiceModal()}
-                className="inline-flex items-center gap-3 px-10 py-4 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
-              >
-                <Plus className="w-5 h-5" />
-                Add {activeSubTab === 'products' ? 'product' : 'service'}
-              </button>
-            </div>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Package className="w-16 h-16 text-zinc-300 dark:text-zinc-700 mb-4" />
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-white">No {activeSubTab} found</h3>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1">Try adjusting your search or filters.</p>
+          </div>
         )}
       </div>
 
@@ -819,7 +833,7 @@ export default function Products() {
                     <div className="flex items-center gap-4">
                       {newService.image_url ? (
                         <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800 group">
-                          <img src={newService.image_url} alt="Service Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={getOptimizedImageUrl(newService.image_url)} alt="Service Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           <button 
                             type="button"
                             onClick={removeServiceImage}
@@ -953,7 +967,7 @@ export default function Products() {
                           <div className="flex flex-wrap gap-4">
                             {imagePreviews.length > 0 ? (
                               <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-700 group">
-                                <img src={imagePreviews[0]} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <img src={getOptimizedImageUrl(imagePreviews[0])} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 <button 
                                   type="button"
                                   onClick={() => removeImage(0)}
@@ -979,7 +993,7 @@ export default function Products() {
                             <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
                               {imagePreviews.slice(1).map((preview, idx) => (
                                 <div key={idx} className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border border-zinc-100 group">
-                                  <img src={preview} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                  <img src={getOptimizedImageUrl(preview)} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                   <button 
                                     type="button"
                                     onClick={() => removeImage(idx + 1)}
@@ -1267,7 +1281,7 @@ export default function Products() {
                     <div className="grid grid-cols-2 lg:grid-cols-1 gap-6">
                       {imagePreviews.length > 0 && (
                         <div className="w-full aspect-video rounded-xl overflow-hidden border border-zinc-100 dark:border-zinc-800 mb-6">
-                          <img src={imagePreviews[0]} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={getOptimizedImageUrl(imagePreviews[0])} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         </div>
                       )}
                       <div className="space-y-4">
