@@ -155,7 +155,7 @@ export default function Settings() {
           <AlertCircle className="w-5 h-5" />
           <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Migrate Images</h3>
         </div>
-        <p className="text-sm text-zinc-500 font-medium">This will move all existing product images to Cloudinary for faster loading. Continue?</p>
+        <p className="text-sm text-zinc-500 font-medium">This will move all existing product images to AWS S3. Continue?</p>
         <div className="flex gap-3">
           <button 
             onClick={async () => {
@@ -1420,6 +1420,25 @@ NOTIFY pgrst, 'reload schema';
             <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Critical operations for managing your business data.</p>
           </div>
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+            <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-700/50 space-y-4">
+              <div className="flex items-center gap-3 text-zinc-900 dark:text-white">
+                <Database className="w-5 h-5 text-brand" />
+                <h4 className="text-sm font-black uppercase tracking-widest">Image Migration</h4>
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                Migrate existing product images to AWS S3. This process runs in the background.
+              </p>
+              <div className="pt-2">
+                <button 
+                  onClick={handleMigrateImages}
+                  disabled={isMigrating}
+                  className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isMigrating ? 'Migrating...' : 'Migrate Images to AWS S3'}
+                </button>
+              </div>
+            </div>
+
             <div className="p-6 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/20 space-y-4">
               <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
                 <AlertTriangle className="w-5 h-5" />
