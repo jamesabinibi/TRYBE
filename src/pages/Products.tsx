@@ -37,7 +37,10 @@ const getOptimizedImageUrl = (url: string, width: number = 300) => {
       const urlObj = new URL(url);
       key = urlObj.pathname.substring(1);
       
-      if (url.includes('cloudinary.com')) {
+      if (url.includes('amazonaws.com')) {
+        // For S3 URLs, the key is just the pathname without the leading slash
+        key = urlObj.pathname.substring(1);
+      } else if (url.includes('cloudinary.com')) {
         const uploadIndex = url.indexOf('/upload/');
         if (uploadIndex !== -1) {
            const afterUpload = url.substring(uploadIndex + 8);

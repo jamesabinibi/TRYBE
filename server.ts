@@ -45,7 +45,62 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
 }
 
 // Cloudinary Helper
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import crypto from "crypto";
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+  },
+});
+
+async function uploadToS3(base64Data: string, folder: string = 'products') {
+  if (!process.env.AWS_S3_BUCKET_NAME || !base64Data || !base64Data.startsWith('data:image')) {
+    return base64Data;
+  }
+
+  try {
+    // Extract base64 data and mime type
+    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      throw new Error('Invalid base64 string');
+    }
+
+    const mimeType = matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+    
+    // Generate a unique filename
+    const extension = mimeType.split('/')[1] || 'jpg';
+    const filename = `${folder}/${crypto.randomUUID()}.${extension}`;
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Key: filename,
+      Body: buffer,
+      ContentType: mimeType,
+      // ACL: 'public-read' // Optional: if you want objects to be public by default
+    });
+
+    await s3Client.send(command);
+    
+    // Construct the S3 URL
+    const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${filename}`;
+    console.log(`[AWS S3] Uploaded to: ${s3Url}`);
+    return s3Url;
+  } catch (error) {
+    console.error('[AWS S3] Upload failed:', error);
+    return base64Data;
+  }
+}
+
 async function uploadToCloudinary(base64Data: string, folder: string = 'products') {
+  // If AWS S3 is configured, use it instead of Cloudinary
+  if (process.env.AWS_S3_BUCKET_NAME) {
+    return uploadToS3(base64Data, folder);
+  }
+
   if (!process.env.CLOUDINARY_CLOUD_NAME || !base64Data || !base64Data.startsWith('data:image')) {
     return base64Data;
   }
@@ -1404,6 +1459,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         tables: {},
         env: {
           cloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,
+          aws_s3: !!process.env.AWS_S3_BUCKET_NAME,
           gemini: geminiKey,
           smtp: !!process.env.SMTP_USER
         }
@@ -1435,6 +1491,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       tables: results,
       env: {
         cloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,
+        aws_s3: !!process.env.AWS_S3_BUCKET_NAME,
         gemini: !!process.env.GEMINI_API_KEY,
         smtp: !!process.env.SMTP_USER
       }
@@ -1463,7 +1520,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const { name, description, price, duration_minutes, category, image_url } = req.body;
       let finalImageUrl = image_url;
       if (image_url && image_url.startsWith('data:image')) {
-        finalImageUrl = await uploadToCloudinary(image_url, 'services');
+        finalImageUrl = await uploadToS3(image_url, 'services');
       }
 
       const { rows } = await pool.query(
@@ -1486,7 +1543,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       let finalImageUrl = image_url;
       if (image_url && image_url.startsWith('data:image')) {
-        finalImageUrl = await uploadToCloudinary(image_url, 'services');
+        finalImageUrl = await uploadToS3(image_url, 'services');
       }
 
       const { rows } = await pool.query(
@@ -2924,7 +2981,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
           if (images && Array.isArray(images) && images.length > 0) {
             for (const img of images) {
-              const finalUrl = await uploadToCloudinary(img);
+              const finalUrl = await uploadToS3(img);
               await client.query(
                 'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
                 [userInfo.account_id, productId, finalUrl]
@@ -2970,7 +3027,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (images && Array.isArray(images) && images.length > 0) {
         const imagesToInsert = await Promise.all(images.map(async (img) => {
-          const finalUrl = await uploadToCloudinary(img);
+          const finalUrl = await uploadToS3(img);
           return { account_id: userInfo.account_id, product_id: productId, image_data: finalUrl };
         }));
         await supabase.from('product_images').insert(imagesToInsert);
@@ -3106,7 +3163,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       await supabase.from('product_images').delete().eq('product_id', id);
       if (images && Array.isArray(images) && images.length > 0) {
         const imagesToInsert = await Promise.all(images.map(async (img) => {
-          const finalUrl = await uploadToCloudinary(img);
+          const finalUrl = await uploadToS3(img);
           return { product_id: id, image_data: finalUrl };
         }));
         await supabase.from('product_images').insert(imagesToInsert);
@@ -4876,11 +4933,14 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (images) {
         for (const img of images) {
           if (img.image_data && img.image_data.startsWith('data:image')) {
-            const cloudinaryUrl = await uploadToCloudinary(img.image_data);
-            if (cloudinaryUrl && cloudinaryUrl.startsWith('http')) {
-              await supabase.from('product_images').update({ image_data: cloudinaryUrl }).eq('id', img.id);
+            const uploadedUrl = await uploadToS3(img.image_data);
+            if (uploadedUrl && uploadedUrl.startsWith('http')) {
+              await supabase.from('product_images').update({ image_data: uploadedUrl }).eq('id', img.id);
               migratedCount++;
             }
+          } else if (img.image_data && img.image_data.includes('cloudinary.com') && process.env.AWS_S3_BUCKET_NAME) {
+             // We would need to download from cloudinary and upload to S3 here, but for now we just handle base64
+             // This is a placeholder for full migration logic
           }
         }
       }

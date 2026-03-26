@@ -3,6 +3,38 @@ import { Search, ChevronDown, Package } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Product } from '../types';
 
+const getOptimizedImageUrl = (url: string, width: number = 100) => {
+  if (!url) return '';
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+  
+  let key = url;
+  if (url.startsWith('http')) {
+    try {
+      const urlObj = new URL(url);
+      key = urlObj.pathname.substring(1);
+      
+      if (url.includes('amazonaws.com')) {
+        key = urlObj.pathname.substring(1);
+      } else if (url.includes('cloudinary.com')) {
+        const uploadIndex = url.indexOf('/upload/');
+        if (uploadIndex !== -1) {
+           const afterUpload = url.substring(uploadIndex + 8);
+           const parts = afterUpload.split('/');
+           if (parts.length > 1 && parts[0].startsWith('v')) {
+             key = parts.slice(1).join('/');
+           } else {
+             key = afterUpload;
+           }
+        }
+      }
+    } catch (e) {
+      // fallback
+    }
+  }
+  
+  return `https://pmp323myg6rsao42jsmdzpidb40xhakc.lambda-url.us-east-1.on.aws/?key=${encodeURIComponent(key)}&w=${width}`;
+};
+
 interface ProductSelectProps {
   products: Product[];
   selectedProduct: Product | null;
@@ -44,7 +76,7 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
           {selectedProduct ? (
             <div className="flex items-center gap-2 text-zinc-900 dark:text-white">
               {selectedProduct.images && selectedProduct.images.length > 0 ? (
-                <img src={selectedProduct.images[0]} alt="" className="w-6 h-6 rounded-md object-cover" referrerPolicy="no-referrer" />
+                <img src={getOptimizedImageUrl(selectedProduct.images[0])} alt="" className="w-6 h-6 rounded-md object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <div className="w-6 h-6 rounded-md bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
                   <Package className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
@@ -91,7 +123,7 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
                   )}
                 >
                   {product.images && product.images.length > 0 ? (
-                    <img src={product.images[0]} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" referrerPolicy="no-referrer" />
+                    <img src={getOptimizedImageUrl(product.images[0])} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" referrerPolicy="no-referrer" />
                   ) : (
                     <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
                       <Package className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
