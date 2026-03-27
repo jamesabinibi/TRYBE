@@ -19,7 +19,8 @@ import {
   Loader2,
   Activity,
   AlertTriangle,
-  Users
+  Users,
+  Image
 } from 'lucide-react';
 import { Category } from '../types';
 import { cn } from '../lib/utils';
@@ -147,6 +148,49 @@ export default function Settings() {
   }, []);
 
   const [isMigrating, setIsMigrating] = useState(false);
+  const [isMigratingDb, setIsMigratingDb] = useState(false);
+
+  const handleMigrateDatabase = async () => {
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-brand">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Migrate Database</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">This will copy all data (users, products, sales, etc.) from Supabase to AWS RDS. This process may take a while. Continue?</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              setIsMigratingDb(true);
+              try {
+                const res = await fetchWithAuth('/api/admin/migrate-database', { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                  toast.success(`Successfully migrated ${data.migratedCount} records!`);
+                } else {
+                  throw new Error(data.error || 'Database migration failed');
+                }
+              } catch (error: any) {
+                toast.error(error.message || 'Failed to migrate database');
+              } finally {
+                setIsMigratingDb(false);
+              }
+            }}
+            className="flex-1 px-4 py-2 bg-brand text-white rounded-xl text-xs font-bold hover:bg-brand/90 transition-colors"
+          >
+            Confirm
+          </button>
+          <button 
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
+  };
 
   const handleMigrateImages = async () => {
     toast.custom((t) => (
@@ -1420,13 +1464,34 @@ NOTIFY pgrst, 'reload schema';
             <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Critical operations for managing your business data.</p>
           </div>
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
-            <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-700/50 space-y-4">
+            <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 space-y-4">
               <div className="flex items-center gap-3 text-zinc-900 dark:text-white">
                 <Database className="w-5 h-5 text-brand" />
+                <h4 className="text-sm font-black uppercase tracking-widest">Database Migration</h4>
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                Migrate all data (accounts, users, products, sales, etc.) from Supabase to AWS RDS.
+                <strong className="block mt-1 text-brand">Note: Run this BEFORE migrating images.</strong>
+              </p>
+              <div className="pt-2">
+                <button 
+                  onClick={handleMigrateDatabase}
+                  disabled={isMigratingDb}
+                  className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isMigratingDb ? 'Migrating...' : 'Migrate Database to AWS RDS'}
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-700/50 space-y-4">
+              <div className="flex items-center gap-3 text-zinc-900 dark:text-white">
+                <Image className="w-5 h-5 text-brand" />
                 <h4 className="text-sm font-black uppercase tracking-widest">Image Migration</h4>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                 Migrate existing product images to AWS S3. This process runs in the background.
+                <strong className="block mt-1 text-brand">Note: Run Database Migration first.</strong>
               </p>
               <div className="pt-2">
                 <button 

@@ -21,9 +21,24 @@ console.error = (...args) => {
   originalError(...args);
 };
 
-// Supabase removed
-const supabase: any = null;
-const supabase_status = 'disconnected';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase initialization
+let supabase: any = null;
+let supabase_status = 'disconnected';
+
+if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+  try {
+    supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    supabase_status = 'connected';
+    console.log('[DB] Supabase client initialized successfully');
+  } catch (e: any) {
+    console.error('[DB] Failed to initialize Supabase client:', e.message);
+    supabase_status = 'error';
+  }
+} else {
+  console.warn('[DB] Supabase credentials missing. Supabase fallback will be disabled.');
+}
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -4922,20 +4937,132 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.post("/api/admin/migrate-database", requireSuperAdmin, async (req: any, res) => {
+    if (!supabase) return res.status(503).json({ error: "Supabase not connected. Cannot read source data." });
+    if (!process.env.AWS_DB_PASSWORD) return res.status(503).json({ error: "AWS RDS not connected. Cannot write destination data." });
+    
+    try {
+      const tables = [
+        'accounts', 'users', 'settings', 'categories', 'customers', 'services',
+        'products', 'product_variants', 'product_images', 'sales', 'sale_items',
+        'expenses', 'bookkeeping', 'notifications'
+      ];
+      
+      let totalMigrated = 0;
+      const client = await pool.connect();
+      
+      const fetchAllData = async (table: string) => {
+        let allData: any[] = [];
+        let from = 0;
+        const limit = 1000;
+        while (true) {
+          const { data, error } = await supabase!.from(table).select('*').range(from, from + limit - 1);
+          if (error) {
+            console.warn(`[MIGRATE] Error reading from ${table}:`, error.message);
+            break;
+          }
+          if (!data || data.length === 0) break;
+          allData = allData.concat(data);
+          if (data.length < limit) break;
+          from += limit;
+        }
+        return allData;
+      };
+
+      try {
+        await client.query('BEGIN');
+        
+        // Special handling for circular dependency between accounts and users
+        console.log(`[MIGRATE] Migrating table: accounts (Phase 1)`);
+        const accountsData = await fetchAllData('accounts');
+        if (accountsData.length > 0) {
+          for (const row of accountsData) {
+            const { owner_id, ...rest } = row; // Omit owner_id for now
+            const columns = Object.keys(rest);
+            const values = Object.values(rest);
+            const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+            const colNames = columns.map(c => `"${c}"`).join(', ');
+            
+            await client.query(`
+              INSERT INTO accounts (${colNames}) 
+              VALUES (${placeholders}) 
+              ON CONFLICT (id) DO NOTHING
+            `, values);
+            totalMigrated++;
+          }
+        }
+
+        // Now migrate the rest of the tables
+        for (const table of tables) {
+          if (table === 'accounts') continue; // Already handled phase 1
+          
+          console.log(`[MIGRATE] Migrating table: ${table}`);
+          const data = await fetchAllData(table);
+          
+          if (data.length > 0) {
+            for (const row of data) {
+              const columns = Object.keys(row);
+              const values = Object.values(row);
+              const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+              const colNames = columns.map(c => `"${c}"`).join(', ');
+              
+              await client.query(`
+                INSERT INTO ${table} (${colNames}) 
+                VALUES (${placeholders}) 
+                ON CONFLICT (id) DO NOTHING
+              `, values);
+              totalMigrated++;
+            }
+          }
+        }
+
+        // Phase 2 for accounts: update owner_id
+        console.log(`[MIGRATE] Migrating table: accounts (Phase 2)`);
+        if (accountsData.length > 0) {
+          for (const row of accountsData) {
+            if (row.owner_id) {
+              await client.query(`UPDATE accounts SET owner_id = $1 WHERE id = $2`, [row.owner_id, row.id]);
+            }
+          }
+        }
+        
+        // Update sequences so new inserts don't fail with duplicate key errors
+        console.log(`[MIGRATE] Updating sequences`);
+        for (const table of tables) {
+          try {
+            await client.query(`SELECT setval(pg_get_serial_sequence('"${table}"', 'id'), COALESCE((SELECT MAX(id)+1 FROM "${table}"), 1), false)`);
+          } catch (seqErr: any) {
+            console.warn(`[MIGRATE] Could not update sequence for ${table}:`, seqErr.message);
+          }
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true, migratedCount: totalMigrated });
+      } catch (e: any) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
+    } catch (error: any) {
+      console.error('[ADMIN] Database migration failed:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/admin/migrate-images", requireSuperAdmin, async (req: any, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
+    if (!process.env.AWS_DB_PASSWORD) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = req.user;
-      const { data: images, error } = await supabase.from('product_images').select('*');
-      if (error) throw error;
+      const { rows: images } = await pool.query('SELECT * FROM product_images');
       
       let migratedCount = 0;
-      if (images) {
+      if (images && images.length > 0) {
         for (const img of images) {
           if (img.image_data && img.image_data.startsWith('data:image')) {
             const uploadedUrl = await uploadToS3(img.image_data);
             if (uploadedUrl && uploadedUrl.startsWith('http')) {
-              await supabase.from('product_images').update({ image_data: uploadedUrl }).eq('id', img.id);
+              await pool.query('UPDATE product_images SET image_data = $1 WHERE id = $2', [uploadedUrl, img.id]);
               migratedCount++;
             }
           } else if (img.image_data && img.image_data.includes('cloudinary.com') && process.env.AWS_S3_BUCKET_NAME) {
