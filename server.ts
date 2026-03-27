@@ -5077,6 +5077,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       // 1. Migrate Product Images
       const { rows: images } = await pool.query('SELECT * FROM product_images');
+      console.log(`[MIGRATE] Found ${images?.length || 0} product images in RDS to check.`);
       if (images && images.length > 0) {
         for (const img of images) {
           if (img.image_data && img.image_data.startsWith('data:image')) {
@@ -5085,9 +5086,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               await pool.query('UPDATE product_images SET image_data = $1 WHERE id = $2', [uploadedUrl, img.id]);
               migratedCount++;
             }
-          } else if (img.image_data && img.image_data.includes('cloudinary.com') && process.env.AWS_S3_BUCKET_NAME) {
+          } else if (img.image_data && img.image_data.startsWith('http') && !img.image_data.includes('amazonaws.com') && process.env.AWS_S3_BUCKET_NAME) {
             try {
-              console.log(`[MIGRATE] Downloading image from Cloudinary: ${img.image_data}`);
+              console.log(`[MIGRATE] Downloading image from URL: ${img.image_data}`);
               const response = await fetch(img.image_data);
               if (response.ok) {
                 const arrayBuffer = await response.arrayBuffer();
@@ -5102,7 +5103,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
                   console.log(`[MIGRATE] Successfully migrated image ${img.id} to S3`);
                 }
               } else {
-                console.error(`[MIGRATE] Failed to download image ${img.id} from Cloudinary: ${response.statusText}`);
+                console.error(`[MIGRATE] Failed to download image ${img.id} from URL: ${response.statusText}`);
               }
             } catch (err) {
               console.error(`[MIGRATE] Error migrating image ${img.id}:`, err);
@@ -5113,6 +5114,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       // 2. Migrate Services Images
       const { rows: services } = await pool.query('SELECT * FROM services WHERE image_url IS NOT NULL');
+      console.log(`[MIGRATE] Found ${services?.length || 0} services with images in RDS to check.`);
       if (services && services.length > 0) {
         for (const srv of services) {
           if (srv.image_url && srv.image_url.startsWith('data:image')) {
@@ -5121,9 +5123,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               await pool.query('UPDATE services SET image_url = $1 WHERE id = $2', [uploadedUrl, srv.id]);
               migratedCount++;
             }
-          } else if (srv.image_url && srv.image_url.includes('cloudinary.com') && process.env.AWS_S3_BUCKET_NAME) {
+          } else if (srv.image_url && srv.image_url.startsWith('http') && !srv.image_url.includes('amazonaws.com') && process.env.AWS_S3_BUCKET_NAME) {
             try {
-              console.log(`[MIGRATE] Downloading service image from Cloudinary: ${srv.image_url}`);
+              console.log(`[MIGRATE] Downloading service image from URL: ${srv.image_url}`);
               const response = await fetch(srv.image_url);
               if (response.ok) {
                 const arrayBuffer = await response.arrayBuffer();
@@ -5137,6 +5139,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
                   migratedCount++;
                   console.log(`[MIGRATE] Successfully migrated service image ${srv.id} to S3`);
                 }
+              } else {
+                console.error(`[MIGRATE] Failed to download service image ${srv.id} from URL: ${response.statusText}`);
               }
             } catch (err) {
               console.error(`[MIGRATE] Error migrating service image ${srv.id}:`, err);
@@ -5147,6 +5151,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       // 3. Migrate Settings Logo
       const { rows: settings } = await pool.query('SELECT * FROM settings WHERE logo_url IS NOT NULL');
+      console.log(`[MIGRATE] Found ${settings?.length || 0} settings with logos in RDS to check.`);
       if (settings && settings.length > 0) {
         for (const set of settings) {
           if (set.logo_url && set.logo_url.startsWith('data:image')) {
@@ -5155,9 +5160,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               await pool.query('UPDATE settings SET logo_url = $1 WHERE id = $2', [uploadedUrl, set.id]);
               migratedCount++;
             }
-          } else if (set.logo_url && set.logo_url.includes('cloudinary.com') && process.env.AWS_S3_BUCKET_NAME) {
+          } else if (set.logo_url && set.logo_url.startsWith('http') && !set.logo_url.includes('amazonaws.com') && process.env.AWS_S3_BUCKET_NAME) {
             try {
-              console.log(`[MIGRATE] Downloading logo from Cloudinary: ${set.logo_url}`);
+              console.log(`[MIGRATE] Downloading logo from URL: ${set.logo_url}`);
               const response = await fetch(set.logo_url);
               if (response.ok) {
                 const arrayBuffer = await response.arrayBuffer();
@@ -5171,6 +5176,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
                   migratedCount++;
                   console.log(`[MIGRATE] Successfully migrated logo ${set.id} to S3`);
                 }
+              } else {
+                console.error(`[MIGRATE] Failed to download logo ${set.id} from URL: ${response.statusText}`);
               }
             } catch (err) {
               console.error(`[MIGRATE] Error migrating logo ${set.id}:`, err);
