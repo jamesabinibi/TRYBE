@@ -5111,40 +5111,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }
       }
 
-      // 1.5 Migrate Products image_url
-      const { rows: products } = await pool.query('SELECT * FROM products WHERE image_url IS NOT NULL');
-      if (products && products.length > 0) {
-        for (const prod of products) {
-          if (prod.image_url && prod.image_url.startsWith('data:image')) {
-            const uploadedUrl = await uploadToS3(prod.image_url, 'products');
-            if (uploadedUrl && uploadedUrl.startsWith('http')) {
-              await pool.query('UPDATE products SET image_url = $1 WHERE id = $2', [uploadedUrl, prod.id]);
-              migratedCount++;
-            }
-          } else if (prod.image_url && prod.image_url.includes('cloudinary.com') && process.env.AWS_S3_BUCKET_NAME) {
-            try {
-              console.log(`[MIGRATE] Downloading product image from Cloudinary: ${prod.image_url}`);
-              const response = await fetch(prod.image_url);
-              if (response.ok) {
-                const arrayBuffer = await response.arrayBuffer();
-                const buffer = Buffer.from(arrayBuffer);
-                const contentType = response.headers.get('content-type') || 'image/jpeg';
-                const base64Data = `data:${contentType};base64,${buffer.toString('base64')}`;
-                
-                const uploadedUrl = await uploadToS3(base64Data, 'products');
-                if (uploadedUrl && uploadedUrl.startsWith('http')) {
-                  await pool.query('UPDATE products SET image_url = $1 WHERE id = $2', [uploadedUrl, prod.id]);
-                  migratedCount++;
-                  console.log(`[MIGRATE] Successfully migrated product image ${prod.id} to S3`);
-                }
-              }
-            } catch (err) {
-              console.error(`[MIGRATE] Error migrating product image ${prod.id}:`, err);
-            }
-          }
-        }
-      }
-
       // 2. Migrate Services Images
       const { rows: services } = await pool.query('SELECT * FROM services WHERE image_url IS NOT NULL');
       if (services && services.length > 0) {
