@@ -96,6 +96,27 @@ export default function SuperAdmin() {
   const [isGeneratingAsset, setIsGeneratingAsset] = useState(false);
   const [mobileAssets, setMobileAssets] = useState<{ icon?: string, splash?: string }>({});
 
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [isFetchingLogs, setIsFetchingLogs] = useState(false);
+
+  const fetchLogs = async () => {
+    setIsFetchingLogs(true);
+    try {
+      const res = await fetchWithAuth('/api/debug/logs', {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(data.logs || []);
+      }
+    } catch (err) {
+      toast.error('Failed to fetch logs');
+    } finally {
+      setIsFetchingLogs(false);
+    }
+  };
+
   const handleGenerateAsset = async (type: 'icon' | 'splash') => {
     setIsGeneratingAsset(true);
     try {
@@ -446,7 +467,11 @@ export default function SuperAdmin() {
                 const data = await res.json();
                 
                 if (res.ok) {
-                  toast.success(`Image migration successful! Migrated: ${data.results.migrated} images`, { id: 'migrate-images', duration: 5000 });
+                  if (data.results.migrated === 0) {
+                    toast.info('No images were migrated. They might already be on S3 or the upload failed. Check logs for details.', { id: 'migrate-images', duration: 5000 });
+                  } else {
+                    toast.success(`Image migration successful! Migrated: ${data.results.migrated} images`, { id: 'migrate-images', duration: 5000 });
+                  }
                 } else {
                   toast.error(data.error || 'Image migration failed', { id: 'migrate-images' });
                 }
@@ -677,6 +702,16 @@ export default function SuperAdmin() {
             >
               <Mail className="w-4 h-4" />
               SMTP: {smtpStatus?.configured ? 'Ready' : 'Check Config'}
+            </button>
+            <button 
+              onClick={() => {
+                setIsLogsModalOpen(true);
+                fetchLogs();
+              }}
+              className="flex items-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all shadow-sm"
+            >
+              <Activity className="w-4 h-4" />
+              View Logs
             </button>
             <button 
               onClick={async () => {
@@ -1169,6 +1204,82 @@ export default function SuperAdmin() {
 
       {/* Reset Password Modal */}
       <AnimatePresence>
+        {isLogsModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsLogsModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 flex flex-col max-h-[80vh]"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Activity className="w-5 h-5 text-brand" />
+                    <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">System Diagnostics</span>
+                  </div>
+                  <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">System Logs</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={fetchLogs}
+                    disabled={isFetchingLogs}
+                    className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw className={cn("w-5 h-5", isFetchingLogs && "animate-spin")} />
+                  </button>
+                  <button
+                    onClick={() => setIsLogsModalOpen(false)}
+                    className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 font-mono text-xs space-y-1 bg-zinc-950 text-zinc-300 selection:bg-brand/30">
+                {logs.length > 0 ? (
+                  logs.map((log, i) => (
+                    <div key={i} className={cn(
+                      "py-0.5 border-l-2 pl-3",
+                      log.startsWith('[ERR]') ? "border-red-500 text-red-400 bg-red-500/5" : 
+                      log.startsWith('[LOG] [AWS S3]') ? "border-blue-500 text-blue-400 bg-blue-500/5" :
+                      "border-zinc-800"
+                    )}>
+                      <span className="opacity-50 mr-2">[{i.toString().padStart(3, '0')}]</span>
+                      {log}
+                    </div>
+                  ))
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-zinc-500 space-y-4 py-20">
+                    <Activity className="w-12 h-12 opacity-20 animate-pulse" />
+                    <p className="font-sans font-medium">No logs available yet</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                  Showing last {logs.length} entries
+                </p>
+                <button
+                  onClick={() => setIsLogsModalOpen(false)}
+                  className="px-8 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
+                >
+                  Close Console
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {isResetModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div 

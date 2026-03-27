@@ -64,8 +64,17 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 
+// Helper to sanitize AWS region ID (e.g., "US East (N. Virginia) us-east-1" -> "us-east-1")
+const getS3Region = () => {
+  const region = process.env.AWS_REGION || "us-east-1";
+  const match = region.match(/[a-z0-9-]+$/i);
+  return match ? match[0].toLowerCase() : region.toLowerCase();
+};
+
+const s3Region = getS3Region();
+
 const s3Client = new S3Client({
-  region: process.env.AWS_REGION || "us-east-1",
+  region: s3Region,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
@@ -102,7 +111,7 @@ async function uploadToS3(base64Data: string, folder: string = 'products') {
     await s3Client.send(command);
     
     // Construct the S3 URL
-    const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${filename}`;
+    const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${s3Region}.amazonaws.com/${filename}`;
     console.log(`[AWS S3] Uploaded to: ${s3Url}`);
     return s3Url;
   } catch (error) {
@@ -1995,6 +2004,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   // TEMPORARY: Debug endpoint to read logs
   app.get("/api/debug/logs", async (req, res) => {
+    if (req.headers.accept?.includes('application/json')) {
+      return res.json({ logs: logHistory });
+    }
     res.send(`<pre>${logHistory.join('\n')}</pre>`);
   });
 
@@ -4937,13 +4949,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       supabase_status,
       supabase_initialized: !!supabase,
       env: {
-        SUPABASE_URL: !!process.env.SUPABASE_URL,
-        SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
-        AWS_DB_PASSWORD: !!process.env.AWS_DB_PASSWORD,
-        AWS_S3_BUCKET_NAME: !!process.env.AWS_S3_BUCKET_NAME,
-        AWS_REGION: !!process.env.AWS_REGION,
-        AWS_ACCESS_KEY_ID: !!process.env.AWS_ACCESS_KEY_ID,
-        AWS_SECRET_ACCESS_KEY: !!process.env.AWS_SECRET_ACCESS_KEY,
+        SUPABASE_URL: process.env.SUPABASE_URL ? `Present (len: ${process.env.SUPABASE_URL.length})` : "Missing",
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? `Present (len: ${process.env.SUPABASE_ANON_KEY.length})` : "Missing",
+        AWS_DB_PASSWORD: process.env.AWS_DB_PASSWORD ? "Present" : "Missing",
+        AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME ? "Present" : "Missing",
+        AWS_REGION: process.env.AWS_REGION ? "Present" : "Missing",
+        AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? "Present" : "Missing",
+        AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ? "Present" : "Missing",
       },
       logs: logHistory.slice(-50)
     });
