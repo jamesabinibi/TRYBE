@@ -199,7 +199,7 @@ export default function Settings() {
           <AlertCircle className="w-5 h-5" />
           <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Migrate Images</h3>
         </div>
-        <p className="text-sm text-zinc-500 font-medium">This will move all existing product images to AWS S3. Continue?</p>
+        <p className="text-sm text-zinc-500 font-medium">This will move all existing images (products, services, logos) to AWS S3. Continue?</p>
         <div className="flex gap-3">
           <button 
             onClick={async () => {

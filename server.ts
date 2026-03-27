@@ -5054,9 +5054,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     if (!process.env.AWS_DB_PASSWORD) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = req.user;
-      const { rows: images } = await pool.query('SELECT * FROM product_images');
-      
       let migratedCount = 0;
+
+      // 1. Migrate Product Images
+      const { rows: images } = await pool.query('SELECT * FROM product_images');
       if (images && images.length > 0) {
         for (const img of images) {
           if (img.image_data && img.image_data.startsWith('data:image')) {
@@ -5066,11 +5067,99 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               migratedCount++;
             }
           } else if (img.image_data && img.image_data.includes('cloudinary.com') && process.env.AWS_S3_BUCKET_NAME) {
-             // We would need to download from cloudinary and upload to S3 here, but for now we just handle base64
-             // This is a placeholder for full migration logic
+            try {
+              console.log(`[MIGRATE] Downloading image from Cloudinary: ${img.image_data}`);
+              const response = await fetch(img.image_data);
+              if (response.ok) {
+                const arrayBuffer = await response.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                const contentType = response.headers.get('content-type') || 'image/jpeg';
+                const base64Data = `data:${contentType};base64,${buffer.toString('base64')}`;
+                
+                const uploadedUrl = await uploadToS3(base64Data);
+                if (uploadedUrl && uploadedUrl.startsWith('http')) {
+                  await pool.query('UPDATE product_images SET image_data = $1 WHERE id = $2', [uploadedUrl, img.id]);
+                  migratedCount++;
+                  console.log(`[MIGRATE] Successfully migrated image ${img.id} to S3`);
+                }
+              } else {
+                console.error(`[MIGRATE] Failed to download image ${img.id} from Cloudinary: ${response.statusText}`);
+              }
+            } catch (err) {
+              console.error(`[MIGRATE] Error migrating image ${img.id}:`, err);
+            }
           }
         }
       }
+
+      // 2. Migrate Services Images
+      const { rows: services } = await pool.query('SELECT * FROM services WHERE image_url IS NOT NULL');
+      if (services && services.length > 0) {
+        for (const srv of services) {
+          if (srv.image_url && srv.image_url.startsWith('data:image')) {
+            const uploadedUrl = await uploadToS3(srv.image_url, 'services');
+            if (uploadedUrl && uploadedUrl.startsWith('http')) {
+              await pool.query('UPDATE services SET image_url = $1 WHERE id = $2', [uploadedUrl, srv.id]);
+              migratedCount++;
+            }
+          } else if (srv.image_url && srv.image_url.includes('cloudinary.com') && process.env.AWS_S3_BUCKET_NAME) {
+            try {
+              console.log(`[MIGRATE] Downloading service image from Cloudinary: ${srv.image_url}`);
+              const response = await fetch(srv.image_url);
+              if (response.ok) {
+                const arrayBuffer = await response.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                const contentType = response.headers.get('content-type') || 'image/jpeg';
+                const base64Data = `data:${contentType};base64,${buffer.toString('base64')}`;
+                
+                const uploadedUrl = await uploadToS3(base64Data, 'services');
+                if (uploadedUrl && uploadedUrl.startsWith('http')) {
+                  await pool.query('UPDATE services SET image_url = $1 WHERE id = $2', [uploadedUrl, srv.id]);
+                  migratedCount++;
+                  console.log(`[MIGRATE] Successfully migrated service image ${srv.id} to S3`);
+                }
+              }
+            } catch (err) {
+              console.error(`[MIGRATE] Error migrating service image ${srv.id}:`, err);
+            }
+          }
+        }
+      }
+
+      // 3. Migrate Settings Logo
+      const { rows: settings } = await pool.query('SELECT * FROM settings WHERE logo_url IS NOT NULL');
+      if (settings && settings.length > 0) {
+        for (const set of settings) {
+          if (set.logo_url && set.logo_url.startsWith('data:image')) {
+            const uploadedUrl = await uploadToS3(set.logo_url, 'logos');
+            if (uploadedUrl && uploadedUrl.startsWith('http')) {
+              await pool.query('UPDATE settings SET logo_url = $1 WHERE id = $2', [uploadedUrl, set.id]);
+              migratedCount++;
+            }
+          } else if (set.logo_url && set.logo_url.includes('cloudinary.com') && process.env.AWS_S3_BUCKET_NAME) {
+            try {
+              console.log(`[MIGRATE] Downloading logo from Cloudinary: ${set.logo_url}`);
+              const response = await fetch(set.logo_url);
+              if (response.ok) {
+                const arrayBuffer = await response.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                const contentType = response.headers.get('content-type') || 'image/jpeg';
+                const base64Data = `data:${contentType};base64,${buffer.toString('base64')}`;
+                
+                const uploadedUrl = await uploadToS3(base64Data, 'logos');
+                if (uploadedUrl && uploadedUrl.startsWith('http')) {
+                  await pool.query('UPDATE settings SET logo_url = $1 WHERE id = $2', [uploadedUrl, set.id]);
+                  migratedCount++;
+                  console.log(`[MIGRATE] Successfully migrated logo ${set.id} to S3`);
+                }
+              }
+            } catch (err) {
+              console.error(`[MIGRATE] Error migrating logo ${set.id}:`, err);
+            }
+          }
+        }
+      }
+
       res.json({ success: true, migratedCount });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
