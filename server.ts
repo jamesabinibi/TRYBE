@@ -604,7 +604,7 @@ async function initAwsDb() {
   }
 }
 
-initAwsDb();
+// initAwsDb();
 
 async function getSystemSetting(key: string): Promise<string | null> {
   try {
@@ -976,12 +976,6 @@ async function createServer() {
         'product_images', 'sales', 'sale_items', 'expenses', 'customers', 
         'settings', 'notifications', 'services', 'bookkeeping'
       ];
-      
-      if (supabase) {
-        for (const table of tablesToDisableRLS) {
-          await supabase.rpc('exec_sql', { sql_query: `ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY;` }).catch(() => {});
-        }
-      }
 
       const setupSql = `
 -- 0. Accounts (Multi-tenancy)
@@ -4983,12 +4977,19 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
             const colNames = columns.map(c => `"${c}"`).join(', ');
             
-            await client.query(`
-              INSERT INTO accounts (${colNames}) 
-              VALUES (${placeholders}) 
-              ON CONFLICT (id) DO NOTHING
-            `, values);
-            totalMigrated++;
+            try {
+              await client.query('SAVEPOINT sp1');
+              await client.query(`
+                INSERT INTO accounts (${colNames}) 
+                VALUES (${placeholders}) 
+                ON CONFLICT (id) DO NOTHING
+              `, values);
+              await client.query('RELEASE SAVEPOINT sp1');
+              totalMigrated++;
+            } catch (err: any) {
+              await client.query('ROLLBACK TO SAVEPOINT sp1');
+              console.warn(`[MIGRATE] Skipping row in accounts due to error:`, err.message);
+            }
           }
         }
 
@@ -5000,18 +5001,36 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           const data = await fetchAllData(table);
           
           if (data.length > 0) {
-            for (const row of data) {
+            for (let row of data) {
+              // Handle schema differences between Supabase and RDS
+              if (table === 'product_images') {
+                if (row.url !== undefined) {
+                  row.image_data = row.url;
+                  delete row.url;
+                }
+                if (row.is_primary !== undefined) {
+                  delete row.is_primary;
+                }
+              }
+              
               const columns = Object.keys(row);
               const values = Object.values(row);
               const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
               const colNames = columns.map(c => `"${c}"`).join(', ');
               
-              await client.query(`
-                INSERT INTO ${table} (${colNames}) 
-                VALUES (${placeholders}) 
-                ON CONFLICT (id) DO NOTHING
-              `, values);
-              totalMigrated++;
+              try {
+                await client.query('SAVEPOINT sp2');
+                await client.query(`
+                  INSERT INTO ${table} (${colNames}) 
+                  VALUES (${placeholders}) 
+                  ON CONFLICT (id) DO NOTHING
+                `, values);
+                await client.query('RELEASE SAVEPOINT sp2');
+                totalMigrated++;
+              } catch (err: any) {
+                await client.query('ROLLBACK TO SAVEPOINT sp2');
+                console.warn(`[MIGRATE] Skipping row in ${table} due to error:`, err.message);
+              }
             }
           }
         }
@@ -5087,6 +5106,40 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               }
             } catch (err) {
               console.error(`[MIGRATE] Error migrating image ${img.id}:`, err);
+            }
+          }
+        }
+      }
+
+      // 1.5 Migrate Products image_url
+      const { rows: products } = await pool.query('SELECT * FROM products WHERE image_url IS NOT NULL');
+      if (products && products.length > 0) {
+        for (const prod of products) {
+          if (prod.image_url && prod.image_url.startsWith('data:image')) {
+            const uploadedUrl = await uploadToS3(prod.image_url, 'products');
+            if (uploadedUrl && uploadedUrl.startsWith('http')) {
+              await pool.query('UPDATE products SET image_url = $1 WHERE id = $2', [uploadedUrl, prod.id]);
+              migratedCount++;
+            }
+          } else if (prod.image_url && prod.image_url.includes('cloudinary.com') && process.env.AWS_S3_BUCKET_NAME) {
+            try {
+              console.log(`[MIGRATE] Downloading product image from Cloudinary: ${prod.image_url}`);
+              const response = await fetch(prod.image_url);
+              if (response.ok) {
+                const arrayBuffer = await response.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                const contentType = response.headers.get('content-type') || 'image/jpeg';
+                const base64Data = `data:${contentType};base64,${buffer.toString('base64')}`;
+                
+                const uploadedUrl = await uploadToS3(base64Data, 'products');
+                if (uploadedUrl && uploadedUrl.startsWith('http')) {
+                  await pool.query('UPDATE products SET image_url = $1 WHERE id = $2', [uploadedUrl, prod.id]);
+                  migratedCount++;
+                  console.log(`[MIGRATE] Successfully migrated product image ${prod.id} to S3`);
+                }
+              }
+            } catch (err) {
+              console.error(`[MIGRATE] Error migrating product image ${prod.id}:`, err);
             }
           }
         }
@@ -5822,10 +5875,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             console.warn(`[INIT] RDS Migration warning: ${e.message}`);
           }
         }
-        if (supabase) {
-          const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
-          if (error) console.warn(`[INIT] Supabase Migration warning: ${error.message}`);
-        }
       };
 
       await runSql(`
@@ -6234,9 +6283,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (process.env.AWS_DB_PASSWORD) {
         const { rows } = await pool.query('SELECT id FROM users WHERE username = $1 OR email = $2 LIMIT 1', ['superadmin', 'admin@gryndee.com']);
         if (rows.length > 0) existingAdmin = rows[0];
-      } else if (supabase) {
-        const { data } = await supabase.from('users').select('id').or('username.eq.superadmin,email.eq.admin@gryndee.com').maybeSingle();
-        existingAdmin = data;
       }
 
       if (!existingAdmin) {
@@ -6251,29 +6297,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             [account.id, 'superadmin', 'admin@gryndee.com', hashedPassword, 'super_admin', 'System Admin']
           );
         }
-        
-        if (supabase) {
-          const { data: account, error: accErr } = await supabase.from('accounts').insert([{ name: 'System Administration' }]).select().single();
-          if (!accErr && account) {
-            await supabase.from('users').insert([{
-              account_id: account.id,
-              username: 'superadmin',
-              email: 'admin@gryndee.com',
-              password: hashedPassword,
-              role: 'super_admin',
-              name: 'System Admin'
-            }]);
-          }
-        }
         console.log('[INIT] Default super admin created: superadmin / superpassword123');
       } else {
         console.log('[INIT] Super admin already exists. Updating password...');
         const hashedPassword = await bcrypt.hash('superpassword123', 10);
         if (process.env.AWS_DB_PASSWORD) {
           await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, existingAdmin.id]);
-        }
-        if (supabase) {
-          await supabase.from('users').update({ password: hashedPassword }).eq('id', existingAdmin.id);
         }
       }
 
@@ -6282,9 +6311,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (process.env.AWS_DB_PASSWORD) {
         const { rows } = await pool.query('SELECT id FROM users WHERE username = $1 OR email = $2 LIMIT 1', ['admin', 'admin@gryndee.com']);
         if (rows.length > 0) demoAdmin = rows[0];
-      } else if (supabase) {
-        const { data } = await supabase.from('users').select('id').or('username.eq.admin,email.eq.admin@gryndee.com').maybeSingle();
-        demoAdmin = data;
       }
 
       if (!demoAdmin) {
@@ -6304,39 +6330,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             [account.id, 'Gryndee Demo', 'NGN', '#10b981']
           );
         }
-
-        if (supabase) {
-          const { data: account, error: accErr } = await supabase.from('accounts').insert([{ name: 'Gryndee Demo' }]).select().single();
-          if (!accErr && account) {
-            const { data: user, error: userErr } = await supabase.from('users').insert([{
-              account_id: account.id,
-              username: 'admin',
-              email: 'admin@gryndee.com',
-              password: hashedPassword,
-              role: 'admin',
-              name: 'Demo Admin'
-            }]).select().single();
-            
-            if (user) {
-              await supabase.from('accounts').update({ owner_id: user.id }).eq('id', account.id);
-              await supabase.from('settings').insert([{
-                account_id: account.id,
-                business_name: 'Gryndee Demo',
-                currency: 'NGN',
-                brand_color: '#10b981'
-              }]);
-            }
-          }
-        }
         console.log('[INIT] Default demo admin created: admin / admin123');
       } else {
         console.log('[INIT] Demo admin already exists. Updating password...');
         const hashedPassword = await bcrypt.hash('admin123', 10);
         if (process.env.AWS_DB_PASSWORD) {
           await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, demoAdmin.id]);
-        }
-        if (supabase) {
-          await supabase.from('users').update({ password: hashedPassword }).eq('id', demoAdmin.id);
         }
       }
     }
