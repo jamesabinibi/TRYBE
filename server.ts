@@ -4932,11 +4932,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/admin/migrate-database", requireSuperAdmin, async (req: any, res) => {
+    dotenv.config(); // Force reload env vars
     let activeSupabase = supabase;
     if (!activeSupabase && process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
       activeSupabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
     }
-    if (!activeSupabase) return res.status(503).json({ error: "Supabase not connected. Cannot read source data. Please check your SUPABASE_URL and SUPABASE_ANON_KEY in Secrets." });
+    if (!activeSupabase) {
+      console.error("[MIGRATE] Supabase connection failed. URL exists:", !!process.env.SUPABASE_URL, "Key exists:", !!process.env.SUPABASE_ANON_KEY);
+      return res.status(503).json({ error: "Supabase not connected. Cannot read source data. Please check your SUPABASE_URL and SUPABASE_ANON_KEY in Secrets." });
+    }
     if (!process.env.AWS_DB_PASSWORD) return res.status(503).json({ error: "AWS RDS not connected. Cannot write destination data." });
     
     try {
