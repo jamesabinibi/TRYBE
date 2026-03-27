@@ -402,7 +402,7 @@ export default function SuperAdmin() {
               toast.dismiss(t);
               toast.loading('Migrating data to AWS RDS...', { id: 'migrate' });
               try {
-                const res = await fetchWithAuth('/api/admin/migrate', { method: 'POST' });
+                const res = await fetchWithAuth('/api/admin/migrate-database', { method: 'POST' });
                 const data = await res.json();
                 
                 if (res.ok) {
@@ -419,6 +419,44 @@ export default function SuperAdmin() {
             className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
           >
             Migrate
+          </button>
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity });
+  };
+
+  const handleMigrateImages = async () => {
+    toast.custom((t) => (
+      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
+        <div className="flex items-center gap-3 text-brand">
+          <AlertCircle className="w-5 h-5" />
+          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Migrate Images</h3>
+        </div>
+        <p className="text-sm text-zinc-500 font-medium">This will copy all product images, service images, and settings logos to AWS S3. Continue?</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t);
+              toast.loading('Migrating images to AWS S3...', { id: 'migrate-images' });
+              try {
+                const res = await fetchWithAuth('/api/admin/migrate-images', { method: 'POST' });
+                const data = await res.json();
+                
+                if (res.ok) {
+                  toast.success(`Image migration successful! Migrated: ${data.results.migrated} images`, { id: 'migrate-images', duration: 5000 });
+                } else {
+                  toast.error(data.error || 'Image migration failed', { id: 'migrate-images' });
+                }
+              } catch (err: any) {
+                toast.error(err.message || 'Network error during image migration', { id: 'migrate-images' });
+              }
+            }}
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+          >
+            Migrate Images
           </button>
           <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
@@ -600,6 +638,20 @@ export default function SuperAdmin() {
         
           <div className="flex items-center gap-3">
             <button 
+              onClick={handleMigrateImages}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-500/10 text-blue-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-500/20 transition-all shadow-sm"
+            >
+              <Database className="w-4 h-4" />
+              Migrate Images
+            </button>
+            <button 
+              onClick={handleMigrate}
+              className="flex items-center gap-2 px-6 py-3 bg-brand/10 text-brand rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand/20 transition-all shadow-sm"
+            >
+              <Database className="w-4 h-4" />
+              Migrate DB
+            </button>
+            <button 
               onClick={() => setIsMobileAssetsModalOpen(true)}
               className="flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
             >
@@ -625,6 +677,22 @@ export default function SuperAdmin() {
             >
               <Mail className="w-4 h-4" />
               SMTP: {smtpStatus?.configured ? 'Ready' : 'Check Config'}
+            </button>
+            <button 
+              onClick={async () => {
+                try {
+                  const res = await fetchWithAuth('/api/admin/debug-env');
+                  const data = await res.json();
+                  console.log('DEBUG ENV:', data);
+                  toast.info(`Supabase: ${data.supabase_status}. Env: ${JSON.stringify(data.env)}`);
+                } catch (err: any) {
+                  toast.error('Debug failed: ' + err.message);
+                }
+              }}
+              className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-blue-500 transition-colors shadow-sm"
+              title="Debug Environment"
+            >
+              <ShieldCheck className="w-5 h-5" />
             </button>
             <button 
               onClick={() => { fetchStats(); fetchUsers(); }}

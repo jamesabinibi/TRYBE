@@ -3,6 +3,9 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+dotenv.config();
+console.log("[INIT] SUPABASE_URL exists:", !!process.env.SUPABASE_URL);
+console.log("[INIT] SUPABASE_ANON_KEY exists:", !!process.env.SUPABASE_ANON_KEY);
 import fs from 'fs';
 import nodemailer from 'nodemailer';
 
@@ -46,8 +49,6 @@ import { v2 as cloudinary } from 'cloudinary';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-dotenv.config();
 
 // Cloudinary Config
 if (process.env.CLOUDINARY_CLOUD_NAME) {
@@ -4931,12 +4932,43 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.get("/api/admin/debug-env", requireSuperAdmin, (req, res) => {
+    res.json({
+      supabase_status,
+      supabase_initialized: !!supabase,
+      env: {
+        SUPABASE_URL: !!process.env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
+        AWS_DB_PASSWORD: !!process.env.AWS_DB_PASSWORD,
+        AWS_S3_BUCKET_NAME: !!process.env.AWS_S3_BUCKET_NAME,
+        AWS_REGION: !!process.env.AWS_REGION,
+        AWS_ACCESS_KEY_ID: !!process.env.AWS_ACCESS_KEY_ID,
+        AWS_SECRET_ACCESS_KEY: !!process.env.AWS_SECRET_ACCESS_KEY,
+      },
+      logs: logHistory.slice(-50)
+    });
+  });
+
   app.post("/api/admin/migrate-database", requireSuperAdmin, async (req: any, res) => {
-    dotenv.config(); // Force reload env vars
+    console.log("[MIGRATE] Migration started. Checking Supabase connection...");
     let activeSupabase = supabase;
-    if (!activeSupabase && process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
-      activeSupabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    console.log("[MIGRATE] Initial supabase state:", !!activeSupabase);
+    
+    if (!activeSupabase) {
+      console.log("[MIGRATE] Supabase not initialized globally. Attempting local initialization...");
+      console.log("[MIGRATE] SUPABASE_URL exists:", !!process.env.SUPABASE_URL);
+      console.log("[MIGRATE] SUPABASE_ANON_KEY exists:", !!process.env.SUPABASE_ANON_KEY);
+      
+      if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+        try {
+          activeSupabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+          console.log("[MIGRATE] Local supabase client created successfully");
+        } catch (err: any) {
+          console.error("[MIGRATE] Local supabase initialization failed:", err.message);
+        }
+      }
     }
+
     if (!activeSupabase) {
       console.error("[MIGRATE] Supabase connection failed. URL exists:", !!process.env.SUPABASE_URL, "Key exists:", !!process.env.SUPABASE_ANON_KEY);
       return res.status(503).json({ error: "Supabase not connected. Cannot read source data. Please check your SUPABASE_URL and SUPABASE_ANON_KEY in Secrets." });
@@ -5194,7 +5226,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }
       }
 
-      res.json({ success: true, migratedCount });
+      res.json({ success: true, results: { migrated: migratedCount } });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
