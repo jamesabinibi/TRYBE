@@ -4932,7 +4932,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/admin/migrate-database", requireSuperAdmin, async (req: any, res) => {
-    if (!supabase) return res.status(503).json({ error: "Supabase not connected. Cannot read source data." });
+    let activeSupabase = supabase;
+    if (!activeSupabase && process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+      activeSupabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    }
+    if (!activeSupabase) return res.status(503).json({ error: "Supabase not connected. Cannot read source data. Please check your SUPABASE_URL and SUPABASE_ANON_KEY in Secrets." });
     if (!process.env.AWS_DB_PASSWORD) return res.status(503).json({ error: "AWS RDS not connected. Cannot write destination data." });
     
     try {
@@ -4950,7 +4954,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         let from = 0;
         const limit = 1000;
         while (true) {
-          const { data, error } = await supabase!.from(table).select('*').range(from, from + limit - 1);
+          const { data, error } = await activeSupabase!.from(table).select('*').range(from, from + limit - 1);
           if (error) {
             console.warn(`[MIGRATE] Error reading from ${table}:`, error.message);
             break;
