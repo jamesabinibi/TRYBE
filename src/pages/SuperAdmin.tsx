@@ -147,6 +147,40 @@ export default function SuperAdmin() {
   };
 
   const [isSmtpConfigModalOpen, setIsSmtpConfigModalOpen] = useState(false);
+  const [isSecretsModalOpen, setIsSecretsModalOpen] = useState(false);
+  const [secrets, setSecrets] = useState({
+    SUPABASE_URL: '',
+    SUPABASE_ANON_KEY: '',
+    AWS_ACCESS_KEY_ID: '',
+    AWS_SECRET_ACCESS_KEY: '',
+    AWS_S3_BUCKET_NAME: '',
+    AWS_REGION: 'us-east-1'
+  });
+  const [isSavingSecrets, setIsSavingSecrets] = useState(false);
+
+  const handleUpdateSecrets = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSecrets(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/update-env', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ env: secrets })
+      });
+      if (res.ok) {
+        toast.success('Secrets updated successfully!');
+        setIsSecretsModalOpen(false);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to update secrets');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update secrets');
+    } finally {
+      setIsSavingSecrets(false);
+    }
+  };
+
   const [smtpConfig, setSmtpConfig] = useState({
     user: '',
     pass: '',
@@ -712,6 +746,13 @@ export default function SuperAdmin() {
             >
               <Activity className="w-4 h-4" />
               View Logs
+            </button>
+            <button 
+              onClick={() => setIsSecretsModalOpen(true)}
+              className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-indigo-500 transition-colors shadow-sm"
+              title="Manage Secrets"
+            >
+              <Key className="w-5 h-5" />
             </button>
             <button 
               onClick={async () => {
@@ -1649,6 +1690,126 @@ export default function SuperAdmin() {
                   Close
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+        {/* Secrets Management Modal */}
+        {isSecretsModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-[32px] overflow-hidden shadow-2xl border border-zinc-200 dark:border-zinc-800"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center">
+                    <Key className="w-6 h-6 text-indigo-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">Manage Secrets</h2>
+                    <p className="text-xs text-zinc-500 font-medium">Update system environment variables</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsSecretsModalOpen(false)}
+                  className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+                >
+                  <X className="w-5 h-5 text-zinc-400" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateSecrets} className="p-8 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Supabase URL</label>
+                    <input 
+                      type="text"
+                      value={secrets.SUPABASE_URL}
+                      onChange={(e) => setSecrets(prev => ({ ...prev, SUPABASE_URL: e.target.value }))}
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      placeholder="https://your-project.supabase.co"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Supabase Anon Key</label>
+                    <input 
+                      type="password"
+                      value={secrets.SUPABASE_ANON_KEY}
+                      onChange={(e) => setSecrets(prev => ({ ...prev, SUPABASE_ANON_KEY: e.target.value }))}
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      placeholder="Your public anon key"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Access Key ID</label>
+                    <input 
+                      type="text"
+                      value={secrets.AWS_ACCESS_KEY_ID}
+                      onChange={(e) => setSecrets(prev => ({ ...prev, AWS_ACCESS_KEY_ID: e.target.value }))}
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      placeholder="AKIA..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Secret Access Key</label>
+                    <input 
+                      type="password"
+                      value={secrets.AWS_SECRET_ACCESS_KEY}
+                      onChange={(e) => setSecrets(prev => ({ ...prev, AWS_SECRET_ACCESS_KEY: e.target.value }))}
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      placeholder="Your secret key"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">S3 Bucket Name</label>
+                    <input 
+                      type="text"
+                      value={secrets.AWS_S3_BUCKET_NAME}
+                      onChange={(e) => setSecrets(prev => ({ ...prev, AWS_S3_BUCKET_NAME: e.target.value }))}
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      placeholder="my-app-images"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Region</label>
+                    <input 
+                      type="text"
+                      value={secrets.AWS_REGION}
+                      onChange={(e) => setSecrets(prev => ({ ...prev, AWS_REGION: e.target.value }))}
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      placeholder="us-east-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsSecretsModalOpen(false)}
+                    className="flex-1 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={isSavingSecrets}
+                    className="flex-1 py-4 bg-indigo-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSavingSecrets ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="w-4 h-4" />
+                        Save Secrets
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

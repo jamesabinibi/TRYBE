@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import nodemailer from 'nodemailer';
 
 // IN-MEMORY LOGGING FOR DEBUGGING
 const logHistory: string[] = [];
@@ -4960,6 +4961,46 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       server_start_time: serverStartTime,
       current_time: new Date().toISOString()
     });
+  });
+
+  app.post("/api/admin/update-env", requireSuperAdmin, async (req, res) => {
+    const { env } = req.body;
+    if (!env || typeof env !== 'object') {
+      return res.status(400).json({ error: "Invalid environment data" });
+    }
+
+    try {
+      let envContent = '';
+      if (fs.existsSync('.env')) {
+        envContent = fs.readFileSync('.env', 'utf8');
+      }
+
+      for (const [key, value] of Object.entries(env)) {
+        process.env[key] = String(value);
+        
+        const regex = new RegExp(`^${key}=.*`, 'm');
+        if (regex.test(envContent)) {
+          envContent = envContent.replace(regex, `${key}=${value}`);
+        } else {
+          envContent += `\n${key}=${value}`;
+        }
+      }
+
+      fs.writeFileSync('.env', envContent.trim() + '\n');
+      console.log("[INIT] Environment updated via API. Re-initializing clients...");
+
+      if (env.SUPABASE_URL || env.SUPABASE_ANON_KEY) {
+        if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+          supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+          supabase_status = 'connected';
+        }
+      }
+
+      res.json({ success: true, message: "Environment updated and persisted to .env" });
+    } catch (err: any) {
+      console.error("[INIT] Failed to update environment:", err);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   app.post("/api/admin/refresh-env", requireSuperAdmin, (req, res) => {
