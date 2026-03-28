@@ -103,7 +103,9 @@ function reinitializeS3() {
 }
 
 async function uploadToS3(base64Data: string, folder: string = 'products') {
+  console.log(`[AWS S3] Attempting upload to folder: ${folder}. Bucket: ${process.env.AWS_S3_BUCKET_NAME}. Region: ${s3Region}`);
   if (!process.env.AWS_S3_BUCKET_NAME || !base64Data || !base64Data.startsWith('data:image')) {
+    console.warn(`[AWS S3] Upload skipped: Missing bucket name or invalid data. Bucket: ${process.env.AWS_S3_BUCKET_NAME}, Data starts with data:image: ${base64Data?.startsWith('data:image')}`);
     return base64Data;
   }
 
@@ -121,22 +123,22 @@ async function uploadToS3(base64Data: string, folder: string = 'products') {
     const extension = mimeType.split('/')[1] || 'jpg';
     const filename = `${folder}/${crypto.randomUUID()}.${extension}`;
 
+    console.log(`[AWS S3] Sending PutObjectCommand for ${filename}`);
     const command = new PutObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: filename,
       Body: buffer,
       ContentType: mimeType,
-      // ACL: 'public-read' // Optional: if you want objects to be public by default
     });
 
     await s3Client.send(command);
     
     // Construct the S3 URL
     const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${s3Region}.amazonaws.com/${filename}`;
-    console.log(`[AWS S3] Uploaded to: ${s3Url}`);
+    console.log(`[AWS S3] Upload successful: ${s3Url}`);
     return s3Url;
-  } catch (error) {
-    console.error('[AWS S3] Upload failed:', error);
+  } catch (error: any) {
+    console.error('[AWS S3] Upload failed:', error.message || error);
     return base64Data;
   }
 }
