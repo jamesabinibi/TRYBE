@@ -26,7 +26,8 @@ import {
   Smartphone,
   Download,
   Image as ImageIcon,
-  AlertCircle
+  AlertCircle,
+  Cloud
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
@@ -148,6 +149,9 @@ export default function SuperAdmin() {
 
   const [isSmtpConfigModalOpen, setIsSmtpConfigModalOpen] = useState(false);
   const [isSecretsModalOpen, setIsSecretsModalOpen] = useState(false);
+  const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
+  const [diagnosticData, setDiagnosticData] = useState<any>(null);
+  const [isFetchingDiagnostic, setIsFetchingDiagnostic] = useState(false);
   const [secrets, setSecrets] = useState({
     SUPABASE_URL: '',
     SUPABASE_ANON_KEY: '',
@@ -157,6 +161,24 @@ export default function SuperAdmin() {
     AWS_REGION: 'us-east-1'
   });
   const [isSavingSecrets, setIsSavingSecrets] = useState(false);
+
+  const fetchDiagnostic = async () => {
+    setIsFetchingDiagnostic(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/check-rds-images');
+      const data = await res.json();
+      if (res.ok) {
+        setDiagnosticData(data);
+        setIsDiagnosticModalOpen(true);
+      } else {
+        toast.error(data.error || 'Failed to fetch diagnostic data');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to fetch diagnostic data');
+    } finally {
+      setIsFetchingDiagnostic(false);
+    }
+  };
 
   const handleUpdateSecrets = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -702,6 +724,14 @@ export default function SuperAdmin() {
             >
               <Database className="w-4 h-4" />
               Migrate Images
+            </button>
+            <button 
+              onClick={fetchDiagnostic}
+              disabled={isFetchingDiagnostic}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-500/10 text-indigo-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all shadow-sm disabled:opacity-50"
+            >
+              <Activity className="w-4 h-4" />
+              {isFetchingDiagnostic ? 'Checking...' : 'Check Image Status'}
             </button>
             <button 
               onClick={handleMigrate}
@@ -1335,6 +1365,162 @@ export default function SuperAdmin() {
                   className="px-8 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
                 >
                   Close Console
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {isDiagnosticModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDiagnosticModalOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 flex flex-col my-8"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Activity className="w-5 h-5 text-indigo-500" />
+                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Image Migration Status</span>
+                  </div>
+                  <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Diagnostic Results</h2>
+                </div>
+                <button
+                  onClick={() => setIsDiagnosticModalOpen(false)}
+                  className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-8 overflow-y-auto max-h-[60vh]">
+                {/* AWS Config Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                    <Cloud className="w-4 h-4" />
+                    AWS S3 Configuration
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Bucket Status</p>
+                      <div className="flex items-center gap-2">
+                        <div className={cn("w-2 h-2 rounded-full", diagnosticData?.awsConfig?.bucketSet ? "bg-emerald-500" : "bg-red-500")} />
+                        <p className="text-sm font-black text-zinc-900 dark:text-white">
+                          {diagnosticData?.awsConfig?.bucketName || 'Not Configured'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Region</p>
+                      <p className="text-sm font-black text-zinc-900 dark:text-white">{diagnosticData?.awsConfig?.region}</p>
+                    </div>
+                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Access Keys</p>
+                      <div className="flex items-center gap-2">
+                        <div className={cn("w-2 h-2 rounded-full", diagnosticData?.awsConfig?.accessKeySet && diagnosticData?.awsConfig?.secretKeySet ? "bg-emerald-500" : "bg-red-500")} />
+                        <p className="text-sm font-black text-zinc-900 dark:text-white">
+                          {diagnosticData?.awsConfig?.accessKeySet ? 'Keys Configured' : 'Keys Missing'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">S3 Connection Test</p>
+                      <div className="flex items-center gap-2">
+                        <div className={cn("w-2 h-2 rounded-full", diagnosticData?.awsConfig?.s3Test === 'SUCCESS' ? "bg-emerald-500" : diagnosticData?.awsConfig?.s3Test === 'NOT RUN' ? "bg-zinc-400" : "bg-red-500")} />
+                        <p className="text-sm font-black text-zinc-900 dark:text-white">{diagnosticData?.awsConfig?.s3Test}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RDS Counts Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                    <Database className="w-4 h-4" />
+                    RDS Image Counts
+                  </h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Products</p>
+                      <p className="text-2xl font-black text-zinc-900 dark:text-white">{diagnosticData?.productImagesCount}</p>
+                    </div>
+                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Services</p>
+                      <p className="text-2xl font-black text-zinc-900 dark:text-white">{diagnosticData?.servicesCount}</p>
+                    </div>
+                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Logos</p>
+                      <p className="text-2xl font-black text-zinc-900 dark:text-white">{diagnosticData?.settingsCount}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Samples Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    Data Format Samples
+                  </h3>
+                  <div className="space-y-2">
+                    {diagnosticData?.samples?.productImages?.length > 0 && (
+                      <div className="p-4 bg-zinc-950 rounded-2xl border border-zinc-800 font-mono text-[10px]">
+                        <p className="text-indigo-400 mb-2 uppercase font-black tracking-widest">Product Images Sample:</p>
+                        {diagnosticData.samples.productImages.map((s: string, i: number) => (
+                          <div key={i} className="text-zinc-500 truncate mb-1">
+                            {s.startsWith('http') ? (
+                              <span className={cn(s.includes('amazonaws.com') ? "text-emerald-500" : "text-amber-500")}>
+                                {s.includes('amazonaws.com') ? '[S3] ' : '[EXTERNAL URL] '}
+                                {s}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-400">[BASE64] {s}...</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {diagnosticData?.samples?.services?.length > 0 && (
+                      <div className="p-4 bg-zinc-950 rounded-2xl border border-zinc-800 font-mono text-[10px]">
+                        <p className="text-indigo-400 mb-2 uppercase font-black tracking-widest">Services Sample:</p>
+                        {diagnosticData.samples.services.map((s: string, i: number) => (
+                          <div key={i} className="text-zinc-500 truncate mb-1">
+                            {s.startsWith('http') ? (
+                              <span className={cn(s.includes('amazonaws.com') ? "text-emerald-500" : "text-amber-500")}>
+                                {s.includes('amazonaws.com') ? '[S3] ' : '[EXTERNAL URL] '}
+                                {s}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-400">[BASE64] {s}...</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsDiagnosticModalOpen(false)}
+                  className="px-8 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-all"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleMigrateImages}
+                  className="px-8 py-3 bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-indigo-500/25"
+                >
+                  Start Migration
                 </button>
               </div>
             </motion.div>
