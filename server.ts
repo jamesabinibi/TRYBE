@@ -3,14 +3,10 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-dotenv.config();
-console.log("[INIT] SUPABASE_URL exists:", !!process.env.SUPABASE_URL);
-console.log("[INIT] SUPABASE_ANON_KEY exists:", !!process.env.SUPABASE_ANON_KEY);
-import fs from 'fs';
-import nodemailer from 'nodemailer';
 
 // IN-MEMORY LOGGING FOR DEBUGGING
 const logHistory: string[] = [];
+const serverStartTime = new Date().toISOString();
 const originalLog = console.log;
 const originalError = console.error;
 console.log = (...args) => {
@@ -23,6 +19,19 @@ console.error = (...args) => {
   if (logHistory.length > 200) logHistory.shift();
   originalError(...args);
 };
+
+dotenv.config();
+console.log("[INIT] Environment variable keys:", Object.keys(process.env).filter(k => !k.includes('SECRET') && !k.includes('KEY') && !k.includes('PASSWORD')).join(', '));
+console.log("[INIT] Sensitive keys present:", {
+  SUPABASE_URL: !!process.env.SUPABASE_URL,
+  SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
+  AWS_DB_PASSWORD: !!process.env.AWS_DB_PASSWORD,
+  AWS_ACCESS_KEY_ID: !!process.env.AWS_ACCESS_KEY_ID,
+  AWS_SECRET_ACCESS_KEY: !!process.env.AWS_SECRET_ACCESS_KEY
+});
+console.log("[INIT] SUPABASE_URL exists:", !!process.env.SUPABASE_URL);
+console.log("[INIT] SUPABASE_ANON_KEY exists:", !!process.env.SUPABASE_ANON_KEY);
+import fs from 'fs';
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -4944,13 +4953,52 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.get("/api/ping", (req, res) => {
+    res.json({ 
+      host: req.headers.host, 
+      url: req.url,
+      server_start_time: serverStartTime,
+      current_time: new Date().toISOString()
+    });
+  });
+
+  app.post("/api/admin/refresh-env", requireSuperAdmin, (req, res) => {
+    console.log("[INIT] Refreshing environment variables...");
+    dotenv.config();
+    
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+      try {
+        supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        supabase_status = 'connected';
+        console.log('[DB] Supabase client re-initialized successfully');
+      } catch (e: any) {
+        console.error('[DB] Failed to re-initialize Supabase client:', e.message);
+        supabase_status = 'error';
+      }
+    } else {
+      console.warn('[DB] Supabase credentials still missing after refresh.');
+    }
+    
+    res.json({ 
+      success: true, 
+      supabase_status, 
+      supabase_initialized: !!supabase,
+      env: {
+        SUPABASE_URL: process.env.SUPABASE_URL ? "Present" : "Missing",
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? "Present" : "Missing"
+      }
+    });
+  });
+
   app.get("/api/admin/debug-env", requireSuperAdmin, (req, res) => {
     res.json({
       supabase_status,
       supabase_initialized: !!supabase,
+      server_start_time: serverStartTime,
+      current_time: new Date().toISOString(),
       env: {
-        SUPABASE_URL: process.env.SUPABASE_URL ? `Present (len: ${process.env.SUPABASE_URL.length})` : "Missing",
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? `Present (len: ${process.env.SUPABASE_ANON_KEY.length})` : "Missing",
+        SUPABASE_URL: process.env.SUPABASE_URL ? `${process.env.SUPABASE_URL.substring(0, 10)}... (len: ${process.env.SUPABASE_URL.length})` : "Missing",
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? `${process.env.SUPABASE_ANON_KEY.substring(0, 10)}... (len: ${process.env.SUPABASE_ANON_KEY.length})` : "Missing",
         AWS_DB_PASSWORD: process.env.AWS_DB_PASSWORD ? "Present" : "Missing",
         AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME ? "Present" : "Missing",
         AWS_REGION: process.env.AWS_REGION ? "Present" : "Missing",
@@ -4962,6 +5010,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/admin/migrate-database", requireSuperAdmin, async (req: any, res) => {
+    console.log(`[MIGRATE] Database migration triggered from host: ${req.headers.host}`);
     console.log("[MIGRATE] Migration started. Checking Supabase connection...");
     let activeSupabase = supabase;
     console.log("[MIGRATE] Initial supabase state:", !!activeSupabase);
@@ -4982,7 +5031,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
 
     if (!activeSupabase) {
-      console.error("[MIGRATE] Supabase connection failed. URL exists:", !!process.env.SUPABASE_URL, "Key exists:", !!process.env.SUPABASE_ANON_KEY);
+      console.error("[MIGRATE] Supabase connection failed.");
+      console.log("[MIGRATE] SUPABASE_URL:", process.env.SUPABASE_URL ? `${process.env.SUPABASE_URL.substring(0, 10)}...` : "Missing");
+      console.log("[MIGRATE] SUPABASE_ANON_KEY:", process.env.SUPABASE_ANON_KEY ? `${process.env.SUPABASE_ANON_KEY.substring(0, 10)}...` : "Missing");
+      console.log("[MIGRATE] AWS_DB_PASSWORD:", process.env.AWS_DB_PASSWORD ? "Present" : "Missing");
       return res.status(503).json({ error: "Supabase not connected. Cannot read source data. Please check your SUPABASE_URL and SUPABASE_ANON_KEY in Secrets." });
     }
     if (!process.env.AWS_DB_PASSWORD) return res.status(503).json({ error: "AWS RDS not connected. Cannot write destination data." });

@@ -716,6 +716,26 @@ export default function SuperAdmin() {
             <button 
               onClick={async () => {
                 try {
+                  const res = await fetchWithAuth('/api/admin/refresh-env', { method: 'POST' });
+                  const data = await res.json();
+                  if (res.ok) {
+                    toast.success('Environment refreshed successfully!');
+                    fetchStats();
+                  } else {
+                    toast.error(data.error || 'Failed to refresh environment');
+                  }
+                } catch (err: any) {
+                  toast.error(err.message || 'Failed to refresh environment');
+                }
+              }}
+              className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-amber-500 transition-colors shadow-sm"
+              title="Refresh Environment"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={async () => {
+                try {
                   const res = await fetchWithAuth('/api/admin/debug-env');
                   const data = await res.json();
                   console.log('DEBUG ENV:', data);
