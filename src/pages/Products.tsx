@@ -16,7 +16,8 @@ import {
   X,
   Check,
   Briefcase,
-  Upload
+  Upload,
+  Share2
 } from 'lucide-react';
 import { Product, Category, Service } from '../types';
 import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
@@ -196,6 +197,12 @@ export default function Products() {
       console.error("Error fetching categories:", err);
       setCategories([]);
     }
+  };
+
+  const handleShareWhatsApp = (product: Product) => {
+    const message = `*${product.name}*\n${product.description || ''}\n\nPrice: ${formatCurrency(product.selling_price, currency)}\n\nCheck it out on our store!`;
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -710,6 +717,9 @@ export default function Products() {
                       {user?.role !== 'staff' && (
                         <td className="px-8 py-6 text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => handleShareWhatsApp(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all">
+                              <Share2 className="w-4 h-4" />
+                            </button>
                             <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all">
                               <Edit2 className="w-4 h-4" />
                             </button>
@@ -753,6 +763,9 @@ export default function Products() {
                     </div>
                     {user?.role !== 'staff' && (
                       <div className="flex items-center gap-1">
+                        <button onClick={() => handleShareWhatsApp(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
+                          <Share2 className="w-4 h-4" />
+                        </button>
                         <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
                           <Edit2 className="w-4 h-4" />
                         </button>

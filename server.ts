@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import nodemailer from 'nodemailer';
+import axios from 'axios';
 
 // IN-MEMORY LOGGING FOR DEBUGGING
 const logHistory: string[] = [];
@@ -236,6 +237,15 @@ async function initAwsDb() {
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='is_active') THEN
             ALTER TABLE accounts ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='subscription_plan') THEN
+            ALTER TABLE accounts ADD COLUMN subscription_plan TEXT DEFAULT 'free';
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='subscription_status') THEN
+            ALTER TABLE accounts ADD COLUMN subscription_status TEXT DEFAULT 'active';
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='last_payment_date') THEN
+            ALTER TABLE accounts ADD COLUMN last_payment_date TIMESTAMP WITH TIME ZONE;
           END IF;
         END $$;
 
@@ -787,8 +797,99 @@ async function createServer() {
     }
   };
 
+  // Paystack Payment Routes
+  app.post("/api/payments/initialize", requireAuth, async (req: any, res) => {
+    const { amount, email, planId } = req.body;
+    if (!amount || !email) {
+      return res.status(400).json({ error: "Amount and email are required" });
+    }
+
+    try {
+      const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+      if (!paystackSecret) {
+        return res.status(503).json({ error: "Payment gateway not configured" });
+      }
+
+      const response = await axios.post(
+        'https://api.paystack.co/transaction/initialize',
+        {
+          amount: Math.round(amount * 100), // Paystack expects amount in kobo
+          email,
+          callback_url: `${process.env.APP_URL}/settings?payment=success`,
+          metadata: {
+            planId,
+            accountId: req.user.accountId,
+            userId: req.user.id
+          }
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${paystackSecret}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      res.json(response.data);
+    } catch (error: any) {
+      console.error('[PAYSTACK] Initialization failed:', error.response?.data || error.message);
+      res.status(500).json({ error: "Failed to initialize payment" });
+    }
+  });
+
+  app.get("/api/payments/verify/:reference", requireAuth, async (req: any, res) => {
+    const { reference } = req.params;
+    
+    try {
+      const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+      if (!paystackSecret) {
+        return res.status(503).json({ error: "Payment gateway not configured" });
+      }
+
+      const response = await axios.get(
+        `https://api.paystack.co/transaction/verify/${reference}`,
+        {
+          headers: {
+            Authorization: `Bearer ${paystackSecret}`
+          }
+        }
+      );
+
+      const data = response.data.data;
+      if (data.status === 'success') {
+        // Update user's subscription status in database
+        const { planId, accountId } = data.metadata;
+        
+        // Update account's subscription plan
+        await pool.query(
+          'UPDATE accounts SET subscription_plan = $1, subscription_status = $2, last_payment_date = $3 WHERE id = $4',
+          [planId, 'active', new Date(), accountId]
+        );
+        
+        console.log(`[PAYSTACK] Payment successful for account ${accountId}, plan ${planId}`);
+      }
+
+      res.json(response.data);
+    } catch (error: any) {
+      console.error('[PAYSTACK] Verification failed:', error.response?.data || error.message);
+      res.status(500).json({ error: "Failed to verify payment" });
+    }
+  });
+
   // Data Migration Tool
   // Migration route removed as migration to AWS RDS is complete.
+
+  app.get("/api/account/subscription", requireAuth, async (req: any, res) => {
+    try {
+      const { rows } = await pool.query(
+        'SELECT subscription_plan, subscription_status, last_payment_date FROM accounts WHERE id = $1',
+        [req.user.accountId]
+      );
+      res.json(rows[0] || { subscription_plan: 'free', subscription_status: 'active' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // Admin: Merge Accounts
   app.post("/api/admin/merge-accounts", requireSuperAdmin, async (req: any, res) => {

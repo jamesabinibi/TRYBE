@@ -20,7 +20,11 @@ import {
   Activity,
   AlertTriangle,
   Users,
-  Image
+  Image,
+  CreditCard,
+  Zap,
+  Crown,
+  CheckCircle2
 } from 'lucide-react';
 import { Category } from '../types';
 import { cn } from '../lib/utils';
@@ -631,7 +635,55 @@ NOTIFY pgrst, 'reload schema';
     toast.success('SQL copied to clipboard! Paste it into Supabase SQL Editor.');
   };
 
-  const [activeTab, setActiveTab] = useState<'branding' | 'team' | 'categories' | 'account' | 'system'>('branding');
+  const [activeTab, setActiveTab] = useState<'branding' | 'team' | 'categories' | 'account' | 'system' | 'billing'>('branding');
+
+  // Billing State
+  const [subscription, setSubscription] = useState<any>(null);
+  const [isBillingLoading, setIsBillingLoading] = useState(false);
+
+  const fetchSubscription = async () => {
+    setIsBillingLoading(true);
+    try {
+      const res = await fetchWithAuth('/api/account/subscription');
+      if (res.ok) {
+        const data = await res.json();
+        setSubscription(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch subscription:', error);
+    } finally {
+      setIsBillingLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'billing') {
+      fetchSubscription();
+    }
+  }, [activeTab]);
+
+  const handleUpgrade = async (planId: string, amount: number) => {
+    try {
+      const res = await fetchWithAuth('/api/payments/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          email: user?.email,
+          planId
+        })
+      });
+      
+      const data = await res.json();
+      if (res.ok && data.data?.authorization_url) {
+        window.location.href = data.data.authorization_url;
+      } else {
+        toast.error(data.error || 'Failed to initialize payment');
+      }
+    } catch (error) {
+      toast.error('Network error');
+    }
+  };
 
   // Users Management State (Merged from Users.tsx)
   const [users, setUsers] = useState<any[]>([]);
@@ -1029,6 +1081,17 @@ NOTIFY pgrst, 'reload schema';
           )}
         >
           Account & Team
+        </button>
+        <button
+          onClick={() => setActiveTab('billing')}
+          className={cn(
+            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+            activeTab === 'billing' 
+              ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
+              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          )}
+        >
+          Billing & Plans
         </button>
         {user?.role === 'super_admin' && (
           <button
@@ -1743,6 +1806,97 @@ NOTIFY pgrst, 'reload schema';
       )}
     </div>
   )}
+
+      {activeTab === 'billing' && (
+        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-brand" />
+                <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-xs tracking-widest">Subscription Plan</h3>
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage your subscription and billing details.</p>
+            </div>
+            
+            <div className="lg:col-span-2 space-y-6">
+              {isBillingLoading ? (
+                <div className="flex items-center justify-center p-12">
+                  <Loader2 className="w-8 h-8 text-brand animate-spin" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Current Plan Card */}
+                  <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-6">
+                      <div className="bg-brand/10 text-brand px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                        Current
+                      </div>
+                    </div>
+                    <div className="space-y-6">
+                      <div className="p-4 bg-brand/5 rounded-3xl w-fit">
+                        {subscription?.subscription_plan === 'pro' ? <Zap className="w-8 h-8 text-brand" /> : <Crown className="w-8 h-8 text-brand" />}
+                      </div>
+                      <div>
+                        <h4 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">
+                          {subscription?.subscription_plan === 'pro' ? 'Professional' : 'Starter'}
+                        </h4>
+                        <p className="text-sm text-zinc-500 font-medium">
+                          {subscription?.subscription_plan === 'pro' ? 'Advanced features for growing businesses.' : 'Basic features for small businesses.'}
+                        </p>
+                      </div>
+                      <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</span>
+                          <span className="text-xs font-bold text-green-600 capitalize">{subscription?.subscription_status || 'Active'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Upgrade Card */}
+                  {subscription?.subscription_plan !== 'pro' && (
+                    <div className="bg-zinc-900 text-white p-8 rounded-[2.5rem] border border-zinc-800 shadow-2xl relative overflow-hidden group">
+                      <div className="absolute -top-12 -right-12 w-40 h-40 bg-brand/20 rounded-full blur-3xl group-hover:bg-brand/30 transition-all" />
+                      <div className="space-y-6 relative z-10">
+                        <div className="p-4 bg-white/10 rounded-3xl w-fit">
+                          <Zap className="w-8 h-8 text-brand" />
+                        </div>
+                        <div>
+                          <h4 className="text-2xl font-black text-white uppercase tracking-tight">Professional</h4>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-black">₦5,000</span>
+                            <span className="text-xs text-zinc-400 font-bold">/month</span>
+                          </div>
+                        </div>
+                        <ul className="space-y-3">
+                          {[
+                            'Unlimited Products',
+                            'Advanced AI Advisor',
+                            'Custom Branding',
+                            'Multi-user Support',
+                            'Priority WhatsApp Support'
+                          ].map((feature, i) => (
+                            <li key={i} className="flex items-center gap-2 text-xs font-medium text-zinc-300">
+                              <CheckCircle2 className="w-4 h-4 text-brand" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                        <button 
+                          onClick={() => handleUpgrade('pro', 5000)}
+                          className="w-full py-4 bg-brand text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-brand/20"
+                        >
+                          Upgrade Now
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* User Modal */}
       {isUserModalOpen && (
