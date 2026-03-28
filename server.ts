@@ -5201,7 +5201,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }
 
         await client.query('COMMIT');
-        res.json({ success: true, migratedCount: totalMigrated });
+        res.json({ success: true, results: { migrated: totalMigrated } });
       } catch (e: any) {
         await client.query('ROLLBACK');
         throw e;

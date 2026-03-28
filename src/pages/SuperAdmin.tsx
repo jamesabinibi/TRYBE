@@ -461,7 +461,7 @@ export default function SuperAdmin() {
                 const data = await res.json();
                 
                 if (res.ok) {
-                  toast.success(`Migration successful! Migrated: ${Object.entries(data.results).map(([k, v]) => `${v} ${k}`).join(', ')}`, { id: 'migrate', duration: 5000 });
+                  toast.success(`Migration successful! Migrated: ${data.results?.migrated || 0} records`, { id: 'migrate', duration: 5000 });
                   fetchStats();
                   fetchUsers();
                 } else {
@@ -501,10 +501,10 @@ export default function SuperAdmin() {
                 const data = await res.json();
                 
                 if (res.ok) {
-                  if (data.results.migrated === 0) {
+                  if ((data.results?.migrated || 0) === 0) {
                     toast.info('No images were migrated. They might already be on S3 or the upload failed. Check logs for details.', { id: 'migrate-images', duration: 5000 });
                   } else {
-                    toast.success(`Image migration successful! Migrated: ${data.results.migrated} images`, { id: 'migrate-images', duration: 5000 });
+                    toast.success(`Image migration successful! Migrated: ${data.results?.migrated || 0} images`, { id: 'migrate-images', duration: 5000 });
                   }
                 } else {
                   toast.error(data.error || 'Image migration failed', { id: 'migrate-images' });

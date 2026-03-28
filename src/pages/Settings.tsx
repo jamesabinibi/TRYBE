@@ -167,7 +167,7 @@ export default function Settings() {
                 const res = await fetchWithAuth('/api/admin/migrate-database', { method: 'POST' });
                 const data = await res.json();
                 if (res.ok) {
-                  toast.success(`Successfully migrated ${data.migratedCount} records!`);
+                  toast.success(`Successfully migrated ${data.results?.migrated || 0} records!`);
                 } else {
                   throw new Error(data.error || 'Database migration failed');
                 }
@@ -209,7 +209,7 @@ export default function Settings() {
                 const res = await fetchWithAuth('/api/admin/migrate-images', { method: 'POST' });
                 const data = await res.json();
                 if (res.ok) {
-                  toast.success(`Successfully migrated ${data.migratedCount} images!`);
+                  toast.success(`Successfully migrated ${data.results?.migrated || 0} images!`);
                 } else {
                   throw new Error(data.error || 'Migration failed');
                 }
