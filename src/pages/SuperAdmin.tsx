@@ -158,7 +158,9 @@ export default function SuperAdmin() {
     AWS_ACCESS_KEY_ID: '',
     AWS_SECRET_ACCESS_KEY: '',
     AWS_S3_BUCKET_NAME: '',
-    AWS_REGION: 'us-east-1'
+    AWS_REGION: 'us-east-1',
+    PAYSTACK_PUBLIC_KEY: '',
+    PAYSTACK_SECRET_KEY: ''
   });
   const [isSavingSecrets, setIsSavingSecrets] = useState(false);
 
@@ -1965,6 +1967,26 @@ export default function SuperAdmin() {
                       onChange={(e) => setSecrets(prev => ({ ...prev, AWS_REGION: e.target.value }))}
                       className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder="us-east-1"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Paystack Public Key</label>
+                    <input 
+                      type="text"
+                      value={secrets.PAYSTACK_PUBLIC_KEY}
+                      onChange={(e) => setSecrets(prev => ({ ...prev, PAYSTACK_PUBLIC_KEY: e.target.value }))}
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      placeholder="pk_test_..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Paystack Secret Key</label>
+                    <input 
+                      type="password"
+                      value={secrets.PAYSTACK_SECRET_KEY}
+                      onChange={(e) => setSecrets(prev => ({ ...prev, PAYSTACK_SECRET_KEY: e.target.value }))}
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      placeholder="sk_test_..."
                     />
                   </div>
                 </div>
