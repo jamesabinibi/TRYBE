@@ -81,15 +81,26 @@ const getS3Region = () => {
   return match ? match[0].toLowerCase() : region.toLowerCase();
 };
 
-const s3Region = getS3Region();
-
-const s3Client = new S3Client({
+let s3Region = getS3Region();
+let s3Client = new S3Client({
   region: s3Region,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
   },
 });
+
+function reinitializeS3() {
+  s3Region = getS3Region();
+  s3Client = new S3Client({
+    region: s3Region,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+    },
+  });
+  console.log(`[AWS S3] Client re-initialized for region: ${s3Region}`);
+}
 
 async function uploadToS3(base64Data: string, folder: string = 'products') {
   if (!process.env.AWS_S3_BUCKET_NAME || !base64Data || !base64Data.startsWith('data:image')) {
@@ -4996,6 +5007,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }
       }
 
+      if (env.AWS_ACCESS_KEY_ID || env.AWS_SECRET_ACCESS_KEY || env.AWS_REGION) {
+        reinitializeS3();
+      }
+
       res.json({ success: true, message: "Environment updated and persisted to .env" });
     } catch (err: any) {
       console.error("[INIT] Failed to update environment:", err);
@@ -5214,8 +5229,58 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.get("/api/admin/check-rds-images", requireSuperAdmin, async (req: any, res) => {
+    if (!process.env.AWS_DB_PASSWORD) return res.status(503).json({ error: "Database not available" });
+    try {
+      const { rows: productImages } = await pool.query('SELECT count(*) FROM product_images');
+      const { rows: services } = await pool.query('SELECT count(*) FROM services WHERE image_url IS NOT NULL');
+      const { rows: settings } = await pool.query('SELECT count(*) FROM settings WHERE logo_url IS NOT NULL');
+      
+      const { rows: productImagesData } = await pool.query('SELECT image_data FROM product_images LIMIT 5');
+      const { rows: servicesData } = await pool.query('SELECT image_url FROM services WHERE image_url IS NOT NULL LIMIT 5');
+      const { rows: settingsData } = await pool.query('SELECT logo_url FROM settings WHERE logo_url IS NOT NULL LIMIT 5');
+
+      let s3Test = 'NOT RUN';
+      if (process.env.AWS_S3_BUCKET_NAME && process.env.AWS_ACCESS_KEY_ID) {
+        try {
+          const testBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+          const testUrl = await uploadToS3(testBase64, 'test');
+          s3Test = testUrl.startsWith('http') ? 'SUCCESS' : 'FAILED: Returned base64';
+        } catch (e: any) {
+          s3Test = `ERROR: ${e.message}`;
+        }
+      }
+
+      res.json({
+        productImagesCount: productImages[0].count,
+        servicesCount: services[0].count,
+        settingsCount: settings[0].count,
+        awsConfig: {
+          bucketSet: !!process.env.AWS_S3_BUCKET_NAME,
+          bucketName: process.env.AWS_S3_BUCKET_NAME ? `${process.env.AWS_S3_BUCKET_NAME.substring(0, 3)}...` : 'NOT SET',
+          region: process.env.AWS_REGION || 'NOT SET',
+          accessKeySet: !!process.env.AWS_ACCESS_KEY_ID,
+          secretKeySet: !!process.env.AWS_SECRET_ACCESS_KEY,
+          s3Test
+        },
+        samples: {
+          productImages: productImagesData.map((r: any) => r.image_data?.substring(0, 50)),
+          services: servicesData.map((r: any) => r.image_url?.substring(0, 50)),
+          settings: settingsData.map((r: any) => r.logo_url?.substring(0, 50))
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/admin/migrate-images", requireSuperAdmin, async (req: any, res) => {
     if (!process.env.AWS_DB_PASSWORD) return res.status(503).json({ error: "Database not available" });
+    if (!process.env.AWS_S3_BUCKET_NAME) {
+      console.error("[MIGRATE] AWS_S3_BUCKET_NAME is not configured.");
+      return res.status(400).json({ error: "AWS S3 Bucket Name is not configured. Please add it in SuperAdmin secrets." });
+    }
+    
     try {
       const userInfo = req.user;
       let migratedCount = 0;
@@ -5226,14 +5291,18 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (images && images.length > 0) {
         for (const img of images) {
           if (img.image_data && img.image_data.startsWith('data:image')) {
+            console.log(`[MIGRATE] Migrating base64 product image ${img.id}`);
             const uploadedUrl = await uploadToS3(img.image_data);
             if (uploadedUrl && uploadedUrl.startsWith('http')) {
               await pool.query('UPDATE product_images SET image_data = $1 WHERE id = $2', [uploadedUrl, img.id]);
               migratedCount++;
+              console.log(`[MIGRATE] Successfully migrated base64 product image ${img.id} to S3: ${uploadedUrl}`);
+            } else {
+              console.warn(`[MIGRATE] Failed to upload base64 product image ${img.id} to S3. Result: ${uploadedUrl?.substring(0, 50)}...`);
             }
-          } else if (img.image_data && img.image_data.startsWith('http') && !img.image_data.includes('amazonaws.com') && process.env.AWS_S3_BUCKET_NAME) {
+          } else if (img.image_data && img.image_data.startsWith('http') && !img.image_data.includes('amazonaws.com')) {
             try {
-              console.log(`[MIGRATE] Downloading image from URL: ${img.image_data}`);
+              console.log(`[MIGRATE] Downloading product image from URL: ${img.image_data}`);
               const response = await fetch(img.image_data);
               if (response.ok) {
                 const arrayBuffer = await response.arrayBuffer();
@@ -5245,13 +5314,20 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
                 if (uploadedUrl && uploadedUrl.startsWith('http')) {
                   await pool.query('UPDATE product_images SET image_data = $1 WHERE id = $2', [uploadedUrl, img.id]);
                   migratedCount++;
-                  console.log(`[MIGRATE] Successfully migrated image ${img.id} to S3`);
+                  console.log(`[MIGRATE] Successfully migrated product image ${img.id} to S3: ${uploadedUrl}`);
+                } else {
+                  console.warn(`[MIGRATE] Failed to upload downloaded product image ${img.id} to S3. Result: ${uploadedUrl?.substring(0, 50)}...`);
                 }
               } else {
-                console.error(`[MIGRATE] Failed to download image ${img.id} from URL: ${response.statusText}`);
+                console.error(`[MIGRATE] Failed to download product image ${img.id} from URL: ${response.statusText}`);
               }
             } catch (err) {
-              console.error(`[MIGRATE] Error migrating image ${img.id}:`, err);
+              console.error(`[MIGRATE] Error migrating product image ${img.id}:`, err);
+            }
+          } else {
+            // Already on S3 or not a migratable format
+            if (img.image_data?.includes('amazonaws.com')) {
+              // console.log(`[MIGRATE] Product image ${img.id} already on S3.`);
             }
           }
         }
@@ -5263,12 +5339,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (services && services.length > 0) {
         for (const srv of services) {
           if (srv.image_url && srv.image_url.startsWith('data:image')) {
+            console.log(`[MIGRATE] Migrating base64 service image ${srv.id}`);
             const uploadedUrl = await uploadToS3(srv.image_url, 'services');
             if (uploadedUrl && uploadedUrl.startsWith('http')) {
               await pool.query('UPDATE services SET image_url = $1 WHERE id = $2', [uploadedUrl, srv.id]);
               migratedCount++;
+              console.log(`[MIGRATE] Successfully migrated base64 service image ${srv.id} to S3: ${uploadedUrl}`);
+            } else {
+              console.warn(`[MIGRATE] Failed to upload base64 service image ${srv.id} to S3. Result: ${uploadedUrl?.substring(0, 50)}...`);
             }
-          } else if (srv.image_url && srv.image_url.startsWith('http') && !srv.image_url.includes('amazonaws.com') && process.env.AWS_S3_BUCKET_NAME) {
+          } else if (srv.image_url && srv.image_url.startsWith('http') && !srv.image_url.includes('amazonaws.com')) {
             try {
               console.log(`[MIGRATE] Downloading service image from URL: ${srv.image_url}`);
               const response = await fetch(srv.image_url);
@@ -5282,7 +5362,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
                 if (uploadedUrl && uploadedUrl.startsWith('http')) {
                   await pool.query('UPDATE services SET image_url = $1 WHERE id = $2', [uploadedUrl, srv.id]);
                   migratedCount++;
-                  console.log(`[MIGRATE] Successfully migrated service image ${srv.id} to S3`);
+                  console.log(`[MIGRATE] Successfully migrated service image ${srv.id} to S3: ${uploadedUrl}`);
+                } else {
+                  console.warn(`[MIGRATE] Failed to upload downloaded service image ${srv.id} to S3. Result: ${uploadedUrl?.substring(0, 50)}...`);
                 }
               } else {
                 console.error(`[MIGRATE] Failed to download service image ${srv.id} from URL: ${response.statusText}`);
@@ -5300,12 +5382,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (settings && settings.length > 0) {
         for (const set of settings) {
           if (set.logo_url && set.logo_url.startsWith('data:image')) {
+            console.log(`[MIGRATE] Migrating base64 logo ${set.id}`);
             const uploadedUrl = await uploadToS3(set.logo_url, 'logos');
             if (uploadedUrl && uploadedUrl.startsWith('http')) {
               await pool.query('UPDATE settings SET logo_url = $1 WHERE id = $2', [uploadedUrl, set.id]);
               migratedCount++;
+              console.log(`[MIGRATE] Successfully migrated base64 logo ${set.id} to S3: ${uploadedUrl}`);
+            } else {
+              console.warn(`[MIGRATE] Failed to upload base64 logo ${set.id} to S3. Result: ${uploadedUrl?.substring(0, 50)}...`);
             }
-          } else if (set.logo_url && set.logo_url.startsWith('http') && !set.logo_url.includes('amazonaws.com') && process.env.AWS_S3_BUCKET_NAME) {
+          } else if (set.logo_url && set.logo_url.startsWith('http') && !set.logo_url.includes('amazonaws.com')) {
             try {
               console.log(`[MIGRATE] Downloading logo from URL: ${set.logo_url}`);
               const response = await fetch(set.logo_url);
@@ -5319,7 +5405,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
                 if (uploadedUrl && uploadedUrl.startsWith('http')) {
                   await pool.query('UPDATE settings SET logo_url = $1 WHERE id = $2', [uploadedUrl, set.id]);
                   migratedCount++;
-                  console.log(`[MIGRATE] Successfully migrated logo ${set.id} to S3`);
+                  console.log(`[MIGRATE] Successfully migrated logo ${set.id} to S3: ${uploadedUrl}`);
+                } else {
+                  console.warn(`[MIGRATE] Failed to upload downloaded logo ${set.id} to S3. Result: ${uploadedUrl?.substring(0, 50)}...`);
                 }
               } else {
                 console.error(`[MIGRATE] Failed to download logo ${set.id} from URL: ${response.statusText}`);
