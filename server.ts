@@ -234,39 +234,30 @@ async function initAwsDb() {
           referred_by_id INTEGER REFERENCES accounts(id),
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
-        
-        -- Ensure owner_id exists if table was created without it
-        DO $$ 
-        BEGIN 
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='owner_id') THEN
-            ALTER TABLE accounts ADD COLUMN owner_id INTEGER;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='is_active') THEN
-            ALTER TABLE accounts ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='subscription_plan') THEN
-            ALTER TABLE accounts ADD COLUMN subscription_plan TEXT DEFAULT 'free';
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='subscription_status') THEN
-            ALTER TABLE accounts ADD COLUMN subscription_status TEXT DEFAULT 'active';
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='last_payment_date') THEN
-            ALTER TABLE accounts ADD COLUMN last_payment_date TIMESTAMP WITH TIME ZONE;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='account_type') THEN
-            ALTER TABLE accounts ADD COLUMN account_type TEXT DEFAULT 'personal';
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='business_type') THEN
-            ALTER TABLE accounts ADD COLUMN business_type TEXT;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='referral_code') THEN
-            ALTER TABLE accounts ADD COLUMN referral_code TEXT UNIQUE;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='referred_by_id') THEN
-            ALTER TABLE accounts ADD COLUMN referred_by_id INTEGER REFERENCES accounts(id);
-          END IF;
-        END $$;
+      `);
 
+      // Add missing columns to accounts
+      const accountCols = [
+        { name: 'owner_id', type: 'INTEGER' },
+        { name: 'is_active', type: 'BOOLEAN DEFAULT TRUE' },
+        { name: 'subscription_plan', type: "TEXT DEFAULT 'free'" },
+        { name: 'subscription_status', type: "TEXT DEFAULT 'active'" },
+        { name: 'last_payment_date', type: 'TIMESTAMP WITH TIME ZONE' },
+        { name: 'account_type', type: "TEXT DEFAULT 'personal'" },
+        { name: 'business_type', type: 'TEXT' },
+        { name: 'referral_code', type: 'TEXT UNIQUE' },
+        { name: 'referred_by_id', type: 'INTEGER REFERENCES accounts(id)' }
+      ];
+
+      for (const col of accountCols) {
+        try {
+          await client.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
+        } catch (e) {
+          console.error(`[DB] Failed to add column ${col.name} to accounts:`, e);
+        }
+      }
+
+      await client.query(`
         CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
           email TEXT UNIQUE NOT NULL,
@@ -278,51 +269,40 @@ async function initAwsDb() {
           is_active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
+      // Add missing columns to users
+      const userCols = [
+        { name: 'username', type: 'TEXT UNIQUE' },
+        { name: 'name', type: 'TEXT' },
+        { name: 'role', type: "TEXT DEFAULT 'user'" },
+        { name: 'account_id', type: 'INTEGER REFERENCES accounts(id)' },
+        { name: 'is_active', type: 'BOOLEAN DEFAULT TRUE' },
+        { name: 'created_at', type: 'TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP' },
+        { name: 'reset_code', type: 'TEXT' },
+        { name: 'reset_expires', type: 'TIMESTAMP WITH TIME ZONE' },
+        { name: 'is_verified', type: 'BOOLEAN DEFAULT false' },
+        { name: 'verification_code', type: 'TEXT' },
+        { name: 'verification_expires', type: 'TIMESTAMP WITH TIME ZONE' }
+      ];
+
+      for (const col of userCols) {
+        try {
+          await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
+        } catch (e) {
+          console.error(`[DB] Failed to add column ${col.name} to users:`, e);
+        }
+      }
+
+      await client.query(`
         CREATE TABLE IF NOT EXISTS system_settings (
           key TEXT PRIMARY KEY,
           value TEXT NOT NULL,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
-        -- Ensure users columns exist
-        DO $$ 
-        BEGIN 
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='username') THEN
-            ALTER TABLE users ADD COLUMN username TEXT UNIQUE;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='name') THEN
-            ALTER TABLE users ADD COLUMN name TEXT;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='role') THEN
-            ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='account_id') THEN
-            ALTER TABLE users ADD COLUMN account_id INTEGER REFERENCES accounts(id);
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_active') THEN
-            ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='created_at') THEN
-            ALTER TABLE users ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reset_code') THEN
-            ALTER TABLE users ADD COLUMN reset_code TEXT;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='reset_expires') THEN
-            ALTER TABLE users ADD COLUMN reset_expires TIMESTAMP WITH TIME ZONE;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_verified') THEN
-            ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT false;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verification_code') THEN
-            ALTER TABLE users ADD COLUMN verification_code TEXT;
-          END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verification_expires') THEN
-            ALTER TABLE users ADD COLUMN verification_expires TIMESTAMP WITH TIME ZONE;
-          END IF;
-        END $$;
-
+      await client.query(`
         CREATE TABLE IF NOT EXISTS chat_messages (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
@@ -331,7 +311,9 @@ async function initAwsDb() {
           is_from_admin BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS settings (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
@@ -350,22 +332,28 @@ async function initAwsDb() {
           welcome_email_body TEXT DEFAULT 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS categories (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
           name TEXT NOT NULL,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
-        -- Ensure categories columns exist
+      // Ensure categories columns exist
+      await client.query(`
         DO $$ 
         BEGIN 
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='account_id') THEN
             ALTER TABLE categories ADD COLUMN account_id INTEGER REFERENCES accounts(id);
           END IF;
         END $$;
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS products (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
@@ -379,8 +367,10 @@ async function initAwsDb() {
           pieces_per_unit INTEGER DEFAULT 1,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
-        -- Ensure products columns exist
+      // Ensure products columns exist
+      await client.query(`
         DO $$ 
         BEGIN 
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='supplier_name') THEN
@@ -396,7 +386,9 @@ async function initAwsDb() {
             ALTER TABLE products ADD COLUMN product_type TEXT DEFAULT 'one';
           END IF;
         END $$;
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS product_variants (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
@@ -409,8 +401,10 @@ async function initAwsDb() {
           price_override DECIMAL(12, 2),
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
-        -- Ensure product_variants columns exist
+      // Ensure product_variants columns exist
+      await client.query(`
         DO $$ 
         BEGIN 
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='account_id') THEN
@@ -423,7 +417,9 @@ async function initAwsDb() {
             ALTER TABLE product_variants ADD COLUMN price_override DECIMAL(12, 2);
           END IF;
         END $$;
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS sales (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
@@ -444,7 +440,9 @@ async function initAwsDb() {
           invoice_number TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
+      await client.query(`
         DO $$ 
         BEGIN 
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sales' AND column_name='invoice_number') THEN
@@ -463,7 +461,9 @@ async function initAwsDb() {
             ALTER TABLE sales ADD COLUMN discount_percentage DECIMAL(12, 2) DEFAULT 0;
           END IF;
         END $$;
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS sale_items (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
@@ -480,7 +480,9 @@ async function initAwsDb() {
           profit DECIMAL(12, 2) DEFAULT 0,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
+      await client.query(`
         DO $$ 
         BEGIN 
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sale_items' AND column_name='account_id') THEN
@@ -502,7 +504,9 @@ async function initAwsDb() {
             ALTER TABLE sale_items ADD COLUMN profit DECIMAL(12, 2) DEFAULT 0;
           END IF;
         END $$;
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS customers (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
@@ -513,18 +517,22 @@ async function initAwsDb() {
           loyalty_points INTEGER DEFAULT 0,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
-        -- Ensure customers columns exist
+      // Ensure customers columns exist
+      await client.query(`
         DO $$ 
         BEGIN 
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='customers' AND column_name='loyalty_points') THEN
-          ALTER TABLE customers ADD COLUMN loyalty_points INTEGER DEFAULT 0;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='permissions') THEN
-          ALTER TABLE users ADD COLUMN permissions JSONB DEFAULT '{}'::jsonb;
-        END IF;
-      END $$;
+            ALTER TABLE customers ADD COLUMN loyalty_points INTEGER DEFAULT 0;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='permissions') THEN
+            ALTER TABLE users ADD COLUMN permissions JSONB DEFAULT '{}'::jsonb;
+          END IF;
+        END $$;
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS expenses (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
@@ -534,7 +542,9 @@ async function initAwsDb() {
           date DATE DEFAULT CURRENT_DATE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS product_images (
           id SERIAL PRIMARY KEY,
           product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
@@ -542,7 +552,9 @@ async function initAwsDb() {
           is_primary BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS services (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
@@ -554,8 +566,10 @@ async function initAwsDb() {
           image_url TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
-        -- Ensure services columns exist
+      // Ensure services columns exist
+      await client.query(`
         DO $$ 
         BEGIN 
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='services' AND column_name='category') THEN
@@ -565,7 +579,9 @@ async function initAwsDb() {
             ALTER TABLE services ADD COLUMN image_url TEXT;
           END IF;
         END $$;
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS bookkeeping (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
@@ -578,14 +594,18 @@ async function initAwsDb() {
           date DATE DEFAULT CURRENT_DATE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+      `);
 
+      await client.query(`
         DO $$ 
         BEGIN 
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookkeeping' AND column_name='nature') THEN
             ALTER TABLE bookkeeping ADD COLUMN nature TEXT DEFAULT 'other';
           END IF;
         END $$;
+      `);
 
+      await client.query(`
         CREATE TABLE IF NOT EXISTS notifications (
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
@@ -5155,6 +5175,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     });
   });
 
+  app.get("/api/admin/secrets", requireSuperAdmin, async (req, res) => {
+    const secrets = {
+      SUPABASE_URL: process.env.SUPABASE_URL ? 'Configured' : '',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Configured' : '',
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? 'Configured' : '',
+      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ? 'Configured' : '',
+      AWS_REGION: process.env.AWS_REGION || 'us-east-1',
+      AWS_S3_BUCKET: process.env.AWS_S3_BUCKET ? 'Configured' : '',
+      PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY ? 'Configured' : '',
+      PAYSTACK_PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY ? 'Configured' : '',
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY ? 'Configured' : ''
+    };
+    res.json(secrets);
+  });
+
   app.post("/api/admin/update-env", requireSuperAdmin, async (req, res) => {
     const { env } = req.body;
     if (!env || typeof env !== 'object') {
@@ -5989,6 +6024,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             ORDER BY u.created_at DESC
           `);
           console.log(`[ADMIN] RDS fetch success. Found ${rows.length} users.`);
+          if (rows.length > 0) {
+            console.log(`[ADMIN] Sample user: ${JSON.stringify(rows[0])}`);
+          }
           
           // Map to match frontend expectations and remove sensitive data
           const mappedUsers = rows.map((u: any) => {

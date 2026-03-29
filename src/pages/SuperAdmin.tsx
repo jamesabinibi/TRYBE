@@ -154,8 +154,26 @@ export default function SuperAdmin() {
     AWS_S3_BUCKET_NAME: '',
     AWS_REGION: 'us-east-1',
     PAYSTACK_PUBLIC_KEY: '',
-    PAYSTACK_SECRET_KEY: ''
+    PAYSTACK_SECRET_KEY: '',
+    GEMINI_API_KEY: ''
   });
+
+  const fetchSecrets = async () => {
+    try {
+      const res = await fetchWithAuth('/api/admin/secrets');
+      if (res.ok) {
+        const data = await res.json();
+        setSecrets(data);
+      }
+    } catch (err) {}
+  };
+
+  useEffect(() => {
+    if (isSecretsModalOpen) {
+      fetchSecrets();
+    }
+  }, [isSecretsModalOpen]);
+
   const [isSavingSecrets, setIsSavingSecrets] = useState(false);
 
   const fetchDiagnostic = async () => {
@@ -713,72 +731,73 @@ export default function SuperAdmin() {
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">Monitoring Gryndee system-wide performance</p>
         </div>
         
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={handleMigrateImages}
-              className="flex items-center gap-2 px-6 py-3 bg-blue-500/10 text-blue-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-500/20 transition-all shadow-sm"
-            >
-              <Database className="w-4 h-4" />
-              Migrate Images
-            </button>
-            <button 
-              onClick={fetchDiagnostic}
-              disabled={isFetchingDiagnostic}
-              className="flex items-center gap-2 px-6 py-3 bg-indigo-500/10 text-indigo-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all shadow-sm disabled:opacity-50"
-            >
-              <Activity className="w-4 h-4" />
-              {isFetchingDiagnostic ? 'Checking...' : 'Check Image Status'}
-            </button>
-            <button 
-              onClick={handleMigrate}
-              className="flex items-center gap-2 px-6 py-3 bg-brand/10 text-brand rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand/20 transition-all shadow-sm"
-            >
-              <Database className="w-4 h-4" />
-              Migrate DB
-            </button>
-            <button 
-              onClick={() => setIsMobileAssetsModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
-            >
-              <Smartphone className="w-4 h-4" />
-              Mobile Assets
-            </button>
-            <button 
-              onClick={() => setIsGeminiModalOpen(true)}
-              className={cn(
-                "flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all",
-                smtpStatus?.geminiConfigured ? "bg-purple-500/10 text-purple-500" : "bg-amber-500/10 text-amber-500"
-              )}
-            >
-              <Sparkles className="w-4 h-4" />
-              AI: {smtpStatus?.geminiConfigured ? 'Ready' : 'Check Config'}
-            </button>
-            <button 
-              onClick={() => setIsSmtpModalOpen(true)}
-              className={cn(
-                "flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all",
-                smtpStatus?.configured ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-              )}
-            >
-              <Mail className="w-4 h-4" />
-              SMTP: {smtpStatus?.configured ? 'Ready' : 'Check Config'}
-            </button>
-            <button 
-              onClick={() => {
-                setIsLogsModalOpen(true);
-                fetchLogs();
-              }}
-              className="flex items-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all shadow-sm"
-            >
-              <Activity className="w-4 h-4" />
-              View Logs
-            </button>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button 
+            onClick={handleMigrate}
+            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-brand/10 text-brand rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-brand/20 transition-all shadow-sm whitespace-nowrap"
+          >
+            <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            Migrate DB
+          </button>
+          <button 
+            onClick={handleMigrateImages}
+            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-500/10 text-blue-500 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-blue-500/20 transition-all shadow-sm whitespace-nowrap"
+          >
+            <ImageIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            Migrate Images
+          </button>
+          <button 
+            onClick={fetchDiagnostic}
+            disabled={isFetchingDiagnostic}
+            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-indigo-500/10 text-indigo-500 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all shadow-sm disabled:opacity-50 whitespace-nowrap"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            {isFetchingDiagnostic ? 'Checking...' : 'Check Status'}
+          </button>
+          <button 
+            onClick={() => setIsMobileAssetsModalOpen(true)}
+            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg whitespace-nowrap"
+          >
+            <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            Mobile Assets
+          </button>
+          <button 
+            onClick={() => setIsGeminiModalOpen(true)}
+            className={cn(
+              "flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap",
+              smtpStatus?.geminiConfigured ? "bg-purple-500/10 text-purple-500" : "bg-amber-500/10 text-amber-500"
+            )}
+          >
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            AI: {smtpStatus?.geminiConfigured ? 'Ready' : 'Check Config'}
+          </button>
+          <button 
+            onClick={() => setIsSmtpModalOpen(true)}
+            className={cn(
+              "flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap",
+              smtpStatus?.configured ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+            )}
+          >
+            <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            SMTP: {smtpStatus?.configured ? 'Ready' : 'Check Config'}
+          </button>
+          <button 
+            onClick={() => {
+              setIsLogsModalOpen(true);
+              fetchLogs();
+            }}
+            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all shadow-sm whitespace-nowrap"
+          >
+            <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            View Logs
+          </button>
+          <div className="flex items-center gap-2 ml-auto">
             <button 
               onClick={() => setIsSecretsModalOpen(true)}
-              className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-indigo-500 transition-colors shadow-sm"
+              className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-indigo-500 transition-colors shadow-sm"
               title="Manage Secrets"
             >
-              <Key className="w-5 h-5" />
+              <Key className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button 
               onClick={async () => {
@@ -795,34 +814,20 @@ export default function SuperAdmin() {
                   toast.error(err.message || 'Failed to refresh environment');
                 }
               }}
-              className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-amber-500 transition-colors shadow-sm"
+              className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-amber-500 transition-colors shadow-sm"
               title="Refresh Environment"
             >
-              <RefreshCw className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={async () => {
-                try {
-                  const res = await fetchWithAuth('/api/admin/debug-env');
-                  const data = await res.json();
-                  console.log('DEBUG ENV:', data);
-                  toast.info(`Supabase: ${data.supabase_status}. Env: ${JSON.stringify(data.env)}`);
-                } catch (err: any) {
-                  toast.error('Debug failed: ' + err.message);
-                }
-              }}
-              className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-blue-500 transition-colors shadow-sm"
-              title="Debug Environment"
-            >
-              <ShieldCheck className="w-5 h-5" />
+              <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button 
               onClick={() => { fetchStats(); fetchUsers(); }}
-              className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-emerald-500 transition-colors shadow-sm"
+              className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-emerald-500 transition-colors shadow-sm"
+              title="Reload Data"
             >
-              <Activity className="w-5 h-5" />
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1911,50 +1916,50 @@ export default function SuperAdmin() {
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Supabase URL</label>
                     <input 
                       type="text"
-                      value={secrets.SUPABASE_URL}
+                      value={secrets.SUPABASE_URL === 'Configured' ? '' : secrets.SUPABASE_URL}
                       onChange={(e) => setSecrets(prev => ({ ...prev, SUPABASE_URL: e.target.value }))}
                       className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      placeholder="https://your-project.supabase.co"
+                      placeholder={secrets.SUPABASE_URL === 'Configured' ? 'Already Configured' : "https://your-project.supabase.co"}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Supabase Anon Key</label>
                     <input 
                       type="password"
-                      value={secrets.SUPABASE_ANON_KEY}
+                      value={secrets.SUPABASE_ANON_KEY === 'Configured' ? '' : secrets.SUPABASE_ANON_KEY}
                       onChange={(e) => setSecrets(prev => ({ ...prev, SUPABASE_ANON_KEY: e.target.value }))}
                       className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      placeholder="Your public anon key"
+                      placeholder={secrets.SUPABASE_ANON_KEY === 'Configured' ? 'Already Configured' : "Your public anon key"}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Access Key ID</label>
                     <input 
                       type="text"
-                      value={secrets.AWS_ACCESS_KEY_ID}
+                      value={secrets.AWS_ACCESS_KEY_ID === 'Configured' ? '' : secrets.AWS_ACCESS_KEY_ID}
                       onChange={(e) => setSecrets(prev => ({ ...prev, AWS_ACCESS_KEY_ID: e.target.value }))}
                       className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      placeholder="AKIA..."
+                      placeholder={secrets.AWS_ACCESS_KEY_ID === 'Configured' ? 'Already Configured' : "AKIA..."}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Secret Access Key</label>
                     <input 
                       type="password"
-                      value={secrets.AWS_SECRET_ACCESS_KEY}
+                      value={secrets.AWS_SECRET_ACCESS_KEY === 'Configured' ? '' : secrets.AWS_SECRET_ACCESS_KEY}
                       onChange={(e) => setSecrets(prev => ({ ...prev, AWS_SECRET_ACCESS_KEY: e.target.value }))}
                       className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      placeholder="Your secret key"
+                      placeholder={secrets.AWS_SECRET_ACCESS_KEY === 'Configured' ? 'Already Configured' : "Your secret key"}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">S3 Bucket Name</label>
                     <input 
                       type="text"
-                      value={secrets.AWS_S3_BUCKET_NAME}
+                      value={secrets.AWS_S3_BUCKET_NAME === 'Configured' ? '' : secrets.AWS_S3_BUCKET_NAME}
                       onChange={(e) => setSecrets(prev => ({ ...prev, AWS_S3_BUCKET_NAME: e.target.value }))}
                       className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      placeholder="my-app-images"
+                      placeholder={secrets.AWS_S3_BUCKET_NAME === 'Configured' ? 'Already Configured' : "my-app-images"}
                     />
                   </div>
                   <div className="space-y-2">
@@ -1971,20 +1976,30 @@ export default function SuperAdmin() {
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Paystack Public Key</label>
                     <input 
                       type="text"
-                      value={secrets.PAYSTACK_PUBLIC_KEY}
+                      value={secrets.PAYSTACK_PUBLIC_KEY === 'Configured' ? '' : secrets.PAYSTACK_PUBLIC_KEY}
                       onChange={(e) => setSecrets(prev => ({ ...prev, PAYSTACK_PUBLIC_KEY: e.target.value }))}
                       className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      placeholder="pk_test_..."
+                      placeholder={secrets.PAYSTACK_PUBLIC_KEY === 'Configured' ? 'Already Configured' : "pk_test_..."}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Paystack Secret Key</label>
                     <input 
                       type="password"
-                      value={secrets.PAYSTACK_SECRET_KEY}
+                      value={secrets.PAYSTACK_SECRET_KEY === 'Configured' ? '' : secrets.PAYSTACK_SECRET_KEY}
                       onChange={(e) => setSecrets(prev => ({ ...prev, PAYSTACK_SECRET_KEY: e.target.value }))}
                       className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      placeholder="sk_test_..."
+                      placeholder={secrets.PAYSTACK_SECRET_KEY === 'Configured' ? 'Already Configured' : "sk_test_..."}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Gemini API Key</label>
+                    <input 
+                      type="password"
+                      value={secrets.GEMINI_API_KEY === 'Configured' ? '' : secrets.GEMINI_API_KEY}
+                      onChange={(e) => setSecrets(prev => ({ ...prev, GEMINI_API_KEY: e.target.value }))}
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      placeholder={secrets.GEMINI_API_KEY === 'Configured' ? 'Already Configured' : "Your Gemini API Key"}
                     />
                   </div>
                 </div>

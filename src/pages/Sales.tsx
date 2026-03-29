@@ -30,7 +30,8 @@ import {
   Mail,
   Phone,
   MapPin,
-  Share2
+  Share2,
+  Link as LinkIcon
 } from 'lucide-react';
 import { Product, Variant, Sale, Customer, Service } from '../types';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
@@ -331,27 +332,51 @@ export default function Sales() {
     const doc = new jsPDF();
     const brandColor = settings?.brand_color || '#10b981';
     
+    // Header
     doc.setFillColor(brandColor);
     doc.rect(0, 0, 210, 40, 'F');
     
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.text(settings?.business_name || 'StockFlow', 15, 25);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(28);
+    doc.text(settings?.business_name || 'Gryndee', 15, 25);
     
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text('INVOICE', 195, 25, { align: 'right' });
-    doc.text(`#${sale.invoice_number}`, 195, 32, { align: 'right' });
+    doc.text('INVOICE', 195, 20, { align: 'right' });
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`#${sale.invoice_number}`, 195, 30, { align: 'right' });
 
+    // Customer Info
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
     doc.text('Bill To:', 15, 55);
+    
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.text(sale.customer_name || 'Walk-in Customer', 15, 62);
-    if (sale.customer_phone) doc.text(sale.customer_phone, 15, 67);
-    if (sale.customer_email) doc.text(sale.customer_email, 15, 72);
+    let currentY = 67;
+    if (sale.customer_phone) {
+      doc.text(sale.customer_phone, 15, currentY);
+      currentY += 5;
+    }
+    if (sale.customer_email) {
+      doc.text(sale.customer_email, 15, currentY);
+      currentY += 5;
+    }
 
+    // Invoice Meta
+    doc.setFont('helvetica', 'bold');
     doc.text('Date:', 140, 62);
+    doc.setFont('helvetica', 'normal');
     doc.text(new Date(sale.created_at).toLocaleDateString(), 160, 62);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Payment:', 140, 67);
+    doc.setFont('helvetica', 'normal');
+    doc.text(sale.payment_method || 'N/A', 160, 67);
 
     const tableData = (sale.sale_items || []).map((item: any) => [
       item.product_name || item.service_name || 'Item',
@@ -361,40 +386,99 @@ export default function Sales() {
     ]);
 
     autoTable(doc, {
-      startY: 80,
+      startY: 85,
       head: [['Description', 'Qty', 'Unit Price', 'Total']],
       body: tableData,
-      headStyles: { fillColor: brandColor },
-      foot: [
-        ['', '', 'Subtotal', formatCurrency((sale.total_amount || 0) + (sale.discount_amount || 0) - (sale.vat_amount || 0), currency)],
-        ['', '', `Discount (${sale.discount_percentage}%)`, `-${formatCurrency(sale.discount_amount || 0, currency)}`],
-        ['', '', 'VAT (7.5%)', formatCurrency(sale.vat_amount || 0, currency)],
-        ['', '', 'Total', formatCurrency(sale.total_amount || 0, currency)]
-      ],
-      footStyles: { fillColor: [245, 245, 245], textColor: 0, fontStyle: 'bold' }
+      headStyles: { 
+        fillColor: brandColor,
+        textColor: 255,
+        fontSize: 10,
+        fontStyle: 'bold',
+        halign: 'left'
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: 50
+      },
+      columnStyles: {
+        1: { halign: 'center' },
+        2: { halign: 'right' },
+        3: { halign: 'right' }
+      },
+      margin: { left: 15, right: 15 },
+      theme: 'striped'
     });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Totals
+    const subtotal = (sale.total_amount || 0) + (sale.discount_amount || 0) - (sale.vat_amount || 0);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Subtotal:', 140, finalY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formatCurrency(subtotal, currency), 195, finalY, { align: 'right' });
+
+    if (sale.discount_amount > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Discount (${sale.discount_percentage}%):`, 140, finalY + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`-${formatCurrency(sale.discount_amount, currency)}`, 195, finalY + 7, { align: 'right' });
+    }
+
+    if (sale.vat_amount > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('VAT (7.5%):', 140, finalY + 14);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatCurrency(sale.vat_amount, currency), 195, finalY + 14, { align: 'right' });
+    }
+
+    doc.setFillColor(brandColor);
+    doc.rect(135, finalY + 18, 65, 10, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Total:', 140, finalY + 24);
+    doc.text(formatCurrency(sale.total_amount, currency), 195, finalY + 24, { align: 'right' });
 
     // Add Terms & Conditions if they exist
     if (settings?.invoice_terms) {
+      const termsY = Math.max(finalY + 40, 240);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Terms & Conditions:', 15, 260);
+      doc.text('Terms & Conditions:', 15, termsY);
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
       const splitTerms = doc.splitTextToSize(settings.invoice_terms, 180);
-      doc.text(splitTerms, 15, 265);
+      doc.text(splitTerms, 15, termsY + 5);
     }
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Thank you for your business!', 105, 285, { align: 'center' });
 
     doc.save(`invoice-${sale.invoice_number}.pdf`);
   };
 
+  const handleCopyLink = (sale: any) => {
+    const link = `${window.location.origin}/invoice/${sale.invoice_number}`;
+    navigator.clipboard.writeText(link);
+    toast.success('Invoice link copied to clipboard!');
+  };
+
   const handleShareEmail = (sale: any) => {
+    const shareUrl = `${window.location.origin}/invoice/${sale.id}`;
     const subject = `Invoice from ${settings?.business_name || 'Gryndee'} - #${sale.invoice_number}`;
-    const body = `Hi ${sale.customer_name || 'Customer'},\n\nPlease find your invoice #${sale.invoice_number} for the amount of ${formatCurrency(sale.total_amount, currency)}.\n\nThank you for your business!\n\nBest regards,\n${settings?.business_name || 'Gryndee'}`;
+    const body = `Hi ${sale.customer_name || 'Customer'},\n\nPlease find your invoice #${sale.invoice_number} for the amount of ${formatCurrency(sale.total_amount, currency)}.\n\nYou can view it here: ${shareUrl}\n\nThank you for your business!\n\nBest regards,\n${settings?.business_name || 'Gryndee'}`;
     window.location.href = `mailto:${sale.customer_email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   const handleShareWhatsApp = (sale: any) => {
-    const message = `Hi ${sale.customer_name || 'Customer'},\n\nHere is your invoice #${sale.invoice_number} from ${settings?.business_name || 'Gryndee'}.\n\nTotal Amount: ${formatCurrency(sale.total_amount, currency)}\n\nThank you for your business!`;
+    const shareUrl = `${window.location.origin}/invoice/${sale.id}`;
+    const message = `Hi ${sale.customer_name || 'Customer'},\n\nHere is your invoice #${sale.invoice_number} from ${settings?.business_name || 'Gryndee'}.\n\nTotal Amount: ${formatCurrency(sale.total_amount, currency)}\n\nView Invoice: ${shareUrl}\n\nThank you for your business!`;
     const whatsappUrl = `https://wa.me/${sale.customer_phone?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -1301,6 +1385,13 @@ export default function Sales() {
                                 <Mail className="w-3.5 h-3.5" />
                               </button>
                               <button 
+                                onClick={(e) => { e.stopPropagation(); handleCopyLink(sale); }}
+                                className="p-2 text-zinc-400 hover:text-brand group-hover:text-white dark:group-hover:text-brand transition-all active:scale-90"
+                                title="Copy Link"
+                              >
+                                <LinkIcon className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
                                 onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(sale); }}
                                 className="p-2 text-zinc-400 hover:text-emerald-500 group-hover:text-white dark:group-hover:text-emerald-400 transition-all active:scale-90"
                                 title="Share via WhatsApp"
@@ -1354,25 +1445,57 @@ export default function Sales() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
-                            {sale.customer_name?.charAt(0) || 'W'}
+                      <div className="flex flex-col gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
+                              {sale.customer_name?.charAt(0) || 'W'}
+                            </div>
+                            <span className="text-xs font-bold text-zinc-900 dark:text-white">{sale.customer_name || 'Walk-in'}</span>
                           </div>
-                          <span className="text-xs font-bold text-zinc-900 dark:text-white">{sale.customer_name || 'Walk-in'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => handlePreview(sale)}
-                            className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
                           <button 
                             onClick={() => handleDeleteSale(sale.id)}
-                            className="p-2.5 text-red-600 bg-red-50 dark:bg-red-500/10 rounded-xl active:scale-95 transition-all"
+                            className="p-2 text-zinc-300 dark:text-zinc-700 hover:text-red-500 transition-all"
+                            title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-xl">
+                          <button 
+                            onClick={() => handlePreview(sale)}
+                            className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-brand transition-all"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">View</span>
+                          </button>
+                          <button 
+                            onClick={() => handleDownloadInvoice(sale)}
+                            className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-brand transition-all"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">PDF</span>
+                          </button>
+                          <button 
+                            onClick={() => handleShareEmail(sale)}
+                            className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-blue-500 transition-all"
+                          >
+                            <Mail className="w-4 h-4" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">Email</span>
+                          </button>
+                          <button 
+                            onClick={() => handleCopyLink(sale)}
+                            className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-brand transition-all"
+                          >
+                            <LinkIcon className="w-4 h-4" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">Link</span>
+                          </button>
+                          <button 
+                            onClick={() => handleShareWhatsApp(sale)}
+                            className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-emerald-500 transition-all"
+                          >
+                            <Share2 className="w-4 h-4" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">WA</span>
                           </button>
                         </div>
                       </div>
