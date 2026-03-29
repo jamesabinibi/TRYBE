@@ -42,7 +42,7 @@ interface AdminStats {
   recentAccounts: any[];
 }
 
-const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
+const StatCard = ({ title, value, icon: Icon, color }: any) => (
   <motion.div 
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -57,12 +57,6 @@ const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
       </div>
       <p className="text-sm text-zinc-600 dark:text-zinc-400 font-medium mb-1">{title}</p>
       <h3 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{value}</h3>
-      {trend && (
-        <div className="flex items-center gap-1 mt-2 text-emerald-500 text-xs font-bold">
-          <ArrowUpRight className="w-3 h-3" />
-          <span>{trend} increase</span>
-        </div>
-      )}
     </div>
   </motion.div>
 );
@@ -828,11 +822,6 @@ export default function SuperAdmin() {
             >
               <Activity className="w-5 h-5" />
             </button>
-            <div className="h-10 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-2 hidden sm:block" />
-            <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest">
-              <Database className="w-4 h-4" />
-              System Healthy
-            </div>
           </div>
       </div>
 
@@ -842,28 +831,24 @@ export default function SuperAdmin() {
           value={stats?.accounts} 
           icon={Building2} 
           color="bg-blue-500/10 text-blue-600"
-          trend="12%"
         />
         <StatCard 
           title="Active Users" 
           value={stats?.users} 
           icon={Users} 
           color="bg-purple-500/10 text-purple-600"
-          trend="8%"
         />
         <StatCard 
           title="Total Products" 
           value={stats?.products} 
           icon={Package} 
           color="bg-orange-500/10 text-orange-600"
-          trend="24%"
         />
         <StatCard 
           title="System Sales" 
           value={stats?.sales} 
           icon={ShoppingCart} 
           color="bg-emerald-500/10 text-emerald-600"
-          trend="15%"
         />
       </div>
 
@@ -888,6 +873,8 @@ export default function SuperAdmin() {
               <thead>
                 <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
                   <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">User</th>
+                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account Type</th>
+                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Type</th>
                   <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account</th>
                   <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</th>
                   <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Verified</th>
@@ -908,6 +895,17 @@ export default function SuperAdmin() {
                           <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{user.email}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className={cn(
+                        "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                        user.account_type === 'business' ? "bg-indigo-500/10 text-indigo-500" : "bg-zinc-500/10 text-zinc-500"
+                      )}>
+                        {user.account_type || 'Personal'}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{user.business_type || 'N/A'}</p>
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-2 text-sm font-bold text-zinc-700 dark:text-zinc-300">

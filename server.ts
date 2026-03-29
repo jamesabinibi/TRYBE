@@ -1,4 +1,6 @@
 import express from "express";
+import { createServer as createHttpServer } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -226,6 +228,10 @@ async function initAwsDb() {
           id SERIAL PRIMARY KEY,
           name TEXT NOT NULL,
           owner_id INTEGER,
+          account_type TEXT DEFAULT 'personal',
+          business_type TEXT,
+          referral_code TEXT UNIQUE,
+          referred_by_id INTEGER REFERENCES accounts(id),
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
         
@@ -246,6 +252,18 @@ async function initAwsDb() {
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='last_payment_date') THEN
             ALTER TABLE accounts ADD COLUMN last_payment_date TIMESTAMP WITH TIME ZONE;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='account_type') THEN
+            ALTER TABLE accounts ADD COLUMN account_type TEXT DEFAULT 'personal';
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='business_type') THEN
+            ALTER TABLE accounts ADD COLUMN business_type TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='referral_code') THEN
+            ALTER TABLE accounts ADD COLUMN referral_code TEXT UNIQUE;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='referred_by_id') THEN
+            ALTER TABLE accounts ADD COLUMN referred_by_id INTEGER REFERENCES accounts(id);
           END IF;
         END $$;
 
@@ -304,6 +322,15 @@ async function initAwsDb() {
             ALTER TABLE users ADD COLUMN verification_expires TIMESTAMP WITH TIME ZONE;
           END IF;
         END $$;
+
+        CREATE TABLE IF NOT EXISTS chat_messages (
+          id SERIAL PRIMARY KEY,
+          account_id INTEGER REFERENCES accounts(id),
+          user_id INTEGER REFERENCES users(id),
+          message TEXT NOT NULL,
+          is_from_admin BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
 
         CREATE TABLE IF NOT EXISTS settings (
           id SERIAL PRIMARY KEY,
@@ -807,9 +834,11 @@ async function createServer() {
     try {
       const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
       if (!paystackSecret) {
+        console.error('[PAYSTACK] Secret key missing');
         return res.status(503).json({ error: "Payment gateway not configured" });
       }
 
+      console.log(`[PAYSTACK] Initializing payment for ${email}, amount: ${amount}`);
       const response = await axios.post(
         'https://api.paystack.co/transaction/initialize',
         {
@@ -832,8 +861,12 @@ async function createServer() {
 
       res.json(response.data);
     } catch (error: any) {
-      console.error('[PAYSTACK] Initialization failed:', error.response?.data || error.message);
-      res.status(500).json({ error: "Failed to initialize payment" });
+      const errorData = error.response?.data;
+      console.error('[PAYSTACK] Initialization failed:', errorData || error.message);
+      res.status(500).json({ 
+        error: "Failed to initialize payment", 
+        details: errorData?.message || error.message 
+      });
     }
   });
 
@@ -878,6 +911,32 @@ async function createServer() {
 
   // Data Migration Tool
   // Migration route removed as migration to AWS RDS is complete.
+
+  app.get('/api/chat/messages', requireAuth, async (req, res) => {
+    const userId = (req as any).userId;
+    const accountId = (req as any).accountId;
+    const role = (req as any).role;
+
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        let query = 'SELECT * FROM chat_messages WHERE account_id = $1 ORDER BY created_at ASC';
+        let params = [accountId];
+        
+        if (role === 'super_admin') {
+          // Super admin can see all messages for a specific account if they are chatting with them
+          // For now, let's just return messages for the current account
+        }
+
+        const { rows } = await pool.query(query, params);
+        res.json(rows);
+      } else {
+        res.json([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch chat messages:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
   app.get("/api/account/subscription", requireAuth, async (req: any, res) => {
     try {
@@ -1250,10 +1309,14 @@ BEGIN
   END IF;
 
   -- Settings
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='settings') AND 
-     NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='settings' AND column_name='account_id') THEN
-    ALTER TABLE settings ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
-    UPDATE settings SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='settings') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='settings' AND column_name='account_id') THEN
+      ALTER TABLE settings ADD COLUMN account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE;
+      UPDATE settings SET account_id = (SELECT id FROM accounts LIMIT 1) WHERE account_id IS NULL;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='settings' AND column_name='invoice_terms') THEN
+      ALTER TABLE settings ADD COLUMN invoice_terms TEXT;
+    END IF;
   END IF;
 
   -- Product Variants
@@ -2338,7 +2401,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post(["/api/login", "/api/login/"], loginHandler);
 
   const registerHandler = async (req: any, res: any) => {
-    const { username, email, password, name } = req.body;
+    const { username, email, password, name, accountType, businessType, referralCode } = req.body;
     const normalizedUsername = username?.trim()?.toLowerCase()?.replace(/\s+/g, '');
     const trimmedEmail = email?.trim()?.toLowerCase();
   
@@ -2377,10 +2440,25 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       try {
         await client.query('BEGIN');
 
+        // Check if referral code is valid
+        let referredByAccountId = null;
+        if (referralCode) {
+          const { rows: referrerRows } = await client.query(
+            'SELECT id FROM accounts WHERE referral_code = $1 LIMIT 1',
+            [referralCode.toUpperCase()]
+          );
+          if (referrerRows.length > 0) {
+            referredByAccountId = referrerRows[0].id;
+          }
+        }
+
+        // Generate a new unique referral code for this account
+        const newReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
         // 1. Create Account
         const { rows: accountRows } = await client.query(
-          'INSERT INTO accounts (name) VALUES ($1) RETURNING id',
-          [name || normalizedUsername]
+          'INSERT INTO accounts (name, account_type, business_type, referral_code, referred_by_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+          [name || normalizedUsername, accountType || 'personal', businessType, newReferralCode, referredByAccountId]
         );
         const account = accountRows[0];
 
@@ -5905,7 +5983,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         console.log(`[ADMIN] Querying RDS for all users...`);
         try {
           const { rows } = await pool.query(`
-            SELECT u.*, a.name as account_name, a.is_active as account_active_status
+            SELECT u.*, a.name as account_name, a.is_active as account_active_status, a.account_type, a.business_type
             FROM users u 
             LEFT JOIN accounts a ON u.account_id = a.id 
             ORDER BY u.created_at DESC
@@ -6555,6 +6633,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         { table: 'product_variants', column: 'low_stock_threshold', type: 'INTEGER DEFAULT 5' },
         { table: 'product_variants', column: 'price_override', type: 'DECIMAL(12,2)' },
         { table: 'product_images', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
+        { table: 'settings', column: 'invoice_terms', type: 'TEXT' },
       ];
 
       for (const m of migrations) {
@@ -6652,7 +6731,66 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     console.error('[INIT] Failed to ensure super admin:', e);
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = createHttpServer(app);
+  const wss = new WebSocketServer({ server });
+  const clients = new Map<string, WebSocket>();
+
+  wss.on('connection', (ws, req) => {
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const userId = url.searchParams.get('userId');
+    const accountId = url.searchParams.get('accountId');
+
+    if (userId) {
+      clients.set(userId, ws);
+    }
+
+    ws.on('message', async (data) => {
+      try {
+        const payload = JSON.parse(data.toString());
+        const { type, message, targetUserId, isFromAdmin } = payload;
+
+        if (type === 'chat_message') {
+          if (process.env.AWS_DB_PASSWORD) {
+            await pool.query(
+              'INSERT INTO chat_messages (account_id, user_id, message, is_from_admin) VALUES ($1, $2, $3, $4)',
+              [accountId, userId, message, isFromAdmin]
+            );
+          }
+
+          if (targetUserId && clients.has(targetUserId)) {
+            clients.get(targetUserId)?.send(JSON.stringify({
+              type: 'chat_message',
+              message,
+              fromUserId: userId,
+              isFromAdmin
+            }));
+          }
+          
+          if (!isFromAdmin) {
+            wss.clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'chat_message',
+                  message,
+                  fromUserId: userId,
+                  accountId,
+                  isFromAdmin: false
+                }));
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error('WS Message Error:', e);
+      }
+    });
+
+    ws.on('close', () => {
+      if (userId) clients.delete(userId);
+    });
+  });
+
+  server.listen(PORT, "0.0.0.0", () => {
     console.log(`[SERVER] Gryndee is running on port ${PORT}`);
     console.log(`[SERVER] Health check endpoint: http://localhost:${PORT}/api/test`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

@@ -29,7 +29,8 @@ import {
   Building2,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  Share2
 } from 'lucide-react';
 import { Product, Variant, Sale, Customer, Service } from '../types';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
@@ -373,7 +374,29 @@ export default function Sales() {
       footStyles: { fillColor: [245, 245, 245], textColor: 0, fontStyle: 'bold' }
     });
 
+    // Add Terms & Conditions if they exist
+    if (settings?.invoice_terms) {
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Terms & Conditions:', 15, 260);
+      doc.setFontSize(8);
+      const splitTerms = doc.splitTextToSize(settings.invoice_terms, 180);
+      doc.text(splitTerms, 15, 265);
+    }
+
     doc.save(`invoice-${sale.invoice_number}.pdf`);
+  };
+
+  const handleShareEmail = (sale: any) => {
+    const subject = `Invoice from ${settings?.business_name || 'Gryndee'} - #${sale.invoice_number}`;
+    const body = `Hi ${sale.customer_name || 'Customer'},\n\nPlease find your invoice #${sale.invoice_number} for the amount of ${formatCurrency(sale.total_amount, currency)}.\n\nThank you for your business!\n\nBest regards,\n${settings?.business_name || 'Gryndee'}`;
+    window.location.href = `mailto:${sale.customer_email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleShareWhatsApp = (sale: any) => {
+    const message = `Hi ${sale.customer_name || 'Customer'},\n\nHere is your invoice #${sale.invoice_number} from ${settings?.business_name || 'Gryndee'}.\n\nTotal Amount: ${formatCurrency(sale.total_amount, currency)}\n\nThank you for your business!`;
+    const whatsappUrl = `https://wa.me/${sale.customer_phone?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   const handleAIScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1269,6 +1292,20 @@ export default function Sales() {
                                 title="Download PDF"
                               >
                                 <Download className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleShareEmail(sale); }}
+                                className="p-2 text-zinc-400 hover:text-blue-500 group-hover:text-white dark:group-hover:text-blue-400 transition-all active:scale-90"
+                                title="Share via Email"
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(sale); }}
+                                className="p-2 text-zinc-400 hover:text-emerald-500 group-hover:text-white dark:group-hover:text-emerald-400 transition-all active:scale-90"
+                                title="Share via WhatsApp"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
                               </button>
                               <button 
                                 onClick={(e) => { e.stopPropagation(); handleDeleteSale(sale.id); }}

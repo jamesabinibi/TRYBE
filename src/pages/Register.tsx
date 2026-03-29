@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, User, ArrowRight, ShieldCheck, Mail, UserPlus, Eye, EyeOff } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Lock, User, ArrowRight, ShieldCheck, Mail, UserPlus, Eye, EyeOff, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../App';
+import { cn } from '../lib/utils';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -13,8 +14,27 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
+  const [accountType, setAccountType] = useState<'personal' | 'business'>('personal');
+  const [businessType, setBusinessType] = useState('');
+  const [referralCode, setReferralCode] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsType, setTermsType] = useState<'terms' | 'privacy'>('terms');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const businessTypes = [
+    'Retail / Boutique',
+    'Food & Beverage / Restaurant',
+    'Services (Salon, Spa, etc.)',
+    'Wholesale / Distribution',
+    'Manufacturing',
+    'Technology / Software',
+    'Healthcare',
+    'Education',
+    'Real Estate',
+    'Other'
+  ];
   const [isSuccess, setIsSuccess] = useState(false);
   const [requiresVerification, setRequiresVerification] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
@@ -86,6 +106,12 @@ export default function Register() {
       return;
     }
     
+    if (!acceptTerms) {
+      setError('You must accept the Terms & Conditions and Privacy Policy');
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       const response = await fetch('/api/register', {
         method: 'POST',
@@ -94,7 +120,10 @@ export default function Register() {
           username: username.trim(), 
           email: email.trim(), 
           password, 
-          name: name.trim() 
+          name: name.trim(),
+          accountType,
+          businessType: accountType === 'business' ? businessType : null,
+          referralCode: referralCode.trim()
         })
       });
       
@@ -271,6 +300,59 @@ export default function Register() {
                 
                   <div className="space-y-4">
                     <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Account Type</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setAccountType('personal')}
+                          className={cn(
+                            "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all",
+                            accountType === 'personal' 
+                              ? "border-brand bg-brand/5 text-brand" 
+                              : "border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500"
+                          )}
+                        >
+                          <User className="w-6 h-6" />
+                          <span className="text-xs font-black uppercase tracking-widest">Personal</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAccountType('business')}
+                          className={cn(
+                            "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all",
+                            accountType === 'business' 
+                              ? "border-brand bg-brand/5 text-brand" 
+                              : "border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500"
+                          )}
+                        >
+                          <ShieldCheck className="w-6 h-6" />
+                          <span className="text-xs font-black uppercase tracking-widest">Business</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {accountType === 'business' && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="space-y-1.5"
+                      >
+                        <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Business Type</label>
+                        <select
+                          required
+                          value={businessType}
+                          onChange={(e) => setBusinessType(e.target.value)}
+                          className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all appearance-none"
+                        >
+                          <option value="">Select Business Type</option>
+                          {businessTypes.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                      </motion.div>
+                    )}
+
+                    <div className="space-y-1.5">
                       <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Full Name</label>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
@@ -338,17 +420,49 @@ export default function Register() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Confirm Password</label>
+                      <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Referral Code (Optional)</label>
                       <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
+                        <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
                         <input 
-                          type={showPassword ? "text" : "password"} 
-                          required
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full pl-12 pr-12 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          type="text" 
+                          value={referralCode}
+                          onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                          placeholder="Enter referral code"
+                          className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                         />
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 px-1">
+                      <div className="flex items-center h-5">
+                        <input
+                          id="terms"
+                          name="terms"
+                          type="checkbox"
+                          checked={acceptTerms}
+                          onChange={(e) => setAcceptTerms(e.target.checked)}
+                          className="h-4 w-4 text-brand focus:ring-brand border-zinc-300 rounded transition-all"
+                        />
+                      </div>
+                      <div className="text-xs">
+                        <label htmlFor="terms" className="font-medium text-zinc-500 dark:text-zinc-400">
+                          I agree to the{' '}
+                          <button 
+                            type="button" 
+                            onClick={() => { setTermsType('terms'); setShowTermsModal(true); }}
+                            className="text-brand hover:underline font-bold"
+                          >
+                            Terms & Conditions
+                          </button>
+                          {' '}and{' '}
+                          <button 
+                            type="button" 
+                            onClick={() => { setTermsType('privacy'); setShowTermsModal(true); }}
+                            className="text-brand hover:underline font-bold"
+                          >
+                            Privacy Policy
+                          </button>
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -377,6 +491,78 @@ export default function Register() {
           )}
         </div>
       </motion.div>
+
+      {/* Terms Modal */}
+      <AnimatePresence>
+        {showTermsModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowTermsModal(false)}
+              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between shrink-0">
+                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">
+                  {termsType === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
+                </h3>
+                <button onClick={() => setShowTermsModal(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                  <User className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-8 overflow-y-auto custom-scrollbar prose dark:prose-invert max-w-none">
+                {termsType === 'terms' ? (
+                  <div className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium">
+                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">1. Acceptance of Terms</h4>
+                    <p>By accessing and using Gryndee, you agree to be bound by these Terms and Conditions. If you do not agree to all of these terms, do not use the service.</p>
+                    
+                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">2. Description of Service</h4>
+                    <p>Gryndee provides inventory management, sales tracking, and business analytics tools for small and medium-sized businesses.</p>
+                    
+                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">3. User Accounts</h4>
+                    <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.</p>
+                    
+                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">4. Subscription and Payments</h4>
+                    <p>Certain features require a paid subscription. All payments are processed securely through our payment partners. Subscriptions renew automatically unless cancelled.</p>
+                    
+                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">5. Data Ownership</h4>
+                    <p>You retain all rights to the data you input into the system. We do not claim ownership of your business data.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium">
+                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">1. Information We Collect</h4>
+                    <p>We collect information you provide directly to us, including your name, email address, and business details when you register for an account.</p>
+                    
+                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">2. How We Use Your Information</h4>
+                    <p>We use your information to provide, maintain, and improve our services, process transactions, and communicate with you.</p>
+                    
+                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">3. Data Security</h4>
+                    <p>We implement reasonable security measures to protect your personal information from unauthorized access, disclosure, or destruction.</p>
+                    
+                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">4. Third-Party Services</h4>
+                    <p>We may use third-party service providers to help us operate our business and the service, such as payment processors and cloud hosting providers.</p>
+                  </div>
+                )}
+              </div>
+              <div className="p-8 border-t border-zinc-100 dark:border-zinc-800 shrink-0">
+                <button 
+                  onClick={() => setShowTermsModal(false)}
+                  className="w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
+                >
+                  Close & Continue
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

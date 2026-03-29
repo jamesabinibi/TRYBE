@@ -7,6 +7,11 @@ export interface User {
   name: string;
   email?: string;
   account_id?: number;
+  subscription_plan?: string;
+  subscription_status?: string;
+  account_type?: string;
+  business_type?: string;
+  referral_code?: string;
   permissions?: {
     can_view_dashboard: boolean;
     can_view_account_data: boolean;

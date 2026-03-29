@@ -45,6 +45,7 @@ import PublicInvoice from './pages/PublicInvoice';
 import { cn } from './lib/utils';
 import NotificationCenter from './components/NotificationCenter';
 import Walkthrough from './components/Walkthrough';
+import ChatSupport from './components/ChatSupport';
 
 import { Toaster } from 'sonner';
 
@@ -70,6 +71,7 @@ interface Settings {
   welcome_email_subject?: string;
   welcome_email_body?: string;
   invoice_footer?: string;
+  invoice_terms?: string;
 }
 
 interface SettingsContextType {
@@ -259,6 +261,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     )}>
       {user && <Walkthrough />}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <ChatSupport />
       <main className="flex-1 flex flex-col min-w-0 relative">
         <header id="main-header" className={cn(
           "h-16 border-b flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 transition-colors duration-300",

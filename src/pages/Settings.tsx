@@ -24,7 +24,8 @@ import {
   CreditCard,
   Zap,
   Crown,
-  CheckCircle2
+  CheckCircle2,
+  FileText
 } from 'lucide-react';
 import { Category } from '../types';
 import { cn } from '../lib/utils';
@@ -52,7 +53,8 @@ export default function Settings() {
     website: globalSettings?.website || '',
     phone_number: globalSettings?.phone_number || '',
     welcome_email_subject: globalSettings?.welcome_email_subject || 'Welcome to Gryndee!',
-    welcome_email_body: globalSettings?.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team'
+    welcome_email_body: globalSettings?.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
+    invoice_terms: globalSettings?.invoice_terms || ''
   });
   const [isSaving, setIsSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(globalSettings?.logo_url || null);
@@ -82,7 +84,8 @@ export default function Settings() {
         website: globalSettings.website || '',
         phone_number: globalSettings.phone_number || '',
         welcome_email_subject: globalSettings.welcome_email_subject || 'Welcome to Gryndee!',
-        welcome_email_body: globalSettings.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team'
+        welcome_email_body: globalSettings.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
+        invoice_terms: globalSettings.invoice_terms || ''
       });
       setLogoPreview(globalSettings.logo_url || null);
     }
@@ -909,7 +912,8 @@ NOTIFY pgrst, 'reload schema';
           website: data.website || '',
           phone_number: data.phone_number || '',
           welcome_email_subject: data.welcome_email_subject || 'Welcome to Gryndee!',
-          welcome_email_body: data.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team'
+          welcome_email_body: data.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
+          invoice_terms: data.invoice_terms || ''
         });
         await refreshSettings();
         toast.success('Settings saved successfully');
@@ -1299,6 +1303,38 @@ NOTIFY pgrst, 'reload schema';
                   className="ml-auto px-4 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
                 >
                   Update
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="invoice-terms" className="flex flex-col p-5 sm:p-6 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-zinc-800 gap-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 shadow-sm border border-zinc-100 dark:border-zinc-700">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] sm:text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Invoice Terms & Conditions</p>
+                <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Add custom terms that will appear at the bottom of your invoices.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <textarea 
+                value={settings.invoice_terms || ''} 
+                onChange={(e) => setSettings({...settings, invoice_terms: e.target.value})}
+                placeholder="e.g. Payment is due within 30 days. Thank you for your business!"
+                rows={4}
+                className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 resize-none" 
+              />
+              <div className="flex justify-end">
+                <button 
+                  onClick={() => saveSettings()}
+                  disabled={isSaving}
+                  className="w-full sm:w-auto px-10 py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                  Update Terms
                 </button>
               </div>
             </div>
