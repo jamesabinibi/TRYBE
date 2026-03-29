@@ -246,14 +246,45 @@ async function initAwsDb() {
         { name: 'account_type', type: "TEXT DEFAULT 'personal'" },
         { name: 'business_type', type: 'TEXT' },
         { name: 'referral_code', type: 'TEXT UNIQUE' },
-        { name: 'referred_by_id', type: 'INTEGER REFERENCES accounts(id)' }
+        { name: 'referred_by_id', type: 'INTEGER REFERENCES accounts(id)' },
+        { name: 'invoice_terms', type: 'TEXT' }
       ];
 
       for (const col of accountCols) {
         try {
-          await client.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
+          // Check if column exists first for better compatibility
+          const checkCol = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name='accounts' AND column_name=$1
+          `, [col.name]);
+          
+          if (checkCol.rows.length === 0) {
+            console.log(`[DB] Adding missing column ${col.name} to accounts...`);
+            await client.query(`ALTER TABLE accounts ADD COLUMN ${col.name} ${col.type}`);
+          }
         } catch (e) {
           console.error(`[DB] Failed to add column ${col.name} to accounts:`, e);
+        }
+      }
+
+      // Add missing columns to sales
+      const salesCols = [
+        { name: 'invoice_terms', type: 'TEXT' }
+      ];
+
+      for (const col of salesCols) {
+        try {
+          const checkCol = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name='sales' AND column_name=$1
+          `, [col.name]);
+          
+          if (checkCol.rows.length === 0) {
+            console.log(`[DB] Adding missing column ${col.name} to sales...`);
+            await client.query(`ALTER TABLE sales ADD COLUMN ${col.name} ${col.type}`);
+          }
+        } catch (e) {
+          console.error(`[DB] Failed to add column ${col.name} to sales:`, e);
         }
       }
 
@@ -283,12 +314,21 @@ async function initAwsDb() {
         { name: 'reset_expires', type: 'TIMESTAMP WITH TIME ZONE' },
         { name: 'is_verified', type: 'BOOLEAN DEFAULT false' },
         { name: 'verification_code', type: 'TEXT' },
-        { name: 'verification_expires', type: 'TIMESTAMP WITH TIME ZONE' }
+        { name: 'verification_expires', type: 'TIMESTAMP WITH TIME ZONE' },
+        { name: 'permissions', type: "JSONB DEFAULT '{}'::jsonb" }
       ];
 
       for (const col of userCols) {
         try {
-          await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
+          const checkCol = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name='users' AND column_name=$1
+          `, [col.name]);
+          
+          if (checkCol.rows.length === 0) {
+            console.log(`[DB] Adding missing column ${col.name} to users...`);
+            await client.query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
+          }
         } catch (e) {
           console.error(`[DB] Failed to add column ${col.name} to users:`, e);
         }
@@ -330,9 +370,49 @@ async function initAwsDb() {
           phone_number TEXT,
           welcome_email_subject TEXT DEFAULT 'Welcome to Gryndee!',
           welcome_email_body TEXT DEFAULT 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
+          invoice_terms TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
       `);
+
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS legal_documents (
+          id SERIAL PRIMARY KEY,
+          terms_and_conditions TEXT,
+          privacy_policy TEXT,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Insert default legal docs if none exist
+      const { rows: legalDocs } = await client.query('SELECT id FROM legal_documents LIMIT 1');
+      if (legalDocs.length === 0) {
+        await client.query('INSERT INTO legal_documents (terms_and_conditions, privacy_policy) VALUES ($1, $2)', [
+          '<h1>Terms and Conditions</h1><p>Default terms...</p>',
+          '<h1>Privacy Policy</h1><p>Default privacy policy...</p>'
+        ]);
+      }
+
+      // Add missing columns to settings
+      const settingsCols = [
+        { name: 'invoice_terms', type: 'TEXT' }
+      ];
+
+      for (const col of settingsCols) {
+        try {
+          const checkCol = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name='settings' AND column_name=$1
+          `, [col.name]);
+          
+          if (checkCol.rows.length === 0) {
+            console.log(`[DB] Adding missing column ${col.name} to settings...`);
+            await client.query(`ALTER TABLE settings ADD COLUMN ${col.name} ${col.type}`);
+          }
+        } catch (e) {
+          console.error(`[DB] Failed to add column ${col.name} to settings:`, e);
+        }
+      }
 
       await client.query(`
         CREATE TABLE IF NOT EXISTS categories (
@@ -3514,7 +3594,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       address: '',
       email: '',
       website: '',
-      phone_number: ''
+      phone_number: '',
+      invoice_terms: ''
     };
     try {
       const userInfo = await getAccountId(req);
@@ -3540,7 +3621,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post(["/api/settings", "/api/settings/"], async (req, res) => {
     const { 
       business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
-      slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body 
+      slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body,
+      invoice_terms
     } = req.body;
     try {
       const userInfo = await getAccountId(req);
@@ -3551,14 +3633,14 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         
         if (existing.length > 0) {
           const { rows } = await pool.query(
-            'UPDATE settings SET business_name = $1, currency = $2, vat_enabled = $3, low_stock_threshold = $4, logo_url = $5, brand_color = $6, slogan = $7, address = $8, email = $9, website = $10, phone_number = $11, welcome_email_subject = $12, welcome_email_body = $13 WHERE account_id = $14 RETURNING *',
-            [business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, userInfo.account_id]
+            'UPDATE settings SET business_name = $1, currency = $2, vat_enabled = $3, low_stock_threshold = $4, logo_url = $5, brand_color = $6, slogan = $7, address = $8, email = $9, website = $10, phone_number = $11, welcome_email_subject = $12, welcome_email_body = $13, invoice_terms = $14 WHERE account_id = $15 RETURNING *',
+            [business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms, userInfo.account_id]
           );
           return res.json(rows[0]);
         } else {
           const { rows } = await pool.query(
-            'INSERT INTO settings (account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *',
-            [userInfo.account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body]
+            'INSERT INTO settings (account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *',
+            [userInfo.account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms]
           );
           return res.json(rows[0]);
         }
@@ -3578,7 +3660,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       let result;
       const settingsData = { 
         business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
-        slogan, address, email, website, phone_number 
+        slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body,
+        invoice_terms
       };
       
       if (existing) {
@@ -3841,7 +3924,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       discount_amount = 0,
       discount_percentage = 0,
       vat_amount = 0,
-      invoice_number: custom_invoice_number
+      invoice_number: custom_invoice_number,
+      invoice_terms
     } = req.body;
     
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -3886,8 +3970,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
           const validStaffId = (staff_id && !isNaN(Number(staff_id))) ? Number(staff_id) : null;
           const { rows: saleRows } = await client.query(
-            'INSERT INTO sales (account_id, invoice_number, customer_name, customer_phone, customer_email, customer_address, total_amount, total_profit, cost_price_total, discount_amount, discount_percentage, vat_amount, payment_method, staff_id, customer_id, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id',
-            [userInfo.account_id, invoice_number, customer_name, customer_phone, customer_email, customer_address, 0, 0, 0, discount_amount, discount_percentage, vat_amount, payment_method, validStaffId, finalCustomerId, 'Completed']
+            'INSERT INTO sales (account_id, invoice_number, customer_name, customer_phone, customer_email, customer_address, total_amount, total_profit, cost_price_total, discount_amount, discount_percentage, vat_amount, payment_method, staff_id, customer_id, status, invoice_terms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id',
+            [userInfo.account_id, invoice_number, customer_name, customer_phone, customer_email, customer_address, 0, 0, 0, discount_amount, discount_percentage, vat_amount, payment_method, validStaffId, finalCustomerId, 'Completed', invoice_terms]
           );
           const saleId = saleRows[0].id;
 
@@ -4056,7 +4140,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           payment_method, 
           staff_id: validStaffId,
           customer_id: finalCustomerId,
-          status: 'Completed' // Default status for invoices
+          status: 'Completed',
+          invoice_terms
         }])
         .select()
         .single();
@@ -5177,15 +5262,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   app.get("/api/admin/secrets", requireSuperAdmin, async (req, res) => {
     const secrets = {
-      SUPABASE_URL: process.env.SUPABASE_URL ? 'Configured' : '',
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Configured' : '',
-      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? 'Configured' : '',
-      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ? 'Configured' : '',
+      SUPABASE_URL: process.env.SUPABASE_URL || '',
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
+      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || '',
       AWS_REGION: process.env.AWS_REGION || 'us-east-1',
-      AWS_S3_BUCKET: process.env.AWS_S3_BUCKET ? 'Configured' : '',
-      PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY ? 'Configured' : '',
-      PAYSTACK_PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY ? 'Configured' : '',
-      GEMINI_API_KEY: process.env.GEMINI_API_KEY ? 'Configured' : ''
+      AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || '',
+      PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY || '',
+      PAYSTACK_PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY || '',
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY || ''
     };
     res.json(secrets);
   });
@@ -5203,6 +5289,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       for (const [key, value] of Object.entries(env)) {
+        if (value === 'Configured') continue; // Skip masked values
+        
         process.env[key] = String(value);
         
         const regex = new RegExp(`^${key}=.*`, 'm');
@@ -6008,6 +6096,48 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  // Super Admin Legal Documents
+  app.get("/api/admin/legal-docs", requireSuperAdmin, async (req, res) => {
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT terms_and_conditions, privacy_policy FROM legal_documents ORDER BY id DESC LIMIT 1');
+        if (rows.length > 0) return res.json(rows[0]);
+      }
+      
+      if (supabase) {
+        const { data, error } = await supabase.from('legal_documents').select('terms_and_conditions, privacy_policy').order('id', { ascending: false }).limit(1).maybeSingle();
+        if (data) return res.json(data);
+      }
+      
+      res.json({ terms_and_conditions: '', privacy_policy: '' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/legal-docs", requireSuperAdmin, async (req, res) => {
+    const { terms_and_conditions, privacy_policy } = req.body;
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query(
+          'INSERT INTO legal_documents (terms_and_conditions, privacy_policy) VALUES ($1, $2)',
+          [terms_and_conditions, privacy_policy]
+        );
+        return res.json({ success: true });
+      }
+      
+      if (supabase) {
+        const { error } = await supabase.from('legal_documents').insert([{ terms_and_conditions, privacy_policy }]);
+        if (error) throw error;
+        return res.json({ success: true });
+      }
+      
+      res.status(503).json({ error: "Database not available" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Super Admin List All Users
   app.get("/api/admin/users", requireSuperAdmin, async (req: any, res) => {
     try {
@@ -6017,23 +6147,39 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (process.env.AWS_DB_PASSWORD) {
         console.log(`[ADMIN] Querying RDS for all users...`);
         try {
-          const { rows } = await pool.query(`
-            SELECT u.*, a.name as account_name, a.is_active as account_active_status, a.account_type, a.business_type
+          // Use a more resilient query that checks for column existence or uses COALESCE
+          // First, let's verify columns in accounts table to avoid 42703
+          const colCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'accounts' AND table_schema = 'public'
+          `);
+          const columns = colCheck.rows.map(r => r.column_name);
+          
+          const hasAccountType = columns.includes('account_type');
+          const hasBusinessType = columns.includes('business_type');
+          
+          const query = `
+            SELECT 
+              u.*, 
+              a.name as account_name, 
+              a.is_active as account_active_status
+              ${hasAccountType ? ', a.account_type' : ", 'personal' as account_type"}
+              ${hasBusinessType ? ', a.business_type' : ", NULL as business_type"}
             FROM users u 
             LEFT JOIN accounts a ON u.account_id = a.id 
             ORDER BY u.created_at DESC
-          `);
+          `;
+          
+          const { rows } = await pool.query(query);
           console.log(`[ADMIN] RDS fetch success. Found ${rows.length} users.`);
-          if (rows.length > 0) {
-            console.log(`[ADMIN] Sample user: ${JSON.stringify(rows[0])}`);
-          }
           
           // Map to match frontend expectations and remove sensitive data
           const mappedUsers = rows.map((u: any) => {
             const { password, ...userWithoutPassword } = u;
             return {
               ...userWithoutPassword,
-              account_active: u.is_active !== undefined ? u.is_active : true, // Map users.is_active to account_active for frontend
+              account_active: u.account_active_status !== undefined ? u.account_active_status : true,
               accounts: u.account_name ? { name: u.account_name } : null
             };
           });
@@ -6051,7 +6197,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       console.log(`[ADMIN] Querying Supabase for all users...`);
       // Try simple select first to see if it's the join or order by causing issues
-      let query = supabase.from('users').select('*, accounts(name)');
+      let query = supabase.from('users').select('*, accounts(name, account_type, business_type)');
       
       const { data: users, error } = await query;
 
@@ -6083,12 +6229,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         return dateB - dateA;
       });
 
-      // Remove passwords from Supabase results
+      // Remove passwords from Supabase results and flatten account_name
       const safeUsers = sortedUsers.map((u: any) => {
         const { password, ...rest } = u;
+        const accountData = Array.isArray(u.accounts) ? u.accounts[0] : u.accounts;
         return {
           ...rest,
-          account_active: u.is_active !== undefined ? u.is_active : true
+          account_active: accountData?.is_active !== undefined ? accountData.is_active : true,
+          account_name: accountData?.name || null,
+          account_type: accountData?.account_type || 'personal',
+          business_type: accountData?.business_type || null,
+          accounts: accountData ? { name: accountData.name } : null
         };
       });
 

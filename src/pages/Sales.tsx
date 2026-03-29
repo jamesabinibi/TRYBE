@@ -79,6 +79,8 @@ export default function Sales() {
 
   const brandColor = settings?.brand_color || '#10b981';
   const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [invoiceTerms, setInvoiceTerms] = useState('');
+  const [isSavingTerms, setIsSavingTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const canViewAccountData = user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data);
@@ -122,9 +124,42 @@ export default function Sales() {
 
   useEffect(() => {
     if (user) {
-      Promise.all([fetchProducts(), fetchServices(), fetchSales(), fetchCustomers()]);
+      Promise.all([fetchProducts(), fetchServices(), fetchSales(), fetchCustomers(), fetchInvoiceTerms()]);
     }
   }, [user]);
+
+  const fetchInvoiceTerms = async () => {
+    try {
+      const response = await fetchWithAuth('/api/settings');
+      if (response.ok) {
+        const data = await response.json();
+        setInvoiceTerms(data.invoice_terms || '');
+      }
+    } catch (error) {
+      console.error('Failed to fetch invoice terms:', error);
+    }
+  };
+
+  const saveInvoiceTerms = async () => {
+    setIsSavingTerms(true);
+    try {
+      const response = await fetchWithAuth('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoice_terms: invoiceTerms })
+      });
+      if (response.ok) {
+        toast.success('Invoice terms updated');
+      } else {
+        toast.error('Failed to update terms');
+      }
+    } catch (error) {
+      console.error('Failed to save invoice terms:', error);
+      toast.error('An error occurred');
+    } finally {
+      setIsSavingTerms(false);
+    }
+  };
 
   const fetchServices = async () => {
     try {
@@ -296,7 +331,8 @@ export default function Sales() {
             customer_name: customerName,
             customer_phone: customerPhone,
             discount_percentage: discountPercent,
-            discount_amount: discountAmount
+            discount_amount: discountAmount,
+            invoice_terms: invoiceTerms
           })
         });
 
@@ -334,30 +370,64 @@ export default function Sales() {
     
     // Header
     doc.setFillColor(brandColor);
-    doc.rect(0, 0, 210, 40, 'F');
+    doc.rect(0, 0, 210, 45, 'F');
     
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(28);
-    doc.text(settings?.business_name || 'Gryndee', 15, 25);
+    // Business Logo or Name
+    if (settings?.logo_url) {
+      try {
+        // Note: Adding images to PDF can be tricky with remote URLs, 
+        // for now we stick to text or a placeholder if it fails
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(24);
+        doc.text(settings?.business_name || 'Gryndee', 15, 25);
+      } catch (e) {
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(24);
+        doc.text(settings?.business_name || 'Gryndee', 15, 25);
+      }
+    } else {
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(24);
+      doc.text(settings?.business_name || 'Gryndee', 15, 25);
+    }
     
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text('INVOICE', 195, 20, { align: 'right' });
-    doc.setFontSize(14);
+    doc.setFontSize(9);
+    doc.text('INVOICE', 195, 15, { align: 'right' });
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(`#${sale.invoice_number}`, 195, 30, { align: 'right' });
+    doc.text(`#${sale.invoice_number}`, 195, 25, { align: 'right' });
+    
+    // Business Info in Header
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    let headerInfoY = 32;
+    if (settings?.email) {
+      doc.text(settings.email, 195, headerInfoY, { align: 'right' });
+      headerInfoY += 4;
+    }
+    if (settings?.phone_number) {
+      doc.text(settings.phone_number, 195, headerInfoY, { align: 'right' });
+    }
 
     // Customer Info
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('Bill To:', 15, 55);
+    doc.text('BILL TO', 15, 60);
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(sale.customer_name || 'Walk-in Customer', 15, 68);
     
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(sale.customer_name || 'Walk-in Customer', 15, 62);
-    let currentY = 67;
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    let currentY = 73;
     if (sale.customer_phone) {
       doc.text(sale.customer_phone, 15, currentY);
       currentY += 5;
@@ -366,17 +436,24 @@ export default function Sales() {
       doc.text(sale.customer_email, 15, currentY);
       currentY += 5;
     }
+    if (sale.customer_address) {
+      const splitAddress = doc.splitTextToSize(sale.customer_address, 80);
+      doc.text(splitAddress, 15, currentY);
+    }
 
     // Invoice Meta
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('Date:', 140, 62);
+    doc.text('DATE ISSUED', 140, 60);
+    doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(sale.created_at).toLocaleDateString(), 160, 62);
+    doc.text(new Date(sale.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }), 140, 68);
     
-    doc.setFont('helvetica', 'bold');
-    doc.text('Payment:', 140, 67);
-    doc.setFont('helvetica', 'normal');
-    doc.text(sale.payment_method || 'N/A', 160, 67);
+    doc.setTextColor(100, 100, 100);
+    doc.text('PAYMENT METHOD', 140, 78);
+    doc.setTextColor(0, 0, 0);
+    doc.text(sale.payment_method || 'N/A', 140, 86);
 
     const tableData = (sale.sale_items || []).map((item: any) => [
       item.product_name || item.service_name || 'Item',
@@ -386,19 +463,22 @@ export default function Sales() {
     ]);
 
     autoTable(doc, {
-      startY: 85,
+      startY: 100,
       head: [['Description', 'Qty', 'Unit Price', 'Total']],
       body: tableData,
       headStyles: { 
-        fillColor: brandColor,
-        textColor: 255,
-        fontSize: 10,
+        fillColor: [245, 245, 245],
+        textColor: [50, 50, 50],
+        fontSize: 9,
         fontStyle: 'bold',
-        halign: 'left'
+        halign: 'left',
+        lineWidth: 0.1,
+        lineColor: [230, 230, 230]
       },
       bodyStyles: {
         fontSize: 9,
-        textColor: 50
+        textColor: 50,
+        cellPadding: 6
       },
       columnStyles: {
         1: { halign: 'center' },
@@ -406,59 +486,77 @@ export default function Sales() {
         3: { halign: 'right' }
       },
       margin: { left: 15, right: 15 },
-      theme: 'striped'
+      theme: 'plain',
+      didDrawPage: (data) => {
+        // Add a thin line at the bottom of the table
+        const lastY = data.cursor?.y || 0;
+        doc.setDrawColor(230, 230, 230);
+        doc.line(15, lastY, 195, lastY);
+      }
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    const finalY = (doc as any).lastAutoTable.finalY + 15;
 
-    // Totals
+    // Totals Section
     const subtotal = (sale.total_amount || 0) + (sale.discount_amount || 0) - (sale.vat_amount || 0);
     
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
     doc.text('Subtotal:', 140, finalY);
-    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
     doc.text(formatCurrency(subtotal, currency), 195, finalY, { align: 'right' });
 
+    let nextY = finalY + 7;
     if (sale.discount_amount > 0) {
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Discount (${sale.discount_percentage}%):`, 140, finalY + 7);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`-${formatCurrency(sale.discount_amount, currency)}`, 195, finalY + 7, { align: 'right' });
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Discount (${sale.discount_percentage}%):`, 140, nextY);
+      doc.setTextColor(220, 38, 38); // Red for discount
+      doc.text(`-${formatCurrency(sale.discount_amount, currency)}`, 195, nextY, { align: 'right' });
+      nextY += 7;
     }
 
     if (sale.vat_amount > 0) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('VAT (7.5%):', 140, finalY + 14);
-      doc.setFont('helvetica', 'normal');
-      doc.text(formatCurrency(sale.vat_amount, currency), 195, finalY + 14, { align: 'right' });
+      doc.setTextColor(100, 100, 100);
+      doc.text('VAT (7.5%):', 140, nextY);
+      doc.setTextColor(0, 0, 0);
+      doc.text(formatCurrency(sale.vat_amount, currency), 195, nextY, { align: 'right' });
+      nextY += 7;
     }
 
+    // Total Box
     doc.setFillColor(brandColor);
-    doc.rect(135, finalY + 18, 65, 10, 'F');
+    doc.rect(135, nextY + 2, 65, 12, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.text('Total:', 140, finalY + 24);
-    doc.text(formatCurrency(sale.total_amount, currency), 195, finalY + 24, { align: 'right' });
+    doc.setFontSize(11);
+    doc.text('TOTAL', 140, nextY + 10);
+    doc.text(formatCurrency(sale.total_amount, currency), 195, nextY + 10, { align: 'right' });
 
     // Add Terms & Conditions if they exist
-    if (settings?.invoice_terms) {
-      const termsY = Math.max(finalY + 40, 240);
+    const termsToUse = sale.invoice_terms || settings?.invoice_terms;
+    if (termsToUse) {
+      const termsY = Math.max(nextY + 30, 220);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text('Terms & Conditions:', 15, termsY);
+      doc.setFontSize(9);
+      doc.text('TERMS & CONDITIONS', 15, termsY);
+      
+      doc.setDrawColor(brandColor);
+      doc.setLineWidth(0.5);
+      doc.line(15, termsY + 2, 45, termsY + 2);
+      
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      const splitTerms = doc.splitTextToSize(settings.invoice_terms, 180);
-      doc.text(splitTerms, 15, termsY + 5);
+      const splitTerms = doc.splitTextToSize(termsToUse, 180);
+      doc.text(splitTerms, 15, termsY + 8);
     }
 
     // Footer
     doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
+    doc.setTextColor(180, 180, 180);
     doc.text('Thank you for your business!', 105, 285, { align: 'center' });
+    doc.text(`Generated by Gryndee System - ${new Date().toLocaleString()}`, 105, 290, { align: 'center' });
 
     doc.save(`invoice-${sale.invoice_number}.pdf`);
   };
@@ -1155,6 +1253,28 @@ export default function Sales() {
                     </button>
                   </div>
 
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-brand" />
+                        Invoice Terms
+                      </h3>
+                      <button
+                        onClick={saveInvoiceTerms}
+                        disabled={isSavingTerms}
+                        className="text-[10px] font-black uppercase tracking-widest text-brand hover:text-brand-hover disabled:opacity-50"
+                      >
+                        {isSavingTerms ? 'Saving...' : 'Save Terms'}
+                      </button>
+                    </div>
+                    <textarea
+                      value={invoiceTerms}
+                      onChange={(e) => setInvoiceTerms(e.target.value)}
+                      className="w-full h-24 p-4 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-medium text-zinc-900 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all resize-none"
+                      placeholder="Add custom terms and conditions for your invoices..."
+                    />
+                  </div>
+
                   {canManageSales && (
                     <button 
                       onClick={handleCheckout}
@@ -1538,6 +1658,29 @@ export default function Sales() {
                       <Download className="w-5 h-5" />
                       Download PDF
                     </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleShareEmail(selectedSaleForPreview)}
+                        className="p-4 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all"
+                        title="Share via Email"
+                      >
+                        <Mail className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleShareWhatsApp(selectedSaleForPreview)}
+                        className="p-4 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all"
+                        title="Share via WhatsApp"
+                      >
+                        <Share2 className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleCopyLink(selectedSaleForPreview)}
+                        className="p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                        title="Copy Link"
+                      >
+                        <LinkIcon className="w-5 h-5" />
+                      </button>
+                    </div>
                     <button
                       onClick={() => setSelectedSaleForPreview(null)}
                       className="p-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-2xl transition-all active:scale-95"

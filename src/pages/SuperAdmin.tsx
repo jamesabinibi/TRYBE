@@ -4,7 +4,7 @@ import {
   Building2, 
   Package, 
   ShoppingCart, 
-  ShieldCheck,
+  FileText,
   TrendingUp,
   Activity,
   ArrowUpRight,
@@ -19,6 +19,7 @@ import {
   Lock,
   X,
   Shield,
+  ShieldCheck,
   User as UserIcon,
   Trash2,
   Power,
@@ -92,6 +93,9 @@ export default function SuperAdmin() {
   const [mobileAssets, setMobileAssets] = useState<{ icon?: string, splash?: string }>({});
 
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [isLegalDocsModalOpen, setIsLegalDocsModalOpen] = useState(false);
+  const [legalDocs, setLegalDocs] = useState({ terms_and_conditions: '', privacy_policy: '' });
+  const [isSavingLegalDocs, setIsSavingLegalDocs] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [isFetchingLogs, setIsFetchingLogs] = useState(false);
 
@@ -109,6 +113,40 @@ export default function SuperAdmin() {
       toast.error('Failed to fetch logs');
     } finally {
       setIsFetchingLogs(false);
+    }
+  };
+
+  const fetchLegalDocs = async () => {
+    try {
+      const response = await fetchWithAuth('/api/admin/legal-docs');
+      if (response.ok) {
+        const data = await response.json();
+        setLegalDocs(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch legal docs:', error);
+    }
+  };
+
+  const saveLegalDocs = async () => {
+    setIsSavingLegalDocs(true);
+    try {
+      const response = await fetchWithAuth('/api/admin/legal-docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(legalDocs)
+      });
+      if (response.ok) {
+        toast.success('Legal documents updated successfully');
+        setIsLegalDocsModalOpen(false);
+      } else {
+        toast.error('Failed to update legal documents');
+      }
+    } catch (error) {
+      console.error('Failed to save legal docs:', error);
+      toast.error('An error occurred while saving');
+    } finally {
+      setIsSavingLegalDocs(false);
     }
   };
 
@@ -793,6 +831,17 @@ export default function SuperAdmin() {
           </button>
           <div className="flex items-center gap-2 ml-auto">
             <button 
+              onClick={() => {
+                fetchLegalDocs();
+                setIsLegalDocsModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-emerald-500 transition-all shadow-sm"
+              title="Legal Documents"
+            >
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Legal Docs</span>
+            </button>
+            <button 
               onClick={() => setIsSecretsModalOpen(true)}
               className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-indigo-500 transition-colors shadow-sm"
               title="Manage Secrets"
@@ -888,116 +937,129 @@ export default function SuperAdmin() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
-                          {user.name?.charAt(0) || user.username?.charAt(0) || '?'}
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
+                            {user.name?.charAt(0) || user.username?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-zinc-900 dark:text-white">{user.name}</p>
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{user.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-black text-zinc-900 dark:text-white">{user.name}</p>
-                          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{user.email}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className={cn(
+                          "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                          user.account_type === 'business' ? "bg-indigo-500/10 text-indigo-500" : "bg-zinc-500/10 text-zinc-500"
+                        )}>
+                          {user.account_type || 'Personal'}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{user.business_type || 'N/A'}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2 text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                          <Building2 className="w-4 h-4 opacity-50" />
+                          {user.account_name || 'N/A'}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
-                        user.account_type === 'business' ? "bg-indigo-500/10 text-indigo-500" : "bg-zinc-500/10 text-zinc-500"
-                      )}>
-                        {user.account_type || 'Personal'}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5">
-                      <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{user.business_type || 'N/A'}</p>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-2 text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                        <Building2 className="w-4 h-4 opacity-50" />
-                        {user.account_name || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
-                        user.role === 'admin' ? "bg-purple-500/10 text-purple-500" : "bg-blue-500/10 text-blue-500"
-                      )}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
-                        user.is_verified ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-                      )}>
-                        {user.is_verified ? 'Yes' : 'No'}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
-                        user.account_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
-                      )}>
-                        {user.account_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setIsResetModalOpen(true);
-                          }}
-                          className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors"
-                          title="Reset Password"
-                        >
-                          <Key className="w-4 h-4" />
-                        </button>
-                        {!user.is_verified && (
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className={cn(
+                          "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                          user.role === 'admin' ? "bg-purple-500/10 text-purple-500" : "bg-blue-500/10 text-blue-500"
+                        )}>
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className={cn(
+                          "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                          user.is_verified ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                        )}>
+                          {user.is_verified ? 'Yes' : 'No'}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className={cn(
+                          "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                          user.account_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                        )}>
+                          {user.account_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <button 
-                            onClick={async () => {
-                              try {
-                                toast.loading('Resending verification...', { id: 'resend-v' });
-                                const res = await fetchWithAuth('/api/auth/resend-verification', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ email: user.email })
-                                });
-                                if (res.ok) {
-                                  toast.success('Verification email sent', { id: 'resend-v' });
-                                } else {
-                                  const d = await res.json();
-                                  toast.error(d.error || 'Failed to resend', { id: 'resend-v' });
-                                }
-                              } catch (e) {
-                                toast.error('Network error', { id: 'resend-v' });
-                              }
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setIsResetModalOpen(true);
                             }}
-                            className="p-2 text-zinc-400 hover:text-blue-500 transition-colors"
-                            title="Resend Verification"
+                            className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors"
+                            title="Reset Password"
                           >
-                            <Mail className="w-4 h-4" />
+                            <Key className="w-4 h-4" />
                           </button>
-                        )}
-                        <button 
-                          onClick={() => handleToggleUserStatus(user.id, user.account_active)}
-                          className={cn("p-2 transition-colors", user.account_active ? "text-zinc-400 hover:text-amber-500" : "text-amber-500 hover:text-amber-600")}
-                          title={user.account_active ? "Deactivate User" : "Activate User"}
-                        >
-                          <Power className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          {!user.is_verified && (
+                            <button 
+                              onClick={async () => {
+                                try {
+                                  toast.loading('Resending verification...', { id: 'resend-v' });
+                                  const res = await fetchWithAuth('/api/auth/resend-verification', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ email: user.email })
+                                  });
+                                  if (res.ok) {
+                                    toast.success('Verification email sent', { id: 'resend-v' });
+                                  } else {
+                                    const d = await res.json();
+                                    toast.error(d.error || 'Failed to resend', { id: 'resend-v' });
+                                  }
+                                } catch (e) {
+                                  toast.error('Network error', { id: 'resend-v' });
+                                }
+                              }}
+                              className="p-2 text-zinc-400 hover:text-blue-500 transition-colors"
+                              title="Resend Verification"
+                            >
+                              <Mail className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => handleToggleUserStatus(user.id, user.account_active)}
+                            className={cn("p-2 transition-colors", user.account_active ? "text-zinc-400 hover:text-amber-500" : "text-amber-500 hover:text-amber-600")}
+                            title={user.account_active ? "Deactivate User" : "Activate User"}
+                          >
+                            <Power className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="px-8 py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center">
+                          <Users className="w-8 h-8 text-zinc-300 dark:text-zinc-700" />
+                        </div>
+                        <p className="text-zinc-500 dark:text-zinc-400 font-medium">No users found</p>
                       </div>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -1072,6 +1134,99 @@ export default function SuperAdmin() {
       {/* Modals here... */}
       <AnimatePresence>
         {/* Modals */}
+      </AnimatePresence>
+
+      {/* Legal Docs Modal */}
+      <AnimatePresence>
+        {isLegalDocsModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsLegalDocsModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                    <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Legal Documents</h2>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Update global Terms & Conditions and Privacy Policy</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsLegalDocsModalOpen(false)}
+                  className="p-3 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-2xl transition-colors"
+                >
+                  <X className="w-6 h-6 text-zinc-400" />
+                </button>
+              </div>
+
+              <div className="p-8 max-h-[70vh] overflow-y-auto space-y-8">
+                <div className="space-y-4">
+                  <label className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-500" />
+                    Terms & Conditions
+                  </label>
+                  <textarea
+                    value={legalDocs.terms_and_conditions}
+                    onChange={(e) => setLegalDocs({ ...legalDocs, terms_and_conditions: e.target.value })}
+                    className="w-full h-64 p-6 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-3xl text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono text-sm resize-none"
+                    placeholder="Enter Terms & Conditions content (HTML or Plain Text)..."
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-emerald-500" />
+                    Privacy Policy
+                  </label>
+                  <textarea
+                    value={legalDocs.privacy_policy}
+                    onChange={(e) => setLegalDocs({ ...legalDocs, privacy_policy: e.target.value })}
+                    className="w-full h-64 p-6 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-3xl text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono text-sm resize-none"
+                    placeholder="Enter Privacy Policy content (HTML or Plain Text)..."
+                  />
+                </div>
+              </div>
+
+              <div className="p-8 bg-zinc-50/50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-4">
+                <button
+                  onClick={() => setIsLegalDocsModalOpen(false)}
+                  className="px-8 py-4 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveLegalDocs}
+                  disabled={isSavingLegalDocs}
+                  className="px-10 py-4 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-2xl font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
+                >
+                  {isSavingLegalDocs ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Mobile Assets Modal */}
