@@ -259,6 +259,19 @@ export default function PublicInvoice() {
                 </div>
               </div>
             </div>
+
+            {/* Invoice Terms */}
+            {invoice.invoice_terms && (
+              <div className="mt-12 p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-[32px] border border-zinc-100 dark:border-zinc-800">
+                <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-2 mb-4">
+                  <FileText className="w-3.5 h-3.5" style={{ color: brandColor }} />
+                  Terms & Conditions
+                </h3>
+                <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">
+                  {invoice.invoice_terms}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Footer Branding */}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, User, ArrowRight, ShieldCheck, Mail, UserPlus, Eye, EyeOff, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
 import { useAuth } from '../App';
 import { cn } from '../lib/utils';
 
@@ -24,15 +25,12 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
 
   const businessTypes = [
-    'Retail / Boutique',
-    'Food & Beverage / Restaurant',
-    'Services (Salon, Spa, etc.)',
-    'Wholesale / Distribution',
-    'Manufacturing',
-    'Technology / Software',
-    'Healthcare',
-    'Education',
-    'Real Estate',
+    'Fashion',
+    'Make Up',
+    'Food & Beverage',
+    'Services',
+    'Retail',
+    'Technology',
     'Other'
   ];
   const [isSuccess, setIsSuccess] = useState(false);
@@ -107,6 +105,7 @@ export default function Register() {
     }
     
     if (!acceptTerms) {
+      toast.error('You must accept the Terms & Conditions and Privacy Policy');
       setError('You must accept the Terms & Conditions and Privacy Policy');
       setIsLoading(false);
       return;
@@ -160,19 +159,19 @@ export default function Register() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sm:mx-auto sm:w-full sm:max-w-md my-auto"
+        className="sm:mx-auto sm:w-full sm:max-w-lg my-auto"
       >
         <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors duration-500">
-          <div className="p-8 pt-12 text-center">
-            <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-brand/20 rotate-3">
-              <UserPlus className="w-8 h-8" />
+          <div className="p-6 sm:p-8 pt-10 text-center">
+            <div className="w-14 h-14 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-brand/20 rotate-3">
+              <UserPlus className="w-7 h-7" />
             </div>
             <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">Create Account</h1>
             <p className="text-zinc-600 dark:text-zinc-400 font-medium">Join Gryndee to manage your inventory</p>
           </div>
 
           {requiresVerification ? (
-            <form onSubmit={handleVerify} className="p-8 space-y-6">
+            <form onSubmit={handleVerify} className="p-6 sm:p-8 space-y-5">
               {isSuccess ? (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -238,7 +237,7 @@ export default function Register() {
                   <button
                     type="submit"
                     disabled={isLoading || verificationCode.length !== 6}
-                    className="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-2xl shadow-lg shadow-brand/20 text-sm font-bold text-white bg-brand hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-[0.98]"
+                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-2xl shadow-lg shadow-brand/20 text-sm font-bold text-white bg-brand hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-[0.98]"
                   >
                     {isLoading ? (
                       <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -264,7 +263,7 @@ export default function Register() {
               )}
             </form>
           ) : (
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5">
               {isSuccess ? (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -342,7 +341,7 @@ export default function Register() {
                           required
                           value={businessType}
                           onChange={(e) => setBusinessType(e.target.value)}
-                          className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all appearance-none"
+                          className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all appearance-none"
                         >
                           <option value="">Select Business Type</option>
                           {businessTypes.map(type => (
@@ -362,7 +361,7 @@ export default function Register() {
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           placeholder="Enter your full name"
-                          className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -377,7 +376,7 @@ export default function Register() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="Enter your email"
-                          className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -392,7 +391,7 @@ export default function Register() {
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
                           placeholder="Choose a username"
-                          className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -407,7 +406,7 @@ export default function Register() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full pl-12 pr-12 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          className="w-full pl-12 pr-12 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                         />
                         <button
                           type="button"
@@ -428,7 +427,7 @@ export default function Register() {
                           value={referralCode}
                           onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                           placeholder="Enter referral code"
-                          className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -470,7 +469,7 @@ export default function Register() {
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/20 group"
+                  className="w-full py-3 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/20 group"
                 >
                   {isLoading ? "Creating Account..." : (
                     <>
@@ -554,7 +553,7 @@ export default function Register() {
               <div className="p-8 border-t border-zinc-100 dark:border-zinc-800 shrink-0">
                 <button 
                   onClick={() => setShowTermsModal(false)}
-                  className="w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
+                  className="w-full py-3 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
                 >
                   Close & Continue
                 </button>

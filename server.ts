@@ -4366,6 +4366,38 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.put("/api/sales/:id/terms", requireAuth, async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      const saleId = req.params.id;
+      const { invoice_terms } = req.body;
+
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query(
+          'UPDATE sales SET invoice_terms = $1 WHERE id = $2 AND account_id = $3',
+          [invoice_terms, saleId, userInfo.account_id]
+        );
+        return res.json({ success: true });
+      }
+
+      if (supabase) {
+        const { error } = await supabase
+          .from('sales')
+          .update({ invoice_terms })
+          .eq('id', saleId)
+          .eq('account_id', userInfo.account_id);
+        
+        if (error) throw error;
+        return res.json({ success: true });
+      }
+
+      res.status(503).json({ error: "Database not available" });
+    } catch (error: any) {
+      console.error('Error updating invoice terms:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/public/invoice/:id", async (req, res) => {
     const { id } = req.params;
     try {
@@ -6099,14 +6131,27 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   // Super Admin Legal Documents
   app.get("/api/admin/legal-docs", requireSuperAdmin, async (req, res) => {
     try {
+      let terms = '';
+      let privacy = '';
+
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT terms_and_conditions, privacy_policy FROM legal_documents ORDER BY id DESC LIMIT 1');
-        if (rows.length > 0) return res.json(rows[0]);
+        const { rows } = await pool.query("SELECT key, value FROM system_settings WHERE key IN ('terms_and_conditions', 'privacy_policy')");
+        rows.forEach(r => {
+          if (r.key === 'terms_and_conditions') terms = r.value;
+          if (r.key === 'privacy_policy') privacy = r.value;
+        });
+        return res.json({ terms_and_conditions: terms, privacy_policy: privacy });
       }
       
       if (supabase) {
-        const { data, error } = await supabase.from('legal_documents').select('terms_and_conditions, privacy_policy').order('id', { ascending: false }).limit(1).maybeSingle();
-        if (data) return res.json(data);
+        const { data, error } = await supabase.from('system_settings').select('key, value').in('key', ['terms_and_conditions', 'privacy_policy']);
+        if (data) {
+          data.forEach(r => {
+            if (r.key === 'terms_and_conditions') terms = r.value;
+            if (r.key === 'privacy_policy') privacy = r.value;
+          });
+        }
+        return res.json({ terms_and_conditions: terms, privacy_policy: privacy });
       }
       
       res.json({ terms_and_conditions: '', privacy_policy: '' });
@@ -6120,15 +6165,23 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       if (process.env.AWS_DB_PASSWORD) {
         await pool.query(
-          'INSERT INTO legal_documents (terms_and_conditions, privacy_policy) VALUES ($1, $2)',
-          [terms_and_conditions, privacy_policy]
+          `INSERT INTO system_settings (key, value) VALUES ('terms_and_conditions', $1) 
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+          [terms_and_conditions]
+        );
+        await pool.query(
+          `INSERT INTO system_settings (key, value) VALUES ('privacy_policy', $1) 
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+          [privacy_policy]
         );
         return res.json({ success: true });
       }
       
       if (supabase) {
-        const { error } = await supabase.from('legal_documents').insert([{ terms_and_conditions, privacy_policy }]);
-        if (error) throw error;
+        const { error: err1 } = await supabase.from('system_settings').upsert({ key: 'terms_and_conditions', value: terms_and_conditions }, { onConflict: 'key' });
+        if (err1) throw err1;
+        const { error: err2 } = await supabase.from('system_settings').upsert({ key: 'privacy_policy', value: privacy_policy }, { onConflict: 'key' });
+        if (err2) throw err2;
         return res.json({ success: true });
       }
       

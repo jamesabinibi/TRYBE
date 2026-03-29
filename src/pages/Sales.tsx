@@ -79,8 +79,7 @@ export default function Sales() {
 
   const brandColor = settings?.brand_color || '#10b981';
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const [invoiceTerms, setInvoiceTerms] = useState('');
-  const [isSavingTerms, setIsSavingTerms] = useState(false);
+  const [customInvoiceTerms, setCustomInvoiceTerms] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const canViewAccountData = user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data);
@@ -124,42 +123,9 @@ export default function Sales() {
 
   useEffect(() => {
     if (user) {
-      Promise.all([fetchProducts(), fetchServices(), fetchSales(), fetchCustomers(), fetchInvoiceTerms()]);
+      Promise.all([fetchProducts(), fetchServices(), fetchSales(), fetchCustomers()]);
     }
   }, [user]);
-
-  const fetchInvoiceTerms = async () => {
-    try {
-      const response = await fetchWithAuth('/api/settings');
-      if (response.ok) {
-        const data = await response.json();
-        setInvoiceTerms(data.invoice_terms || '');
-      }
-    } catch (error) {
-      console.error('Failed to fetch invoice terms:', error);
-    }
-  };
-
-  const saveInvoiceTerms = async () => {
-    setIsSavingTerms(true);
-    try {
-      const response = await fetchWithAuth('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoice_terms: invoiceTerms })
-      });
-      if (response.ok) {
-        toast.success('Invoice terms updated');
-      } else {
-        toast.error('Failed to update terms');
-      }
-    } catch (error) {
-      console.error('Failed to save invoice terms:', error);
-      toast.error('An error occurred');
-    } finally {
-      setIsSavingTerms(false);
-    }
-  };
 
   const fetchServices = async () => {
     try {
@@ -331,8 +297,7 @@ export default function Sales() {
             customer_name: customerName,
             customer_phone: customerPhone,
             discount_percentage: discountPercent,
-            discount_amount: discountAmount,
-            invoice_terms: invoiceTerms
+            discount_amount: discountAmount
           })
         });
 
@@ -360,8 +325,36 @@ export default function Sales() {
     });
   };
 
+  const [isSavingTerms, setIsSavingTerms] = useState(false);
+
   const handlePreview = (sale: any) => {
     setSelectedSaleForPreview(sale);
+    setCustomInvoiceTerms(sale.invoice_terms || '');
+  };
+
+  const saveCustomTerms = async () => {
+    if (!selectedSaleForPreview) return;
+    setIsSavingTerms(true);
+    try {
+      const response = await fetchWithAuth(`/api/sales/${selectedSaleForPreview.id}/terms`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoice_terms: customInvoiceTerms })
+      });
+      if (response.ok) {
+        toast.success('Invoice terms saved successfully');
+        // Update the local state
+        setSelectedSaleForPreview({ ...selectedSaleForPreview, invoice_terms: customInvoiceTerms });
+        setSales(sales.map(s => s.id === selectedSaleForPreview.id ? { ...s, invoice_terms: customInvoiceTerms } : s));
+      } else {
+        toast.error('Failed to save terms');
+      }
+    } catch (error) {
+      console.error('Error saving terms:', error);
+      toast.error('An error occurred');
+    } finally {
+      setIsSavingTerms(false);
+    }
   };
 
   const handleDownloadInvoice = (sale: any) => {
@@ -533,8 +526,7 @@ export default function Sales() {
     doc.text(formatCurrency(sale.total_amount, currency), 195, nextY + 10, { align: 'right' });
 
     // Add Terms & Conditions if they exist
-    const termsToUse = sale.invoice_terms || settings?.invoice_terms;
-    if (termsToUse) {
+    if (customInvoiceTerms) {
       const termsY = Math.max(nextY + 30, 220);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
@@ -548,7 +540,7 @@ export default function Sales() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      const splitTerms = doc.splitTextToSize(termsToUse, 180);
+      const splitTerms = doc.splitTextToSize(customInvoiceTerms, 180);
       doc.text(splitTerms, 15, termsY + 8);
     }
 
@@ -1820,6 +1812,29 @@ export default function Sales() {
                         </span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Custom Invoice Terms Input */}
+                  <div className="mt-12 p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-[32px] border border-zinc-100 dark:border-zinc-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-brand" />
+                        Custom Invoice Terms
+                      </h3>
+                      <button
+                        onClick={saveCustomTerms}
+                        disabled={isSavingTerms}
+                        className="text-[10px] font-black uppercase tracking-widest text-brand hover:text-brand-hover disabled:opacity-50"
+                      >
+                        {isSavingTerms ? 'Saving...' : 'Save Terms'}
+                      </button>
+                    </div>
+                    <textarea
+                      value={customInvoiceTerms}
+                      onChange={(e) => setCustomInvoiceTerms(e.target.value)}
+                      className="w-full h-24 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-medium text-zinc-900 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all resize-none"
+                      placeholder="Add custom terms and conditions that will appear at the bottom of this invoice..."
+                    />
                   </div>
                 </div>
               </motion.div>
