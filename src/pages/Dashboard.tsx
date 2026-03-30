@@ -276,21 +276,6 @@ export default function Dashboard() {
               New Sale
             </Link>
           </div>
-          {user?.referral_code && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
-              <span className="label-text text-zinc-400">Referral Code:</span>
-              <span className="label-text text-brand">{user.referral_code}</span>
-              <button 
-                onClick={() => {
-                  navigator.clipboard.writeText(user.referral_code);
-                  toast.success('Referral code copied!');
-                }}
-                className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
-              >
-                <Copy className="w-3 h-3 text-zinc-400" />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -310,7 +295,8 @@ export default function Dashboard() {
             </div>
             <div>
               <h3 className="h3">Referral Program</h3>
-              <p className="body-text opacity-70">Invite friends and get rewarded. They get 14 days of Pro features free!</p>
+              <p className="body-text opacity-70">Invite friends and get rewarded. They get 1 month of Pro features free!</p>
+              <p className="label-text mt-1 text-brand">Referrals: 0 / 3</p>
             </div>
           </div>
           

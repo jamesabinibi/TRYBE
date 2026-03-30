@@ -146,7 +146,7 @@ export default function AIAdvisor() {
             </div>
             <div className="pt-4 space-y-3">
               <Link 
-                to="/settings" 
+                to="/subscription" 
                 className="btn-primary w-full py-4 text-xs uppercase tracking-widest"
               >
                 Upgrade to Pro
