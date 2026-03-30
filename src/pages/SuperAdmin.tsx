@@ -28,7 +28,8 @@ import {
   Download,
   Image as ImageIcon,
   AlertCircle,
-  Cloud
+  Cloud,
+  Trophy
 } from 'lucide-react';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
@@ -96,6 +97,10 @@ export default function SuperAdmin() {
 
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
   const [isLegalDocsModalOpen, setIsLegalDocsModalOpen] = useState(false);
+  const [isPromoCodesModalOpen, setIsPromoCodesModalOpen] = useState(false);
+  const [promoCodes, setPromoCodes] = useState<any[]>([]);
+  const [newPromoCode, setNewPromoCode] = useState({ code: '', duration_months: 1 });
+  const [isCreatingPromo, setIsCreatingPromo] = useState(false);
   const [legalDocs, setLegalDocs] = useState({ terms_and_conditions: '', privacy_policy: '' });
   const [isSavingLegalDocs, setIsSavingLegalDocs] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -335,10 +340,58 @@ export default function SuperAdmin() {
   const [newPassword, setNewPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
 
+  const fetchPromoCodes = async () => {
+    try {
+      const res = await fetchWithAuth('/api/admin/promo-codes');
+      if (res.ok) {
+        const data = await res.json();
+        setPromoCodes(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch promo codes:', err);
+    }
+  };
+
+  const handleCreatePromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPromoCode.code || !newPromoCode.duration_months) return;
+    setIsCreatingPromo(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/promo-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPromoCode)
+      });
+      if (res.ok) {
+        toast.success('Promo code created!');
+        setNewPromoCode({ code: '', duration_months: 1 });
+        fetchPromoCodes();
+      }
+    } catch (err) {
+      toast.error('Failed to create promo code');
+    } finally {
+      setIsCreatingPromo(false);
+    }
+  };
+
+  const handleDeletePromo = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this promo code?')) return;
+    try {
+      const res = await fetchWithAuth(`/api/admin/promo-codes/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Promo code deleted');
+        fetchPromoCodes();
+      }
+    } catch (err) {
+      toast.error('Failed to delete promo code');
+    }
+  };
+
   useEffect(() => {
     fetchStats();
     fetchUsers();
     fetchAccounts();
+    fetchPromoCodes();
   }, []);
 
   const fetchStats = async () => {
@@ -833,6 +886,14 @@ export default function SuperAdmin() {
           </button>
           <div className="flex items-center gap-2 ml-auto">
             <button 
+              onClick={() => setIsPromoCodesModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-brand transition-all shadow-sm"
+              title="Promo Codes"
+            >
+              <Trophy className="w-4 h-4" />
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Promo Codes</span>
+            </button>
+            <button 
               onClick={() => {
                 fetchLegalDocs();
                 setIsLegalDocsModalOpen(true);
@@ -1138,7 +1199,104 @@ export default function SuperAdmin() {
         {/* Modals */}
       </AnimatePresence>
 
-      {/* Legal Docs Modal */}
+      {/* Promo Codes Modal */}
+      <AnimatePresence>
+        {isPromoCodesModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsPromoCodesModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center">
+                    <Trophy className="w-6 h-6 text-brand" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight italic">Promo Codes</h2>
+                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Manage subscription codes</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsPromoCodesModalOpen(false)}
+                  className="p-2 hover:bg-zinc-100 dark:hover:bg-white/[0.05] rounded-xl transition-colors"
+                >
+                  <X className="w-6 h-6 text-zinc-400" />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                {/* Create Promo Code */}
+                <form onSubmit={handleCreatePromo} className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 space-y-4">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white">Generate New Code</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Code</label>
+                      <Input 
+                        placeholder="e.g. PREMIUM30" 
+                        value={newPromoCode.code}
+                        onChange={(e) => setNewPromoCode({ ...newPromoCode, code: e.target.value.toUpperCase() })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Duration (Months)</label>
+                      <Input 
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={newPromoCode.duration_months}
+                        onChange={(e) => setNewPromoCode({ ...newPromoCode, duration_months: parseInt(e.target.value) })}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={isCreatingPromo}
+                    className="w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 disabled:opacity-50"
+                  >
+                    {isCreatingPromo ? 'Generating...' : 'Generate Code'}
+                  </button>
+                </form>
+
+                {/* Promo Codes List */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white">Active Codes</h3>
+                  <div className="space-y-2">
+                    {promoCodes.map((promo) => (
+                      <div key={promo.id} className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                        <div>
+                          <p className="text-lg font-black text-brand tracking-tight">{promo.code}</p>
+                          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{promo.duration_months} Months Premium</p>
+                        </div>
+                        <button 
+                          onClick={() => handleDeletePromo(promo.id)}
+                          className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ))}
+                    {promoCodes.length === 0 && (
+                      <p className="text-center py-8 text-zinc-500 italic text-sm">No promo codes generated yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {isLegalDocsModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

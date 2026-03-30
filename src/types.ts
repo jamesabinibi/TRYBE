@@ -12,6 +12,12 @@ export interface User {
   account_type?: string;
   business_type?: string;
   referral_code?: string;
+  referral_count?: number;
+  referrals_for_reward?: number;
+  active_referral_count?: number;
+  invoice_count_month?: number;
+  last_invoice_reset?: string;
+  trial_expiry?: string;
   permissions?: {
     can_view_dashboard: boolean;
     can_view_account_data: boolean;
@@ -79,7 +85,6 @@ export interface Customer {
   name: string;
   phone: string;
   email?: string;
-  loyalty_points: number;
   created_at: string;
 }
 

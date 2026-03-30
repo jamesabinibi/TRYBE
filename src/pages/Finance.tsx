@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Wallet, Briefcase, TrendingDown, LayoutDashboard } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { Wallet, Briefcase, TrendingDown, LayoutDashboard, Lock } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { useAuth } from '../App';
 import CashFlowRunway from './CashFlowRunway';
 import Bookkeeping from './Bookkeeping';
 import Expenses from './Expenses';
 
 export default function Finance() {
+  const { user } = useAuth();
+  const isPro = user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial';
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') as 'cashflow' | 'bookkeeping' | 'expenses' || 'cashflow';
   const [activeTab, setActiveTab] = useState<'cashflow' | 'bookkeeping' | 'expenses'>(tab);
@@ -21,7 +24,38 @@ export default function Finance() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-20">
+    <div className="max-w-7xl mx-auto space-y-6 pb-20 relative">
+      {!isPro && (
+        <div className="absolute inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-white/60 dark:bg-zinc-950/60 backdrop-blur-md rounded-[2.5rem]">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] shadow-2xl border border-zinc-200 dark:border-zinc-800 max-w-md w-full text-center space-y-6 sticky top-20"
+          >
+            <div className="w-20 h-20 bg-brand/10 rounded-[2rem] flex items-center justify-center mx-auto">
+              <Wallet className="w-10 h-10 text-brand" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">Professional Feature</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+                Advanced Finance Hub is exclusive to our Professional plan. Upgrade now to manage your cash flow and bookkeeping with ease.
+              </p>
+            </div>
+            <div className="pt-4 space-y-3">
+              <Link 
+                to="/settings" 
+                className="block w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
+              >
+                Upgrade to Professional
+              </Link>
+              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                Or use a referral code to get 14 days free
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight flex items-center gap-3">

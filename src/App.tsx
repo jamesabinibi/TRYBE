@@ -21,11 +21,13 @@ import {
   Moon,
   Sun,
   ShieldCheck,
+  Crown,
   FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
 import { SearchProvider, useSearch } from './contexts/SearchContext';
+import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import AIAdvisor from './pages/AIAdvisor';
 import Finance from './pages/Finance';
@@ -33,6 +35,7 @@ import Products from './pages/Products';
 import Services from './pages/Services';
 import Sales from './pages/Sales';
 import SuperAdmin from './pages/SuperAdmin';
+import Subscription from './pages/Subscription';
 import Settings from './pages/Settings';
 import Invoices from './pages/Invoices';
 import Expenses from './pages/Expenses';
@@ -54,6 +57,7 @@ interface AuthContextType {
   user: User | null;
   login: (user: User) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
 }
 
@@ -126,6 +130,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     ...(user?.role !== 'staff' ? [{ icon: FileText, label: 'Tax Report', path: '/tax' }] : []),
     { icon: FileText, label: 'Invoices', path: '/invoices' },
     { icon: Users, label: 'Customers', path: '/customers' },
+    ...(user?.role !== 'staff' ? [{ icon: Crown, label: 'Subscription', path: '/subscription' }] : []),
     ...(user?.role === 'super_admin' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
     ...(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data) ? [{ icon: SettingsIcon, label: 'Settings', path: '/settings' }] : []),
   ];
@@ -439,6 +444,20 @@ export default function App() {
     localStorage.removeItem('user');
   };
 
+  const refreshUser = async () => {
+    if (!user) return;
+    try {
+      const res = await fetchWithAuth('/api/auth/me');
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
+    }
+  };
+
   const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
     const headers = {
       ...options.headers,
@@ -455,7 +474,7 @@ export default function App() {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, fetchWithAuth }}>
+    <AuthContext.Provider value={{ user, login, logout, refreshUser, fetchWithAuth }}>
       <SettingsContext.Provider value={{ settings, refreshSettings: fetchSettings }}>
         <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
           <SearchProvider>
@@ -481,13 +500,17 @@ export default function App() {
                           <Route path="/tax" element={user?.role === 'staff' ? <Navigate to="/" /> : <TaxReport />} />
                           <Route path="/invoices" element={<Invoices />} />
                           <Route path="/customers" element={<Customers />} />
+                          <Route path="/subscription" element={<Subscription />} />
                           <Route path="/super-admin" element={<SuperAdmin />} />
                           <Route path="/settings" element={(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data)) ? <Settings /> : <Navigate to="/" />} />
                           <Route path="*" element={<Navigate to="/" />} />
                         </Routes>
                       </Layout>
                     ) : (
-                      <Navigate to="/login" />
+                      <Routes>
+                        <Route path="/" element={<Landing />} />
+                        <Route path="*" element={<Navigate to="/login" />} />
+                      </Routes>
                     )
                   } 
                 />

@@ -599,7 +599,6 @@ export default function Products() {
                     <option key={cat.id} value={cat.id} className="dark:bg-zinc-900">{cat.name}</option>
                   ))}
                 </Input>
-                <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none group-hover:text-brand transition-colors" />
               </div>
               {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_products)) && (
                 <button 

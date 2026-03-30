@@ -837,7 +837,6 @@ export default function Sales() {
                             <option key={s.id} value={s.id}>{s.name} - {formatCurrency(s.price)}</option>
                           ))}
                         </Input>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
                       </div>
                     </div>
                   )}
@@ -846,11 +845,6 @@ export default function Sales() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Customer (Optional)</label>
-                        {selectedCustomer && (
-                          <span className="text-[10px] font-bold text-brand uppercase tracking-widest bg-brand/10 px-2 py-1 rounded-full">
-                            {selectedCustomer.loyalty_points || 0} Points
-                          </span>
-                        )}
                       </div>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
@@ -872,7 +866,6 @@ export default function Sales() {
                             <option key={c.id} value={c.id} className="dark:bg-zinc-900">{c.name} ({c.phone})</option>
                           ))}
                         </Input>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
                       </div>
                     </div>
 

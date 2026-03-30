@@ -19,7 +19,9 @@ import {
   Settings as SettingsIcon,
   Image as ImageIcon,
   CheckCircle2,
-  Shield
+  Shield,
+  ShieldCheck,
+  Copy
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -235,24 +237,49 @@ export default function Dashboard() {
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Dashboard</h1>
-          <p className="body-text text-zinc-500 dark:text-zinc-400">Welcome back, here's what's happening today.</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Dashboard</h1>
+            {user?.subscription_plan === 'professional' && (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-brand/10 text-brand rounded-full border border-brand/20 shadow-sm animate-pulse">
+                <ShieldCheck className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Verified Premium</span>
+              </div>
+            )}
+          </div>
+          <p className="body-text text-zinc-500 dark:text-zinc-400">Welcome back, {user?.name || 'User'}. Here's what's happening today.</p>
         </div>
-        <div className="flex gap-2">
-          <Link 
-            to="/ai-advisor"
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-white/[0.05] text-zinc-900 dark:text-white rounded-xl text-[13px] font-semibold transition-all hover:bg-zinc-200 dark:hover:bg-white/[0.1]"
-          >
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            AI Pulse
-          </Link>
-          <Link 
-            to="/sales"
-            className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 shadow-lg shadow-brand/20"
-          >
-            <Plus className="w-4 h-4" />
-            New Sale
-          </Link>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-2">
+            <Link 
+              to="/ai-advisor"
+              className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-white/[0.05] text-zinc-900 dark:text-white rounded-xl text-[13px] font-semibold transition-all hover:bg-zinc-200 dark:hover:bg-white/[0.1]"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              AI Pulse
+            </Link>
+            <Link 
+              to="/sales"
+              className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 shadow-lg shadow-brand/20"
+            >
+              <Plus className="w-4 h-4" />
+              New Sale
+            </Link>
+          </div>
+          {user?.referral_code && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
+              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Referral Code:</span>
+              <span className="text-[10px] font-black text-brand uppercase tracking-widest">{user.referral_code}</span>
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(user.referral_code);
+                  toast.success('Referral code copied!');
+                }}
+                className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
+              >
+                <Copy className="w-3 h-3 text-zinc-400" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -317,6 +344,47 @@ export default function Dashboard() {
           subtitle={user?.role === 'staff' ? "Your lifetime transactions" : "Lifetime transactions"}
         />
       </div>
+
+      {/* Referral Card */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card p-6 border-brand/20 bg-brand/[0.02] relative overflow-hidden group"
+      >
+        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <Trophy className="w-24 h-24 text-brand -rotate-12" />
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center shrink-0">
+              <Trophy className="w-6 h-6 text-brand" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tight">Referral Program</h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Invite friends and get rewarded. They get 14 days of Pro features free!</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 p-1.5 bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
+            <div className="px-4 py-2">
+              <span className="text-[10px] text-zinc-400 font-black uppercase tracking-widest block leading-none mb-1">Your Code</span>
+              <span className="text-xl font-black text-brand tracking-tighter leading-none">{user?.referral_code || 'GRYNDEE'}</span>
+            </div>
+            <button 
+              onClick={() => {
+                if (user?.referral_code) {
+                  navigator.clipboard.writeText(user.referral_code);
+                  toast.success('Referral code copied!');
+                }
+              }}
+              className="p-3 bg-brand text-white rounded-xl hover:bg-brand-hover transition-all active:scale-95 shadow-lg shadow-brand/20"
+              title="Copy Code"
+            >
+              <Copy className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </motion.div>
 
 
 

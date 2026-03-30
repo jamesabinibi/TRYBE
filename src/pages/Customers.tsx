@@ -35,7 +35,6 @@ interface Customer {
   phone: string;
   email: string;
   address?: string;
-  loyalty_points: number;
   created_at: string;
 }
 
@@ -97,12 +96,7 @@ export default function Customers() {
       const res = await fetchWithAuth('/api/customers');
       const data = await res.json();
       if (Array.isArray(data)) {
-        // Ensure loyalty_points exists for frontend
-        const normalized = data.map(c => ({
-          ...c,
-          loyalty_points: c.loyalty_points || 0
-        }));
-        setCustomers(normalized);
+        setCustomers(data);
       } else {
         console.error('Customers data is not an array:', data);
         setCustomers([]);
@@ -226,11 +220,10 @@ export default function Customers() {
       c.name,
       c.phone,
       c.email || 'N/A',
-      c.loyalty_points.toString(),
       new Date(c.created_at).toLocaleDateString()
     ]);
     (doc as any).autoTable({
-      head: [['Name', 'Phone', 'Email', 'Points', 'Joined']],
+      head: [['Name', 'Phone', 'Email', 'Joined']],
       body: tableData,
       startY: 20,
     });
@@ -242,7 +235,6 @@ export default function Customers() {
       Name: c.name,
       Phone: c.phone,
       Email: c.email || '',
-      Points: c.loyalty_points,
       Joined: new Date(c.created_at).toLocaleDateString()
     }));
     const ws = XLSX.utils.json_to_sheet(data);
@@ -335,10 +327,6 @@ export default function Customers() {
               <div className="flex items-start justify-between mb-6">
                 <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-[2rem] flex items-center justify-center text-brand font-bold text-2xl border border-zinc-200 dark:border-zinc-700 group-hover:bg-brand group-hover:text-white group-hover:border-brand transition-all duration-500">
                   {customer.name?.charAt(0) || '?'}
-                </div>
-                <div className="flex items-center gap-1.5 px-4 py-2 bg-brand/10 text-brand rounded-full text-[10px] font-bold uppercase tracking-widest">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  {customer.loyalty_points} Points
                 </div>
               </div>
               
