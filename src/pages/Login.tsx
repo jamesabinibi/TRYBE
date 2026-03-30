@@ -53,55 +53,55 @@ export default function Login() {
         className="sm:mx-auto sm:w-full sm:max-w-md my-auto"
       >
         <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors duration-500">
-          <div className="p-6 sm:p-8 pt-10 text-center">
-            <div className="w-14 h-14 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-brand/30 rotate-3">
-              <ShieldCheck className="w-7 h-7" />
+          <div className="p-6 pt-8 text-center">
+            <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-3 shadow-lg shadow-brand/30 rotate-3">
+              <ShieldCheck className="w-6 h-6" />
             </div>
-            <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">Gryndee</h1>
-            <p className="text-zinc-600 dark:text-zinc-400 font-medium">Sign in to manage your inventory</p>
+            <h1 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight mb-1">Gryndee</h1>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 font-medium tracking-tight">Sign in to manage your business</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5">
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {error && (
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl text-red-600 dark:text-red-400 text-sm font-medium text-center">
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-xl text-red-600 dark:text-red-400 text-xs font-medium text-center">
                 {error}
               </div>
             )}
             
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Username or Email</label>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Username or Email</label>
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                   <input 
                     type="text" 
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter username or email"
-                    className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                    placeholder="Username or Email"
+                    className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Password</label>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                   <input 
                     type={showPassword ? "text" : "password"} 
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-12 pr-12 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                    className="w-full pl-11 pr-11 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -110,7 +110,7 @@ export default function Login() {
             <button 
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/30 group"
+              className="w-full py-2.5 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/30 group text-sm"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

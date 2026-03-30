@@ -21,6 +21,7 @@ import {
   History,
   X,
   MessageCircle,
+  Link as LinkIcon,
   Building2
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
@@ -64,6 +65,7 @@ const Invoices: React.FC = () => {
   const [invoiceNumber, setInvoiceNumber] = useState(generateInvoiceNumber());
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [discount, setDiscount] = useState(0);
+  const [invoiceTerms, setInvoiceTerms] = useState(settings?.invoice_terms || '');
   const [isGenerating, setIsGenerating] = useState(false);
   const [pastInvoices, setPastInvoices] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -138,6 +140,16 @@ const Invoices: React.FC = () => {
     window.open(whatsappUrl, '_blank');
   };
 
+  const handleCopyLink = (invoice: any) => {
+    const invoiceLink = `${window.location.origin}/invoice/${invoice.id}`;
+    navigator.clipboard.writeText(invoiceLink).then(() => {
+      toast.success('Invoice link copied to clipboard');
+    }).catch((err) => {
+      console.error('Failed to copy link: ', err);
+      toast.error('Failed to copy link');
+    });
+  };
+
   const resetForm = () => {
     setInvoiceNumber(generateInvoiceNumber());
     setInvoiceDate(new Date().toISOString().split('T')[0]);
@@ -170,6 +182,7 @@ const Invoices: React.FC = () => {
       setInvoiceNumber(invoice.invoice_number || `INV-${Date.now().toString().slice(-6)}`);
       setInvoiceDate(invoice.created_at ? new Date(invoice.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       setDiscount(invoice.discount_percentage || 0);
+      setInvoiceTerms(invoice.invoice_terms || settings?.invoice_terms || '');
       setRecipient({
         name: invoice.customer_name || (invoice.customers?.name) || '',
         email: invoice.customer_email || (invoice.customers?.email) || '', 
@@ -243,7 +256,9 @@ const Invoices: React.FC = () => {
       },
       invoiceNumber: inv.invoice_number,
       invoiceDate: new Date(inv.created_at).toLocaleDateString(),
-      discount: inv.discount_percentage || 0
+      discount: inv.discount_percentage || 0,
+      invoiceTerms: inv.invoice_terms || settings?.invoice_terms || '',
+      vat_amount: inv.vat_amount || 0
     };
 
     generatePDF(mappedData);
@@ -283,7 +298,8 @@ const Invoices: React.FC = () => {
         vat_amount: vatAmount,
         total_amount: total,
         payment_method: 'Invoice',
-        status: 'Pending'
+        status: 'Pending',
+        invoice_terms: invoiceTerms
       };
 
       const res = await fetchWithAuth('/api/sales', {
@@ -401,6 +417,9 @@ const Invoices: React.FC = () => {
     const num = isExternal ? data.invoiceNumber : invoiceNumber;
     const date = isExternal ? data.invoiceDate : invoiceDate;
     const disc = isExternal ? data.discount : discount;
+    const terms = isExternal ? data.invoiceTerms : invoiceTerms;
+    const vatEnabled = isExternal ? data.vat_amount > 0 : settings?.vat_enabled;
+    const vatAmount = isExternal ? data.vat_amount : calculateVAT();
 
     if (!items || items.length === 0) {
       toast.error('Please add at least one item to the invoice');
@@ -418,7 +437,10 @@ const Invoices: React.FC = () => {
         recipient: rec,
         invoiceNumber: num,
         invoiceDate: date,
-        discount: disc
+        discount: disc,
+        invoiceTerms: terms,
+        vatEnabled,
+        vatAmount
       }, settings);
       toast.success('Invoice generated successfully');
     } catch (error) {
@@ -560,6 +582,20 @@ const Invoices: React.FC = () => {
                             <FileText className="w-4 h-4" />
                           </button>
                           <button
+                            onClick={() => handleShareWhatsApp(inv)}
+                            className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all"
+                            title="Share on WhatsApp"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleCopyLink(inv)}
+                            className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all"
+                            title="Copy Link"
+                          >
+                            <LinkIcon className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => handleDownload(inv)}
                             className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all"
                             title="Download PDF"
@@ -609,6 +645,18 @@ const Invoices: React.FC = () => {
                         className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
                       >
                         <FileText className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleShareWhatsApp(inv)}
+                        className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleCopyLink(inv)}
+                        className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                      >
+                        <LinkIcon className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDownload(inv)}
@@ -720,7 +768,7 @@ const Invoices: React.FC = () => {
                                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{item.price ? 'Service' : 'Product'}</p>
                                 </div>
                               </div>
-                              <p className="text-sm font-bold font-mono tracking-tighter text-zinc-900 dark:text-white">
+                              <p className={`text-sm ${NUMBER_STYLE} text-zinc-900 dark:text-white`}>
                                 <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
                                 {(item.price || item.selling_price || 0).toLocaleString()}
                               </p>
@@ -769,24 +817,24 @@ const Invoices: React.FC = () => {
                             type="number"
                             value={item.quantity}
                             onChange={(e) => updateQuantity(index, parseInt(e.target.value))}
-                            className="w-20 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all font-mono"
+                            className={`w-20 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all ${NUMBER_STYLE}`}
                           />
                         </td>
                         <td className="py-2 sm:py-6 flex justify-between items-center sm:table-cell">
                           <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Price</span>
                           <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-bold font-mono">{settings?.currency || '₦'}</span>
+                            <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-xs ${NUMBER_STYLE}`}>{settings?.currency || '₦'}</span>
                             <input
                               type="number"
                               value={item.price}
                               onChange={(e) => updatePrice(index, parseFloat(e.target.value))}
-                              className="w-32 pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all font-mono"
+                              className={`w-32 pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all ${NUMBER_STYLE}`}
                             />
                           </div>
                         </td>
                         <td className="py-2 sm:py-6 flex justify-between items-center sm:table-cell">
                           <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total</span>
-                          <span className="text-sm font-bold font-mono tracking-tighter text-zinc-950 dark:text-white">
+                          <span className={`text-sm ${NUMBER_STYLE} text-zinc-950 dark:text-white`}>
                             <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
                             {item.total.toLocaleString()}
                           </span>
@@ -903,9 +951,20 @@ const Invoices: React.FC = () => {
                     type="number"
                     value={discount}
                     onChange={(e) => setDiscount(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
-                    className="w-20 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white text-right focus:ring-4 focus:ring-brand/20 outline-none font-mono transition-all"
+                    className={`w-20 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white text-right focus:ring-4 focus:ring-brand/20 outline-none transition-all ${NUMBER_STYLE}`}
                   />
                 </div>
+              </div>
+
+              <div className="pt-4 border-t border-white/10">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 block">Invoice Terms</span>
+                <textarea
+                  value={invoiceTerms}
+                  onChange={(e) => setInvoiceTerms(e.target.value)}
+                  placeholder="e.g. Payment is due within 30 days."
+                  rows={3}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-medium text-white placeholder:text-zinc-500 focus:ring-4 focus:ring-brand/20 outline-none transition-all resize-none"
+                />
               </div>
 
               {settings?.vat_enabled && (
@@ -942,9 +1001,16 @@ const Invoices: React.FC = () => {
           <div className="p-10 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/30">
             <div>
               <h2 className="text-3xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">Invoice Preview</h2>
-              <p className="text-zinc-400 dark:text-zinc-500 font-mono text-sm mt-1 tracking-widest uppercase">NO. {previewInvoice.invoice_number}</p>
+              <p className="text-zinc-400 dark:text-zinc-500 font-sans font-bold text-sm mt-1 tracking-widest uppercase">NO. {previewInvoice.invoice_number}</p>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => handleCopyLink(previewInvoice)}
+                className="p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl transition-all active:scale-95 shadow-lg shadow-blue-500/20"
+                title="Copy Invoice Link"
+              >
+                <LinkIcon className="w-6 h-6" />
+              </button>
               <button
                 onClick={() => handleShareWhatsApp(previewInvoice)}
                 className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
@@ -1045,14 +1111,14 @@ const Invoices: React.FC = () => {
                           <p className="text-xs text-zinc-400 mt-1 font-medium">{item.service_id ? 'Service' : 'Product'}</p>
                         </td>
                         <td className="py-8 px-4 text-center">
-                          <span className="font-mono text-sm font-bold text-zinc-950 dark:text-white">
+                          <span className={`${NUMBER_STYLE} text-sm text-zinc-950 dark:text-white`}>
                             {item.quantity}
                           </span>
                         </td>
-                        <td className="py-8 px-4 text-right font-mono text-sm text-zinc-500 dark:text-zinc-400">
+                        <td className={`py-8 px-4 text-right ${NUMBER_STYLE} text-sm text-zinc-500 dark:text-zinc-400`}>
                           {formatCurrency(item.unit_price || 0, settings?.currency || 'NGN')}
                         </td>
-                        <td className="py-8 pl-4 text-right font-mono font-bold text-zinc-950 dark:text-white text-base">
+                        <td className={`py-8 pl-4 text-right ${NUMBER_STYLE} text-zinc-950 dark:text-white text-base`}>
                           {formatCurrency(item.total_price || 0, settings?.currency || 'NGN')}
                         </td>
                       </tr>
@@ -1064,30 +1130,43 @@ const Invoices: React.FC = () => {
 
             {/* Summary Section */}
             <div className="mt-12 flex flex-col sm:flex-row justify-between items-start gap-12 pt-12 border-t border-zinc-100 dark:border-zinc-800">
-              <div className="max-w-xs">
-                <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Note</h5>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium italic">
-                  {settings?.invoice_footer || `Thank you for your business. We appreciate your trust in ${settings?.business_name || 'us'}.`}
-                </p>
+              <div className="max-w-xs space-y-6">
+                <div>
+                  <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Terms & Conditions</h5>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium italic">
+                    {previewInvoice.invoice_terms || settings?.invoice_terms || `Thank you for your business. We appreciate your trust in ${settings?.business_name || 'us'}.`}
+                  </p>
+                </div>
+                
+                {(settings?.bank_name || settings?.account_name || settings?.account_number) && (
+                  <div>
+                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Payment Details</h5>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                      {settings?.bank_name && <p><span className="font-bold text-zinc-700 dark:text-zinc-300">Bank:</span> {settings.bank_name}</p>}
+                      {settings?.account_name && <p><span className="font-bold text-zinc-700 dark:text-zinc-300">Account Name:</span> {settings.account_name}</p>}
+                      {settings?.account_number && <p><span className="font-bold text-zinc-700 dark:text-zinc-300">Account Number:</span> {settings.account_number}</p>}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="w-full sm:w-80 space-y-4">
                 <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">Subtotal</span>
-                  <span className="font-mono font-bold">{formatCurrency((previewInvoice.total_amount || 0) + (previewInvoice.discount_amount || 0) - (previewInvoice.vat_amount || 0), settings?.currency || 'NGN')}</span>
+                  <span className={NUMBER_STYLE}>{formatCurrency((parseFloat(previewInvoice.total_amount) || 0) + (parseFloat(previewInvoice.discount_amount) || 0) - (parseFloat(previewInvoice.vat_amount) || 0), settings?.currency || 'NGN')}</span>
                 </div>
                 
                 {previewInvoice.discount_amount > 0 && (
                   <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">Discount ({previewInvoice.discount_percentage}%)</span>
-                    <span className="font-mono font-bold">-{formatCurrency(previewInvoice.discount_amount, settings?.currency || 'NGN')}</span>
+                    <span className={NUMBER_STYLE}>-{formatCurrency(previewInvoice.discount_amount, settings?.currency || 'NGN')}</span>
                   </div>
                 )}
 
                 {previewInvoice.vat_amount > 0 && (
                   <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">VAT (7.5%)</span>
-                    <span className="font-mono font-bold">{formatCurrency(previewInvoice.vat_amount, settings?.currency || 'NGN')}</span>
+                    <span className={NUMBER_STYLE}>{formatCurrency(previewInvoice.vat_amount, settings?.currency || 'NGN')}</span>
                   </div>
                 )}
 

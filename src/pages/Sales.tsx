@@ -1245,28 +1245,6 @@ export default function Sales() {
                     </button>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                        <FileText className="w-3.5 h-3.5 text-brand" />
-                        Invoice Terms
-                      </h3>
-                      <button
-                        onClick={saveInvoiceTerms}
-                        disabled={isSavingTerms}
-                        className="text-[10px] font-black uppercase tracking-widest text-brand hover:text-brand-hover disabled:opacity-50"
-                      >
-                        {isSavingTerms ? 'Saving...' : 'Save Terms'}
-                      </button>
-                    </div>
-                    <textarea
-                      value={invoiceTerms}
-                      onChange={(e) => setInvoiceTerms(e.target.value)}
-                      className="w-full h-24 p-4 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-medium text-zinc-900 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all resize-none"
-                      placeholder="Add custom terms and conditions for your invoices..."
-                    />
-                  </div>
-
                   {canManageSales && (
                     <button 
                       onClick={handleCheckout}

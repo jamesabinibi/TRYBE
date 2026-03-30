@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Download, Building2, MapPin, Phone, Mail, FileText } from 'lucide-react';
 import { generatePDF } from '../utils/pdfGenerator';
+import { NUMBER_STYLE } from '../lib/utils';
 
 export default function PublicInvoice() {
   const { id } = useParams();
@@ -26,12 +27,13 @@ export default function PublicInvoice() {
     fetchInvoice();
   }, [id]);
 
-  const formatCurrency = (amount: number, currency: string) => {
+  const formatCurrency = (amount: number | string, currency: string) => {
+    const value = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: currency || 'NGN',
       minimumFractionDigits: 0,
-    }).format(amount);
+    }).format(value);
   };
 
   const handleDownload = () => {
@@ -62,7 +64,10 @@ export default function PublicInvoice() {
       },
       invoiceNumber: invoice.invoice_number,
       invoiceDate: new Date(invoice.created_at).toLocaleDateString(),
-      discount: invoice.discount_percentage || 0
+      discount: invoice.discount_percentage || 0,
+      invoiceTerms: invoice.invoice_terms || settings?.invoice_terms || '',
+      vatEnabled: invoice.vat_amount > 0,
+      vatAmount: parseFloat(invoice.vat_amount) || 0
     };
 
     generatePDF(mappedData, settings);
@@ -130,7 +135,7 @@ export default function PublicInvoice() {
                   <h1 className="text-4xl font-black tracking-tighter text-zinc-900 dark:text-white uppercase leading-none">
                     Invoice
                   </h1>
-                  <p className="text-zinc-400 dark:text-zinc-500 font-mono text-sm mt-2 tracking-widest">
+                  <p className="text-zinc-400 dark:text-zinc-500 font-sans font-bold text-sm mt-2 tracking-widest">
                     NO. {invoice.invoice_number}
                   </p>
                 </div>
@@ -205,14 +210,14 @@ export default function PublicInvoice() {
                           <p className="text-xs text-zinc-400 mt-1 font-medium">{item.service_id ? 'Service' : 'Product'}</p>
                         </td>
                         <td className="py-8 px-4 text-center">
-                          <span className="font-mono text-sm font-bold text-zinc-950 dark:text-white">
+                          <span className={`${NUMBER_STYLE} text-sm text-zinc-950 dark:text-white`}>
                             {item.quantity}
                           </span>
                         </td>
-                        <td className="py-8 px-4 text-right font-mono text-sm text-zinc-500 dark:text-zinc-400">
+                        <td className={`py-8 px-4 text-right ${NUMBER_STYLE} text-sm text-zinc-500 dark:text-zinc-400`}>
                           {formatCurrency(item.unit_price || item.price_at_sale || 0, currency)}
                         </td>
-                        <td className="py-8 pl-4 text-right font-mono font-bold text-zinc-950 dark:text-white text-base">
+                        <td className={`py-8 pl-4 text-right ${NUMBER_STYLE} text-zinc-950 dark:text-white text-base`}>
                           {formatCurrency(item.total_price || (item.quantity * (item.unit_price || item.price_at_sale || 0)), currency)}
                         </td>
                       </tr>
@@ -224,30 +229,43 @@ export default function PublicInvoice() {
 
             {/* Summary Section */}
             <div className="mt-12 flex flex-col sm:flex-row justify-between items-start gap-12 pt-12 border-t border-zinc-100 dark:border-zinc-800">
-              <div className="max-w-xs">
-                <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Note</h5>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium italic">
-                  "Thank you for your business. We appreciate your trust in {settings.business_name || 'us'}."
-                </p>
+              <div className="max-w-xs space-y-6">
+                <div>
+                  <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Terms & Conditions</h5>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium italic">
+                    {invoice.invoice_terms || settings.invoice_terms || `Thank you for your business. We appreciate your trust in ${settings.business_name || 'us'}.`}
+                  </p>
+                </div>
+
+                {(settings?.bank_name || settings?.account_name || settings?.account_number) && (
+                  <div>
+                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Payment Details</h5>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                      {settings?.bank_name && <p><span className="font-bold text-zinc-700 dark:text-zinc-300">Bank:</span> {settings.bank_name}</p>}
+                      {settings?.account_name && <p><span className="font-bold text-zinc-700 dark:text-zinc-300">Account Name:</span> {settings.account_name}</p>}
+                      {settings?.account_number && <p><span className="font-bold text-zinc-700 dark:text-zinc-300">Account Number:</span> {settings.account_number}</p>}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="w-full sm:w-80 space-y-4">
                 <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">Subtotal</span>
-                  <span className="font-mono font-bold">{formatCurrency((invoice.total_amount || 0) + (invoice.discount_amount || 0) - (invoice.vat_amount || 0), currency)}</span>
+                  <span className={NUMBER_STYLE}>{formatCurrency((parseFloat(invoice.total_amount) || 0) + (parseFloat(invoice.discount_amount) || 0) - (parseFloat(invoice.vat_amount) || 0), currency)}</span>
                 </div>
                 
                 {invoice.discount_amount > 0 && (
                   <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">Discount ({invoice.discount_percentage}%)</span>
-                    <span className="font-mono font-bold">-{formatCurrency(invoice.discount_amount, currency)}</span>
+                    <span className={NUMBER_STYLE}>-{formatCurrency(invoice.discount_amount, currency)}</span>
                   </div>
                 )}
 
                 {invoice.vat_amount > 0 && (
                   <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">VAT</span>
-                    <span className="font-mono font-bold">{formatCurrency(invoice.vat_amount, currency)}</span>
+                    <span className={NUMBER_STYLE}>{formatCurrency(invoice.vat_amount, currency)}</span>
                   </div>
                 )}
 
@@ -264,7 +282,7 @@ export default function PublicInvoice() {
             {invoice.invoice_terms && (
               <div className="mt-12 p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-[32px] border border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-2 mb-4">
-                  <FileText className="w-3.5 h-3.5" style={{ color: brandColor }} />
+                  <FileText className="w-3.5 h-3.5" style={{ color: settings?.brand_color || '#10b981' }} />
                   Terms & Conditions
                 </h3>
                 <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">

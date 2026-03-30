@@ -54,8 +54,26 @@ export default function Settings() {
     phone_number: globalSettings?.phone_number || '',
     welcome_email_subject: globalSettings?.welcome_email_subject || 'Welcome to Gryndee!',
     welcome_email_body: globalSettings?.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
-    invoice_terms: globalSettings?.invoice_terms || ''
+    invoice_terms: globalSettings?.invoice_terms || '',
+    bank_name: globalSettings?.bank_name || '',
+    account_name: globalSettings?.account_name || '',
+    account_number: globalSettings?.account_number || '',
+    business_type: globalSettings?.business_type || ''
   });
+  const businessTypes = [
+    'Agriculture', 'Auto / Parts', 'Bakery', 'Beauty (make Up)', 'Catering', 'Clothing', 
+    'Computer Services', 'Construction', 'Consulting', 'Cosmetics', 'Dairy Products', 
+    'Education', 'Electronics', 'Entertainment', 'Fashion', 'Financial Services', 
+    'Fishing', 'Food & Beverages', 'Footwear', 'Fruits & Vegetables', 'Furniture', 
+    'Gift & Toys', 'Grocery', 'Hotel', 'Information Technology', 'Jewelry', 
+    'Kitchen Utensils', 'Laundry', 'Legal Services', 'Maintenance Services', 
+    'Medical & Healthcare', 'Mobile & Accessories', 'Non Profit', 'Nursery', 'Online', 
+    'Others', 'Personal', 'Petroleum', 'Pet Stores', 'Photo Studio', 'Poultry', 
+    'Printing', 'Restaurant & Cafe', 'Security Services', 'Sports & Fitness', 
+    'Stationery', 'Street Foods', 'Textiles', 'Tours & Travel', 'Transportation', 
+    'Veterinary', 'Waste Collection'
+  ];
+
   const [isSaving, setIsSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(globalSettings?.logo_url || null);
   const [showClearSalesConfirm, setShowClearSalesConfirm] = useState(false);
@@ -85,7 +103,11 @@ export default function Settings() {
         phone_number: globalSettings.phone_number || '',
         welcome_email_subject: globalSettings.welcome_email_subject || 'Welcome to Gryndee!',
         welcome_email_body: globalSettings.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
-        invoice_terms: globalSettings.invoice_terms || ''
+        invoice_terms: globalSettings.invoice_terms || '',
+        bank_name: globalSettings.bank_name || '',
+        account_name: globalSettings.account_name || '',
+        account_number: globalSettings.account_number || '',
+        business_type: globalSettings.business_type || ''
       });
       setLogoPreview(globalSettings.logo_url || null);
     }
@@ -913,7 +935,11 @@ NOTIFY pgrst, 'reload schema';
           phone_number: data.phone_number || '',
           welcome_email_subject: data.welcome_email_subject || 'Welcome to Gryndee!',
           welcome_email_body: data.welcome_email_body || 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
-          invoice_terms: data.invoice_terms || ''
+          invoice_terms: data.invoice_terms || '',
+          bank_name: data.bank_name || '',
+          account_name: data.account_name || '',
+          account_number: data.account_number || '',
+          business_type: data.business_type || ''
         });
         await refreshSettings();
         toast.success('Settings saved successfully');
@@ -1243,6 +1269,31 @@ NOTIFY pgrst, 'reload schema';
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Type</label>
+              <select 
+                value={settings.business_type} 
+                onChange={(e) => setSettings({...settings, business_type: e.target.value})}
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+              >
+                <option value="">Select Business Type</option>
+                {businessTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Website</label>
+              <input 
+                type="text" 
+                value={settings.website} 
+                onChange={(e) => setSettings({...settings, website: e.target.value})}
+                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+              />
+            </div>
+          </div>
+
           <div className="space-y-2 pt-6">
             <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Address</label>
             <textarea 
@@ -1271,6 +1322,70 @@ NOTIFY pgrst, 'reload schema';
                 onChange={(e) => setSettings({...settings, currency: e.target.value})}
                 className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
               />
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-zinc-200 dark:border-zinc-800 mt-8">
+            <h4 className="text-sm font-black text-zinc-950 dark:text-white uppercase tracking-widest mb-6">Bank Details (For Invoices)</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Bank Name</label>
+                <select 
+                  value={settings.bank_name || ''} 
+                  onChange={(e) => setSettings({...settings, bank_name: e.target.value})}
+                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 appearance-none" 
+                >
+                  <option value="">Select a Bank</option>
+                  <option value="Access Bank">Access Bank</option>
+                  <option value="Citibank">Citibank</option>
+                  <option value="Ecobank">Ecobank</option>
+                  <option value="Fidelity Bank">Fidelity Bank</option>
+                  <option value="First Bank of Nigeria">First Bank of Nigeria</option>
+                  <option value="First City Monument Bank (FCMB)">First City Monument Bank (FCMB)</option>
+                  <option value="Globus Bank">Globus Bank</option>
+                  <option value="Guaranty Trust Bank (GTBank)">Guaranty Trust Bank (GTBank)</option>
+                  <option value="Heritage Bank">Heritage Bank</option>
+                  <option value="Keystone Bank">Keystone Bank</option>
+                  <option value="Kuda Bank">Kuda Bank</option>
+                  <option value="Moniepoint">Moniepoint</option>
+                  <option value="Opay">Opay</option>
+                  <option value="Palmpay">Palmpay</option>
+                  <option value="Polaris Bank">Polaris Bank</option>
+                  <option value="PremiumTrust Bank">PremiumTrust Bank</option>
+                  <option value="Providus Bank">Providus Bank</option>
+                  <option value="Stanbic IBTC Bank">Stanbic IBTC Bank</option>
+                  <option value="Standard Chartered Bank">Standard Chartered Bank</option>
+                  <option value="Sterling Bank">Sterling Bank</option>
+                  <option value="SunTrust Bank">SunTrust Bank</option>
+                  <option value="Taj Bank">Taj Bank</option>
+                  <option value="Titan Trust Bank">Titan Trust Bank</option>
+                  <option value="Union Bank of Nigeria">Union Bank of Nigeria</option>
+                  <option value="United Bank for Africa (UBA)">United Bank for Africa (UBA)</option>
+                  <option value="Unity Bank">Unity Bank</option>
+                  <option value="Wema Bank">Wema Bank</option>
+                  <option value="Zenith Bank">Zenith Bank</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Account Name</label>
+                <input 
+                  type="text" 
+                  value={settings.account_name || ''} 
+                  onChange={(e) => setSettings({...settings, account_name: e.target.value})}
+                  placeholder="e.g. John Doe"
+                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Account Number</label>
+                <input 
+                  type="text" 
+                  value={settings.account_number || ''} 
+                  onChange={(e) => setSettings({...settings, account_number: e.target.value})}
+                  placeholder="e.g. 0123456789"
+                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -1308,37 +1423,7 @@ NOTIFY pgrst, 'reload schema';
             </div>
           </div>
 
-          <div id="invoice-terms" className="flex flex-col p-5 sm:p-6 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-zinc-800 gap-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 shadow-sm border border-zinc-100 dark:border-zinc-700">
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <p className="text-[10px] sm:text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Invoice Terms & Conditions</p>
-                <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Add custom terms that will appear at the bottom of your invoices.</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <textarea 
-                value={settings.invoice_terms || ''} 
-                onChange={(e) => setSettings({...settings, invoice_terms: e.target.value})}
-                placeholder="e.g. Payment is due within 30 days. Thank you for your business!"
-                rows={4}
-                className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 resize-none" 
-              />
-              <div className="flex justify-end">
-                <button 
-                  onClick={() => saveSettings()}
-                  disabled={isSaving}
-                  className="w-full sm:w-auto px-10 py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center justify-center gap-2"
-                >
-                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-                  Update Terms
-                </button>
-              </div>
-            </div>
-          </div>
+
 
           <div id="tax" className="flex flex-col p-5 sm:p-6 bg-brand/5 dark:bg-brand/10 rounded-2xl sm:rounded-[2rem] border border-brand/10 gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -371,6 +371,9 @@ async function initAwsDb() {
           welcome_email_subject TEXT DEFAULT 'Welcome to Gryndee!',
           welcome_email_body TEXT DEFAULT 'Hi {name},\n\nYour account has been successfully created. You can now sign in with your username: {username}.\n\nBest regards,\nThe Gryndee Team',
           invoice_terms TEXT,
+          bank_name TEXT,
+          account_name TEXT,
+          account_number TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
       `);
@@ -395,7 +398,10 @@ async function initAwsDb() {
 
       // Add missing columns to settings
       const settingsCols = [
-        { name: 'invoice_terms', type: 'TEXT' }
+        { name: 'invoice_terms', type: 'TEXT' },
+        { name: 'bank_name', type: 'TEXT' },
+        { name: 'account_name', type: 'TEXT' },
+        { name: 'account_number', type: 'TEXT' }
       ];
 
       for (const col of settingsCols) {
@@ -774,7 +780,7 @@ async function initAwsDb() {
   }
 }
 
-// initAwsDb();
+initAwsDb();
 
 async function getSystemSetting(key: string): Promise<string | null> {
   try {
@@ -2177,15 +2183,72 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.post("/api/ai/insight", async (req, res) => {
+    const userInfo = await getAccountId(req);
+    if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+    
+    const apiKey = process.env.GEMINI_API_KEY;
+    let finalApiKey = apiKey;
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'GEMINI_API_KEY' LIMIT 1");
+        if (rows.length > 0 && rows[0].value) finalApiKey = rows[0].value;
+      }
+    } catch (err) {
+      console.error('Error fetching GEMINI_API_KEY from system_settings:', err);
+    }
+
+    if (!finalApiKey) {
+      return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing. Please add it in Super Admin settings." });
+    }
+
+    try {
+      const { sales, expenses, inventory } = req.body;
+      const ai = new GoogleGenAI({ apiKey: finalApiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `You are Gryndee AI, a proactive business partner for an entrepreneur. 
+        Look at the user's products/services in their inventory to understand their specific niche.
+        
+        Provide 3-4 SHORT, punchy, and highly personalized business tips based specifically on what they sell.
+        Vary your advice every time. Focus on areas like:
+        - Optimal price points and profit margins for their specific products.
+        - Marketing strategies (e.g., Facebook/Instagram ads, TikTok, local SEO) tailored to their niche.
+        - Upselling or bundling opportunities based on their catalog.
+
+        If the data arrays are empty, give them 3 quick, high-impact tips on how to choose their first product and start marketing. Do NOT say the data was "left blank".
+
+        Business Data:
+        Sales: ${JSON.stringify(sales)}
+        Expenses: ${JSON.stringify(expenses)}
+        Inventory: ${JSON.stringify(inventory)}
+        
+        Random Seed to ensure fresh advice: ${Math.random()}
+
+        Format your response in Markdown with clear headings (use ## or ###), bullet points, and bold text for emphasis. 
+        Keep the tone encouraging, direct, and professional. No fluff.`
+      });
+
+      res.json({ insight: response.text || "I couldn't generate insights at this moment. Please try again later." });
+    } catch (error: any) {
+      console.error('[AI] Insight generation error:', error);
+      res.status(500).json({ error: error.message || "Failed to generate AI insight" });
+    }
+  });
+
   app.post("/api/ai/forecast", async (req, res) => {
     const userInfo = await getAccountId(req);
     if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
     
     const apiKey = process.env.GEMINI_API_KEY;
     let finalApiKey = apiKey;
-    if (process.env.AWS_DB_PASSWORD) {
-      const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'GEMINI_API_KEY' LIMIT 1");
-      if (rows.length > 0 && rows[0].value) finalApiKey = rows[0].value;
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'GEMINI_API_KEY' LIMIT 1");
+        if (rows.length > 0 && rows[0].value) finalApiKey = rows[0].value;
+      }
+    } catch (err) {
+      console.error('Error fetching GEMINI_API_KEY from system_settings:', err);
     }
 
     console.log('[AI] GEMINI_API_KEY present:', !!finalApiKey);
@@ -3602,9 +3665,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!userInfo) return res.json(defaultSettings);
 
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT * FROM settings WHERE account_id = $1', [userInfo.account_id]);
+        const { rows } = await pool.query(`
+          SELECT s.*, a.business_type 
+          FROM settings s 
+          LEFT JOIN accounts a ON s.account_id = a.id 
+          WHERE s.account_id = $1
+        `, [userInfo.account_id]);
         if (rows.length > 0) return res.json(rows[0]);
-        return res.json({ account_id: userInfo.account_id, ...defaultSettings });
+        
+        // If settings don't exist, get business_type from accounts
+        const { rows: accountRows } = await pool.query('SELECT business_type FROM accounts WHERE id = $1', [userInfo.account_id]);
+        return res.json({ 
+          account_id: userInfo.account_id, 
+          ...defaultSettings, 
+          business_type: accountRows[0]?.business_type || '' 
+        });
       }
 
       if (!supabase) return res.json(defaultSettings);
@@ -3622,25 +3697,30 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const { 
       business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
       slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body,
-      invoice_terms
+      invoice_terms, bank_name, account_name, account_number, business_type
     } = req.body;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
       
       if (process.env.AWS_DB_PASSWORD) {
+        // Update business_type in accounts table
+        if (business_type) {
+          await pool.query('UPDATE accounts SET business_type = $1 WHERE id = $2', [business_type, userInfo.account_id]);
+        }
+
         const { rows: existing } = await pool.query('SELECT id FROM settings WHERE account_id = $1', [userInfo.account_id]);
         
         if (existing.length > 0) {
           const { rows } = await pool.query(
-            'UPDATE settings SET business_name = $1, currency = $2, vat_enabled = $3, low_stock_threshold = $4, logo_url = $5, brand_color = $6, slogan = $7, address = $8, email = $9, website = $10, phone_number = $11, welcome_email_subject = $12, welcome_email_body = $13, invoice_terms = $14 WHERE account_id = $15 RETURNING *',
-            [business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms, userInfo.account_id]
+            'UPDATE settings SET business_name = $1, currency = $2, vat_enabled = $3, low_stock_threshold = $4, logo_url = $5, brand_color = $6, slogan = $7, address = $8, email = $9, website = $10, phone_number = $11, welcome_email_subject = $12, welcome_email_body = $13, invoice_terms = $14, bank_name = $15, account_name = $16, account_number = $17 WHERE account_id = $18 RETURNING *',
+            [business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms, bank_name, account_name, account_number, userInfo.account_id]
           );
           return res.json(rows[0]);
         } else {
           const { rows } = await pool.query(
-            'INSERT INTO settings (account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *',
-            [userInfo.account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms]
+            'INSERT INTO settings (account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms, bank_name, account_name, account_number) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *',
+            [userInfo.account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms, bank_name, account_name, account_number]
           );
           return res.json(rows[0]);
         }
@@ -3661,7 +3741,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const settingsData = { 
         business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
         slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body,
-        invoice_terms
+        invoice_terms, bank_name, account_name, account_number
       };
       
       if (existing) {
@@ -5259,11 +5339,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         return res.status(503).json({ error: "Database not available" });
       }
 
-      const userMap = new Map(users?.map(u => [u.id, u.name]));
+      const userMap = new Map(users?.map(u => [u.id?.toString(), u.name]));
 
       const performanceMap = new Map();
       data.forEach(s => {
-        const staffName = userMap.get(s.staff_id) || `Staff #${s.staff_id}`;
+        const staffName = userMap.get(s.staff_id?.toString()) || `Staff #${s.staff_id || 'Unknown'}`;
         const existing = performanceMap.get(staffName) || { sales: 0, profit: 0, count: 0 };
         performanceMap.set(staffName, {
           sales: existing.sales + (parseFloat(s.total_amount) || 0),
@@ -6124,6 +6204,38 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       return res.status(503).json({ error: "Database not available" });
     } catch (error: any) {
       console.error('[ADMIN] Delete user failed:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Public Legal Documents
+  app.get("/api/legal-docs", async (req, res) => {
+    try {
+      let terms = '';
+      let privacy = '';
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query("SELECT key, value FROM system_settings WHERE key IN ('terms_and_conditions', 'privacy_policy')");
+        rows.forEach(r => {
+          if (r.key === 'terms_and_conditions') terms = r.value;
+          if (r.key === 'privacy_policy') privacy = r.value;
+        });
+        return res.json({ terms_and_conditions: terms, privacy_policy: privacy });
+      }
+      
+      if (supabase) {
+        const { data, error } = await supabase.from('system_settings').select('key, value').in('key', ['terms_and_conditions', 'privacy_policy']);
+        if (data) {
+          data.forEach(r => {
+            if (r.key === 'terms_and_conditions') terms = r.value;
+            if (r.key === 'privacy_policy') privacy = r.value;
+          });
+        }
+        return res.json({ terms_and_conditions: terms, privacy_policy: privacy });
+      }
+      
+      res.json({ terms_and_conditions: '', privacy_policy: '' });
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });

@@ -118,7 +118,7 @@ export default function SuperAdmin() {
 
   const fetchLegalDocs = async () => {
     try {
-      const response = await fetchWithAuth('/api/admin/legal-docs');
+      const response = await fetchWithAuth(`/api/admin/legal-docs?t=${Date.now()}`);
       if (response.ok) {
         const data = await response.json();
         setLegalDocs(data);

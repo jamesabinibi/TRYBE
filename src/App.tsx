@@ -72,6 +72,10 @@ interface Settings {
   welcome_email_body?: string;
   invoice_footer?: string;
   invoice_terms?: string;
+  bank_name?: string;
+  account_name?: string;
+  account_number?: string;
+  business_type?: string;
 }
 
 interface SettingsContextType {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, Sparkles, TrendingUp, AlertCircle, Lightbulb, Loader2, Target, Package, DollarSign } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
-import { GoogleGenAI } from "@google/genai";
+
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
 import { formatCurrency } from '../lib/utils';
@@ -56,35 +56,26 @@ export default function AIAdvisor() {
 
   const generateInsight = async (businessData: any) => {
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `You are Gryndee AI, a proactive business partner for an entrepreneur. 
-        Look at the user's products/services in their inventory to understand their specific niche.
-        
-        Provide 3-4 SHORT, punchy, and highly personalized business tips based specifically on what they sell.
-        Vary your advice every time. Focus on areas like:
-        - Optimal price points and profit margins for their specific products.
-        - Marketing strategies (e.g., Facebook/Instagram ads, TikTok, local SEO) tailored to their niche.
-        - Upselling or bundling opportunities based on their catalog.
-
-        If the data arrays are empty, give them 3 quick, high-impact tips on how to choose their first product and start marketing. Do NOT say the data was "left blank".
-
-        Business Data:
-        Sales: ${JSON.stringify(businessData.sales)}
-        Expenses: ${JSON.stringify(businessData.expenses)}
-        Inventory: ${JSON.stringify(businessData.inventory)}
-        
-        Random Seed to ensure fresh advice: ${Math.random()}
-
-        Format your response in Markdown with clear headings (use ## or ###), bullet points, and bold text for emphasis. 
-        Keep the tone encouraging, direct, and professional. No fluff.`
+      const response = await fetchWithAuth('/api/ai/insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sales: businessData.sales,
+          expenses: businessData.expenses,
+          inventory: businessData.inventory
+        })
       });
-
-      setInsight(response.text || "I couldn't generate insights at this moment. Please try again later.");
-    } catch (error) {
+      
+      const data = await response.json();
+      if (response.ok) {
+        setInsight(data.insight);
+      } else {
+        console.error('Insight error:', data.error);
+        setInsight(data.error || "Error connecting to AI Advisor. Please ensure your API key is configured.");
+      }
+    } catch (error: any) {
       console.error('Error generating AI insight:', error);
-      setInsight("Error connecting to AI Advisor. Please ensure your API key is configured.");
+      setInsight(`Error connecting to AI Advisor: ${error.message || 'Unknown error'}. Please ensure your API key is configured.`);
     } finally {
       setLoadingPulse(false);
     }
@@ -99,9 +90,11 @@ export default function AIAdvisor() {
         setForecast(data);
       } else {
         console.error('Forecast error:', data.error);
+        setForecast({ error: data.error || "Error connecting to AI Advisor. Please ensure your API key is configured." });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching forecast:', error);
+      setForecast({ error: `Error connecting to AI Advisor: ${error.message || 'Unknown error'}. Please ensure your API key is configured.` });
     } finally {
       setLoadingForecast(false);
     }
@@ -232,6 +225,14 @@ export default function AIAdvisor() {
                   <Target className="w-8 h-8 text-brand absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                 </div>
                 <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Generating strategic forecast...</p>
+              </div>
+            ) : forecast?.error ? (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-3xl p-8 flex items-start gap-4">
+                <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0 mt-1" />
+                <div>
+                  <h3 className="text-red-900 dark:text-red-200 font-bold text-lg">Forecast Error</h3>
+                  <p className="text-red-700 dark:text-red-300 mt-2">{forecast.error}</p>
+                </div>
               </div>
             ) : forecast ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

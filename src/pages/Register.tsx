@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, User, ArrowRight, ShieldCheck, Mail, UserPlus, Eye, EyeOff, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -25,17 +25,38 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
 
   const businessTypes = [
-    'Fashion',
-    'Make Up',
-    'Food & Beverage',
-    'Services',
-    'Retail',
-    'Technology',
-    'Other'
+    'Agriculture', 'Auto / Parts', 'Bakery', 'Beauty (make Up)', 'Catering', 'Clothing', 
+    'Computer Services', 'Construction', 'Consulting', 'Cosmetics', 'Dairy Products', 
+    'Education', 'Electronics', 'Entertainment', 'Fashion', 'Financial Services', 
+    'Fishing', 'Food & Beverages', 'Footwear', 'Fruits & Vegetables', 'Furniture', 
+    'Gift & Toys', 'Grocery', 'Hotel', 'Information Technology', 'Jewelry', 
+    'Kitchen Utensils', 'Laundry', 'Legal Services', 'Maintenance Services', 
+    'Medical & Healthcare', 'Mobile & Accessories', 'Non Profit', 'Nursery', 'Online', 
+    'Others', 'Personal', 'Petroleum', 'Pet Stores', 'Photo Studio', 'Poultry', 
+    'Printing', 'Restaurant & Cafe', 'Security Services', 'Sports & Fitness', 
+    'Stationery', 'Street Foods', 'Textiles', 'Tours & Travel', 'Transportation', 
+    'Veterinary', 'Waste Collection'
   ];
   const [isSuccess, setIsSuccess] = useState(false);
   const [requiresVerification, setRequiresVerification] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
+
+  const [legalDocs, setLegalDocs] = useState({ terms_and_conditions: '', privacy_policy: '' });
+
+  useEffect(() => {
+    const fetchLegalDocs = async () => {
+      try {
+        const response = await fetch(`/api/legal-docs?t=${Date.now()}`);
+        if (response.ok) {
+          const data = await response.json();
+          setLegalDocs(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch legal docs:', error);
+      }
+    };
+    fetchLegalDocs();
+  }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,12 +183,12 @@ export default function Register() {
         className="sm:mx-auto sm:w-full sm:max-w-lg my-auto"
       >
         <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors duration-500">
-          <div className="p-6 sm:p-8 pt-10 text-center">
-            <div className="w-14 h-14 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-brand/20 rotate-3">
-              <UserPlus className="w-7 h-7" />
+          <div className="p-6 pt-8 text-center">
+            <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-3 shadow-lg shadow-brand/20 rotate-3">
+              <UserPlus className="w-6 h-6" />
             </div>
-            <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">Create Account</h1>
-            <p className="text-zinc-600 dark:text-zinc-400 font-medium">Join Gryndee to manage your inventory</p>
+            <h1 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight mb-1">Create Account</h1>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 font-medium tracking-tight">Join Gryndee to manage your business</p>
           </div>
 
           {requiresVerification ? (
@@ -351,84 +372,105 @@ export default function Register() {
                       </motion.div>
                     )}
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Full Name</label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
-                        <input 
-                          type="text" 
-                          required
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          placeholder="Enter your full name"
-                          className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Full Name</label>
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                          <input 
+                            type="text" 
+                            required
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Full Name"
+                            className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Email Address</label>
+                        <div className="relative">
+                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                          <input 
+                            type="email" 
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Email"
+                            className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Email Address</label>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
-                        <input 
-                          type="email" 
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="Enter your email"
-                          className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Username</label>
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                          <input 
+                            type="text" 
+                            required
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="Username"
+                            className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                          <input 
+                            type={showPassword ? "text" : "password"} 
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="w-full pl-11 pr-11 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Username</label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
-                        <input 
-                          type="text" 
-                          required
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder="Choose a username"
-                          className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Confirm Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                          <input 
+                            type={showPassword ? "text" : "password"} 
+                            required
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="w-full pl-11 pr-11 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Password</label>
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
-                        <input 
-                          type={showPassword ? "text" : "password"} 
-                          required
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full pl-12 pr-12 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                        >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Referral Code (Optional)</label>
-                      <div className="relative">
-                        <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
-                        <input 
-                          type="text" 
-                          value={referralCode}
-                          onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                          placeholder="Enter referral code"
-                          className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
-                        />
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Referral Code</label>
+                        <div className="relative">
+                          <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                          <input 
+                            type="text" 
+                            value={referralCode}
+                            onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                            placeholder="Optional"
+                            className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -513,41 +555,47 @@ export default function Register() {
                   {termsType === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
                 </h3>
                 <button onClick={() => setShowTermsModal(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                  <User className="w-5 h-5" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="p-8 overflow-y-auto custom-scrollbar prose dark:prose-invert max-w-none">
                 {termsType === 'terms' ? (
-                  <div className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium">
-                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">1. Acceptance of Terms</h4>
-                    <p>By accessing and using Gryndee, you agree to be bound by these Terms and Conditions. If you do not agree to all of these terms, do not use the service.</p>
-                    
-                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">2. Description of Service</h4>
-                    <p>Gryndee provides inventory management, sales tracking, and business analytics tools for small and medium-sized businesses.</p>
-                    
-                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">3. User Accounts</h4>
-                    <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.</p>
-                    
-                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">4. Subscription and Payments</h4>
-                    <p>Certain features require a paid subscription. All payments are processed securely through our payment partners. Subscriptions renew automatically unless cancelled.</p>
-                    
-                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">5. Data Ownership</h4>
-                    <p>You retain all rights to the data you input into the system. We do not claim ownership of your business data.</p>
-                  </div>
+                  <div 
+                    className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium"
+                    dangerouslySetInnerHTML={{ __html: legalDocs.terms_and_conditions || `
+                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">1. Acceptance of Terms</h4>
+                      <p>By accessing and using Gryndee, you agree to be bound by these Terms and Conditions. If you do not agree to all of these terms, do not use the service.</p>
+                      
+                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">2. Description of Service</h4>
+                      <p>Gryndee provides inventory management, sales tracking, and business analytics tools for small and medium-sized businesses.</p>
+                      
+                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">3. User Accounts</h4>
+                      <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.</p>
+                      
+                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">4. Subscription and Payments</h4>
+                      <p>Certain features require a paid subscription. All payments are processed securely through our payment partners. Subscriptions renew automatically unless cancelled.</p>
+                      
+                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">5. Data Ownership</h4>
+                      <p>You retain all rights to the data you input into the system. We do not claim ownership of your business data.</p>
+                    ` }}
+                  />
                 ) : (
-                  <div className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium">
-                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">1. Information We Collect</h4>
-                    <p>We collect information you provide directly to us, including your name, email address, and business details when you register for an account.</p>
-                    
-                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">2. How We Use Your Information</h4>
-                    <p>We use your information to provide, maintain, and improve our services, process transactions, and communicate with you.</p>
-                    
-                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">3. Data Security</h4>
-                    <p>We implement reasonable security measures to protect your personal information from unauthorized access, disclosure, or destruction.</p>
-                    
-                    <h4 className="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">4. Third-Party Services</h4>
-                    <p>We may use third-party service providers to help us operate our business and the service, such as payment processors and cloud hosting providers.</p>
-                  </div>
+                  <div 
+                    className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium"
+                    dangerouslySetInnerHTML={{ __html: legalDocs.privacy_policy || `
+                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">1. Information We Collect</h4>
+                      <p>We collect information you provide directly to us, including your name, email address, and business details when you register for an account.</p>
+                      
+                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">2. How We Use Your Information</h4>
+                      <p>We use your information to provide, maintain, and improve our services, process transactions, and communicate with you.</p>
+                      
+                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">3. Data Security</h4>
+                      <p>We implement reasonable security measures to protect your personal information from unauthorized access, disclosure, or destruction.</p>
+                      
+                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">4. Third-Party Services</h4>
+                      <p>We may use third-party service providers to help us operate our business and the service, such as payment processors and cloud hosting providers.</p>
+                    ` }}
+                  />
                 )}
               </div>
               <div className="p-8 border-t border-zinc-100 dark:border-zinc-800 shrink-0">

@@ -6,7 +6,10 @@ export const generatePDF = async (data: any, settings: any) => {
   const rec = data.recipient;
   const num = data.invoiceNumber;
   const date = data.invoiceDate;
-  const disc = data.discount;
+  const disc = parseFloat(data.discount) || 0;
+  const invoiceTerms = data.invoiceTerms;
+  const vatEnabled = data.vatEnabled;
+  const vatAmount = parseFloat(data.vatAmount) || 0;
 
   try {
     const doc = new jsPDF({
@@ -107,8 +110,8 @@ export const generatePDF = async (data: any, settings: any) => {
     const tableData = items.map((item: any) => [
       item.name,
       item.quantity.toString(),
-      new Intl.NumberFormat('en-NG', { style: 'currency', currency: settings?.currency || 'NGN', minimumFractionDigits: 0 }).format(item.price),
-      new Intl.NumberFormat('en-NG', { style: 'currency', currency: settings?.currency || 'NGN', minimumFractionDigits: 0 }).format(item.total)
+      new Intl.NumberFormat('en-NG', { style: 'currency', currency: settings?.currency || 'NGN', minimumFractionDigits: 0 }).format(parseFloat(item.price) || 0),
+      new Intl.NumberFormat('en-NG', { style: 'currency', currency: settings?.currency || 'NGN', minimumFractionDigits: 0 }).format(parseFloat(item.total) || 0)
     ]);
 
     autoTable(doc, {
@@ -142,12 +145,46 @@ export const generatePDF = async (data: any, settings: any) => {
 
     // Totals
     const finalY = (doc as any).lastAutoTable.finalY + 15;
-    const subtotal = items.reduce((sum: number, item: any) => sum + item.total, 0);
+    const subtotal = items.reduce((sum: number, item: any) => sum + (parseFloat(item.total) || 0), 0);
     const discountAmount = (subtotal * disc) / 100;
-    const total = subtotal - discountAmount;
+    const total = subtotal - discountAmount + (vatEnabled ? vatAmount : 0);
 
     const rightColX = pageWidth - 20;
     const labelX = pageWidth - 70;
+
+    // Bank Details
+    if (settings?.bank_name || settings?.account_name || settings?.account_number) {
+      doc.setFontSize(9);
+      doc.setTextColor(150, 150, 150);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAYMENT DETAILS', 20, finalY);
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont('helvetica', 'normal');
+      let bankY = finalY + 6;
+      
+      if (settings?.bank_name) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Bank:', 20, bankY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(settings.bank_name, 35, bankY);
+        bankY += 5;
+      }
+      if (settings?.account_name) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Account Name:', 20, bankY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(settings.account_name, 45, bankY);
+        bankY += 5;
+      }
+      if (settings?.account_number) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Account Number:', 20, bankY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(settings.account_number, 48, bankY);
+      }
+    }
 
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
@@ -162,6 +199,13 @@ export const generatePDF = async (data: any, settings: any) => {
       doc.setTextColor(16, 185, 129); // Emerald color for discount
       doc.text(`Discount (${disc}%):`, labelX, totalY);
       doc.text(`-${new Intl.NumberFormat('en-NG', { style: 'currency', currency: settings?.currency || 'NGN', minimumFractionDigits: 0 }).format(discountAmount)}`, rightColX, totalY, { align: 'right' });
+    }
+
+    if (vatEnabled && vatAmount > 0) {
+      totalY += 8;
+      doc.setTextColor(100, 100, 100);
+      doc.text(`VAT (7.5%):`, labelX, totalY);
+      doc.text(new Intl.NumberFormat('en-NG', { style: 'currency', currency: settings?.currency || 'NGN', minimumFractionDigits: 0 }).format(vatAmount), rightColX, totalY, { align: 'right' });
     }
 
     totalY += 12;
@@ -184,11 +228,18 @@ export const generatePDF = async (data: any, settings: any) => {
     doc.setFontSize(9);
     doc.setTextColor(150, 150, 150);
     doc.setFont('helvetica', 'italic');
-    doc.text('Thank you for your business!', pageWidth / 2, footerY, { align: 'center' });
+    
+    const termsText = invoiceTerms || settings?.invoice_terms || 'Thank you for your business!';
+    const splitTerms = doc.splitTextToSize(termsText, pageWidth - 40);
+    
+    // Adjust footerY based on terms length
+    const adjustedFooterY = footerY - (splitTerms.length - 1) * 4;
+    
+    doc.text(splitTerms, pageWidth / 2, adjustedFooterY, { align: 'center' });
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text(settings?.business_name || 'StockFlow', pageWidth / 2, footerY + 5, { align: 'center' });
+    doc.text(settings?.business_name || 'StockFlow', pageWidth / 2, adjustedFooterY + (splitTerms.length * 4) + 1, { align: 'center' });
 
     doc.save(`Invoice_${num}.pdf`);
   } catch (error) {
