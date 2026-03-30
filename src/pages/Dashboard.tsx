@@ -294,6 +294,47 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Referral Card */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card p-6 border-brand/20 bg-brand/[0.02] relative overflow-hidden group"
+      >
+        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <Trophy className="w-24 h-24 text-brand -rotate-12" />
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center shrink-0">
+              <Trophy className="w-6 h-6 text-brand" />
+            </div>
+            <div>
+              <h3 className="h3">Referral Program</h3>
+              <p className="body-text opacity-70">Invite friends and get rewarded. They get 14 days of Pro features free!</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 p-1.5 bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
+            <div className="px-4 py-2">
+              <span className="label-text block leading-none mb-1">Your Code</span>
+              <span className="h2 text-brand tracking-tighter leading-none">{user?.referral_code || 'GRYNDEE'}</span>
+            </div>
+            <button 
+              onClick={() => {
+                if (user?.referral_code) {
+                  navigator.clipboard.writeText(user.referral_code);
+                  toast.success('Referral code copied!');
+                }
+              }}
+              className="p-3 bg-brand text-white rounded-xl hover:bg-brand-hover transition-all active:scale-95 shadow-lg shadow-brand/20"
+              title="Copy Code"
+            >
+              <Copy className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">
         <QuickAction 
@@ -408,49 +449,6 @@ export default function Dashboard() {
           subtitle={user?.role === 'staff' ? "Your lifetime transactions" : "Lifetime transactions"}
         />
       </div>
-
-      {/* Referral Card */}
-      <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-card p-6 border-brand/20 bg-brand/[0.02] relative overflow-hidden group"
-      >
-        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <Trophy className="w-24 h-24 text-brand -rotate-12" />
-        </div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center shrink-0">
-              <Trophy className="w-6 h-6 text-brand" />
-            </div>
-            <div>
-              <h3 className="h3">Referral Program</h3>
-              <p className="body-text opacity-70">Invite friends and get rewarded. They get 14 days of Pro features free!</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3 p-1.5 bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
-            <div className="px-4 py-2">
-              <span className="label-text block leading-none mb-1">Your Code</span>
-              <span className="h2 text-brand tracking-tighter leading-none">{user?.referral_code || 'GRYNDEE'}</span>
-            </div>
-            <button 
-              onClick={() => {
-                if (user?.referral_code) {
-                  navigator.clipboard.writeText(user.referral_code);
-                  toast.success('Referral code copied!');
-                }
-              }}
-              className="p-3 bg-brand text-white rounded-xl hover:bg-brand-hover transition-all active:scale-95 shadow-lg shadow-brand/20"
-              title="Copy Code"
-            >
-              <Copy className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 glass-card p-8">

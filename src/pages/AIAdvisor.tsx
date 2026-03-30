@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain, Sparkles, TrendingUp, AlertCircle, Lightbulb, Loader2, Target, Package, DollarSign, X } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
+import { useNavigate } from 'react-router-dom';
 
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
@@ -10,6 +11,7 @@ import { formatCurrency } from '../lib/utils';
 export default function AIAdvisor() {
   const { fetchWithAuth, user } = useAuth();
   const { settings } = useSettings();
+  const navigate = useNavigate();
   const currency = settings?.currency || 'NGN';
   
   const isPro = user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial';
@@ -127,7 +129,7 @@ export default function AIAdvisor() {
             className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] shadow-2xl border border-zinc-200 dark:border-zinc-800 max-w-md w-full text-center space-y-6 sticky top-20 relative"
           >
             <button 
-              onClick={() => setShowOverlay(false)}
+              onClick={() => navigate('/')}
               className="absolute top-6 right-6 p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
             >
               <X className="w-5 h-5" />
@@ -137,9 +139,9 @@ export default function AIAdvisor() {
               <Brain className="w-10 h-10 text-brand" />
             </div>
             <div className="space-y-2">
-              <h2 className="h2 uppercase">Professional Feature</h2>
+              <h2 className="h2 uppercase">Pro Feature</h2>
               <p className="body-text">
-                AI Intelligence is exclusive to our Professional plan. Upgrade now to get deep insights into your business performance.
+                AI Intelligence is exclusive to our Pro plan. Upgrade now to get deep insights into your business performance.
               </p>
             </div>
             <div className="pt-4 space-y-3">
@@ -147,7 +149,7 @@ export default function AIAdvisor() {
                 to="/settings" 
                 className="btn-primary w-full py-4 text-xs uppercase tracking-widest"
               >
-                Upgrade to Professional
+                Upgrade to Pro
               </Link>
               <p className="label-text">
                 Or use a referral code to get 14 days free

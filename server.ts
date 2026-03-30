@@ -2786,7 +2786,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
                 // Notify Referrer of Reward
                 await client.query(
                   'INSERT INTO notifications (account_id, user_id, title, message, type) VALUES ($1, $2, $3, $4, $5)',
-                  [referredByAccountId, r.owner_id, 'Referral Reward!', `Congratulations! You've successfully referred 3 people. We've added 1 month of Professional features to your account!`, 'success']
+                  [referredByAccountId, r.owner_id, 'Referral Reward!', `Congratulations! You've successfully referred 3 people. We've added 1 month of Pro features to your account!`, 'success']
                 );
               } else {
                 // Just notify of new referral
@@ -2803,7 +2803,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             
             await client.query(
               'INSERT INTO notifications (account_id, user_id, title, message, type) VALUES ($1, $2, $3, $4, $5)',
-              [account.id, newUser.id, 'Welcome to Gryndee!', `You've successfully used a referral code! You've been granted 14 days of Professional features for free.`, 'success']
+              [account.id, newUser.id, 'Welcome to Gryndee!', `You've successfully used a referral code! You've been granted 14 days of Pro features for free.`, 'success']
             );
 
             // Update new account to Pro trial
@@ -6305,7 +6305,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const { subscription_plan } = req.user;
 
     if (subscription_plan !== 'professional' && req.user.role !== 'super_admin') {
-      return res.status(403).json({ error: 'AI Logo Generator is a Professional feature. Please upgrade to use it.' });
+      return res.status(403).json({ error: 'AI Logo Generator is a Pro feature. Please upgrade to use it.' });
     }
 
     if (!businessName || !brandColor) {

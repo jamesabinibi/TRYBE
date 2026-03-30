@@ -89,7 +89,7 @@ export default function Subscription() {
           className="inline-flex items-center gap-2 px-4 py-2 bg-brand/10 text-brand rounded-full border border-brand/20"
         >
           <Crown className="w-4 h-4" />
-          <span className="label-text text-brand">Gryndee Professional</span>
+          <span className="label-text text-brand">Gryndee Pro</span>
         </motion.div>
         <h1 className="h1">
           Scale Your Business with <span className="text-brand">Premium</span>
@@ -112,7 +112,7 @@ export default function Subscription() {
 
           <div className="space-y-6">
             <div>
-              <h3 className="h3 uppercase tracking-widest">Professional Plan</h3>
+              <h3 className="h3 uppercase tracking-widest">Pro Plan</h3>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="text-4xl font-medium text-zinc-900 dark:text-white">{formatCurrency(price, currency)}</span>
                 <span className="text-zinc-500 dark:text-zinc-400 font-medium">/month</span>

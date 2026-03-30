@@ -863,7 +863,7 @@ NOTIFY pgrst, 'reload schema';
 
   const handleGenerateLogo = async () => {
     if (user?.subscription_plan === 'starter' && user?.role !== 'super_admin') {
-      toast.error('AI Logo Generator is a Professional feature. Please upgrade to use it.');
+      toast.error('AI Logo Generator is a Pro feature. Please upgrade to use it.');
       return;
     }
 
@@ -2089,7 +2089,7 @@ NOTIFY pgrst, 'reload schema';
                       </div>
                       <div>
                         <h4 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">
-                          {subscription?.subscription_plan === 'pro' ? 'Professional' : 'Starter'}
+                          {subscription?.subscription_plan === 'pro' ? 'Pro' : 'Starter'}
                         </h4>
                         <p className="text-sm text-zinc-500 font-medium">
                           {subscription?.subscription_plan === 'pro' ? 'Advanced features for growing businesses.' : 'Basic features for small businesses.'}
@@ -2113,7 +2113,7 @@ NOTIFY pgrst, 'reload schema';
                           <Zap className="w-8 h-8 text-brand" />
                         </div>
                         <div>
-                          <h4 className="h2 text-white">Professional</h4>
+                          <h4 className="h2 text-white">Pro</h4>
                           <div className="flex items-baseline gap-1">
                             <span className="text-3xl font-black">₦2,000</span>
                             <span className="label-text text-zinc-400">/month</span>
