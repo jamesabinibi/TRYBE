@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain, Sparkles, TrendingUp, AlertCircle, Lightbulb, Loader2, Target, Package, DollarSign } from 'lucide-react';
+import { Brain, Sparkles, TrendingUp, AlertCircle, Lightbulb, Loader2, Target, Package, DollarSign, X } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -13,6 +13,7 @@ export default function AIAdvisor() {
   const currency = settings?.currency || 'NGN';
   
   const isPro = user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial';
+  const [showOverlay, setShowOverlay] = useState(true);
   
   // Pulse State
   const [loadingPulse, setLoadingPulse] = useState(false);
@@ -118,30 +119,37 @@ export default function AIAdvisor() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20 relative">
-      {!isPro && (
+      {!isPro && showOverlay && (
         <div className="absolute inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-white/60 dark:bg-zinc-950/60 backdrop-blur-md rounded-[2.5rem]">
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] shadow-2xl border border-zinc-200 dark:border-zinc-800 max-w-md w-full text-center space-y-6 sticky top-20"
+            className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] shadow-2xl border border-zinc-200 dark:border-zinc-800 max-w-md w-full text-center space-y-6 sticky top-20 relative"
           >
+            <button 
+              onClick={() => setShowOverlay(false)}
+              className="absolute top-6 right-6 p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
             <div className="w-20 h-20 bg-brand/10 rounded-[2rem] flex items-center justify-center mx-auto">
               <Brain className="w-10 h-10 text-brand" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">Professional Feature</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+              <h2 className="h2 uppercase">Professional Feature</h2>
+              <p className="body-text">
                 AI Intelligence is exclusive to our Professional plan. Upgrade now to get deep insights into your business performance.
               </p>
             </div>
             <div className="pt-4 space-y-3">
               <Link 
                 to="/settings" 
-                className="block w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
+                className="btn-primary w-full py-4 text-xs uppercase tracking-widest"
               >
                 Upgrade to Professional
               </Link>
-              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+              <p className="label-text">
                 Or use a referral code to get 14 days free
               </p>
             </div>
@@ -151,11 +159,11 @@ export default function AIAdvisor() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight flex items-center gap-3">
+          <h1 className="h1 flex items-center gap-3">
             <Brain className="w-8 h-8 text-brand" />
             AI Intelligence Hub
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400 font-medium">Your proactive business partner, powered by Gemini AI.</p>
+          <p className="body-text">Your proactive business partner, powered by Gemini AI.</p>
         </div>
         
         <div className="flex overflow-x-auto custom-scrollbar gap-2 p-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 w-full md:w-fit">
@@ -198,7 +206,7 @@ export default function AIAdvisor() {
               <button 
                 onClick={fetchBusinessData}
                 disabled={loadingPulse}
-                className="px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                className="btn-primary"
               >
                 {loadingPulse ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 Refresh Pulse
@@ -222,7 +230,7 @@ export default function AIAdvisor() {
                         <Markdown>{insight}</Markdown>
                       </div>
                     ) : (
-                      <p className="text-center text-zinc-500 italic">No insights generated yet.</p>
+                      <p className="text-center text-zinc-500">No insights generated yet.</p>
                     )}
                   </div>
                 </div>
@@ -230,7 +238,7 @@ export default function AIAdvisor() {
                 <div className="bg-zinc-50 dark:bg-zinc-800/50 p-6 border-t border-zinc-100 dark:border-zinc-800">
                   <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400">
                     <Lightbulb className="w-5 h-5 text-brand shrink-0" />
-                    <p className="text-xs font-medium italic">
+                    <p className="text-xs font-medium">
                       Tip: These insights are based on your most recent 50 transactions and current inventory levels.
                     </p>
                   </div>
@@ -253,7 +261,7 @@ export default function AIAdvisor() {
               <button 
                 onClick={generateForecast}
                 disabled={loadingForecast}
-                className="px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                className="btn-primary"
               >
                 {loadingForecast ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
                 Run Forecast
@@ -285,11 +293,11 @@ export default function AIAdvisor() {
                       <Brain className="w-6 h-6" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-zinc-900 dark:text-white">Strategic Advice</h2>
-                      <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">AI Recommendation</p>
+                      <h2 className="h2">Strategic Advice</h2>
+                      <p className="label-text">AI Recommendation</p>
                     </div>
                   </div>
-                  <p className="text-lg text-zinc-700 dark:text-zinc-300 italic leading-relaxed">
+                  <p className="text-lg text-zinc-700 dark:text-zinc-300 leading-relaxed">
                     "{forecast.strategic_advice}"
                   </p>
                   
@@ -331,7 +339,7 @@ export default function AIAdvisor() {
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-8 text-zinc-500 italic">
+                      <div className="text-center py-8 text-zinc-500">
                         No immediate restock suggestions. Your inventory looks healthy!
                       </div>
                     )}
@@ -339,7 +347,7 @@ export default function AIAdvisor() {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-20 text-zinc-500 italic">
+              <div className="text-center py-20 text-zinc-500">
                 Click "Run Forecast" to generate predictive insights.
               </div>
             )}

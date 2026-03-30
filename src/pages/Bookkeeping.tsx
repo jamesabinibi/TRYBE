@@ -124,9 +124,9 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete Record</h3>
+          <h3 className="label-text text-zinc-900">Delete Record</h3>
         </div>
-        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this record? This action cannot be undone.</p>
+        <p className="body-text">Are you sure you want to delete this record? This action cannot be undone.</p>
         <div className="flex gap-3">
           <button 
             onClick={async () => {
@@ -141,11 +141,11 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                 toast.error('Failed to delete');
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="btn-destructive flex-1"
           >
             Delete
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="btn-secondary flex-1">
             Cancel
           </button>
         </div>
@@ -195,20 +195,20 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
       {!hideHeader && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Financial Bookkeeping</h1>
-            <p className="text-zinc-600 dark:text-zinc-400 font-medium">Record non-sales inflows like loans and investments</p>
+            <h1 className="h1">Financial Bookkeeping</h1>
+            <p className="body-text mt-1">Record non-sales inflows like loans and investments</p>
           </div>
           <div className="flex gap-3">
             <button 
               onClick={exportToCSV}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+              className="btn-secondary"
             >
               <Download className="w-4 h-4" />
               Export
             </button>
             <button 
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+              className="btn-primary"
             >
               <Plus className="w-4 h-4" />
               Record Inflow
@@ -221,14 +221,14 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
         <div className="flex justify-end mb-4 gap-3">
           <button 
             onClick={exportToCSV}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+            className="btn-secondary"
           >
             <Download className="w-4 h-4" />
             Export
           </button>
           <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+            className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             Record Inflow
@@ -276,12 +276,12 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-zinc-50/50 dark:bg-zinc-800/30">
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Date</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Type</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Nature</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Description</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Amount</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Actions</th>
+                <th className="px-6 py-4 label-text">Date</th>
+                <th className="px-6 py-4 label-text">Type</th>
+                <th className="px-6 py-4 label-text">Nature</th>
+                <th className="px-6 py-4 label-text">Description</th>
+                <th className="px-6 py-4 label-text text-right">Amount</th>
+                <th className="px-6 py-4 label-text text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -373,8 +373,8 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Record Inflow</h2>
-                  <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Add non-sales income to your books</p>
+                  <h2 className="h2">Record Inflow</h2>
+                  <p className="body-text opacity-70">Add non-sales income to your books</p>
                 </div>
                 <button 
                   onClick={() => setIsAddModalOpen(false)}
@@ -387,7 +387,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
               <form onSubmit={handleAddRecord} className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Type</label>
+                    <label className="label-text ml-1">Type</label>
                     <Input 
                       as="select"
                       value={newRecord.type}
@@ -399,7 +399,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                     </Input>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Nature</label>
+                    <label className="label-text ml-1">Nature</label>
                     <Input 
                       as="select"
                       value={newRecord.nature}
@@ -414,7 +414,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Date</label>
+                    <label className="label-text ml-1">Date</label>
                     <Input 
                       type="date" 
                       value={newRecord.date}
@@ -422,7 +422,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Amount ({currency})</label>
+                    <label className="label-text ml-1">Amount ({currency})</label>
                     <Input 
                       type="number" 
                       placeholder="0.00"
@@ -433,7 +433,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Description</label>
+                  <label className="label-text ml-1">Description</label>
                   <Textarea 
                     placeholder="What is this inflow for?"
                     value={newRecord.description}
@@ -445,7 +445,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                 <button 
                   type="submit"
                   disabled={isSaving}
-                  className="w-full py-5 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="btn-primary w-full py-5"
                 >
                   {isSaving ? (
                     <Loader2 className="w-5 h-5 animate-spin" />

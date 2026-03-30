@@ -11,9 +11,10 @@ import {
   MessageCircle,
   ArrowRight,
   Loader2,
-  Gift
+  Gift,
+  X
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
 import { toast } from 'sonner';
 import { cn, formatCurrency } from '../lib/utils';
@@ -24,6 +25,7 @@ export default function Subscription() {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
 
   const currency = settings?.currency || 'NGN';
   const price = 2000;
@@ -58,6 +60,7 @@ export default function Subscription() {
       if (res.ok) {
         toast.success('Promo code applied successfully! Your subscription has been updated.');
         setPromoCode('');
+        setIsPromoModalOpen(false);
         refreshSettings();
         // Refresh user state globally
         await refreshUser();
@@ -86,12 +89,12 @@ export default function Subscription() {
           className="inline-flex items-center gap-2 px-4 py-2 bg-brand/10 text-brand rounded-full border border-brand/20"
         >
           <Crown className="w-4 h-4" />
-          <span className="text-xs font-black uppercase tracking-widest">Gryndee Professional</span>
+          <span className="label-text text-brand">Gryndee Professional</span>
         </motion.div>
-        <h1 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tight">
+        <h1 className="h1">
           Scale Your Business with <span className="text-brand">Premium</span>
         </h1>
-        <p className="text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto">
+        <p className="body-text max-w-xl mx-auto">
           Unlock the full power of Gryndee and take your business to the next level with our professional tools.
         </p>
       </div>
@@ -109,17 +112,17 @@ export default function Subscription() {
 
           <div className="space-y-6">
             <div>
-              <h3 className="text-xl font-black text-zinc-900 dark:text-white uppercase tracking-widest">Professional Plan</h3>
+              <h3 className="h3 uppercase tracking-widest">Professional Plan</h3>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-4xl font-black text-zinc-900 dark:text-white">{formatCurrency(price, currency)}</span>
-                <span className="text-zinc-500 dark:text-zinc-400 font-bold">/month</span>
+                <span className="text-4xl font-medium text-zinc-900 dark:text-white">{formatCurrency(price, currency)}</span>
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium">/month</span>
               </div>
             </div>
 
             <div className="space-y-4">
               <button 
                 onClick={handleUpgrade}
-                className="w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-brand/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                className="btn-primary w-full py-4 text-base"
               >
                 Upgrade Now
                 <ArrowRight className="w-4 h-4" />
@@ -130,26 +133,17 @@ export default function Subscription() {
                   <div className="w-full border-t border-zinc-200 dark:border-zinc-800"></div>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase tracking-widest">
-                  <span className="bg-white dark:bg-[#0A0A0B] px-4 text-zinc-400 font-bold">Or use a promo code</span>
+                  <span className="bg-white dark:bg-[#0A0A0B] px-4 text-zinc-400 font-bold">Or</span>
                 </div>
               </div>
 
-              <form onSubmit={handleApplyPromo} className="flex gap-2">
-                <input 
-                  type="text"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  placeholder="ENTER CODE"
-                  className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-brand/50 transition-all"
-                />
-                <button 
-                  type="submit"
-                  disabled={isApplyingPromo || !promoCode.trim()}
-                  className="px-6 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-bold text-xs uppercase tracking-widest hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center"
-                >
-                  {isApplyingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
-                </button>
-              </form>
+              <button 
+                onClick={() => setIsPromoModalOpen(true)}
+                className="w-full py-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
+              >
+                <Gift className="w-4 h-4" />
+                Have a promo code?
+              </button>
             </div>
 
             <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800/50">
@@ -200,6 +194,72 @@ export default function Subscription() {
           </div>
         </motion.div>
       </div>
+
+      {/* Promo Code Modal */}
+      <AnimatePresence>
+        {isPromoModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsPromoModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
+            >
+              <button 
+                onClick={() => setIsPromoModalOpen(false)}
+                className="absolute top-6 right-6 p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-zinc-900 dark:hover:text-white z-10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="p-8 space-y-6">
+                <div className="text-center space-y-2">
+                  <div className="w-16 h-16 bg-brand/10 rounded-3xl flex items-center justify-center text-brand mx-auto mb-4">
+                    <Gift className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight uppercase">Redeem Code</h2>
+                  <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Enter your promo code below</p>
+                </div>
+
+                <form onSubmit={handleApplyPromo} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Promo Code</label>
+                    <input 
+                      type="text"
+                      autoFocus
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      placeholder="E.G. GRYNDEE30"
+                      className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-6 py-4 text-lg font-black tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand/50 transition-all uppercase"
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={isApplyingPromo || !promoCode.trim()}
+                    className="w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-brand/20 hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    {isApplyingPromo ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Apply Code'}
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setIsPromoModalOpen(false)}
+                    className="w-full py-3 text-zinc-400 font-bold text-[10px] uppercase tracking-widest hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Referral Info Section */}
       <motion.div 

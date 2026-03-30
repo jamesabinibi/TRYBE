@@ -18,6 +18,8 @@ export default function Login() {
     setIsLoading(true);
     setError('');
     
+    console.log('[DEBUG] Login attempt:', { username: username.trim() });
+
     try {
       const response = await fetch('/api/login', {
         method: 'POST',
@@ -25,29 +27,34 @@ export default function Login() {
         body: JSON.stringify({ username: username.trim(), password })
       });
       
+      console.log('[DEBUG] Login response status:', response.status);
+
       if (response.ok) {
         const user = await response.json();
+        console.log('[DEBUG] Login success:', user.username);
         login(user);
       } else {
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
           const data = await response.json();
+          console.error('[DEBUG] Login failed (JSON):', data);
           setError(data.error || 'Invalid username or password');
         } else {
           const text = await response.text();
+          console.error('[DEBUG] Login failed (Text):', text);
           setError(text || `Server error (${response.status}). Please try again later.`);
         }
       }
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('Network error. Please check your connection.');
+    } catch (err: any) {
+      console.error('[DEBUG] Login network error:', err);
+      setError(`Network error: ${err.message || 'Failed to fetch'}. Please check if the server is running.`);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black flex flex-col py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] flex flex-col py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -58,8 +65,8 @@ export default function Login() {
             <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-3 shadow-lg shadow-brand/30 rotate-3">
               <ShieldCheck className="w-6 h-6" />
             </div>
-            <h1 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight mb-1">Gryndee</h1>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 font-medium tracking-tight">Sign in to manage your business</p>
+            <h1 className="h1 mb-1">Gryndee</h1>
+            <p className="body-text text-xs font-medium">Sign in to manage your business</p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -71,7 +78,7 @@ export default function Login() {
             
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Username or Email</label>
+                <label className="label-text ml-1">Username or Email</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                   <Input 
@@ -80,13 +87,13 @@ export default function Login() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Username or Email"
-                    className="pl-11"
+                    className="pl-11 font-light"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Password</label>
+                <label className="label-text ml-1">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                   <Input 
@@ -95,7 +102,7 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-11 pr-11"
+                    className="pl-11 pr-11 font-light"
                   />
                   <button
                     type="button"
@@ -111,7 +118,7 @@ export default function Login() {
             <button 
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/30 group text-sm"
+              className="w-full py-2.5 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/30 group text-sm"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -135,10 +142,10 @@ export default function Login() {
 
           <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-800 text-center space-y-4">
             <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
-              Don't have an account? <Link to="/register" className="text-brand font-bold hover:underline">Sign Up</Link>
+              Don't have an account? <Link to="/register" className="text-brand font-medium hover:underline">Sign Up</Link>
             </p>
             <div className="pt-4 border-t border-zinc-200 dark:border-zinc-700">
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+              <p className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
                 Demo Credentials: admin / admin123
               </p>
             </div>

@@ -556,7 +556,7 @@ function TestimonialCard({ quote, author, role, image }: { quote: string; author
       <div className="flex gap-1">
         {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 text-brand fill-brand" />)}
       </div>
-      <p className="text-zinc-300 text-lg font-medium italic leading-relaxed">"{quote}"</p>
+      <p className="text-zinc-300 text-lg font-medium leading-relaxed">"{quote}"</p>
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-full bg-zinc-800 overflow-hidden ring-2 ring-white/10">
           <img src={image} alt={author} className="w-full h-full object-cover" />

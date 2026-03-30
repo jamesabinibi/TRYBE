@@ -98,9 +98,9 @@ export default function Sales() {
       <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-zinc-900 dark:text-white">
           <Trash2 className="w-5 h-5 text-red-500" />
-          <h3 className="font-display font-bold text-lg text-zinc-900 dark:text-white">Clear Cart?</h3>
+          <h3 className="h3">Clear Cart?</h3>
         </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">This will remove all items from your current order. This action cannot be undone.</p>
+        <p className="body-text">This will remove all items from your current order. This action cannot be undone.</p>
         <div className="flex gap-3">
           <button 
             onClick={() => {
@@ -108,13 +108,13 @@ export default function Sales() {
               toast.dismiss(t);
               toast.success('Cart cleared');
             }}
-            className="flex-1 py-3 bg-red-500 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-red-600 transition-all active:scale-95"
+            className="btn-destructive flex-1"
           >
             Clear All
           </button>
           <button 
             onClick={() => toast.dismiss(t)}
-            className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+            className="btn-secondary flex-1"
           >
             Cancel
           </button>
@@ -621,9 +621,9 @@ export default function Sales() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Confirm Deletion</h3>
+          <h3 className="label-text text-zinc-900">Confirm Deletion</h3>
         </div>
-        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this sale? Stock will be reverted and this action cannot be undone.</p>
+        <p className="body-text">Are you sure you want to delete this sale? Stock will be reverted and this action cannot be undone.</p>
         <div className="flex gap-3">
           <button 
             onClick={async () => {
@@ -650,13 +650,13 @@ export default function Sales() {
                 error: (err) => err
               });
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="btn-destructive flex-1"
           >
             Delete
           </button>
           <button 
             onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+            className="btn-secondary flex-1"
           >
             Cancel
           </button>
@@ -1299,10 +1299,10 @@ export default function Sales() {
                             <div className="p-2 bg-brand/10 rounded-lg">
                               <TrendingUp className="w-4 h-4 text-brand" />
                             </div>
-                            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+12.5%</span>
+                            <span className="label-text text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+12.5%</span>
                           </div>
-                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Revenue</p>
-                          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                          <p className="label-text mb-1">Total Revenue</p>
+                          <h3 className="h2">
                             {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0), currency)}
                           </h3>
                         </div>
@@ -1316,10 +1316,10 @@ export default function Sales() {
                             <div className="p-2 bg-emerald-500/10 rounded-lg">
                               <ArrowUpRight className="w-4 h-4 text-emerald-500" />
                             </div>
-                            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+8.2%</span>
+                            <span className="label-text text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+8.2%</span>
                           </div>
-                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Profit</p>
-                          <h3 className="text-2xl font-bold text-emerald-500 tracking-tight">
+                          <p className="label-text mb-1">Total Profit</p>
+                          <h3 className="h2 text-emerald-500">
                             {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0), currency)}
                           </h3>
                         </div>
@@ -1333,10 +1333,10 @@ export default function Sales() {
                             <div className="p-2 bg-blue-500/10 rounded-lg">
                               <ShoppingCart className="w-4 h-4 text-blue-500" />
                             </div>
-                            <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">Active</span>
+                            <span className="label-text text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">Active</span>
                           </div>
-                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Transactions</p>
-                          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{filteredSales.length}</h3>
+                          <p className="label-text mb-1">Transactions</p>
+                          <h3 className="h2">{filteredSales.length}</h3>
                         </div>
                       </div>
                     </div>
@@ -1348,10 +1348,10 @@ export default function Sales() {
                             <div className="p-2 bg-purple-500/10 rounded-lg">
                               <CreditCard className="w-4 h-4 text-purple-500" />
                             </div>
-                            <span className="text-[10px] font-bold text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full">Stable</span>
+                            <span className="label-text text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full">Stable</span>
                           </div>
-                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Avg. Order Value</p>
-                          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                          <p className="label-text mb-1">Avg. Order Value</p>
+                          <h3 className="h2">
                             {formatCurrency(filteredSales.length > 0 ? (filteredSales.reduce((acc, s) => acc + (s.total_amount || 0), 0) / filteredSales.length) : 0, currency)}
                           </h3>
                         </div>
@@ -1401,14 +1401,14 @@ export default function Sales() {
                   <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead>
                       <tr className="bg-zinc-50/30 dark:bg-zinc-800/30 border-b border-zinc-100 dark:border-zinc-800">
-                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Invoice</th>
-                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Date</th>
-                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Customer</th>
-                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Staff</th>
-                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Payment</th>
-                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-right">Amount</th>
-                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-right">Profit</th>
-                        <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-right">Actions</th>
+                        <th className="px-8 py-6 label-text">Invoice</th>
+                        <th className="px-8 py-6 label-text">Date</th>
+                        <th className="px-8 py-6 label-text">Customer</th>
+                        <th className="px-8 py-6 label-text">Staff</th>
+                        <th className="px-8 py-6 label-text">Payment</th>
+                        <th className="px-8 py-6 label-text text-right">Amount</th>
+                        <th className="px-8 py-6 label-text text-right">Profit</th>
+                        <th className="px-8 py-6 label-text text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -1417,9 +1417,9 @@ export default function Sales() {
                           <td className="px-8 py-5">
                             <button 
                               onClick={() => handlePreview(sale)}
-                              className="text-xs font-bold text-brand group-hover:text-white dark:group-hover:text-brand transition-colors tracking-widest uppercase"
+                              className="label-text text-brand group-hover:text-white dark:group-hover:text-brand transition-colors"
                             >
-                              {sale.invoice_number}
+                              #{sale.invoice_number}
                             </button>
                           </td>
                           <td className="px-8 py-5 text-[11px] font-medium opacity-70">
@@ -1427,10 +1427,10 @@ export default function Sales() {
                           </td>
                           <td className="px-8 py-5">
                             <div className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[9px] font-bold text-zinc-500 dark:text-zinc-400 group-hover:bg-white/10 dark:group-hover:bg-zinc-900/10">
+                              <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center label-text text-zinc-500 dark:text-zinc-400 group-hover:bg-white/10 dark:group-hover:bg-zinc-900/10">
                                 {sale.customer_name?.charAt(0) || 'W'}
                               </div>
-                              <span className="text-xs font-bold">{sale.customer_name || 'Walk-in'}</span>
+                              <span className="body-text font-bold">{sale.customer_name || 'Walk-in'}</span>
                             </div>
                           </td>
                           <td className="px-8 py-5 text-[11px] font-bold opacity-80">{sale.staff_name}</td>
@@ -1752,7 +1752,7 @@ export default function Sales() {
                   <div className="mt-12 flex flex-col sm:flex-row justify-between items-start gap-12 pt-12 border-t border-zinc-100 dark:border-zinc-800">
                     <div className="max-w-xs">
                       <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Note</h5>
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium italic">
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                         {settings?.invoice_footer || `Thank you for your business. We appreciate your trust in ${settings?.business_name || 'us'}.`}
                       </p>
                     </div>

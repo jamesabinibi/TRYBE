@@ -41,8 +41,8 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
         <div className="p-4 bg-zinc-100 dark:bg-zinc-800 rounded-full">
           <Shield className="w-12 h-12 text-zinc-400" />
         </div>
-        <h2 className="text-xl font-black text-zinc-900 dark:text-white uppercase tracking-widest">Access Denied</h2>
-        <p className="text-zinc-500 dark:text-zinc-400 font-medium text-center max-w-md">
+        <h2 className="h2">Access Denied</h2>
+        <p className="body-text text-center max-w-md">
           You do not have permission to view expenses. Please contact your administrator.
         </p>
       </div>
@@ -222,9 +222,9 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete Expense</h3>
+          <h3 className="h3">Delete Expense</h3>
         </div>
-        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this expense? This action cannot be undone.</p>
+        <p className="body-text opacity-70">Are you sure you want to delete this expense? This action cannot be undone.</p>
         <div className="flex gap-3">
           <button 
             onClick={async () => {
@@ -239,11 +239,11 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                 toast.error('Failed to delete');
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="btn-destructive flex-1"
           >
             Delete
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="btn-secondary flex-1">
             Cancel
           </button>
         </div>
@@ -283,13 +283,13 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
       {!hideHeader && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Business Expenses</h1>
-            <p className="text-zinc-600 dark:text-zinc-400 font-medium">Track your operational costs and overheads</p>
+            <h1 className="h1">Business Expenses</h1>
+            <p className="body-text mt-1">Track your operational costs and overheads</p>
           </div>
           {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_expenses)) && (
             <button 
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+              className="btn-primary"
             >
               <Plus className="w-4 h-4" />
               Record Expense
@@ -303,7 +303,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
           {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_expenses)) && (
             <button 
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+              className="btn-primary"
             >
               <Plus className="w-4 h-4" />
               Record Expense
@@ -323,7 +323,8 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
           <TotalDisplay 
             label="Total Expenses" 
             value={totalExpenses.toLocaleString()} 
-            valueClassName="text-6xl font-display font-bold text-zinc-900 dark:text-white tracking-tight"
+            labelClassName="label-text"
+            valueClassName="h2"
           />
         </motion.div>
       </div>
@@ -365,11 +366,11 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
           <table className="w-full text-left border-collapse">
             <thead className="hidden sm:table-header-group">
               <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Date</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Category</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Description</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Amount</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Actions</th>
+                <th className="px-8 py-6 label-text">Date</th>
+                <th className="px-8 py-6 label-text">Category</th>
+                <th className="px-8 py-6 label-text">Description</th>
+                <th className="px-8 py-6 label-text text-right">Amount</th>
+                <th className="px-8 py-6 label-text text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -416,7 +417,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                       <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl flex items-center justify-center text-zinc-300">
                         <Wallet className="w-8 h-8" />
                       </div>
-                      <p className="text-zinc-400 font-medium italic">No expenses found</p>
+                      <p className="text-zinc-400 font-medium">No expenses found</p>
                     </div>
                   </td>
                 </tr>
@@ -447,7 +448,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                   <div className="w-10 h-10 bg-brand/10 rounded-2xl flex items-center justify-center text-brand">
                     <Wallet className="w-5 h-5" />
                   </div>
-                  <h2 className="text-xl font-black text-zinc-950 dark:text-white tracking-tight">Record Expense</h2>
+                  <h2 className="h2">Record Expense</h2>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="relative">
@@ -459,7 +460,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                     />
                     <button 
                       className={cn(
-                        "flex items-center gap-2 px-4 py-2 bg-brand/10 text-brand rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand/20 transition-all",
+                        "flex items-center gap-2 px-4 py-2 bg-brand/10 text-brand rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-brand/20 transition-all",
                         isProcessingAI && "animate-pulse"
                       )}
                     >
@@ -476,7 +477,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
               <form onSubmit={handleAddExpense} className="p-8 space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</label>
+                    <label className="label-text">Category</label>
                     <Input 
                       as="select"
                       value={newExpense.category}
@@ -486,7 +487,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                     </Input>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Amount (₦)</label>
+                    <label className="label-text">Amount ({currency})</label>
                     <Input 
                       required
                       type="number" 
@@ -498,7 +499,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</label>
+                  <label className="label-text">Date</label>
                   <Input 
                     type="date" 
                     value={newExpense.date}
@@ -507,7 +508,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Description</label>
+                  <label className="label-text">Description</label>
                   <Textarea 
                     required
                     value={newExpense.description}
@@ -521,14 +522,14 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                   <button 
                     type="button"
                     onClick={() => setIsAddModalOpen(false)}
-                    className="flex-1 py-4 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all active:scale-95"
+                    className="btn-secondary flex-1 py-4"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
                     disabled={isSaving}
-                    className="flex-1 py-4 bg-brand text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 disabled:opacity-50 active:scale-95"
+                    className="btn-primary flex-1 py-4"
                   >
                     {isSaving ? 'Saving...' : 'Save Expense'}
                   </button>

@@ -481,10 +481,10 @@ const Invoices: React.FC = () => {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
         <div>
-          <h1 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display mb-2">
+          <h1 className="h1">
             Invoicing System
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400 font-medium">
+          <p className="body-text mt-1">
             {activeTab === 'create' ? 'Generate professional invoices for your clients' : 'View and manage your past invoices'}
           </p>
         </div>
@@ -514,7 +514,7 @@ const Invoices: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={resetForm}
-                className="p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+                className="btn-secondary p-3"
                 title="Reset Form"
               >
                 <Plus className="w-5 h-5" />
@@ -522,23 +522,23 @@ const Invoices: React.FC = () => {
               <button
                 onClick={saveInvoice}
                 disabled={isSaving || invoiceItems.length === 0}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black uppercase tracking-[0.2em] hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all disabled:opacity-50 active:scale-95"
+                className="btn-primary flex-1 sm:flex-none"
               >
                 {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                <span className="text-[10px]">Save</span>
+                Save
               </button>
               <button
                 onClick={generatePDF}
                 disabled={isGenerating}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-white font-black uppercase tracking-[0.2em] shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
-                style={{ backgroundColor: brandColor, boxShadow: `0 20px 40px ${brandColor}33` }}
+                className="btn-primary flex-1 sm:flex-none"
+                style={{ backgroundColor: brandColor }}
               >
                 {isGenerating ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <Download className="w-5 h-5" />
                 )}
-                <span className="text-[10px]">{isGenerating ? 'Generating...' : 'Download'}</span>
+                {isGenerating ? 'Generating...' : 'Download'}
               </button>
             </div>
           )}
@@ -551,11 +551,11 @@ const Invoices: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
-                  <th className="px-8 py-6 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.2em]">Invoice #</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Date</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Client</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Amount</th>
-                  <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Actions</th>
+                  <th className="px-8 py-6 label-text">Invoice #</th>
+                  <th className="px-8 py-6 label-text">Date</th>
+                  <th className="px-8 py-6 label-text">Client</th>
+                  <th className="px-8 py-6 label-text">Amount</th>
+                  <th className="px-8 py-6 label-text text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -566,7 +566,7 @@ const Invoices: React.FC = () => {
                         <div className="w-20 h-20 rounded-[2.5rem] bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center">
                           <History className="w-10 h-10 opacity-20" />
                         </div>
-                        <p className="font-medium italic">No saved invoices found</p>
+                        <p className="font-medium">No saved invoices found</p>
                       </div>
                     </td>
                   </tr>
@@ -648,7 +648,7 @@ const Invoices: React.FC = () => {
                   <div className="w-16 h-16 rounded-3xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center">
                     <History className="w-8 h-8 opacity-20" />
                   </div>
-                  <p className="text-sm italic">No invoices found</p>
+                  <p className="text-sm">No invoices found</p>
                 </div>
               </div>
             ) : (
@@ -713,7 +713,7 @@ const Invoices: React.FC = () => {
           {/* Invoice Header Info */}
           <div className="glass-card p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Invoice Number</label>
+              <label className="label-text">Invoice Number</label>
               <div className="relative">
                 <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <Input
@@ -725,7 +725,7 @@ const Invoices: React.FC = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Invoice Date</label>
+              <label className="label-text">Invoice Date</label>
               <div className="relative">
                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <Input
@@ -741,11 +741,11 @@ const Invoices: React.FC = () => {
           {/* Item Selection */}
           <div className="glass-card p-8">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">Invoice Items</h2>
+              <h2 className="h2">Invoice Items</h2>
               <div className="relative">
                 <button
                   onClick={() => setShowItemDropdown(!showItemDropdown)}
-                  className="flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all active:scale-95"
+                  className="btn-primary"
                 >
                   <Plus className="w-4 h-4" />
                   Add Item
@@ -799,7 +799,7 @@ const Invoices: React.FC = () => {
                         ) : (
                           <div className="p-12 text-center text-zinc-400">
                             <Search className="w-12 h-12 mx-auto mb-4 opacity-10" />
-                            <p className="text-sm italic">No items found</p>
+                            <p className="text-sm">No items found</p>
                           </div>
                         )}
                       </div>
@@ -813,10 +813,10 @@ const Invoices: React.FC = () => {
               <table className="w-full">
                 <thead className="hidden sm:table-header-group">
                   <tr className="text-left border-b border-zinc-100 dark:border-zinc-800">
-                    <th className="pb-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Description</th>
-                    <th className="pb-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] w-24">Qty</th>
-                    <th className="pb-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] w-40">Price</th>
-                    <th className="pb-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] w-40">Total</th>
+                    <th className="pb-6 label-text">Description</th>
+                    <th className="pb-6 label-text w-24">Qty</th>
+                    <th className="pb-6 label-text w-40">Price</th>
+                    <th className="pb-6 label-text w-40">Total</th>
                     <th className="pb-6 w-10"></th>
                   </tr>
                 </thead>
@@ -878,7 +878,7 @@ const Invoices: React.FC = () => {
                           <div className="w-16 h-16 rounded-[2rem] bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center">
                             <Package className="w-8 h-8 opacity-20" />
                           </div>
-                          <p className="text-sm italic">No items added to invoice yet</p>
+                          <p className="text-sm">No items added to invoice yet</p>
                         </div>
                       </td>
                     </tr>
@@ -890,15 +890,15 @@ const Invoices: React.FC = () => {
 
           {/* Invoice Summary */}
           <div className="glass-card p-8 space-y-6">
-            <h2 className="text-xl font-bold font-display tracking-tight text-zinc-950 dark:text-white">Invoice Summary</h2>
+            <h2 className="h2">Invoice Summary</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
-                <span className="text-[10px] font-bold uppercase tracking-widest">Subtotal</span>
+                <span className="label-text">Subtotal</span>
                 <span className="font-bold text-zinc-950 dark:text-white">{settings?.currency || '₦'}{calculateSubtotal().toLocaleString()}</span>
               </div>
               
               <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
-                <span className="text-[10px] font-bold uppercase tracking-widest">Discount (%)</span>
+                <span className="label-text">Discount (%)</span>
                 <Input
                   type="number"
                   value={discount}
@@ -909,7 +909,7 @@ const Invoices: React.FC = () => {
 
               {settings?.vat_enabled && (
                 <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
-                  <span className="text-[10px] font-bold uppercase tracking-widest">VAT (7.5%)</span>
+                  <span className="label-text">VAT (7.5%)</span>
                   <span className="font-bold text-zinc-950 dark:text-white">
                     <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
                     {calculateVAT().toLocaleString()}
@@ -919,8 +919,8 @@ const Invoices: React.FC = () => {
               
               <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-end">
                 <div>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Total Amount</p>
-                  <p className={cn(NUMBER_STYLE, "text-4xl tracking-tighter text-zinc-950 dark:text-white")}>
+                  <p className="label-text mb-1">Total Amount</p>
+                  <p className={cn(NUMBER_STYLE, "h1")}>
                     <span className="opacity-30 mr-2 text-xl">{settings?.currency || '₦'}</span>
                     {calculateTotal().toLocaleString()}
                   </p>
@@ -929,7 +929,7 @@ const Invoices: React.FC = () => {
 
               {/* Invoice Terms */}
               <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 block">Invoice Terms</span>
+                <span className="label-text mb-2 block">Invoice Terms</span>
                 <Textarea
                   value={invoiceTerms}
                   onChange={(e) => setInvoiceTerms(e.target.value)}
@@ -939,7 +939,7 @@ const Invoices: React.FC = () => {
                 <button
                   onClick={updateInvoiceTerms}
                   disabled={isSaving}
-                  className="mt-3 flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all active:scale-95 disabled:opacity-50"
+                  className="btn-primary mt-3"
                 >
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Update Terms
@@ -953,7 +953,7 @@ const Invoices: React.FC = () => {
         <div className="space-y-8">
           {/* Recipient Info */}
           <div className="glass-card p-8">
-            <h2 className="text-xl font-bold text-zinc-950 dark:text-white tracking-tight font-display mb-8 flex items-center gap-3">
+            <h2 className="h2 mb-8 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                 <User className="w-5 h-5 text-zinc-500" />
               </div>
@@ -961,7 +961,7 @@ const Invoices: React.FC = () => {
             </h2>
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Client Name</label>
+                <label className="label-text">Client Name</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                   <Input
@@ -974,7 +974,7 @@ const Invoices: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Email Address</label>
+                <label className="label-text">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                   <Input
@@ -987,7 +987,7 @@ const Invoices: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Phone Number</label>
+                <label className="label-text">Phone Number</label>
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                   <Input
@@ -1171,7 +1171,7 @@ const Invoices: React.FC = () => {
               <div className="max-w-xs space-y-6">
                 <div>
                   <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Terms & Conditions</h5>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium italic">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                     {previewInvoice.invoice_terms || settings?.invoice_terms || `Thank you for your business. We appreciate your trust in ${settings?.business_name || 'us'}.`}
                   </p>
                 </div>

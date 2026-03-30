@@ -66,7 +66,7 @@ const QuickAction = ({ to, icon: Icon, label, color, className, onClick }: any) 
         <Icon className="w-4 h-4" />
       </div>
       <div className="ml-3">
-        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap pr-2">
+        <span className="label-text whitespace-nowrap pr-2">
           {label}
         </span>
       </div>
@@ -85,9 +85,10 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any)
       label={title} 
       value={value} 
       icon={Icon ? <Icon className="w-5 h-5" /> : undefined}
-      valueClassName={color}
+      valueClassName={cn("h2", color)}
+      labelClassName="label-text"
     />
-    {subtitle && <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mt-2">{subtitle}</p>}
+    {subtitle && <p className="body-text opacity-70 mt-2">{subtitle}</p>}
   </motion.div>
 );
 
@@ -103,13 +104,13 @@ export default function Dashboard() {
         <div className="p-4 bg-zinc-100 dark:bg-zinc-800 rounded-full">
           <Shield className="w-12 h-12 text-zinc-400" />
         </div>
-        <h2 className="text-xl font-black text-zinc-900 dark:text-white uppercase tracking-widest">Access Denied</h2>
-        <p className="text-zinc-500 dark:text-zinc-400 font-medium text-center max-w-md">
+        <h2 className="h2">Access Denied</h2>
+        <p className="body-text text-center max-w-md">
           You do not have permission to view the dashboard. Please contact your administrator.
         </p>
         <button 
           onClick={() => navigate('/sales')}
-          className="px-8 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
+          className="btn-primary px-8"
         >
           Go to Sales
         </button>
@@ -124,18 +125,20 @@ export default function Dashboard() {
   const [staffPerformance, setStaffPerformance] = useState<any[]>([]);
   const [topSales, setTopSales] = useState<any[]>([]);
   const [topExpenses, setTopExpenses] = useState<any[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<any[]>([]);
   const [isForecasting, setIsForecasting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [sumRes, trendRes, salesRes, staffRes, topSalesRes, topExpRes] = await Promise.all([
+        const [sumRes, trendRes, salesRes, staffRes, topSalesRes, topExpRes, productsRes] = await Promise.all([
           fetchWithAuth('/api/analytics/summary'),
           fetchWithAuth('/api/analytics/trends'),
           fetchWithAuth('/api/sales'),
           fetchWithAuth('/api/analytics/staff-performance'),
           fetchWithAuth('/api/analytics/top-sales'),
-          fetchWithAuth('/api/analytics/top-expenses')
+          fetchWithAuth('/api/analytics/top-expenses'),
+          fetchWithAuth('/api/products')
         ]);
 
         const sumData = await sumRes.json();
@@ -144,6 +147,7 @@ export default function Dashboard() {
         const staffData = await staffRes.json();
         const topSalesData = await topSalesRes.json();
         const topExpData = await topExpRes.json();
+        const productsData = await productsRes.json();
 
         setSummary(sumData || {});
         setTrends(Array.isArray(trendData) ? trendData : []);
@@ -151,13 +155,20 @@ export default function Dashboard() {
         setStaffPerformance(Array.isArray(staffData) ? staffData : []);
         setTopSales(Array.isArray(topSalesData) ? topSalesData : []);
         setTopExpenses(Array.isArray(topExpData) ? topExpData : []);
+
+        // Filter for low stock products
+        const lowStock = productsData.filter((p: any) => {
+          const globalThreshold = globalSettings?.low_stock_threshold || 5;
+          return p.variants?.some((v: any) => v.quantity <= (v.low_stock_threshold || globalThreshold));
+        });
+        setLowStockProducts(lowStock);
       } catch (err) {
         console.error('Failed to fetch dashboard data', err);
         setSummary({});
       }
     };
     fetchData();
-  }, []);
+  }, [globalSettings?.low_stock_threshold]);
 
   if (!summary) return (
     <div className="flex items-center justify-center h-64">
@@ -182,15 +193,15 @@ export default function Dashboard() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-brand/10 border border-brand/20 rounded-2xl p-6 mb-6">
+            <div className="bg-brand/5 border border-brand/10 rounded-2xl p-6 mb-6">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-brand/20 flex items-center justify-center text-brand shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
                     <Sparkles className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-zinc-900 dark:text-white font-bold">Complete Your Business Setup</h3>
-                    <p className="text-[13px] text-zinc-600 dark:text-zinc-400 mt-1">
+                    <h3 className="h3">Complete Your Business Setup</h3>
+                    <p className="body-text opacity-70 mt-1">
                       To get the most out of Gryndee, please finish setting up your business profile.
                     </p>
                     <div className="flex flex-wrap gap-4 mt-4">
@@ -198,25 +209,25 @@ export default function Dashboard() {
                         {globalSettings?.business_name && globalSettings?.business_name !== 'Gryndee' ? (
                           <CheckCircle2 className="w-4 h-4 text-brand" />
                         ) : (
-                          <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700" />
+                          <div className="w-4 h-4 rounded-full border-2 border-zinc-200 dark:border-zinc-800" />
                         )}
-                        <span className="text-[11px] font-medium text-zinc-500">Business Name</span>
+                        <span className="label-text">Business Name</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {globalSettings?.logo_url ? (
                           <CheckCircle2 className="w-4 h-4 text-brand" />
                         ) : (
-                          <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700" />
+                          <div className="w-4 h-4 rounded-full border-2 border-zinc-200 dark:border-zinc-800" />
                         )}
-                        <span className="text-[11px] font-medium text-zinc-500">Business Logo</span>
+                        <span className="label-text">Business Logo</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {globalSettings?.phone_number ? (
                           <CheckCircle2 className="w-4 h-4 text-brand" />
                         ) : (
-                          <div className="w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-700" />
+                          <div className="w-4 h-4 rounded-full border-2 border-zinc-200 dark:border-zinc-800" />
                         )}
-                        <span className="text-[11px] font-medium text-zinc-500">Contact Details</span>
+                        <span className="label-text">Contact Details</span>
                       </div>
                     </div>
                   </div>
@@ -224,7 +235,7 @@ export default function Dashboard() {
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                   <Link
                     to="/settings"
-                    className="flex-1 md:flex-none px-6 py-2.5 bg-brand text-white rounded-xl text-[13px] font-bold hover:opacity-90 transition-all shadow-lg shadow-brand/20 text-center"
+                    className="btn-primary"
                   >
                     Complete Setup
                   </Link>
@@ -238,28 +249,28 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Dashboard</h1>
+            <h1 className="h1">Dashboard</h1>
             {user?.subscription_plan === 'professional' && (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-brand/10 text-brand rounded-full border border-brand/20 shadow-sm animate-pulse">
-                <ShieldCheck className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Verified Premium</span>
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-brand/10 text-brand rounded-full border border-brand/20 shadow-sm">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span className="label-text">Verified Premium</span>
               </div>
             )}
           </div>
-          <p className="body-text text-zinc-500 dark:text-zinc-400">Welcome back, {user?.name || 'User'}. Here's what's happening today.</p>
+          <p className="body-text mt-1">Welcome back, {user?.name || 'User'}. Here's what's happening today.</p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-2">
             <Link 
               to="/ai-advisor"
-              className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-white/[0.05] text-zinc-900 dark:text-white rounded-xl text-[13px] font-semibold transition-all hover:bg-zinc-200 dark:hover:bg-white/[0.1]"
+              className="btn-secondary"
             >
               <Sparkles className="w-4 h-4 text-amber-400" />
               AI Pulse
             </Link>
             <Link 
               to="/sales"
-              className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 shadow-lg shadow-brand/20"
+              className="btn-primary"
             >
               <Plus className="w-4 h-4" />
               New Sale
@@ -267,8 +278,8 @@ export default function Dashboard() {
           </div>
           {user?.referral_code && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
-              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Referral Code:</span>
-              <span className="text-[10px] font-black text-brand uppercase tracking-widest">{user.referral_code}</span>
+              <span className="label-text text-zinc-400">Referral Code:</span>
+              <span className="label-text text-brand">{user.referral_code}</span>
               <button 
                 onClick={() => {
                   navigator.clipboard.writeText(user.referral_code);
@@ -289,33 +300,86 @@ export default function Dashboard() {
           to="/sales" 
           icon={Plus} 
           label="New Sale" 
-          color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
+          color="bg-brand/5 text-brand border-brand/10" 
         />
         <QuickAction 
           to="/products" 
           icon={Package} 
           label="Add Product" 
-          color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
+          color="bg-brand/5 text-brand border-brand/10" 
         />
         <QuickAction 
           to="/finance?tab=expenses" 
           icon={DollarSign} 
           label="Add Expense" 
-          color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
+          color="bg-brand/5 text-brand border-brand/10" 
         />
         <QuickAction 
           to="/customers" 
           icon={Users} 
           label="Customers" 
-          color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
+          color="bg-brand/5 text-brand border-brand/10" 
         />
         <QuickAction 
           to="/invoices" 
           icon={ArrowUpRight} 
           label="Invoices" 
-          color="bg-brand/10 text-brand border-brand/20 dark:bg-brand/5" 
+          color="bg-brand/5 text-brand border-brand/10" 
         />
       </div>
+
+      {/* Low Stock Alerts */}
+      {lowStockProducts.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-2xl p-4"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/20 flex items-center justify-center text-red-600 dark:text-red-400">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="label-text font-semibold text-red-900 dark:text-red-400">Low Stock Alerts</h3>
+              <p className="text-[10px] text-red-700 dark:text-red-500 opacity-70 uppercase tracking-wider">Inventory Attention Required</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {lowStockProducts.slice(0, 3).map((product) => (
+              <Link 
+                key={product.id}
+                to={`/products?search=${product.name}`}
+                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-xl border border-red-100 dark:border-red-900/20 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="w-10 h-10 rounded-lg bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+                    {product.images?.[0] ? (
+                      <img src={product.images[0]} alt="" className="w-full h-full object-cover rounded-lg" referrerPolicy="no-referrer" />
+                    ) : (
+                      <Package className="w-5 h-5 text-zinc-400" />
+                    )}
+                  </div>
+                  <div className="overflow-hidden">
+                    <p className="label-text font-medium text-zinc-900 dark:text-white truncate">{product.name}</p>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Stock: {product.total_stock}</p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-bold rounded-full uppercase">Low</span>
+                </div>
+              </Link>
+            ))}
+            {lowStockProducts.length > 3 && (
+              <Link 
+                to="/products"
+                className="flex items-center justify-center p-3 bg-white dark:bg-zinc-900 rounded-xl border border-red-100 dark:border-red-900/20 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                <span className="label-text text-red-600 dark:text-red-400 font-medium">+{lowStockProducts.length - 3} more items</span>
+              </Link>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
@@ -360,15 +424,15 @@ export default function Dashboard() {
               <Trophy className="w-6 h-6 text-brand" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tight">Referral Program</h3>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Invite friends and get rewarded. They get 14 days of Pro features free!</p>
+              <h3 className="h3">Referral Program</h3>
+              <p className="body-text opacity-70">Invite friends and get rewarded. They get 14 days of Pro features free!</p>
             </div>
           </div>
           
           <div className="flex items-center gap-3 p-1.5 bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
             <div className="px-4 py-2">
-              <span className="text-[10px] text-zinc-400 font-black uppercase tracking-widest block leading-none mb-1">Your Code</span>
-              <span className="text-xl font-black text-brand tracking-tighter leading-none">{user?.referral_code || 'GRYNDEE'}</span>
+              <span className="label-text block leading-none mb-1">Your Code</span>
+              <span className="h2 text-brand tracking-tighter leading-none">{user?.referral_code || 'GRYNDEE'}</span>
             </div>
             <button 
               onClick={() => {
@@ -391,16 +455,16 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 glass-card p-8">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-zinc-900 dark:text-white">Cash Flow</h2>
+            <h2 className="h2">Cash Flow</h2>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-brand" />
-                <span className="text-[11px] font-medium text-zinc-500">Revenue</span>
+                <span className="label-text">Revenue</span>
               </div>
               {user?.role !== 'staff' && (
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-red-500" />
-                  <span className="text-[11px] font-medium text-zinc-500">Expenses</span>
+                  <span className="label-text">Expenses</span>
                 </div>
               )}
             </div>
@@ -468,22 +532,22 @@ export default function Dashboard() {
         </div>
 
         <div className="glass-card p-8">
-          <h2 className="text-zinc-900 dark:text-white mb-6">Top Products</h2>
+          <h2 className="h2 mb-6">Top Products</h2>
           <div className="space-y-6">
             {topSales.slice(0, 5).map((sale, i) => (
               <div key={sale.name} className="flex items-center justify-between group">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-white/[0.03] flex items-center justify-center text-zinc-500 group-hover:bg-brand/10 group-hover:text-brand transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-50 dark:bg-white/[0.03] flex items-center justify-center text-zinc-400 group-hover:bg-brand/10 group-hover:text-brand transition-colors">
                     <Package className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-[13px] font-semibold text-zinc-900 dark:text-white truncate max-w-[120px]">{sale.name}</p>
-                    <p className="text-[11px] text-zinc-500">{sale.quantity} units</p>
+                    <p className="body-text font-medium text-zinc-900 dark:text-white truncate max-w-[120px]">{sale.name}</p>
+                    <p className="label-text">{sale.quantity} units</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[13px] font-bold text-zinc-900 dark:text-white"><CurrencyDisplay amount={sale.revenue} currencyCode={currency} /></p>
-                  <div className="w-16 h-1 bg-zinc-100 dark:bg-white/[0.05] rounded-full mt-1 overflow-hidden">
+                  <p className="body-text font-medium text-zinc-900 dark:text-white"><CurrencyDisplay amount={sale.revenue} currencyCode={currency} /></p>
+                  <div className="w-16 h-1 bg-zinc-100 dark:bg-white/[0.05] rounded-full mt-1.5 overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${(sale.revenue / topSales[0].revenue) * 100}%` }}
@@ -495,7 +559,7 @@ export default function Dashboard() {
             ))}
             {topSales.length === 0 && (
               <div className="py-10 text-center text-zinc-400">
-                <p className="text-xs">No sales recorded yet</p>
+                <p className="body-text">No sales recorded yet</p>
               </div>
             )}
           </div>
@@ -505,24 +569,24 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass-card p-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-zinc-900 dark:text-white">Recent Transactions</h2>
+            <h2 className="h2">Recent Transactions</h2>
             <Link to="/sales" className="label-text text-brand hover:underline">View all</Link>
           </div>
           <div className="space-y-1">
             {recentSales.map((sale) => (
               <div key={sale.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors border-b border-zinc-100 dark:border-white/[0.02] last:border-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-brand">
+                  <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
                     <ArrowUpRight className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-[13px] font-medium text-zinc-900 dark:text-white">Sale #{sale.id.toString().slice(-4)}</p>
-                    <p className="text-[11px] text-zinc-500">{new Date(sale.created_at).toLocaleDateString()}</p>
+                    <p className="body-text font-medium text-zinc-900 dark:text-white">Sale #{sale.id.toString().slice(-4)}</p>
+                    <p className="label-text">{new Date(sale.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[13px] font-bold text-brand">+<CurrencyDisplay amount={sale.total_amount} currencyCode={currency} /></p>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{sale.payment_method}</p>
+                  <p className="body-text font-medium text-brand">+<CurrencyDisplay amount={sale.total_amount} currencyCode={currency} /></p>
+                  <p className="label-text">{sale.payment_method}</p>
                 </div>
               </div>
             ))}
@@ -530,24 +594,24 @@ export default function Dashboard() {
         </div>
 
         <div className="glass-card p-8">
-          <h2 className="text-zinc-900 dark:text-white mb-6">Team Performance</h2>
+          <h2 className="h2 mb-6">Team Performance</h2>
           <div className="space-y-6">
             {staffPerformance.map((staff, i) => (
               <div key={staff.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/[0.05] flex items-center justify-center text-zinc-500 font-bold text-xs">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-50 dark:bg-white/[0.05] flex items-center justify-center text-zinc-400 font-medium text-xs">
                     {staff.name?.charAt(0) || '?'}
                   </div>
                   <div>
-                    <p className="text-[13px] font-semibold text-zinc-900 dark:text-white">{staff.name}</p>
-                    <p className="text-[11px] text-zinc-500">{staff.transaction_count} transactions</p>
+                    <p className="body-text font-medium text-zinc-900 dark:text-white">{staff.name}</p>
+                    <p className="label-text">{staff.transaction_count} transactions</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[13px] font-bold text-zinc-900 dark:text-white"><CurrencyDisplay amount={staff.total_sales} currencyCode={currency} /></p>
+                  <p className="body-text font-medium text-zinc-900 dark:text-white"><CurrencyDisplay amount={staff.total_sales} currencyCode={currency} /></p>
                   <div className="flex items-center gap-1 justify-end mt-1">
                     <Trophy className={cn("w-3 h-3", i === 0 ? "text-amber-400" : "text-zinc-300")} />
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase">Rank #<NumberDisplay value={i + 1} /></span>
+                    <span className="label-text">Rank #<NumberDisplay value={i + 1} /></span>
                   </div>
                 </div>
               </div>

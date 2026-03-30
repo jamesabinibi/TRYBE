@@ -1081,7 +1081,7 @@ NOTIFY pgrst, 'reload schema';
           <AlertCircle className="w-5 h-5" />
           <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Clear All Sales</h3>
         </div>
-        <p className="text-sm text-zinc-500 font-medium italic">Warning: This will permanently delete ALL sales history and records. This action cannot be undone.</p>
+        <p className="text-sm text-zinc-500 font-medium">Warning: This will permanently delete ALL sales history and records. This action cannot be undone.</p>
         <div className="flex gap-3">
           <button 
             onClick={async () => {
@@ -1122,8 +1122,8 @@ NOTIFY pgrst, 'reload schema';
     <div className="max-w-6xl space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Settings</h1>
-          <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 font-medium">Configure your business preferences and system settings.</p>
+          <h1 className="h1">Settings</h1>
+          <p className="body-text">Configure your business preferences and system settings.</p>
         </div>
       </div>
 
@@ -1132,7 +1132,7 @@ NOTIFY pgrst, 'reload schema';
         <button
           onClick={() => setActiveTab('branding')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+            "px-6 py-2.5 rounded-xl label-text transition-all whitespace-nowrap",
             activeTab === 'branding' 
               ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
               : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -1143,7 +1143,7 @@ NOTIFY pgrst, 'reload schema';
         <button
           onClick={() => setActiveTab('categories')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+            "px-6 py-2.5 rounded-xl label-text transition-all whitespace-nowrap",
             activeTab === 'categories' 
               ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
               : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -1154,7 +1154,7 @@ NOTIFY pgrst, 'reload schema';
         <button
           onClick={() => setActiveTab('account')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+            "px-6 py-2.5 rounded-xl label-text transition-all whitespace-nowrap",
             activeTab === 'account' 
               ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
               : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -1165,7 +1165,7 @@ NOTIFY pgrst, 'reload schema';
         <button
           onClick={() => setActiveTab('billing')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+            "px-6 py-2.5 rounded-xl label-text transition-all whitespace-nowrap",
             activeTab === 'billing' 
               ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
               : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -1177,7 +1177,7 @@ NOTIFY pgrst, 'reload schema';
           <button
             onClick={() => setActiveTab('system')}
             className={cn(
-              "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+              "px-6 py-2.5 rounded-xl label-text transition-all whitespace-nowrap",
               activeTab === 'system' 
                 ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
                 : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -1195,14 +1195,14 @@ NOTIFY pgrst, 'reload schema';
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Business Profile</h3>
+            <h3 className="h3">Business Profile</h3>
           </div>
-          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Update your business information and tax settings.</p>
+          <p className="body-text">Update your business information and tax settings.</p>
         </div>
         <div id="logo" className="lg:col-span-2 space-y-6">
           <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <div className="flex flex-col items-center text-center space-y-6">
-              <label className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Business Logo</label>
+              <label className="label-text">Business Logo</label>
               <div className="flex flex-col items-center gap-6 w-full">
                 <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl sm:rounded-[2.5rem] border-2 border-dashed border-zinc-200 dark:border-zinc-800 overflow-hidden bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center relative group shadow-inner">
                   {logoPreview ? (
@@ -1223,7 +1223,7 @@ NOTIFY pgrst, 'reload schema';
                       <div className="p-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
                         <Plus className="w-6 h-6 text-brand" />
                       </div>
-                      <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Upload Logo</span>
+                      <span className="label-text">Upload Logo</span>
                       <input type="file" accept="image/png, image/jpeg" className="hidden" onChange={handleLogoUpload} />
                     </label>
                   )}
@@ -1232,11 +1232,11 @@ NOTIFY pgrst, 'reload schema';
                   <button 
                     onClick={() => saveSettings()}
                     disabled={isSaving}
-                    className="w-full px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-zinc-900/20 dark:shadow-white/10 disabled:opacity-50"
+                    className="btn-primary w-full"
                   >
                     {isSaving ? '...' : 'Save Business Logo'}
                   </button>
-                  <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest">Recommended: Square PNG or JPEG</p>
+                  <p className="label-text text-center">Recommended: Square PNG or JPEG</p>
                 </div>
 
                 {/* AI Logo Generator */}
@@ -1247,12 +1247,12 @@ NOTIFY pgrst, 'reload schema';
                         <Sparkles className="w-5 h-5 text-brand" />
                       </div>
                       <div className="text-left">
-                        <h3 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-tight italic">AI Logo Generator</h3>
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Create a professional logo in seconds</p>
+                        <h3 className="h3">AI Logo Generator</h3>
+                        <p className="label-text">Create a professional logo in seconds</p>
                       </div>
                     </div>
                     {user?.subscription_plan === 'starter' && (
-                      <div className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                      <div className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-lg label-text flex items-center gap-1">
                         <Crown className="w-3 h-3" />
                         Premium
                       </div>
@@ -1262,7 +1262,7 @@ NOTIFY pgrst, 'reload schema';
                   <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2 text-left">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Business Name</label>
+                        <label className="label-text ml-1">Business Name</label>
                         <Input 
                           value={settings.business_name}
                           onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}
@@ -1270,7 +1270,7 @@ NOTIFY pgrst, 'reload schema';
                         />
                       </div>
                       <div className="space-y-2 text-left">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Brand Color</label>
+                        <label className="label-text ml-1">Brand Color</label>
                         <div className="flex items-center gap-2">
                           <input 
                             type="color" 
@@ -1290,7 +1290,7 @@ NOTIFY pgrst, 'reload schema';
                     <button 
                       onClick={handleGenerateLogo}
                       disabled={isGeneratingLogo || !settings.business_name}
-                      className="w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="btn-primary w-full"
                     >
                       {isGeneratingLogo ? (
                         <>
@@ -1328,7 +1328,7 @@ NOTIFY pgrst, 'reload schema';
                                 </button>
                               </div>
                             </div>
-                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Option {idx + 1}</p>
+                            <p className="label-text">Option {idx + 1}</p>
                           </div>
                         ))}
                       </div>
@@ -1340,7 +1340,7 @@ NOTIFY pgrst, 'reload schema';
           </div>
 
           <div id="brand" className="space-y-4">
-            <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Brand Colour</label>
+            <label className="label-text">Brand Colour</label>
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-200/50 dark:border-zinc-700/50 relative overflow-visible">
               <div className="flex flex-col sm:flex-row items-center gap-6 relative z-20 w-full lg:w-auto">
                 <div 
@@ -1351,7 +1351,7 @@ NOTIFY pgrst, 'reload schema';
                 </div>
                 <div className="flex-1 flex flex-col items-center sm:items-start w-full sm:w-auto mt-4 sm:mt-0">
                   <div className="flex items-center gap-3 w-full max-w-[200px]">
-                    <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">
+                    <span className="label-text shrink-0">
                       HEX
                     </span>
                     <input 
@@ -1361,13 +1361,13 @@ NOTIFY pgrst, 'reload schema';
                       className="w-full h-10 bg-white dark:bg-black/50 border border-zinc-200 dark:border-zinc-700 rounded-xl px-1 py-1 focus:outline-none focus:border-brand"
                     />
                   </div>
-                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium mt-2">Enter a valid HEX code (e.g. #10b981)</p>
+                  <p className="body-text mt-2">Enter a valid HEX code (e.g. #10b981)</p>
                 </div>
               </div>
               
               <button 
                 onClick={() => saveSettings()}
-                className="w-full lg:w-auto px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-zinc-900/20 dark:shadow-white/10 relative z-10"
+                className="btn-primary w-full lg:w-auto"
               >
                 Apply Colour
               </button>
@@ -1376,7 +1376,7 @@ NOTIFY pgrst, 'reload schema';
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-zinc-100 dark:border-zinc-800">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Name</label>
+              <label className="label-text">Business Name</label>
               <Input 
                 type="text" 
                 value={settings.business_name} 
@@ -1384,7 +1384,7 @@ NOTIFY pgrst, 'reload schema';
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Slogan / Tagline</label>
+              <label className="label-text">Slogan / Tagline</label>
               <Input 
                 type="text" 
                 value={settings.slogan} 
@@ -1395,7 +1395,7 @@ NOTIFY pgrst, 'reload schema';
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Address</label>
+              <label className="label-text">Email Address</label>
               <Input 
                 type="email" 
                 value={settings.email} 
@@ -1403,9 +1403,9 @@ NOTIFY pgrst, 'reload schema';
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Phone Number</label>
+              <label className="label-text">Phone Number</label>
               <Input 
-                type="text" 
+                type="tel" 
                 value={settings.phone_number} 
                 onChange={(e) => setSettings({...settings, phone_number: e.target.value})}
               />
@@ -1414,7 +1414,7 @@ NOTIFY pgrst, 'reload schema';
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Type</label>
+              <label className="label-text">Business Type</label>
               <Input 
                 as="select"
                 value={settings.business_type} 
@@ -1427,7 +1427,7 @@ NOTIFY pgrst, 'reload schema';
               </Input>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Website</label>
+              <label className="label-text">Website</label>
               <Input 
                 type="text" 
                 value={settings.website} 
@@ -1437,7 +1437,7 @@ NOTIFY pgrst, 'reload schema';
           </div>
 
           <div className="space-y-2 pt-6">
-            <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Address</label>
+            <label className="label-text">Business Address</label>
             <Textarea 
               value={settings.address} 
               onChange={(e) => setSettings({...settings, address: e.target.value})}
@@ -1447,7 +1447,7 @@ NOTIFY pgrst, 'reload schema';
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Website URL</label>
+              <label className="label-text">Website URL</label>
               <Input 
                 type="text" 
                 value={settings.website} 
@@ -1455,7 +1455,7 @@ NOTIFY pgrst, 'reload schema';
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Currency Symbol</label>
+              <label className="label-text">Currency Symbol</label>
               <Input 
                 type="text" 
                 value={settings.currency} 
@@ -1465,10 +1465,10 @@ NOTIFY pgrst, 'reload schema';
           </div>
 
           <div className="pt-8 border-t border-zinc-200 dark:border-zinc-800 mt-8">
-            <h4 className="text-sm font-black text-zinc-950 dark:text-white uppercase tracking-widest mb-6">Bank Details (For Invoices)</h4>
+            <h4 className="h3 mb-6">Bank Details (For Invoices)</h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Bank Name</label>
+                <label className="label-text">Bank Name</label>
                 <Input 
                   as="select"
                   value={settings.bank_name || ''} 
@@ -1506,7 +1506,7 @@ NOTIFY pgrst, 'reload schema';
                 </Input>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Account Name</label>
+                <label className="label-text">Account Name</label>
                 <Input 
                   type="text" 
                   value={settings.account_name || ''} 
@@ -1515,7 +1515,7 @@ NOTIFY pgrst, 'reload schema';
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Account Number</label>
+                <label className="label-text">Account Number</label>
                 <Input 
                   type="text" 
                   value={settings.account_number || ''} 
@@ -1532,7 +1532,7 @@ NOTIFY pgrst, 'reload schema';
             <button 
               onClick={() => saveSettings()}
               disabled={isSaving}
-              className="w-full sm:w-auto px-10 py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center justify-center gap-2"
+              className="btn-primary w-full sm:w-auto"
             >
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
               Save Branding Settings
@@ -1541,7 +1541,7 @@ NOTIFY pgrst, 'reload schema';
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Global Low Stock Alert</label>
+              <label className="label-text">Global Low Stock Alert</label>
               <div className="flex items-center gap-3">
                 <Input 
                   type="number" 
@@ -1549,10 +1549,10 @@ NOTIFY pgrst, 'reload schema';
                   onChange={(e) => setSettings({...settings, low_stock_threshold: e.target.value})}
                   className="w-24" 
                 />
-                <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">units</span>
+                <span className="body-text">units</span>
                 <button 
                   onClick={() => saveSettings()}
-                  className="ml-auto px-4 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                  className="btn-secondary ml-auto"
                 >
                   Update
                 </button>
@@ -1569,8 +1569,8 @@ NOTIFY pgrst, 'reload schema';
                   <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
                 <div>
-                  <p className="text-[10px] sm:text-sm font-black text-brand uppercase tracking-widest">VAT Enabled</p>
-                  <p className="text-[10px] sm:text-xs text-brand/70 dark:text-brand/80 font-medium">Apply 7.5% tax to all sales by default (Nigeria Finance Act 2023).</p>
+                  <p className="label-text text-brand">VAT Enabled</p>
+                  <p className="body-text text-brand/70 dark:text-brand/80">Apply 7.5% tax to all sales by default (Nigeria Finance Act 2023).</p>
                 </div>
               </div>
               <button 
@@ -1609,9 +1609,9 @@ NOTIFY pgrst, 'reload schema';
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Tag className="w-4 h-4 text-brand" />
-                <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Product/Service Category</h3>
+                <h3 className="h3">Product/Service Category</h3>
               </div>
-              <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage the categories used to organize your inventory.</p>
+              <p className="body-text">Manage the categories used to organize your inventory.</p>
             </div>
             <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
               <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
@@ -1624,7 +1624,7 @@ NOTIFY pgrst, 'reload schema';
                 />
                 <button 
                   type="submit"
-                  className="w-full sm:w-auto px-8 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95"
+                  className="btn-primary w-full sm:w-auto px-8"
                 >
                   Add
                 </button>
@@ -1685,18 +1685,18 @@ NOTIFY pgrst, 'reload schema';
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-brand" />
-              <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Email Templates</h3>
+              <h3 className="h3">Email Templates</h3>
             </div>
-            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Customize the automated emails sent to your users.</p>
+            <p className="body-text">Customize the automated emails sent to your users.</p>
           </div>
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Welcome Email</h4>
+                <h4 className="h3">Welcome Email</h4>
                 <button 
                   onClick={handleSendTestEmail}
                   disabled={isSendingTestEmail}
-                  className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex items-center gap-2"
+                  className="btn-secondary text-[10px] uppercase tracking-widest"
                 >
                   {isSendingTestEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bell className="w-3 h-3" />}
                   Send Test
@@ -1704,7 +1704,7 @@ NOTIFY pgrst, 'reload schema';
               </div>
               
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Subject Line</label>
+                <label className="label-text">Subject Line</label>
                 <Input 
                   type="text" 
                   value={settings.welcome_email_subject} 
@@ -1713,13 +1713,13 @@ NOTIFY pgrst, 'reload schema';
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Body</label>
+                <label className="label-text">Email Body</label>
                 <Textarea 
                   value={settings.welcome_email_body} 
                   onChange={(e) => setSettings({...settings, welcome_email_body: e.target.value})}
                   rows={6}
                 />
-                <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-medium italic">
+                <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-medium">
                   Use <code className="text-brand">{'{name}'}</code>, <code className="text-brand">{'{username}'}</code>, and <code className="text-brand">{'{verification_code}'}</code> as placeholders.
                 </p>
               </div>
@@ -1729,7 +1729,7 @@ NOTIFY pgrst, 'reload schema';
               <button 
                 onClick={() => saveSettings()}
                 disabled={isSaving}
-                className="w-full sm:w-auto px-10 py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center justify-center gap-2"
+                className="btn-primary w-full sm:w-auto px-10"
               >
                 {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                 Save Email Templates
@@ -1743,21 +1743,21 @@ NOTIFY pgrst, 'reload schema';
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-brand" />
-              <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">System Health</h3>
+              <h3 className="h3">System Health</h3>
             </div>
-            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Diagnostic tools and system status information.</p>
+            <p className="body-text">Diagnostic tools and system status information.</p>
           </div>
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Server Status</p>
+                <p className="label-text mb-1">Server Status</p>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                   <p className="text-sm font-bold text-zinc-900 dark:text-white">Operational</p>
                 </div>
               </div>
               <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Database</p>
+                <p className="label-text mb-1">Database</p>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                   <p className="text-sm font-bold text-zinc-900 dark:text-white">Connected</p>
@@ -1766,7 +1766,7 @@ NOTIFY pgrst, 'reload schema';
             </div>
             <button 
               onClick={() => toast.success('System diagnostics completed. All systems normal.')}
-              className="w-full py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+              className="btn-secondary w-full text-[10px] uppercase tracking-widest"
             >
               Run Full Diagnostics
             </button>
@@ -1778,17 +1778,17 @@ NOTIFY pgrst, 'reload schema';
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-brand" />
-              <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Data Management</h3>
+              <h3 className="h3">Data Management</h3>
             </div>
-            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Critical operations for managing your business data.</p>
+            <p className="body-text">Critical operations for managing your business data.</p>
           </div>
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
             <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 space-y-4">
               <div className="flex items-center gap-3 text-zinc-900 dark:text-white">
                 <Database className="w-5 h-5 text-brand" />
-                <h4 className="text-sm font-black uppercase tracking-widest">Database Migration</h4>
+                <h4 className="h3">Database Migration</h4>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+              <p className="body-text">
                 Migrate all data (accounts, users, products, sales, etc.) from Supabase to AWS RDS.
                 <strong className="block mt-1 text-brand">Note: Run this BEFORE migrating images.</strong>
               </p>
@@ -1796,7 +1796,7 @@ NOTIFY pgrst, 'reload schema';
                 <button 
                   onClick={handleMigrateDatabase}
                   disabled={isMigratingDb}
-                  className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-secondary text-[10px] uppercase tracking-widest"
                 >
                   {isMigratingDb ? 'Migrating...' : 'Migrate Database to AWS RDS'}
                 </button>
@@ -1806,9 +1806,9 @@ NOTIFY pgrst, 'reload schema';
             <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-700/50 space-y-4">
               <div className="flex items-center gap-3 text-zinc-900 dark:text-white">
                 <Image className="w-5 h-5 text-brand" />
-                <h4 className="text-sm font-black uppercase tracking-widest">Image Migration</h4>
+                <h4 className="h3">Image Migration</h4>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+              <p className="body-text">
                 Migrate existing product images to AWS S3. This process runs in the background.
                 <strong className="block mt-1 text-brand">Note: Run Database Migration first.</strong>
               </p>
@@ -1816,7 +1816,7 @@ NOTIFY pgrst, 'reload schema';
                 <button 
                   onClick={handleMigrateImages}
                   disabled={isMigrating}
-                  className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-secondary text-[10px] uppercase tracking-widest"
                 >
                   {isMigrating ? 'Migrating...' : 'Migrate Images to AWS S3'}
                 </button>
@@ -1826,21 +1826,21 @@ NOTIFY pgrst, 'reload schema';
             <div className="p-6 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/20 space-y-4">
               <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
                 <AlertTriangle className="w-5 h-5" />
-                <h4 className="text-sm font-black uppercase tracking-widest">Danger Zone</h4>
+                <h4 className="h3">Danger Zone</h4>
               </div>
-              <p className="text-xs text-red-600/70 dark:text-red-400/70 font-medium">
+              <p className="body-text text-red-600/70 dark:text-red-400/70">
                 These actions are irreversible. Please proceed with extreme caution.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button 
                   onClick={() => setShowClearSalesConfirm(true)}
-                  className="px-6 py-3 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
+                  className="btn-destructive text-[10px] uppercase tracking-widest"
                 >
                   Clear All Sales Data
                 </button>
                 <button 
                   onClick={() => toast.error('Full system reset is disabled for safety.')}
-                  className="px-6 py-3 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
+                  className="btn-secondary text-red-600 dark:text-red-400 text-[10px] uppercase tracking-widest"
                 >
                   Factory Reset
                 </button>
@@ -1858,9 +1858,9 @@ NOTIFY pgrst, 'reload schema';
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <UserIcon className="w-4 h-4 text-brand" />
-            <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">User Account</h3>
+            <h3 className="h3">User Account</h3>
           </div>
-          <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage your personal profile and security settings.</p>
+          <p className="body-text">Manage your personal profile and security settings.</p>
         </div>
         <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-700/50">
@@ -1885,10 +1885,10 @@ NOTIFY pgrst, 'reload schema';
                     required
                   />
                   <div className="flex gap-2">
-                    <button type="submit" className="flex-1 sm:flex-none px-4 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all">
+                    <button type="submit" className="btn-primary flex-1 sm:flex-none">
                       Save Changes
                     </button>
-                    <button type="button" onClick={() => setIsEditingProfile(false)} className="flex-1 sm:flex-none px-4 py-2 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-all">
+                    <button type="button" onClick={() => setIsEditingProfile(false)} className="btn-secondary flex-1 sm:flex-none">
                       Cancel
                     </button>
                   </div>
@@ -1896,8 +1896,8 @@ NOTIFY pgrst, 'reload schema';
               ) : (
                 <div className="flex items-center justify-between">
                   <div className="text-center sm:text-left">
-                    <h4 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">{user?.name}</h4>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-widest font-black">{user?.role}</p>
+                    <h4 className="h3">{user?.name}</h4>
+                    <p className="label-text">{user?.role}</p>
                   </div>
                   <button 
                     onClick={() => setIsEditingProfile(true)}
@@ -1920,7 +1920,7 @@ NOTIFY pgrst, 'reload schema';
             >
               <div className="flex items-center gap-3">
                 <History className="w-4 h-4 text-zinc-400 group-hover:text-brand" />
-                <span className="text-sm font-bold text-zinc-600 dark:text-zinc-400">Restart App Walkthrough</span>
+                <span className="body-text font-bold">Restart App Walkthrough</span>
               </div>
               <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600" />
             </button>
@@ -1928,7 +1928,7 @@ NOTIFY pgrst, 'reload schema';
               <form onSubmit={handleChangePassword} className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-700/50 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Lock className="w-4 h-4 text-brand" />
-                  <h4 className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-widest">Change Password</h4>
+                  <h4 className="label-text">Change Password</h4>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
@@ -1955,10 +1955,10 @@ NOTIFY pgrst, 'reload schema';
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                  <button type="submit" className="w-full sm:w-auto px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20">
+                  <button type="submit" className="btn-primary w-full sm:w-auto">
                     Update Password
                   </button>
-                  <button type="button" onClick={() => setIsChangingPassword(false)} className="w-full sm:w-auto px-6 py-3 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-all">
+                  <button type="button" onClick={() => setIsChangingPassword(false)} className="btn-secondary w-full sm:w-auto">
                     Cancel
                   </button>
                 </div>
@@ -1970,7 +1970,7 @@ NOTIFY pgrst, 'reload schema';
               >
                 <div className="flex items-center gap-3">
                   <Lock className="w-4 h-4 text-zinc-400 group-hover:text-brand" />
-                  <span className="text-sm font-bold text-zinc-600 dark:text-zinc-400">Change Password</span>
+                  <span className="body-text font-bold">Change Password</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600" />
               </button>
@@ -1985,15 +1985,15 @@ NOTIFY pgrst, 'reload schema';
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-brand" />
-              <h3 className="font-black text-zinc-900 dark:text-white tracking-tight uppercase text-[10px] sm:text-xs tracking-widest">Team Management</h3>
+              <h3 className="h3">Team Management</h3>
             </div>
-            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage your staff accounts and their access levels.</p>
+            <p className="body-text">Manage your staff accounts and their access levels.</p>
           </div>
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
             <div className="flex justify-end">
               <button 
                 onClick={() => handleOpenUserModal()}
-                className="px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center gap-2"
+                className="btn-primary flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 Add Member
@@ -2004,9 +2004,9 @@ NOTIFY pgrst, 'reload schema';
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                    <th className="px-4 py-4 text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest">Member</th>
-                    <th className="px-4 py-4 text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</th>
-                    <th className="px-4 py-4 text-right text-[10px] font-black text-zinc-400 uppercase tracking-widest">Actions</th>
+                    <th className="px-4 py-4 text-left label-text">Member</th>
+                    <th className="px-4 py-4 text-left label-text">Role</th>
+                    <th className="px-4 py-4 text-right label-text">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800/50">
@@ -2018,14 +2018,14 @@ NOTIFY pgrst, 'reload schema';
                             {u.name?.charAt(0) || u.username?.charAt(0) || '?'}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-zinc-900 dark:text-white">{u.name}</p>
-                            <p className="text-[10px] text-zinc-500 font-medium">@{u.username}</p>
+                            <p className="body-text font-bold">{u.name}</p>
+                            <p className="label-text">@{u.username}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-4">
                         <span className={cn(
-                          "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest",
+                          "px-3 py-1 rounded-lg label-text",
                           u.role === 'admin' || u.role === 'super_admin' ? "bg-brand/10 text-brand" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                         )}>
                           {u.role}
@@ -2113,10 +2113,10 @@ NOTIFY pgrst, 'reload schema';
                           <Zap className="w-8 h-8 text-brand" />
                         </div>
                         <div>
-                          <h4 className="text-2xl font-black text-white uppercase tracking-tight">Professional</h4>
+                          <h4 className="h2 text-white">Professional</h4>
                           <div className="flex items-baseline gap-1">
                             <span className="text-3xl font-black">₦2,000</span>
-                            <span className="text-xs text-zinc-400 font-bold">/month</span>
+                            <span className="label-text text-zinc-400">/month</span>
                           </div>
                         </div>
                         <ul className="space-y-3">
@@ -2128,7 +2128,7 @@ NOTIFY pgrst, 'reload schema';
                             'Priority WhatsApp Support',
                             'Free Business Tax Consultation'
                           ].map((feature, i) => (
-                            <li key={i} className="flex items-center gap-2 text-xs font-medium text-zinc-300">
+                            <li key={i} className="flex items-center gap-2 body-text text-zinc-300">
                               <CheckCircle2 className="w-4 h-4 text-brand" />
                               {feature}
                             </li>
@@ -2136,7 +2136,7 @@ NOTIFY pgrst, 'reload schema';
                         </ul>
                         <button 
                           onClick={() => handleUpgrade('pro', 2000)}
-                          className="w-full py-4 bg-brand text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-brand/20"
+                          className="btn-primary w-full"
                         >
                           Upgrade Now
                         </button>
@@ -2156,10 +2156,10 @@ NOTIFY pgrst, 'reload schema';
           <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight uppercase tracking-widest text-xs">
+                <h3 className="h3">
                   {editingUser ? 'Edit Team Member' : 'Add Team Member'}
                 </h3>
-                <p className="text-[10px] text-zinc-500 font-medium">Configure access for your staff.</p>
+                <p className="label-text">Configure access for your staff.</p>
               </div>
               <button onClick={() => setIsUserModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
                 <X className="w-5 h-5 text-zinc-400" />
@@ -2169,7 +2169,7 @@ NOTIFY pgrst, 'reload schema';
             <form onSubmit={handleUserSubmit} className="p-8 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Full Name</label>
+                  <label className="label-text">Full Name</label>
                   <Input 
                     type="text" 
                     required
@@ -2178,7 +2178,7 @@ NOTIFY pgrst, 'reload schema';
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Username</label>
+                  <label className="label-text">Username</label>
                   <Input 
                     type="text" 
                     required
@@ -2187,7 +2187,7 @@ NOTIFY pgrst, 'reload schema';
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Email Address</label>
+                  <label className="label-text">Email Address</label>
                   <Input 
                     type="email" 
                     required
@@ -2196,7 +2196,7 @@ NOTIFY pgrst, 'reload schema';
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</label>
+                  <label className="label-text">Role</label>
                   <Input 
                     as="select"
                     value={userFormData.role}
@@ -2210,7 +2210,7 @@ NOTIFY pgrst, 'reload schema';
 
                 {userFormData.role !== 'admin' && (
                   <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Permissions</label>
+                    <label className="label-text">Permissions</label>
                     <div className="space-y-3">
                       {[
                         { id: 'can_view_dashboard', label: 'View Dashboard' },
@@ -2221,7 +2221,7 @@ NOTIFY pgrst, 'reload schema';
                         { id: 'can_manage_expenses', label: 'Manage Expenses' },
                       ].map((perm) => (
                         <label key={perm.id} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
-                          <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{perm.label}</span>
+                          <span className="body-text font-bold">{perm.label}</span>
                           <input 
                             type="checkbox"
                             className="w-4 h-4 rounded border-zinc-300 text-brand focus:ring-brand"
@@ -2240,7 +2240,7 @@ NOTIFY pgrst, 'reload schema';
                   </div>
                 )}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                  <label className="label-text">
                     {editingUser ? 'New Password (leave blank to keep current)' : 'Password'}
                   </label>
                   <Input 
@@ -2255,7 +2255,7 @@ NOTIFY pgrst, 'reload schema';
               <button 
                 type="submit"
                 disabled={isSaving}
-                className="w-full py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 flex items-center justify-center gap-2"
+                className="btn-primary w-full"
               >
                 {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                 {editingUser ? 'Update Member' : 'Add Member'}

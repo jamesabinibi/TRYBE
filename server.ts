@@ -240,9 +240,58 @@ async function initAwsDb() {
           code TEXT UNIQUE NOT NULL,
           duration_months INTEGER NOT NULL DEFAULT 1,
           is_active BOOLEAN DEFAULT TRUE,
+          usage_count INTEGER DEFAULT 0,
+          max_usages INTEGER DEFAULT NULL,
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
+
+        CREATE TABLE IF NOT EXISTS promo_code_usages (
+          id SERIAL PRIMARY KEY,
+          promo_code_id BIGINT REFERENCES promo_codes(id) ON DELETE CASCADE,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+          used_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
       `);
+
+      // Add missing columns to promo_codes
+      const promoCols = [
+        { name: 'usage_count', type: 'INTEGER DEFAULT 0' },
+        { name: 'max_usages', type: 'INTEGER DEFAULT NULL' }
+      ];
+
+      for (const col of promoCols) {
+        try {
+          const checkCol = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name='promo_codes' AND column_name=$1
+          `, [col.name]);
+          
+          if (checkCol.rows.length === 0) {
+            console.log(`[DB] Adding missing column ${col.name} to promo_codes...`);
+            await client.query(`ALTER TABLE promo_codes ADD COLUMN ${col.name} ${col.type}`);
+          }
+        } catch (e) {
+          console.error(`[DB] Failed to add column ${col.name} to promo_codes:`, e);
+        }
+      }
+
+      // Migration: Generate referral codes for existing accounts that don't have one
+      try {
+        const { rows: accountsWithoutCode } = await client.query(
+          'SELECT id FROM accounts WHERE referral_code IS NULL OR referral_code = \'\''
+        );
+        
+        if (accountsWithoutCode.length > 0) {
+          console.log(`[DB] Generating referral codes for ${accountsWithoutCode.length} accounts...`);
+          for (const acc of accountsWithoutCode) {
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            await client.query('UPDATE accounts SET referral_code = $1 WHERE id = $2', [code, acc.id]);
+          }
+        }
+      } catch (e) {
+        console.error('[DB] Failed to migrate referral codes:', e);
+      }
 
       // Add missing columns to accounts
       const accountCols = [
@@ -6304,7 +6353,25 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   app.get("/api/admin/promo-codes", requireSuperAdmin, async (req: any, res) => {
     try {
-      const { rows } = await pool.query('SELECT * FROM promo_codes ORDER BY created_at DESC');
+      const { rows } = await pool.query(`
+        SELECT p.*, 
+          COALESCE(
+            (SELECT json_agg(json_build_object(
+              'user_id', u.id,
+              'username', u.username,
+              'email', u.email,
+              'used_at', pcu.used_at,
+              'account_name', a.name
+            ))
+            FROM promo_code_usages pcu
+            JOIN users u ON pcu.user_id = u.id
+            JOIN accounts a ON pcu.account_id = a.id
+            WHERE pcu.promo_code_id = p.id),
+            '[]'::json
+          ) as usages
+        FROM promo_codes p 
+        ORDER BY p.created_at DESC
+      `);
       res.json(rows);
     } catch (error) {
       console.error('[ADMIN] Failed to fetch promo codes:', error);
@@ -6313,14 +6380,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.post("/api/admin/promo-codes", requireSuperAdmin, async (req: any, res) => {
-    const { code, duration_months } = req.body;
-    if (!code || !duration_months) {
-      return res.status(400).json({ error: 'Code and duration are required' });
+    let { code, duration_months, max_usages } = req.body;
+    
+    // If code is not provided, generate a random one
+    if (!code) {
+      code = Math.random().toString(36).substring(2, 10).toUpperCase();
     }
+
+    if (!duration_months) {
+      return res.status(400).json({ error: 'Duration is required' });
+    }
+
     try {
       const { rows } = await pool.query(
-        'INSERT INTO promo_codes (code, duration_months) VALUES ($1, $2) RETURNING *',
-        [code.toUpperCase(), duration_months]
+        'INSERT INTO promo_codes (code, duration_months, max_usages) VALUES ($1, $2, $3) RETURNING *',
+        [code.toUpperCase(), duration_months, max_usages || null]
       );
       res.json(rows[0]);
     } catch (error) {
@@ -6349,6 +6423,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
 
     try {
+      // 1. Check if it's a valid promo code
       const { rows: promoRows } = await pool.query(
         'SELECT * FROM promo_codes WHERE code = $1 AND is_active = TRUE LIMIT 1',
         [code.toUpperCase()]
@@ -6359,6 +6434,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       const promo = promoRows[0];
+
+      // Check max usages
+      if (promo.max_usages !== null && promo.usage_count >= promo.max_usages) {
+        return res.status(400).json({ error: 'This promo code has reached its maximum usage limit' });
+      }
+
       const durationMonths = promo.duration_months;
 
       // Calculate new expiry date
@@ -6378,8 +6459,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         ['professional', 'active', newExpiry, account_id]
       );
 
-      // Deactivate promo code if it's one-time use (optional, but let's keep it active for now or add a usage limit)
-      // For now, let's just keep it active.
+      // Increment usage count
+      await pool.query(
+        'UPDATE promo_codes SET usage_count = usage_count + 1 WHERE id = $1',
+        [promo.id]
+      );
+
+      // Record usage
+      await pool.query(
+        'INSERT INTO promo_code_usages (promo_code_id, user_id, account_id) VALUES ($1, $2, $3)',
+        [promo.id, req.user.id, account_id]
+      );
 
       res.json({ success: true, new_expiry: newExpiry });
     } catch (error) {

@@ -24,6 +24,7 @@ import {
   Trash2,
   Power,
   RefreshCw,
+  Copy,
   Smartphone,
   Download,
   Image as ImageIcon,
@@ -60,7 +61,7 @@ const StatCard = ({ title, value, icon: Icon, color }: any) => (
         <Icon className="w-6 h-6" />
       </div>
       <p className="text-sm text-zinc-600 dark:text-zinc-400 font-medium mb-1">{title}</p>
-      <h3 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{value}</h3>
+      <h3 className="text-2xl font-medium text-zinc-900 dark:text-white tracking-tight">{value}</h3>
     </div>
   </motion.div>
 );
@@ -98,8 +99,9 @@ export default function SuperAdmin() {
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
   const [isLegalDocsModalOpen, setIsLegalDocsModalOpen] = useState(false);
   const [isPromoCodesModalOpen, setIsPromoCodesModalOpen] = useState(false);
+  const [expandedPromoId, setExpandedPromoId] = useState<number | null>(null);
   const [promoCodes, setPromoCodes] = useState<any[]>([]);
-  const [newPromoCode, setNewPromoCode] = useState({ code: '', duration_months: 1 });
+  const [newPromoCode, setNewPromoCode] = useState({ code: '', duration_months: 1, max_usages: '' });
   const [isCreatingPromo, setIsCreatingPromo] = useState(false);
   const [legalDocs, setLegalDocs] = useState({ terms_and_conditions: '', privacy_policy: '' });
   const [isSavingLegalDocs, setIsSavingLegalDocs] = useState(false);
@@ -354,17 +356,20 @@ export default function SuperAdmin() {
 
   const handleCreatePromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPromoCode.code || !newPromoCode.duration_months) return;
+    if (!newPromoCode.duration_months) return;
     setIsCreatingPromo(true);
     try {
       const res = await fetchWithAuth('/api/admin/promo-codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPromoCode)
+        body: JSON.stringify({
+          ...newPromoCode,
+          max_usages: newPromoCode.max_usages ? parseInt(newPromoCode.max_usages) : null
+        })
       });
       if (res.ok) {
         toast.success('Promo code created!');
-        setNewPromoCode({ code: '', duration_months: 1 });
+        setNewPromoCode({ code: '', duration_months: 1, max_usages: '' });
         fetchPromoCodes();
       }
     } catch (err) {
@@ -471,7 +476,7 @@ export default function SuperAdmin() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete Account</h3>
+          <h3 className="font-medium text-zinc-900 uppercase tracking-widest text-xs">Delete Account</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this account? This will delete all associated users, products, and sales. This action cannot be undone.</p>
         <div className="flex gap-3">
@@ -494,11 +499,11 @@ export default function SuperAdmin() {
                 toast.error('Network error');
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-red-700 transition-all"
           >
             Delete
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -538,7 +543,7 @@ export default function SuperAdmin() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-brand">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">System Setup</h3>
+          <h3 className="font-medium text-zinc-900 uppercase tracking-widest text-xs">System Setup</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">This will attempt to create missing database tables. Continue?</p>
         <div className="flex gap-3">
@@ -560,11 +565,11 @@ export default function SuperAdmin() {
                 toast.error(err.message || 'Network error during setup', { id: 'setup' });
               }
             }}
-            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-brand-hover transition-all"
           >
             Continue
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -577,7 +582,7 @@ export default function SuperAdmin() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-brand">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Migrate Data</h3>
+          <h3 className="font-medium text-zinc-900 uppercase tracking-widest text-xs">Migrate Data</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">This will copy all data from Supabase to AWS RDS. Existing data in RDS with same IDs will be updated. Continue?</p>
         <div className="flex gap-3">
@@ -600,11 +605,11 @@ export default function SuperAdmin() {
                 toast.error(err.message || 'Network error during migration', { id: 'migrate' });
               }
             }}
-            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-brand-hover transition-all"
           >
             Migrate
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -617,7 +622,7 @@ export default function SuperAdmin() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-brand">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Migrate Images</h3>
+          <h3 className="font-medium text-zinc-900 uppercase tracking-widest text-xs">Migrate Images</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">This will copy all product images, service images, and settings logos to AWS S3. Continue?</p>
         <div className="flex gap-3">
@@ -642,11 +647,11 @@ export default function SuperAdmin() {
                 toast.error(err.message || 'Network error during image migration', { id: 'migrate-images' });
               }
             }}
-            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-brand-hover transition-all"
           >
             Migrate Images
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -685,7 +690,7 @@ export default function SuperAdmin() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-brand">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">{newStatus ? 'Activate' : 'Deactivate'} User</h3>
+          <h3 className="font-medium text-zinc-900 uppercase tracking-widest text-xs">{newStatus ? 'Activate' : 'Deactivate'} User</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Are you sure you want to {newStatus ? 'activate' : 'deactivate'} this user?</p>
         <div className="flex gap-3">
@@ -711,11 +716,11 @@ export default function SuperAdmin() {
                 toast.error(err.message || 'Network error', { id: 'user-status' });
               }
             }}
-            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-brand-hover transition-all"
           >
             {newStatus ? 'Activate' : 'Deactivate'}
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -728,7 +733,7 @@ export default function SuperAdmin() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete User</h3>
+          <h3 className="font-medium text-zinc-900 uppercase tracking-widest text-xs">Delete User</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this user? This action cannot be undone.</p>
         <div className="flex gap-3">
@@ -751,11 +756,11 @@ export default function SuperAdmin() {
                 toast.error('Network error', { id: 'delete-user' });
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-red-700 transition-all"
           >
             Delete
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -820,58 +825,58 @@ export default function SuperAdmin() {
             <ShieldCheck className="w-5 h-5 text-emerald-500" />
             <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]">System Administration</span>
           </div>
-          <h1 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tight">Global Overview</h1>
+          <h1 className="h1">Global Overview</h1>
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">Monitoring Gryndee system-wide performance</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button 
             onClick={handleMigrate}
-            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-brand/10 text-brand rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-brand/20 transition-all shadow-sm whitespace-nowrap"
+            className="btn-secondary flex items-center gap-2"
           >
-            <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Database className="w-4 h-4" />
             Migrate DB
           </button>
           <button 
             onClick={handleMigrateImages}
-            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-500/10 text-blue-500 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-blue-500/20 transition-all shadow-sm whitespace-nowrap"
+            className="btn-secondary flex items-center gap-2 text-blue-500 border-blue-500/20 hover:bg-blue-500/5"
           >
-            <ImageIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <ImageIcon className="w-4 h-4" />
             Migrate Images
           </button>
           <button 
             onClick={fetchDiagnostic}
             disabled={isFetchingDiagnostic}
-            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-indigo-500/10 text-indigo-500 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all shadow-sm disabled:opacity-50 whitespace-nowrap"
+            className="btn-secondary flex items-center gap-2 text-indigo-500 border-indigo-500/20 hover:bg-indigo-500/5 disabled:opacity-50"
           >
-            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <ShieldCheck className="w-4 h-4" />
             {isFetchingDiagnostic ? 'Checking...' : 'Check Status'}
           </button>
           <button 
             onClick={() => setIsMobileAssetsModalOpen(true)}
-            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg whitespace-nowrap"
+            className="btn-primary flex items-center gap-2"
           >
-            <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Smartphone className="w-4 h-4" />
             Mobile Assets
           </button>
           <button 
             onClick={() => setIsGeminiModalOpen(true)}
             className={cn(
-              "flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap",
-              smtpStatus?.geminiConfigured ? "bg-purple-500/10 text-purple-500" : "bg-amber-500/10 text-amber-500"
+              "btn-secondary flex items-center gap-2",
+              smtpStatus?.geminiConfigured ? "text-purple-500 border-purple-500/20 hover:bg-purple-500/5" : "text-amber-500 border-amber-500/20 hover:bg-amber-500/5"
             )}
           >
-            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Sparkles className="w-4 h-4" />
             AI: {smtpStatus?.geminiConfigured ? 'Ready' : 'Check Config'}
           </button>
           <button 
             onClick={() => setIsSmtpModalOpen(true)}
             className={cn(
-              "flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap",
-              smtpStatus?.configured ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+              "btn-secondary flex items-center gap-2",
+              smtpStatus?.configured ? "text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/5" : "text-amber-500 border-amber-500/20 hover:bg-amber-500/5"
             )}
           >
-            <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Mail className="w-4 h-4" />
             SMTP: {smtpStatus?.configured ? 'Ready' : 'Check Config'}
           </button>
           <button 
@@ -879,37 +884,37 @@ export default function SuperAdmin() {
               setIsLogsModalOpen(true);
               fetchLogs();
             }}
-            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all shadow-sm whitespace-nowrap"
+            className="btn-secondary flex items-center gap-2"
           >
-            <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Activity className="w-4 h-4" />
             View Logs
           </button>
           <div className="flex items-center gap-2 ml-auto">
             <button 
               onClick={() => setIsPromoCodesModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-brand transition-all shadow-sm"
+              className="btn-ghost flex items-center gap-2"
               title="Promo Codes"
             >
               <Trophy className="w-4 h-4" />
-              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Promo Codes</span>
+              <span className="hidden sm:inline label-text">Promo Codes</span>
             </button>
             <button 
               onClick={() => {
                 fetchLegalDocs();
                 setIsLegalDocsModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-emerald-500 transition-all shadow-sm"
+              className="btn-ghost flex items-center gap-2"
               title="Legal Documents"
             >
               <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Legal Docs</span>
+              <span className="hidden sm:inline label-text">Legal Docs</span>
             </button>
             <button 
               onClick={() => setIsSecretsModalOpen(true)}
-              className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-indigo-500 transition-colors shadow-sm"
+              className="btn-ghost p-2.5"
               title="Manage Secrets"
             >
-              <Key className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Key className="w-5 h-5" />
             </button>
             <button 
               onClick={async () => {
@@ -926,17 +931,17 @@ export default function SuperAdmin() {
                   toast.error(err.message || 'Failed to refresh environment');
                 }
               }}
-              className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-amber-500 transition-colors shadow-sm"
+              className="btn-ghost p-2.5"
               title="Refresh Environment"
             >
-              <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
+              <RefreshCw className="w-5 h-5" />
             </button>
             <button 
               onClick={() => { fetchStats(); fetchUsers(); }}
-              className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-emerald-500 transition-colors shadow-sm"
+              className="btn-ghost p-2.5"
               title="Reload Data"
             >
-              <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Activity className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -969,9 +974,9 @@ export default function SuperAdmin() {
         />
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-4">
-          <h2 className="text-xl font-black text-zinc-900 dark:text-white">Users</h2>
+          <h2 className="h2">Users</h2>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <Input 
@@ -989,14 +994,14 @@ export default function SuperAdmin() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
-                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">User</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account Type</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Business Type</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Verified</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                  <th className="px-8 py-4 label-text">User</th>
+                  <th className="px-8 py-4 label-text">Account Type</th>
+                  <th className="px-8 py-4 label-text">Business Type</th>
+                  <th className="px-8 py-4 label-text">Account</th>
+                  <th className="px-8 py-4 label-text">Role</th>
+                  <th className="px-8 py-4 label-text">Verified</th>
+                  <th className="px-8 py-4 label-text">Status</th>
+                  <th className="px-8 py-4 label-text text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -1005,18 +1010,18 @@ export default function SuperAdmin() {
                     <tr key={user.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
+                          <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-bold">
                             {user.name?.charAt(0) || user.username?.charAt(0) || '?'}
                           </div>
                           <div>
-                            <p className="text-sm font-black text-zinc-900 dark:text-white">{user.name}</p>
-                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{user.email}</p>
+                            <p className="body-text font-bold text-zinc-900 dark:text-white">{user.name}</p>
+                            <p className="label-text">{user.email}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-8 py-5">
                         <span className={cn(
-                          "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                          "label-text px-2 py-0.5 rounded-full",
                           user.account_type === 'business' ? "bg-indigo-500/10 text-indigo-500" : "bg-zinc-500/10 text-zinc-500"
                         )}>
                           {user.account_type || 'Personal'}
@@ -1033,7 +1038,7 @@ export default function SuperAdmin() {
                       </td>
                       <td className="px-8 py-5">
                         <span className={cn(
-                          "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                          "label-text px-2 py-0.5 rounded-full",
                           user.role === 'admin' ? "bg-purple-500/10 text-purple-500" : "bg-blue-500/10 text-blue-500"
                         )}>
                           {user.role}
@@ -1041,7 +1046,7 @@ export default function SuperAdmin() {
                       </td>
                       <td className="px-8 py-5">
                         <span className={cn(
-                          "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                          "label-text px-2 py-0.5 rounded-full",
                           user.is_verified ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
                         )}>
                           {user.is_verified ? 'Yes' : 'No'}
@@ -1049,7 +1054,7 @@ export default function SuperAdmin() {
                       </td>
                       <td className="px-8 py-5">
                         <span className={cn(
-                          "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                          "label-text px-2 py-0.5 rounded-full",
                           user.account_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
                         )}>
                           {user.account_active ? 'Active' : 'Inactive'}
@@ -1222,13 +1227,13 @@ export default function SuperAdmin() {
                     <Trophy className="w-6 h-6 text-brand" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight italic">Promo Codes</h2>
-                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Manage subscription codes</p>
+                    <h2 className="h2">Promo Codes</h2>
+                    <p className="label-text">Manage subscription codes</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setIsPromoCodesModalOpen(false)}
-                  className="p-2 hover:bg-zinc-100 dark:hover:bg-white/[0.05] rounded-xl transition-colors"
+                  className="btn-ghost p-2"
                 >
                   <X className="w-6 h-6 text-zinc-400" />
                 </button>
@@ -1237,15 +1242,23 @@ export default function SuperAdmin() {
               <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 {/* Create Promo Code */}
                 <form onSubmit={handleCreatePromo} className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white">Generate New Code</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white">Generate New Code</h3>
+                    <button 
+                      type="button"
+                      onClick={() => setNewPromoCode({ ...newPromoCode, code: Math.random().toString(36).substring(2, 10).toUpperCase() })}
+                      className="text-[10px] font-black text-brand uppercase tracking-widest hover:underline"
+                    >
+                      Randomize
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Code</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Code (Optional)</label>
                       <Input 
                         placeholder="e.g. PREMIUM30" 
                         value={newPromoCode.code}
                         onChange={(e) => setNewPromoCode({ ...newPromoCode, code: e.target.value.toUpperCase() })}
-                        required
                       />
                     </div>
                     <div className="space-y-2">
@@ -1259,11 +1272,21 @@ export default function SuperAdmin() {
                         required
                       />
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Max Usages</label>
+                      <Input 
+                        type="number"
+                        min="1"
+                        value={newPromoCode.max_usages}
+                        onChange={(e) => setNewPromoCode({ ...newPromoCode, max_usages: e.target.value })}
+                        placeholder="Unlimited"
+                      />
+                    </div>
                   </div>
                   <button 
                     type="submit"
                     disabled={isCreatingPromo}
-                    className="w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 disabled:opacity-50"
+                    className="btn-primary w-full py-4"
                   >
                     {isCreatingPromo ? 'Generating...' : 'Generate Code'}
                   </button>
@@ -1271,24 +1294,104 @@ export default function SuperAdmin() {
 
                 {/* Promo Codes List */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white">Active Codes</h3>
-                  <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white">Active Codes</h3>
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{promoCodes.length} Total</span>
+                  </div>
+                  <div className="space-y-3">
                     {promoCodes.map((promo) => (
-                      <div key={promo.id} className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                        <div>
-                          <p className="text-lg font-black text-brand tracking-tight">{promo.code}</p>
-                          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{promo.duration_months} Months Premium</p>
+                      <div key={promo.id} className="space-y-2">
+                        <div className="flex items-center justify-between p-5 bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 hover:border-brand/30 transition-all group">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <p className="text-xl font-bold text-brand tracking-tight">{promo.code}</p>
+                              <span className={cn(
+                                "px-2 py-0.5 rounded-full label-text",
+                                promo.is_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                              )}>
+                                {promo.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 mt-1">
+                              <p className="label-text">{promo.duration_months} Months Premium</p>
+                              <button 
+                                onClick={() => setExpandedPromoId(expandedPromoId === promo.id ? null : promo.id)}
+                                className="flex items-center gap-1 label-text hover:text-brand transition-colors"
+                              >
+                                <Users className="w-3 h-3" />
+                                {promo.usage_count} / {promo.max_usages || '∞'} Used
+                                {promo.usages?.length > 0 && (
+                                  <span className="ml-1 text-brand underline decoration-brand/30 underline-offset-2">
+                                    {expandedPromoId === promo.id ? 'Hide Users' : 'View Users'}
+                                  </span>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => {
+                                const text = promo.code;
+                                navigator.clipboard.writeText(text);
+                                toast.success('Code copied to clipboard');
+                              }}
+                              className="p-3 text-zinc-400 hover:text-brand hover:bg-brand/5 rounded-xl transition-all"
+                              title="Copy Code"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeletePromo(promo.id)}
+                              className="p-3 text-zinc-400 hover:text-red-500 hover:bg-red-500/5 rounded-xl transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                        <button 
-                          onClick={() => handleDeletePromo(promo.id)}
-                          className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+
+                        {/* Usage Details */}
+                        <AnimatePresence>
+                          {expandedPromoId === promo.id && promo.usages?.length > 0 && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mx-4 p-4 bg-zinc-50 dark:bg-zinc-800/30 rounded-b-[1.5rem] border-x border-b border-zinc-100 dark:border-zinc-800 space-y-3">
+                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-2">Users who used this code:</p>
+                                <div className="space-y-2">
+                                  {promo.usages.map((usage: any, idx: number) => (
+                                    <div key={idx} className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-[10px] font-black text-zinc-400">
+                                          {idx + 1}
+                                        </div>
+                                        <div>
+                                          <p className="text-xs font-black text-zinc-900 dark:text-white">{usage.username}</p>
+                                          <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-tight">{usage.email}</p>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-[9px] font-black text-brand uppercase tracking-widest">{usage.account_name}</p>
+                                        <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest">
+                                          {new Date(usage.used_at).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     ))}
                     {promoCodes.length === 0 && (
-                      <p className="text-center py-8 text-zinc-500 italic text-sm">No promo codes generated yet.</p>
+                      <div className="text-center py-12 bg-zinc-50 dark:bg-zinc-800/30 rounded-[2rem] border border-dashed border-zinc-200 dark:border-zinc-800">
+                        <Trophy className="w-8 h-8 text-zinc-300 mx-auto mb-3" />
+                        <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest">No promo codes generated yet.</p>
+                      </div>
                     )}
                   </div>
                 </div>

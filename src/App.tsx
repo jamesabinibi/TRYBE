@@ -167,25 +167,25 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               />
             ) : (
               <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-medium text-sm shadow-lg"
                 style={{ backgroundColor: brandColor }}
               >
                 {settings?.business_name?.charAt(0) || 'S'}
               </div>
             )}
             <span className={cn(
-              "font-display font-bold text-lg tracking-tight",
+              "font-display font-medium text-lg tracking-tight",
               isDarkMode ? "text-white" : "text-zinc-900"
             )}>
               {settings?.business_name || 'StockFlow'}
             </span>
           </div>
-          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+          <button onClick={onClose} className="lg:hidden p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
         
-        <nav id="sidebar-nav" className="flex-1 px-3 py-2 space-y-1">
+        <nav id="sidebar-nav" className="flex-1 px-4 py-2 space-y-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const navId = `nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`;
@@ -198,14 +198,14 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                   if (window.innerWidth < 1024) onClose();
                 }}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group relative",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative",
                   isActive 
                     ? isDarkMode ? "text-white" : "text-zinc-900"
                     : "hover:bg-zinc-100 dark:hover:bg-white/[0.03] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
                 )}
               >
-                <item.icon className={cn("w-4.5 h-4.5 transition-colors", isActive ? "text-brand" : "text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300")} />
-                <span className="text-[13px] font-medium tracking-tight">{item.label}</span>
+                <item.icon className={cn("w-4.5 h-4.5 transition-colors", isActive ? "text-brand" : "text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300")} />
+                <span className="text-sm font-medium tracking-tight">{item.label}</span>
                 {isActive && (
                   <motion.div 
                     layoutId="active-nav-glow"
@@ -221,30 +221,30 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
         <div className="p-4 mt-auto">
           <div className={cn(
-            "rounded-2xl p-3 border",
+            "rounded-2xl p-4 border",
             isDarkMode ? "bg-white/[0.02] border-white/[0.04]" : "bg-zinc-50 border-zinc-100"
           )}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold text-xs">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-medium text-sm">
                 {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={cn("text-xs font-semibold truncate", isDarkMode ? "text-white" : "text-zinc-900")}>{user?.name}</p>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">{user?.role}</p>
+                <p className={cn("text-sm font-medium truncate", isDarkMode ? "text-white" : "text-zinc-900")}>{user?.name}</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium">{user?.role}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button 
                 onClick={toggleDarkMode}
-                className="flex-1 flex items-center justify-center p-2 rounded-lg bg-zinc-100 dark:bg-white/[0.05] text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                className="flex-1 flex items-center justify-center p-2.5 rounded-xl bg-zinc-100 dark:bg-white/[0.05] text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
               >
-                {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
               <button 
                 onClick={logout}
-                className="flex-1 flex items-center justify-center p-2 rounded-lg bg-zinc-100 dark:bg-white/[0.05] text-zinc-500 hover:text-red-500 transition-colors"
+                className="flex-1 flex items-center justify-center p-2.5 rounded-xl bg-zinc-100 dark:bg-white/[0.05] text-zinc-500 hover:text-red-500 transition-colors"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -303,7 +303,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             
             <Link 
               to={location.pathname.startsWith('/products') ? "/products?action=add" : "/sales"}
-              className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-xl text-[13px] font-semibold transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-brand/20"
+              className="btn-primary"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">
@@ -314,13 +314,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {user?.role === 'admin' || user?.role === 'super_admin' ? (
               <Link 
                 to="/settings"
-                className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05] hover:bg-zinc-300 dark:hover:bg-white/[0.1] transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05] hover:bg-zinc-300 dark:hover:bg-white/[0.1] transition-colors cursor-pointer"
                 title="Settings"
               >
                 {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
               </Link>
             ) : (
-              <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05]">
+              <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05]">
                 {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
               </div>
             )}

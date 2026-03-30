@@ -166,9 +166,9 @@ export default function Customers() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete Customer</h3>
+          <h3 className="label-text text-zinc-900">Delete Customer</h3>
         </div>
-        <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this customer? This action cannot be undone.</p>
+        <p className="body-text">Are you sure you want to delete this customer? This action cannot be undone.</p>
         <div className="flex gap-3">
           <button 
             onClick={async () => {
@@ -186,11 +186,11 @@ export default function Customers() {
                 toast.error('Network error');
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="btn-destructive flex-1"
           >
             Delete
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="btn-secondary flex-1">
             Cancel
           </button>
         </div>
@@ -292,11 +292,11 @@ export default function Customers() {
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
             <Users className="w-24 h-24" />
           </div>
-          <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.2em] mb-4">Total Customers</p>
-          <h3 className="text-4xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">
+          <p className="label-text mb-4">Total Customers</p>
+          <h3 className="h1">
             {customers.length}
           </h3>
-          <div className="mt-4 flex items-center gap-2 text-emerald-500 text-[10px] font-bold uppercase tracking-widest">
+          <div className="mt-4 flex items-center gap-2 text-emerald-500 label-text">
             <TrendingUp className="w-3.5 h-3.5" />
             Active Growth
           </div>
@@ -351,7 +351,7 @@ export default function Customers() {
                   <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                     <Calendar className="w-4 h-4" />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Since {new Date(customer.created_at).toLocaleDateString()}</span>
+                  <span className="label-text">Since {new Date(customer.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
 
@@ -359,7 +359,7 @@ export default function Customers() {
                 <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
                   <button 
                     onClick={() => fetchHistory(customer)}
-                    className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-950 hover:text-white dark:hover:bg-white dark:hover:text-zinc-950 transition-all"
+                    className="btn-secondary flex-1"
                   >
                     History
                   </button>
@@ -396,7 +396,7 @@ export default function Customers() {
                 <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl flex items-center justify-center text-zinc-300">
                   <Users className="w-8 h-8" />
                 </div>
-                <p className="text-zinc-400 font-medium italic">No customers found</p>
+                <p className="text-zinc-400 font-medium">No customers found</p>
               </div>
             </div>
           )}
@@ -444,7 +444,7 @@ export default function Customers() {
 
               <form onSubmit={isAddModalOpen ? handleAddCustomer : handleEditCustomer} className="p-8 space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Full Name</label>
+                  <label className="label-text">Full Name</label>
                     <Input 
                       required
                       type="text" 
@@ -456,7 +456,7 @@ export default function Customers() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Phone Number</label>
+                    <label className="label-text">Phone Number</label>
                     <Input 
                       required
                       type="tel" 
@@ -466,7 +466,7 @@ export default function Customers() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Email (Optional)</label>
+                    <label className="label-text">Email (Optional)</label>
                     <Input 
                       type="email" 
                       value={newCustomer.email}
@@ -477,7 +477,7 @@ export default function Customers() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Address (Optional)</label>
+                  <label className="label-text">Address (Optional)</label>
                   <Textarea 
                     value={newCustomer.address}
                     onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
@@ -493,14 +493,14 @@ export default function Customers() {
                       setIsAddModalOpen(false);
                       setIsEditModalOpen(false);
                     }}
-                    className="flex-1 py-4 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all active:scale-95"
+                    className="btn-secondary flex-1"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
                     disabled={isSaving}
-                    className="flex-1 py-4 bg-brand text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 disabled:opacity-50 active:scale-95"
+                    className="btn-primary flex-1"
                   >
                     {isSaving ? 'Saving...' : (isAddModalOpen ? 'Save Customer' : 'Update Customer')}
                   </button>
@@ -534,8 +534,8 @@ export default function Customers() {
                     <History className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-zinc-950 dark:text-white tracking-tight">Purchase History</h2>
-                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{selectedCustomer?.name}</p>
+                    <h2 className="h2">Purchase History</h2>
+                    <p className="label-text">{selectedCustomer?.name}</p>
                   </div>
                 </div>
                 <button onClick={() => setIsHistoryModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
@@ -558,13 +558,13 @@ export default function Customers() {
                               <Calendar className="w-5 h-5" />
                             </div>
                             <div>
-                              <p className="text-xs font-black text-zinc-950 dark:text-white uppercase tracking-widest">{sale.invoice_number}</p>
-                              <p className="text-[10px] font-bold text-zinc-400">{new Date(sale.created_at).toLocaleString()}</p>
+                              <p className="label-text text-zinc-950 dark:text-white">{sale.invoice_number}</p>
+                              <p className="label-text text-zinc-400">{new Date(sale.created_at).toLocaleString()}</p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-lg font-black text-brand">{formatCurrency(sale.total_amount, currency)}</p>
-                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{sale.payment_method}</p>
+                            <p className="h3 text-brand">{formatCurrency(sale.total_amount, currency)}</p>
+                            <p className="label-text">{sale.payment_method}</p>
                           </div>
                         </div>
                         <div className="space-y-3">

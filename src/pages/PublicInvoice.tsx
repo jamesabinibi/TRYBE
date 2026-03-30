@@ -232,7 +232,7 @@ export default function PublicInvoice() {
               <div className="max-w-xs space-y-6">
                 <div>
                   <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Terms & Conditions</h5>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium italic">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                     {invoice.invoice_terms || settings.invoice_terms || `Thank you for your business. We appreciate your trust in ${settings.business_name || 'us'}.`}
                   </p>
                 </div>

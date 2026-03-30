@@ -188,8 +188,8 @@ export default function Register() {
             <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-3 shadow-lg shadow-brand/20 rotate-3">
               <UserPlus className="w-6 h-6" />
             </div>
-            <h1 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight mb-1">Create Account</h1>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 font-medium tracking-tight">Join Gryndee to manage your business</p>
+            <h1 className="h1 mb-1">Create Account</h1>
+            <p className="body-text text-xs font-medium">Join Gryndee to manage your business</p>
           </div>
 
           {requiresVerification ? (
@@ -203,12 +203,12 @@ export default function Register() {
                   <div className="w-16 h-16 bg-brand/10 text-brand rounded-full flex items-center justify-center mx-auto mb-4">
                     <ShieldCheck className="w-8 h-8" />
                   </div>
-                  <h2 className="text-xl font-black text-zinc-900 dark:text-white">Verification Successful!</h2>
-                  <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+                  <h2 className="h2">Verification Successful!</h2>
+                  <p className="body-text">
                     Your account has been verified.
                   </p>
                   <div className="pt-4">
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest">Redirecting to dashboard...</p>
+                    <p className="label-text">Redirecting to dashboard...</p>
                     <div className="w-full h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
                       <motion.div 
                         initial={{ width: 0 }}
@@ -222,9 +222,9 @@ export default function Register() {
               ) : (
                 <>
                   <div className="text-center mb-6">
-                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Verify your email</h2>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                      We've sent a 6-digit code to <span className="font-bold text-zinc-900 dark:text-white">{email}</span>
+                    <h2 className="h2 mb-2">Verify your email</h2>
+                    <p className="body-text">
+                      We've sent a 6-digit code to <span className="font-medium text-zinc-900 dark:text-white">{email}</span>
                     </p>
                   </div>
 
@@ -235,7 +235,7 @@ export default function Register() {
                   )}
 
                   <div>
-                    <label htmlFor="code" className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">
+                    <label htmlFor="code" className="label-text block mb-2">
                       Verification Code
                     </label>
                     <div className="relative group">
@@ -249,7 +249,7 @@ export default function Register() {
                         required
                         value={verificationCode}
                         onChange={(e) => setVerificationCode(e.target.value)}
-                        className="pl-11 text-center tracking-widest text-lg"
+                        className="pl-11 text-center tracking-widest text-lg font-light"
                         placeholder="000000"
                         maxLength={6}
                       />
@@ -259,7 +259,7 @@ export default function Register() {
                   <button
                     type="submit"
                     disabled={isLoading || verificationCode.length !== 6}
-                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-2xl shadow-lg shadow-brand/20 text-sm font-bold text-white bg-brand hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-[0.98]"
+                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-2xl shadow-lg shadow-brand/20 text-sm font-medium text-white bg-brand hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-[0.98]"
                   >
                     {isLoading ? (
                       <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -276,7 +276,7 @@ export default function Register() {
                       type="button"
                       onClick={handleResendCode}
                       disabled={isLoading}
-                      className="text-sm text-brand font-bold hover:underline disabled:opacity-50"
+                      className="text-sm text-brand font-medium hover:underline disabled:opacity-50"
                     >
                       Didn't receive the code? Resend
                     </button>
@@ -295,12 +295,12 @@ export default function Register() {
                   <div className="w-16 h-16 bg-brand/10 text-brand rounded-full flex items-center justify-center mx-auto mb-4">
                     <ShieldCheck className="w-8 h-8" />
                   </div>
-                  <h2 className="text-xl font-black text-zinc-900 dark:text-white">Registration Successful!</h2>
-                  <p className="text-zinc-500 dark:text-zinc-400 font-medium">
-                    We've sent a confirmation email to <span className="text-zinc-900 dark:text-white font-bold">{email}</span>.
+                  <h2 className="h2">Registration Successful!</h2>
+                  <p className="body-text">
+                    We've sent a confirmation email to <span className="text-zinc-900 dark:text-white font-medium">{email}</span>.
                   </p>
                   <div className="pt-4">
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest">Redirecting to login...</p>
+                    <p className="label-text">Redirecting to login...</p>
                     <div className="w-full h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
                       <motion.div 
                         initial={{ width: 0 }}
@@ -321,7 +321,7 @@ export default function Register() {
                 
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Account Type</label>
+                      <label className="label-text ml-1">Account Type</label>
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
@@ -334,7 +334,7 @@ export default function Register() {
                           )}
                         >
                           <User className="w-6 h-6" />
-                          <span className="text-xs font-black uppercase tracking-widest">Personal</span>
+                          <span className="text-[10px] font-medium uppercase tracking-widest">Personal</span>
                         </button>
                         <button
                           type="button"
@@ -347,7 +347,7 @@ export default function Register() {
                           )}
                         >
                           <ShieldCheck className="w-6 h-6" />
-                          <span className="text-xs font-black uppercase tracking-widest">Business</span>
+                          <span className="text-[10px] font-medium uppercase tracking-widest">Business</span>
                         </button>
                       </div>
                     </div>
@@ -358,12 +358,13 @@ export default function Register() {
                         animate={{ opacity: 1, height: 'auto' }}
                         className="space-y-1.5"
                       >
-                        <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Business Type</label>
+                        <label className="label-text ml-1">Business Type</label>
                         <Input
                           as="select"
                           required
                           value={businessType}
                           onChange={(e) => setBusinessType(e.target.value)}
+                          className="font-light"
                         >
                           <option value="">Select Business Type</option>
                           {businessTypes.map(type => (
@@ -375,7 +376,7 @@ export default function Register() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Full Name</label>
+                        <label className="label-text ml-1">Full Name</label>
                         <div className="relative">
                           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                           <Input 
@@ -384,13 +385,13 @@ export default function Register() {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="Full Name"
-                            className="pl-11"
+                            className="pl-11 font-light"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Email Address</label>
+                        <label className="label-text ml-1">Email Address</label>
                         <div className="relative">
                           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                           <Input 
@@ -399,7 +400,7 @@ export default function Register() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="Email"
-                            className="pl-11"
+                            className="pl-11 font-light"
                           />
                         </div>
                       </div>
@@ -407,7 +408,7 @@ export default function Register() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Username</label>
+                        <label className="label-text ml-1">Username</label>
                         <div className="relative">
                           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                           <Input 
@@ -416,13 +417,13 @@ export default function Register() {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="Username"
-                            className="pl-11"
+                            className="pl-11 font-light"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Password</label>
+                        <label className="label-text ml-1">Password</label>
                         <div className="relative">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                           <Input 
@@ -431,7 +432,7 @@ export default function Register() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
-                            className="pl-11 pr-11"
+                            className="pl-11 pr-11 font-light"
                           />
                           <button
                             type="button"
@@ -446,7 +447,7 @@ export default function Register() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Confirm Password</label>
+                        <label className="label-text ml-1">Confirm Password</label>
                         <div className="relative">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                           <Input 
@@ -455,13 +456,13 @@ export default function Register() {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="••••••••"
-                            className="pl-11 pr-11"
+                            className="pl-11 pr-11 font-light"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Referral Code</label>
+                        <label className="label-text ml-1">Referral Code</label>
                         <div className="relative">
                           <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                           <Input 
@@ -469,7 +470,7 @@ export default function Register() {
                             value={referralCode}
                             onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                             placeholder="Optional"
-                            className="pl-11"
+                            className="pl-11 font-light"
                           />
                         </div>
                       </div>
@@ -487,12 +488,12 @@ export default function Register() {
                         />
                       </div>
                       <div className="text-xs">
-                        <label htmlFor="terms" className="font-medium text-zinc-500 dark:text-zinc-400">
+                        <label htmlFor="terms" className="body-text">
                           I agree to the{' '}
                           <button 
                             type="button" 
                             onClick={() => { setTermsType('terms'); setShowTermsModal(true); }}
-                            className="text-brand hover:underline font-bold"
+                            className="text-brand hover:underline font-medium"
                           >
                             Terms & Conditions
                           </button>
@@ -500,7 +501,7 @@ export default function Register() {
                           <button 
                             type="button" 
                             onClick={() => { setTermsType('privacy'); setShowTermsModal(true); }}
-                            className="text-brand hover:underline font-bold"
+                            className="text-brand hover:underline font-medium"
                           >
                             Privacy Policy
                           </button>
@@ -512,7 +513,7 @@ export default function Register() {
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/20 group"
+                  className="w-full py-3 bg-brand hover:bg-brand-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white rounded-2xl font-medium flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand/20 group"
                 >
                   {isLoading ? "Creating Account..." : (
                     <>
@@ -524,7 +525,7 @@ export default function Register() {
 
                 <div className="text-center">
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
-                    Already have an account? <Link to="/login" className="text-brand font-bold hover:underline">Sign In</Link>
+                    Already have an account? <Link to="/login" className="text-brand font-medium hover:underline">Sign In</Link>
                   </p>
                 </div>
               </>
@@ -552,7 +553,7 @@ export default function Register() {
               className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between shrink-0">
-                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">
+                <h3 className="label-text">
                   {termsType === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
                 </h3>
                 <button onClick={() => setShowTermsModal(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
@@ -562,38 +563,38 @@ export default function Register() {
               <div className="p-8 overflow-y-auto custom-scrollbar prose dark:prose-invert max-w-none">
                 {termsType === 'terms' ? (
                   <div 
-                    className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium"
+                    className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400 font-light"
                     dangerouslySetInnerHTML={{ __html: legalDocs.terms_and_conditions || `
-                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">1. Acceptance of Terms</h4>
+                      <h4 class="label-text">1. Acceptance of Terms</h4>
                       <p>By accessing and using Gryndee, you agree to be bound by these Terms and Conditions. If you do not agree to all of these terms, do not use the service.</p>
                       
-                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">2. Description of Service</h4>
+                      <h4 class="label-text">2. Description of Service</h4>
                       <p>Gryndee provides inventory management, sales tracking, and business analytics tools for small and medium-sized businesses.</p>
                       
-                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">3. User Accounts</h4>
+                      <h4 class="label-text">3. User Accounts</h4>
                       <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.</p>
                       
-                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">4. Subscription and Payments</h4>
+                      <h4 class="label-text">4. Subscription and Payments</h4>
                       <p>Certain features require a paid subscription. All payments are processed securely through our payment partners. Subscriptions renew automatically unless cancelled.</p>
                       
-                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">5. Data Ownership</h4>
+                      <h4 class="label-text">5. Data Ownership</h4>
                       <p>You retain all rights to the data you input into the system. We do not claim ownership of your business data.</p>
                     ` }}
                   />
                 ) : (
                   <div 
-                    className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium"
+                    className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400 font-light"
                     dangerouslySetInnerHTML={{ __html: legalDocs.privacy_policy || `
-                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">1. Information We Collect</h4>
+                      <h4 class="label-text">1. Information We Collect</h4>
                       <p>We collect information you provide directly to us, including your name, email address, and business details when you register for an account.</p>
                       
-                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">2. How We Use Your Information</h4>
+                      <h4 class="label-text">2. How We Use Your Information</h4>
                       <p>We use your information to provide, maintain, and improve our services, process transactions, and communicate with you.</p>
                       
-                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">3. Data Security</h4>
+                      <h4 class="label-text">3. Data Security</h4>
                       <p>We implement reasonable security measures to protect your personal information from unauthorized access, disclosure, or destruction.</p>
                       
-                      <h4 class="text-zinc-900 dark:text-white font-black uppercase tracking-widest text-[10px]">4. Third-Party Services</h4>
+                      <h4 class="label-text">4. Third-Party Services</h4>
                       <p>We may use third-party service providers to help us operate our business and the service, such as payment processors and cloud hosting providers.</p>
                     ` }}
                   />
@@ -602,7 +603,7 @@ export default function Register() {
               <div className="p-8 border-t border-zinc-100 dark:border-zinc-800 shrink-0">
                 <button 
                   onClick={() => setShowTermsModal(false)}
-                  className="w-full py-3 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
+                  className="w-full py-3 bg-brand text-white rounded-2xl label-text hover:bg-brand-hover transition-all shadow-lg shadow-brand/20"
                 >
                   Close & Continue
                 </button>

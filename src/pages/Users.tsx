@@ -292,7 +292,7 @@ export default function Users() {
             ))
           ) : (
             <div className="p-12 text-center">
-              <p className="text-sm text-zinc-500 italic">No team members found.</p>
+              <p className="text-sm text-zinc-500">No team members found.</p>
             </div>
           )}
         </div>

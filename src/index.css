@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -23,29 +23,39 @@
     touch-action: manipulation;
   }
   body {
-    @apply font-sans text-zinc-950 dark:text-zinc-100 antialiased;
+    @apply font-sans text-zinc-900 dark:text-zinc-100 antialiased bg-zinc-50 dark:bg-[#050505];
   }
   
-  h1 { @apply font-display text-[24px] sm:text-[32px] font-bold tracking-tight; }
-  h2 { @apply font-display text-[16px] sm:text-[18px] font-medium tracking-tight; }
-  .card-number { @apply font-display text-[20px] sm:text-[28px] font-semibold tracking-tight; }
-  .body-text { @apply text-[12px] sm:text-[14px] leading-relaxed; }
-  .label-text { @apply text-[10px] sm:text-[12px] font-medium; }
+  h1, .h1 { @apply font-display text-2xl sm:text-3xl font-medium tracking-tight text-zinc-900 dark:text-white not-italic; }
+  h2, .h2 { @apply font-display text-lg sm:text-xl font-medium tracking-tight text-zinc-900 dark:text-white not-italic; }
+  h3, .h3 { @apply font-display text-base font-medium tracking-tight text-zinc-900 dark:text-white not-italic; }
+  
+  .card-number { @apply font-display text-xl sm:text-2xl font-medium tracking-tight; }
+  .body-text { @apply text-sm leading-relaxed font-light text-zinc-600 dark:text-zinc-400; }
+  .label-text { @apply text-[10px] font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-400; }
+  .btn-destructive { @apply px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium transition-all hover:bg-red-700 active:scale-95 flex items-center justify-center gap-2 shadow-sm; }
 }
 
-.bg-brand { background: var(--brand-color, #10b981); }
-.text-brand { color: var(--brand-color, #10b981); }
-.border-brand { border-color: var(--brand-color, #10b981); }
-.ring-brand { --tw-ring-color: var(--brand-color, #10b981); }
-.selection-brand { --tw-selection-bg: var(--brand-color-light, #10b98133); }
+/* Standard UI Components */
+.btn-primary {
+  @apply px-4 py-2 bg-brand text-white rounded-xl text-sm font-medium transition-all hover:opacity-90 active:scale-95 shadow-sm flex items-center justify-center gap-2;
+}
+
+.btn-secondary {
+  @apply px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl text-sm font-medium transition-all hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 flex items-center justify-center gap-2;
+}
+
+.btn-ghost {
+  @apply px-4 py-2 text-zinc-600 dark:text-zinc-400 rounded-xl text-sm font-medium transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 flex items-center justify-center gap-2;
+}
 
 .glass-card {
-  @apply bg-white dark:bg-[#121821] border border-zinc-200/50 dark:border-white/[0.04] rounded-[16px] shadow-sm;
+  @apply bg-white dark:bg-[#0A0A0B] border border-zinc-200/50 dark:border-white/[0.04] rounded-2xl shadow-sm overflow-hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.glass-card:hover {
-  @apply shadow-md lg:-translate-y-1;
+.glass-card-hover {
+  @apply hover:shadow-md hover:border-zinc-300/50 dark:hover:border-white/[0.08];
 }
 
 .custom-scrollbar::-webkit-scrollbar {

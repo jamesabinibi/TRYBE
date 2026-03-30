@@ -227,7 +227,7 @@ export const generatePDF = async (data: any, settings: any) => {
     
     doc.setFontSize(9);
     doc.setTextColor(150, 150, 150);
-    doc.setFont('helvetica', 'italic');
+    doc.setFont('helvetica', 'normal');
     
     const termsText = invoiceTerms || settings?.invoice_terms || 'Thank you for your business!';
     const splitTerms = doc.splitTextToSize(termsText, pageWidth - 40);

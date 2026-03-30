@@ -41,7 +41,7 @@ export const Input = ({ className, as: Component = 'input', children, options, .
   return (
     <Component
       className={cn(
-        "w-full px-0 py-2 bg-transparent border-b border-zinc-300 dark:border-zinc-700 text-sm text-zinc-950 dark:text-white outline-none focus:border-brand transition-all",
+        "w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-600",
         className
       )}
       {...(props as any)}

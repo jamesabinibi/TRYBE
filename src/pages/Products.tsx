@@ -524,7 +524,7 @@ export default function Products() {
               <Package className="w-24 h-24" />
             </div>
             <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Stock value @ cost price</p>
-            <h3 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
+          <h3 className="h1">
               <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
               {totalCostValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h3>
@@ -538,7 +538,7 @@ export default function Products() {
             <TrendingUp className="w-24 h-24" />
           </div>
           <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Stock value @ selling price</p>
-          <h3 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
+          <h3 className="h1">
             <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
             {totalSellingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
@@ -603,7 +603,7 @@ export default function Products() {
               {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_products)) && (
                 <button 
                   onClick={() => activeSubTab === 'products' ? openAddModal() : openAddServiceModal()}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl font-bold hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 active:scale-95 whitespace-nowrap"
+                  className="btn-primary flex items-center gap-2"
                 >
                   <Plus className="w-5 h-5" />
                   Add {activeSubTab === 'products' ? 'Product' : 'Service'}
@@ -623,23 +623,23 @@ export default function Products() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
-                    <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
+                <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
+                    <th className="px-8 py-6 label-text">
                       {activeSubTab === 'products' ? 'Product Details' : 'Service Details'}
                     </th>
-                    <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Category</th>
+                    <th className="px-8 py-6 label-text">Category</th>
                     {activeSubTab === 'products' && (
-                      <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Stock Status</th>
+                      <th className="px-8 py-6 label-text">Stock Status</th>
                     )}
-                    <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Unit Price</th>
+                    <th className="px-8 py-6 label-text">Unit Price</th>
                     {activeSubTab === 'products' && (user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data)) && (
-                      <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Inventory Value</th>
+                      <th className="px-8 py-6 label-text">Inventory Value</th>
                     )}
                     {activeSubTab === 'services' && (
-                      <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Duration</th>
+                      <th className="px-8 py-6 label-text">Duration</th>
                     )}
                     {user?.role !== 'staff' && (
-                      <th className="px-8 py-6 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] text-right">Actions</th>
+                      <th className="px-8 py-6 label-text text-right">Actions</th>
                     )}
                   </tr>
                 </thead>
@@ -664,15 +664,15 @@ export default function Products() {
                             )}
                           </div>
                           <div>
-                            <p className="text-sm font-bold tracking-tight mb-0.5">{item.name}</p>
+                            <p className="body-text font-bold mb-0.5">{item.name}</p>
                             {activeSubTab === 'products' && (
-                              <p className="text-[10px] font-bold opacity-50 uppercase tracking-widest">{item.supplier_name || 'No Supplier'}</p>
+                              <p className="label-text">{item.supplier_name || 'No Supplier'}</p>
                             )}
                           </div>
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 group-hover:bg-white/10 dark:group-hover:bg-black/10 transition-colors">
+                        <span className="label-text px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 group-hover:bg-white/10 dark:group-hover:bg-black/10 transition-colors">
                           {activeSubTab === 'products' ? item.category_name : item.category}
                         </span>
                       </td>
@@ -687,12 +687,12 @@ export default function Products() {
                               )}>
                                 <NumberDisplay value={item.total_stock || 0} size="sm" />
                               </p>
-                              <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest">Units</span>
+                              <span className="label-text">Units</span>
                             </div>
                             {item.variants && item.variants.length > 1 && (
                               <div className="flex flex-wrap gap-1">
                                 {item.variants.map((v: any, i: number) => v.quantity > 0 && (
-                                  <span key={i} className="text-[8px] font-bold px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-md uppercase tracking-tighter border border-zinc-200 dark:border-zinc-700 group-hover:border-white/10 dark:group-hover:border-black/10 transition-colors">
+                                  <span key={i} className="label-text px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-md tracking-tighter border border-zinc-200 dark:border-zinc-700 group-hover:border-white/10 dark:group-hover:bg-black/10 transition-colors">
                                     {v.size}: {v.quantity}
                                   </span>
                                 ))}
