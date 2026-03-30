@@ -31,6 +31,8 @@ import { Category } from '../types';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
 import { useAuth, useSettings } from '../App';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 
 export default function Settings() {
   const { user, fetchWithAuth } = useAuth();
@@ -1230,20 +1232,18 @@ NOTIFY pgrst, 'reload schema';
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-zinc-100 dark:border-zinc-800">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Name</label>
-              <input 
+              <Input 
                 type="text" 
                 value={settings.business_name} 
                 onChange={(e) => setSettings({...settings, business_name: e.target.value})}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
               />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Slogan / Tagline</label>
-              <input 
+              <Input 
                 type="text" 
                 value={settings.slogan} 
                 onChange={(e) => setSettings({...settings, slogan: e.target.value})}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
               />
             </div>
           </div>
@@ -1251,20 +1251,18 @@ NOTIFY pgrst, 'reload schema';
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Address</label>
-              <input 
+              <Input 
                 type="email" 
                 value={settings.email} 
                 onChange={(e) => setSettings({...settings, email: e.target.value})}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
               />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Phone Number</label>
-              <input 
+              <Input 
                 type="text" 
                 value={settings.phone_number} 
                 onChange={(e) => setSettings({...settings, phone_number: e.target.value})}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
               />
             </div>
           </div>
@@ -1272,55 +1270,51 @@ NOTIFY pgrst, 'reload schema';
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Type</label>
-              <select 
+              <Input 
+                as="select"
                 value={settings.business_type} 
                 onChange={(e) => setSettings({...settings, business_type: e.target.value})}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
               >
                 <option value="">Select Business Type</option>
                 {businessTypes.map(type => (
                   <option key={type} value={type}>{type}</option>
                 ))}
-              </select>
+              </Input>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Website</label>
-              <input 
+              <Input 
                 type="text" 
                 value={settings.website} 
                 onChange={(e) => setSettings({...settings, website: e.target.value})}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
               />
             </div>
           </div>
 
           <div className="space-y-2 pt-6">
             <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Business Address</label>
-            <textarea 
+            <Textarea 
               value={settings.address} 
               onChange={(e) => setSettings({...settings, address: e.target.value})}
               rows={3}
-              className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 resize-none" 
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Website URL</label>
-              <input 
+              <Input 
                 type="text" 
                 value={settings.website} 
                 onChange={(e) => setSettings({...settings, website: e.target.value})}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
               />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Currency Symbol</label>
-              <input 
+              <Input 
                 type="text" 
                 value={settings.currency} 
                 onChange={(e) => setSettings({...settings, currency: e.target.value})}
-                className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
               />
             </div>
           </div>
@@ -1330,10 +1324,10 @@ NOTIFY pgrst, 'reload schema';
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Bank Name</label>
-                <select 
+                <Input 
+                  as="select"
                   value={settings.bank_name || ''} 
                   onChange={(e) => setSettings({...settings, bank_name: e.target.value})}
-                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 appearance-none" 
                 >
                   <option value="">Select a Bank</option>
                   <option value="Access Bank">Access Bank</option>
@@ -1364,26 +1358,24 @@ NOTIFY pgrst, 'reload schema';
                   <option value="Unity Bank">Unity Bank</option>
                   <option value="Wema Bank">Wema Bank</option>
                   <option value="Zenith Bank">Zenith Bank</option>
-                </select>
+                </Input>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Account Name</label>
-                <input 
+                <Input 
                   type="text" 
                   value={settings.account_name || ''} 
                   onChange={(e) => setSettings({...settings, account_name: e.target.value})}
                   placeholder="e.g. John Doe"
-                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Account Number</label>
-                <input 
+                <Input 
                   type="text" 
                   value={settings.account_number || ''} 
                   onChange={(e) => setSettings({...settings, account_number: e.target.value})}
                   placeholder="e.g. 0123456789"
-                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
                 />
               </div>
             </div>
@@ -1406,11 +1398,11 @@ NOTIFY pgrst, 'reload schema';
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Global Low Stock Alert</label>
               <div className="flex items-center gap-3">
-                <input 
+                <Input 
                   type="number" 
                   value={settings.low_stock_threshold} 
                   onChange={(e) => setSettings({...settings, low_stock_threshold: e.target.value})}
-                  className="w-24 px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
+                  className="w-24" 
                 />
                 <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">units</span>
                 <button 
@@ -1478,12 +1470,12 @@ NOTIFY pgrst, 'reload schema';
             </div>
             <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
               <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
-                <input 
+                <Input 
                   type="text" 
                   placeholder="New category name..." 
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value)}
-                  className="flex-1 px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all dark:text-white"
+                  className="flex-1"
                 />
                 <button 
                   type="submit"
@@ -1497,12 +1489,12 @@ NOTIFY pgrst, 'reload schema';
                   <div key={c.id} className="group relative">
                     {editingCategory === c.id ? (
                       <div className="flex items-center gap-1 bg-white dark:bg-zinc-800 border border-brand rounded-xl px-2 py-1 shadow-sm">
-                        <input 
+                        <Input 
                           autoFocus
                           type="text" 
                           value={editCategoryName}
                           onChange={(e) => setEditCategoryName(e.target.value)}
-                          className="w-24 text-xs font-bold outline-none bg-transparent text-zinc-900 dark:text-white"
+                          className="w-24"
                         />
                         <button onClick={() => handleUpdateCategory(c.id)} className="p-1 text-brand hover:bg-brand/5 rounded-lg">
                           <Check className="w-3 h-3" />
@@ -1568,21 +1560,19 @@ NOTIFY pgrst, 'reload schema';
               
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Subject Line</label>
-                <input 
+                <Input 
                   type="text" 
                   value={settings.welcome_email_subject} 
                   onChange={(e) => setSettings({...settings, welcome_email_subject: e.target.value})}
-                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900" 
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Body</label>
-                <textarea 
+                <Textarea 
                   value={settings.welcome_email_body} 
                   onChange={(e) => setSettings({...settings, welcome_email_body: e.target.value})}
                   rows={6}
-                  className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white text-zinc-900 resize-none" 
                 />
                 <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-medium italic">
                   Use <code className="text-brand">{'{name}'}</code>, <code className="text-brand">{'{username}'}</code>, and <code className="text-brand">{'{verification_code}'}</code> as placeholders.
@@ -1735,19 +1725,17 @@ NOTIFY pgrst, 'reload schema';
             <div className="flex-1 w-full">
               {isEditingProfile ? (
                 <form onSubmit={handleUpdateProfile} className="space-y-3">
-                  <input
+                  <Input
                     type="text"
                     value={profileForm.name}
                     onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                    className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20 dark:text-white"
                     placeholder="Full Name"
                     required
                   />
-                  <input
+                  <Input
                     type="email"
                     value={profileForm.email}
                     onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                    className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20 dark:text-white"
                     placeholder="Email Address"
                     required
                   />
@@ -1798,28 +1786,25 @@ NOTIFY pgrst, 'reload schema';
                   <h4 className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-widest">Change Password</h4>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <input
+                  <Input
                     type="password"
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                    className="px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20 dark:text-white"
                     placeholder="Current Password"
                     required
                   />
                   <div className="hidden sm:block" />
-                  <input
+                  <Input
                     type="password"
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    className="px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20 dark:text-white"
                     placeholder="New Password"
                     required
                   />
-                  <input
+                  <Input
                     type="password"
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    className="px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/20 dark:text-white"
                     placeholder="Confirm New Password"
                     required
                   />
@@ -2039,45 +2024,42 @@ NOTIFY pgrst, 'reload schema';
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Full Name</label>
-                  <input 
+                  <Input 
                     type="text" 
                     required
                     value={userFormData.name}
                     onChange={(e) => setUserFormData({...userFormData, name: e.target.value})}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Username</label>
-                  <input 
+                  <Input 
                     type="text" 
                     required
                     value={userFormData.username}
                     onChange={(e) => setUserFormData({...userFormData, username: e.target.value})}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Email Address</label>
-                  <input 
+                  <Input 
                     type="email" 
                     required
                     value={userFormData.email}
                     onChange={(e) => setUserFormData({...userFormData, email: e.target.value})}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Role</label>
-                  <select 
+                  <Input 
+                    as="select"
                     value={userFormData.role}
                     onChange={(e) => setUserFormData({...userFormData, role: e.target.value as any})}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white"
                   >
                     <option value="staff">Staff</option>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
-                  </select>
+                  </Input>
                 </div>
 
                 {userFormData.role !== 'admin' && (
@@ -2115,12 +2097,11 @@ NOTIFY pgrst, 'reload schema';
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                     {editingUser ? 'New Password (leave blank to keep current)' : 'Password'}
                   </label>
-                  <input 
+                  <Input 
                     type="password" 
                     required={!editingUser}
                     value={userFormData.password}
                     onChange={(e) => setUserFormData({...userFormData, password: e.target.value})}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all dark:text-white"
                   />
                 </div>
               </div>

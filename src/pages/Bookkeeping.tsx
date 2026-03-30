@@ -20,6 +20,8 @@ import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
 import { TotalDisplay } from '../components/TotalDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 
 interface Record {
   id: number;
@@ -249,25 +251,24 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
         <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-            <input 
+            <Input 
               type="text" 
               placeholder="Search records..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-transparent rounded-2xl text-sm font-medium text-zinc-900 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand/20 transition-all outline-none"
             />
           </div>
           <div className="flex items-center gap-3">
-            <select 
+            <Input 
+              as="select"
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-brand/10 transition-all"
             >
               <option value="All">All Types</option>
               {types.map(t => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
-            </select>
+            </Input>
           </div>
         </div>
 
@@ -387,59 +388,57 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Type</label>
-                    <select 
+                    <Input 
+                      as="select"
                       value={newRecord.type}
                       onChange={(e) => setNewRecord({...newRecord, type: e.target.value as any})}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none transition-all"
                     >
                       {types.map(t => (
                         <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
-                    </select>
+                    </Input>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Nature</label>
-                    <select 
+                    <Input 
+                      as="select"
                       value={newRecord.nature}
                       onChange={(e) => setNewRecord({...newRecord, nature: e.target.value as any})}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none transition-all"
                     >
                       {natures.map(n => (
                         <option key={n.value} value={n.value}>{n.label}</option>
                       ))}
-                    </select>
+                    </Input>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Date</label>
-                    <input 
+                    <Input 
                       type="date" 
                       value={newRecord.date}
                       onChange={(e) => setNewRecord({...newRecord, date: e.target.value})}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none transition-all"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Amount ({currency})</label>
-                    <input 
+                    <Input 
                       type="number" 
                       placeholder="0.00"
                       value={newRecord.amount}
                       onChange={(e) => setNewRecord({...newRecord, amount: e.target.value})}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none transition-all"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Description</label>
-                  <textarea 
+                  <Textarea 
                     placeholder="What is this inflow for?"
                     value={newRecord.description}
                     onChange={(e) => setNewRecord({...newRecord, description: e.target.value})}
-                    className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-transparent focus:border-brand rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none transition-all resize-none h-32"
+                    rows={4}
                   />
                 </div>
 

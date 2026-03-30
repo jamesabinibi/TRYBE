@@ -18,6 +18,8 @@ import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
 import { formatCurrency, cn } from '../lib/utils';
 import { toast } from 'sonner';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 
 interface Service {
   id: number;
@@ -172,12 +174,11 @@ const Services = () => {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-            <input 
+            <Input 
               type="text" 
               placeholder="Search services..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
             />
           </div>
         </div>
@@ -271,50 +272,46 @@ const Services = () => {
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="p-8 space-y-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Service Name</label>
-                    <input 
+                    <Input 
                       name="name"
                       required
                       defaultValue={editingService?.name}
                       placeholder="e.g. Haircut, Consultation"
-                      className="w-full px-6 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Price (₦)</label>
-                    <input 
+                    <Input 
                       name="price"
                       type="number"
                       step="0.01"
                       required
                       defaultValue={editingService?.price}
                       placeholder="0.00"
-                      className="w-full px-6 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Category</label>
-                    <input 
+                    <Input 
                       name="category"
                       required
                       defaultValue={editingService?.category}
                       placeholder="e.g. Beauty, Consulting"
-                      className="w-full px-6 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Description</label>
-                    <textarea 
+                    <Textarea 
                       name="description"
                       rows={3}
                       defaultValue={editingService?.description}
                       placeholder="Brief description of the service..."
-                      className="w-full px-6 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all resize-none"
                     />
                   </div>
 

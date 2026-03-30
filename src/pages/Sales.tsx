@@ -34,10 +34,12 @@ import {
   Link as LinkIcon
 } from 'lucide-react';
 import { Product, Variant, Sale, Customer, Service } from '../types';
-import { CurrencyDisplay } from '../components/CurrencyDisplay';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 import { NumberDisplay } from '../components/NumberDisplay';
 import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
 import { TotalDisplay } from '../components/TotalDisplay';
+import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
@@ -822,19 +824,19 @@ export default function Sales() {
                     <div className="flex-1 space-y-2">
                       <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Select Service</label>
                       <div className="relative">
-                        <select
+                        <Input
+                          as="select"
                           value={selectedService?.id || ''}
                           onChange={(e) => {
                             const svc = services.find(s => s.id === parseInt(e.target.value));
                             setSelectedService(svc || null);
                           }}
-                          className="w-full pl-4 pr-10 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-base font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none cursor-pointer"
                         >
                           <option value="">Choose a service...</option>
                           {services.map(s => (
                             <option key={s.id} value={s.id}>{s.name} - {formatCurrency(s.price)}</option>
                           ))}
-                        </select>
+                        </Input>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
                       </div>
                     </div>
@@ -852,7 +854,8 @@ export default function Sales() {
                       </div>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                        <select 
+                        <Input 
+                          as="select"
                           value={selectedCustomer?.id || ''}
                           onChange={(e) => {
                             const customer = customers.find(c => c.id === parseInt(e.target.value));
@@ -862,13 +865,13 @@ export default function Sales() {
                               setCustomerPhone('');
                             }
                           }}
-                          className="w-full pl-12 pr-4 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none cursor-pointer"
+                          className="pl-12"
                         >
                           <option value="" className="dark:bg-zinc-900">Walk-in Customer</option>
                           {customers.map(c => (
                             <option key={c.id} value={c.id} className="dark:bg-zinc-900">{c.name} ({c.phone})</option>
                           ))}
-                        </select>
+                        </Input>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
                       </div>
                     </div>
@@ -877,22 +880,20 @@ export default function Sales() {
                       <div className="grid grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2">
                         <div className="space-y-2">
                           <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">New Customer Name</label>
-                          <input 
+                          <Input 
                             type="text"
                             value={customerName}
                             onChange={(e) => setCustomerName(e.target.value)}
                             placeholder="John Doe"
-                            className="w-full px-5 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                           />
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Phone Number</label>
-                          <input 
+                          <Input 
                             type="tel"
                             value={customerPhone}
                             onChange={(e) => setCustomerPhone(e.target.value)}
                             placeholder="080..."
-                            className="w-full px-5 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                           />
                         </div>
                       </div>
@@ -1192,13 +1193,13 @@ export default function Sales() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Discount (%)</label>
-                        <input 
+                        <Input 
                           type="number"
                           min="0"
                           max="100"
                           value={discountPercent}
                           onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                          className="w-24 px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-right outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                          className="w-24 text-right"
                         />
                       </div>
                       {discountAmount > 0 && (
@@ -1807,10 +1808,10 @@ export default function Sales() {
                         {isSavingTerms ? 'Saving...' : 'Save Terms'}
                       </button>
                     </div>
-                    <textarea
+                    <Textarea
                       value={customInvoiceTerms}
                       onChange={(e) => setCustomInvoiceTerms(e.target.value)}
-                      className="w-full h-24 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-medium text-zinc-900 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all resize-none"
+                      className="h-24"
                       placeholder="Add custom terms and conditions that will appear at the bottom of this invoice..."
                     />
                   </div>

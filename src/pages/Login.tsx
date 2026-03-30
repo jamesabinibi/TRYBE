@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../App';
 import { Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
+import { Input } from '../components/Input';
 
 export default function Login() {
   const { login } = useAuth();
@@ -73,13 +74,13 @@ export default function Login() {
                 <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Username or Email</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                  <input 
+                  <Input 
                     type="text" 
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Username or Email"
-                    className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                    className="pl-11"
                   />
                 </div>
               </div>
@@ -88,13 +89,13 @@ export default function Login() {
                 <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                  <input 
+                  <Input 
                     type={showPassword ? "text" : "password"} 
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-11 pr-11 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                    className="pl-11 pr-11"
                   />
                   <button
                     type="button"

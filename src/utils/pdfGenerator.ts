@@ -110,8 +110,8 @@ export const generatePDF = async (data: any, settings: any) => {
     const tableData = items.map((item: any) => [
       item.name,
       item.quantity.toString(),
-      new Intl.NumberFormat('en-NG', { style: 'currency', currency: settings?.currency || 'NGN', minimumFractionDigits: 0 }).format(parseFloat(item.price) || 0),
-      new Intl.NumberFormat('en-NG', { style: 'currency', currency: settings?.currency || 'NGN', minimumFractionDigits: 0 }).format(parseFloat(item.total) || 0)
+      (settings?.currency || 'NGN') + ' ' + (parseFloat(item.price) || 0).toLocaleString('en-NG', { minimumFractionDigits: 0 }),
+      (settings?.currency || 'NGN') + ' ' + (parseFloat(item.total) || 0).toLocaleString('en-NG', { minimumFractionDigits: 0 })
     ]);
 
     autoTable(doc, {

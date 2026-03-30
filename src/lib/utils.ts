@@ -16,15 +16,5 @@ export function formatCurrency(amount: number | string | undefined | null, curre
   }
   
   const currency = currencyCode || 'NGN';
-  try {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: currency,
-    }).format(value);
-  } catch (e) {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-    }).format(value);
-  }
+  return `${currency} ${value.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`;
 }

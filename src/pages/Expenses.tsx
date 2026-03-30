@@ -16,8 +16,10 @@ import {
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
-import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
 import { TotalDisplay } from '../components/TotalDisplay';
+import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
@@ -330,33 +332,32 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
         <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-            <input 
+            <Input 
               type="text" 
               placeholder="Search expenses..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-transparent rounded-2xl text-sm font-medium text-zinc-950 dark:text-white focus:bg-white dark:focus:bg-zinc-800 transition-all outline-none border border-zinc-200 dark:border-zinc-700 focus:border-brand"
             />
           </div>
           <div className="flex items-center gap-2">
-            <select
+            <Input
+              as="select"
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:border-brand outline-none transition-all dark:text-white"
             >
               <option value="All" className="dark:bg-zinc-900">All Categories</option>
               {categories.map(cat => <option key={cat} value={cat} className="dark:bg-zinc-900">{cat}</option>)}
-            </select>
-            <select
+            </Input>
+            <Input
+              as="select"
               value={filterDuration}
               onChange={(e) => setFilterDuration(e.target.value)}
-              className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:border-brand outline-none transition-all dark:text-white"
             >
               <option value="All Time" className="dark:bg-zinc-900">All Time</option>
               <option value="Today" className="dark:bg-zinc-900">Today</option>
               <option value="This Week" className="dark:bg-zinc-900">This Week</option>
               <option value="This Month" className="dark:bg-zinc-900">This Month</option>
-            </select>
+            </Input>
           </div>
         </div>
 
@@ -476,46 +477,43 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</label>
-                    <select 
+                    <Input 
+                      as="select"
                       value={newExpense.category}
                       onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     >
                       {categories.map(c => <option key={c} value={c} className="dark:bg-zinc-900">{c}</option>)}
-                    </select>
+                    </Input>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Amount (₦)</label>
-                    <input 
+                    <Input 
                       required
                       type="number" 
                       value={newExpense.amount}
                       onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
                       placeholder="0.00"
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</label>
-                  <input 
+                  <Input 
                     type="date" 
                     value={newExpense.date}
                     onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Description</label>
-                  <textarea 
+                  <Textarea 
                     required
                     value={newExpense.description}
                     onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
                     placeholder="What was this expense for?"
                     rows={3}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all resize-none"
                   />
                 </div>
 

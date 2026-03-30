@@ -20,7 +20,9 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency } from '../lib/utils';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
@@ -313,12 +315,11 @@ export default function Customers() {
         <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-            <input 
+            <Input 
               type="text" 
               placeholder="Search by name, phone, or email..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-transparent rounded-2xl text-sm font-medium text-zinc-950 dark:text-white focus:bg-white dark:focus:bg-zinc-800 transition-all outline-none border border-zinc-200 dark:border-zinc-700 focus:border-brand"
             />
           </div>
         </div>
@@ -456,48 +457,44 @@ export default function Customers() {
               <form onSubmit={isAddModalOpen ? handleAddCustomer : handleEditCustomer} className="p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Full Name</label>
-                    <input 
+                    <Input 
                       required
                       type="text" 
                       value={newCustomer.name}
                       onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
                       placeholder="John Doe"
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                     />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Phone Number</label>
-                    <input 
+                    <Input 
                       required
                       type="tel" 
                       value={newCustomer.phone}
                       onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
                       placeholder="+234..."
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Email (Optional)</label>
-                    <input 
+                    <Input 
                       type="email" 
                       value={newCustomer.email}
                       onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
                       placeholder="john@example.com"
-                      className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Address (Optional)</label>
-                  <textarea 
+                  <Textarea 
                     value={newCustomer.address}
                     onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
                     placeholder="123 Main St, Lagos"
                     rows={2}
-                    className="w-full px-5 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                   />
                 </div>
 

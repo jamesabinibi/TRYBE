@@ -6,7 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { cn, NUMBER_STYLE } from '../lib/utils';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
-import { NumberDisplay } from '../components/NumberDisplay';
+import { Input } from '../components/Input';
 
 export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: boolean }) {
   const { fetchWithAuth } = useAuth();
@@ -144,11 +144,10 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
               <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Current Cash on Hand</p>
               {isEditingCash ? (
                 <div className="flex items-center gap-2">
-                  <input 
+                  <Input 
                     type="number"
                     value={tempCash}
                     onChange={(e) => setTempCash(e.target.value)}
-                    className="w-32 px-3 py-1 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-bold outline-none"
                     autoFocus
                   />
                   <button onClick={handleSaveCash} className="text-brand font-black text-[10px] uppercase tracking-widest">Save</button>

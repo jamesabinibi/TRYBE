@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Loader2, User as UserIcon, ShieldCheck } from '
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../App';
 import { cn } from '../lib/utils';
+import { Input } from './Input';
 
 interface Message {
   id: string;
@@ -183,12 +184,12 @@ export default function ChatSupport() {
             {/* Input */}
             <form onSubmit={handleSendMessage} className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50">
               <div className="relative">
-                <input 
+                <Input 
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type your message..."
-                  className="w-full pl-4 pr-12 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-medium outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                  className="pr-12"
                 />
                 <button 
                   type="submit"

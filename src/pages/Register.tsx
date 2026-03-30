@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { useAuth } from '../App';
 import { cn } from '../lib/utils';
+import { Input } from '../components/Input';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -241,14 +242,14 @@ export default function Register() {
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <ShieldCheck className="h-5 w-5 text-zinc-400 group-focus-within:text-brand transition-colors" />
                       </div>
-                      <input
+                      <Input
                         id="code"
                         name="code"
                         type="text"
                         required
                         value={verificationCode}
                         onChange={(e) => setVerificationCode(e.target.value)}
-                        className="block w-full pl-11 pr-4 py-3 border-2 border-zinc-200 dark:border-zinc-800 rounded-2xl bg-zinc-50 dark:bg-zinc-900/50 text-zinc-900 dark:text-white placeholder-zinc-400 focus:ring-0 focus:border-brand transition-all duration-300 font-medium text-center tracking-widest text-lg"
+                        className="pl-11 text-center tracking-widest text-lg"
                         placeholder="000000"
                         maxLength={6}
                       />
@@ -358,17 +359,17 @@ export default function Register() {
                         className="space-y-1.5"
                       >
                         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Business Type</label>
-                        <select
+                        <Input
+                          as="select"
                           required
                           value={businessType}
                           onChange={(e) => setBusinessType(e.target.value)}
-                          className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all appearance-none"
                         >
                           <option value="">Select Business Type</option>
                           {businessTypes.map(type => (
                             <option key={type} value={type}>{type}</option>
                           ))}
-                        </select>
+                        </Input>
                       </motion.div>
                     )}
 
@@ -377,13 +378,13 @@ export default function Register() {
                         <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Full Name</label>
                         <div className="relative">
                           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                          <input 
+                          <Input 
                             type="text" 
                             required
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="Full Name"
-                            className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                            className="pl-11"
                           />
                         </div>
                       </div>
@@ -392,13 +393,13 @@ export default function Register() {
                         <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Email Address</label>
                         <div className="relative">
                           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                          <input 
+                          <Input 
                             type="email" 
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="Email"
-                            className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                            className="pl-11"
                           />
                         </div>
                       </div>
@@ -409,13 +410,13 @@ export default function Register() {
                         <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Username</label>
                         <div className="relative">
                           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                          <input 
+                          <Input 
                             type="text" 
                             required
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="Username"
-                            className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                            className="pl-11"
                           />
                         </div>
                       </div>
@@ -424,13 +425,13 @@ export default function Register() {
                         <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Password</label>
                         <div className="relative">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                          <input 
+                          <Input 
                             type={showPassword ? "text" : "password"} 
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
-                            className="w-full pl-11 pr-11 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                            className="pl-11 pr-11"
                           />
                           <button
                             type="button"
@@ -448,13 +449,13 @@ export default function Register() {
                         <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Confirm Password</label>
                         <div className="relative">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                          <input 
+                          <Input 
                             type={showPassword ? "text" : "password"} 
                             required
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="••••••••"
-                            className="w-full pl-11 pr-11 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                            className="pl-11 pr-11"
                           />
                         </div>
                       </div>
@@ -463,12 +464,12 @@ export default function Register() {
                         <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Referral Code</label>
                         <div className="relative">
                           <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                          <input 
+                          <Input 
                             type="text" 
                             value={referralCode}
                             onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                             placeholder="Optional"
-                            className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all"
+                            className="pl-11"
                           />
                         </div>
                       </div>

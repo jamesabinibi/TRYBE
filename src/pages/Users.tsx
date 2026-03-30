@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
 import { Users as UsersIcon, Plus, Shield, User as UserIcon, MoreVertical, Trash2, Edit2, X, Check, AlertCircle } from 'lucide-react';
+import { Input } from '../components/Input';
 import { User } from '../types';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
@@ -326,36 +327,33 @@ export default function Users() {
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-600 dark:text-zinc-400 uppercase tracking-widest">Full Name</label>
-                  <input 
+                  <Input 
                     required
                     type="text" 
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     placeholder="John Doe"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Username</label>
-                  <input 
+                  <Input 
                     required
                     type="text" 
                     value={formData.username}
                     onChange={(e) => setFormData({...formData, username: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     placeholder="johndoe"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Address</label>
-                  <input 
+                  <Input 
                     required
                     type="email" 
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                     placeholder="john@example.com"
                   />
                 </div>
@@ -363,12 +361,11 @@ export default function Users() {
                 {!editingUser && (
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Password</label>
-                    <input 
+                    <Input 
                       required
                       type="password" 
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
                       placeholder="••••••••"
                     />
                   </div>
@@ -376,15 +373,15 @@ export default function Users() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Role</label>
-                  <select 
+                  <Input 
+                    as="select"
                     value={formData.role}
                     onChange={(e) => setFormData({...formData, role: e.target.value as any})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all appearance-none"
                   >
                     <option value="staff" className="dark:bg-zinc-900">Staff</option>
                     <option value="manager" className="dark:bg-zinc-900">Manager</option>
                     <option value="admin" className="dark:bg-zinc-900">Admin</option>
-                  </select>
+                  </Input>
                 </div>
 
                 <div className="pt-4">

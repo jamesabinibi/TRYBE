@@ -24,6 +24,8 @@ import {
   Link as LinkIcon,
   Building2
 } from 'lucide-react';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 import { useAuth, useSettings } from '../App';
 import { cn, formatCurrency, NUMBER_STYLE } from '../lib/utils';
 import { toast } from 'sonner';
@@ -390,6 +392,26 @@ const Invoices: React.FC = () => {
     setInvoiceItems(updated);
   };
 
+  const updateInvoiceTerms = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetchWithAuth('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoice_terms: invoiceTerms })
+      });
+      if (res.ok) {
+        toast.success('Invoice terms updated');
+      } else {
+        toast.error('Failed to update invoice terms');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const calculateSubtotal = () => {
     return invoiceItems.reduce((sum, item) => sum + item.total, 0);
   };
@@ -694,11 +716,11 @@ const Invoices: React.FC = () => {
               <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Invoice Number</label>
               <div className="relative">
                 <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                <input
+                <Input
                   type="text"
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all font-sans"
+                  className="pl-12"
                 />
               </div>
             </div>
@@ -706,11 +728,11 @@ const Invoices: React.FC = () => {
               <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Invoice Date</label>
               <div className="relative">
                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                <input
+                <Input
                   type="date"
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                  className="pl-12"
                 />
               </div>
             </div>
@@ -741,12 +763,12 @@ const Invoices: React.FC = () => {
                       <div className="p-4 border-b border-zinc-100 dark:border-zinc-800">
                         <div className="relative">
                           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                          <input
+                          <Input
                             type="text"
                             placeholder="Search inventory..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 text-zinc-900 dark:text-white outline-none"
+                            className="pl-12"
                             autoFocus
                           />
                         </div>
@@ -813,22 +835,22 @@ const Invoices: React.FC = () => {
                         </td>
                         <td className="py-2 sm:py-6 flex justify-between items-center sm:table-cell">
                           <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Qty</span>
-                          <input
+                          <Input
                             type="number"
                             value={item.quantity}
                             onChange={(e) => updateQuantity(index, parseInt(e.target.value))}
-                            className={`w-20 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all ${NUMBER_STYLE}`}
+                            className={cn("w-20 text-center", NUMBER_STYLE)}
                           />
                         </td>
                         <td className="py-2 sm:py-6 flex justify-between items-center sm:table-cell">
                           <span className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Price</span>
                           <div className="relative">
-                            <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-xs ${NUMBER_STYLE}`}>{settings?.currency || '₦'}</span>
-                            <input
+                            <span className={`absolute left-0 top-1/2 -translate-y-1/2 text-zinc-400 text-xs ${NUMBER_STYLE}`}>{settings?.currency || '₦'}</span>
+                            <Input
                               type="number"
                               value={item.price}
                               onChange={(e) => updatePrice(index, parseFloat(e.target.value))}
-                              className={`w-32 pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all ${NUMBER_STYLE}`}
+                              className={cn("w-32 pl-6", NUMBER_STYLE)}
                             />
                           </div>
                         </td>
@@ -865,9 +887,69 @@ const Invoices: React.FC = () => {
               </table>
             </div>
           </div>
+
+          {/* Invoice Summary */}
+          <div className="glass-card p-8 space-y-6">
+            <h2 className="text-xl font-bold font-display tracking-tight text-zinc-950 dark:text-white">Invoice Summary</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
+                <span className="text-[10px] font-bold uppercase tracking-widest">Subtotal</span>
+                <span className="font-bold text-zinc-950 dark:text-white">{settings?.currency || '₦'}{calculateSubtotal().toLocaleString()}</span>
+              </div>
+              
+              <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
+                <span className="text-[10px] font-bold uppercase tracking-widest">Discount (%)</span>
+                <Input
+                  type="number"
+                  value={discount}
+                  onChange={(e) => setDiscount(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  className="w-20 text-right"
+                />
+              </div>
+
+              {settings?.vat_enabled && (
+                <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
+                  <span className="text-[10px] font-bold uppercase tracking-widest">VAT (7.5%)</span>
+                  <span className="font-bold text-zinc-950 dark:text-white">
+                    <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
+                    {calculateVAT().toLocaleString()}
+                  </span>
+                </div>
+              )}
+              
+              <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Total Amount</p>
+                  <p className={cn(NUMBER_STYLE, "text-4xl tracking-tighter text-zinc-950 dark:text-white")}>
+                    <span className="opacity-30 mr-2 text-xl">{settings?.currency || '₦'}</span>
+                    {calculateTotal().toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Invoice Terms */}
+              <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 block">Invoice Terms</span>
+                <Textarea
+                  value={invoiceTerms}
+                  onChange={(e) => setInvoiceTerms(e.target.value)}
+                  placeholder="e.g. Payment is due within 30 days."
+                  rows={3}
+                />
+                <button
+                  onClick={updateInvoiceTerms}
+                  disabled={isSaving}
+                  className="mt-3 flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Update Terms
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Right Column: Recipient & Totals */}
+        {/* Right Column: Recipient & Payment Details */}
         <div className="space-y-8">
           {/* Recipient Info */}
           <div className="glass-card p-8">
@@ -882,12 +964,12 @@ const Invoices: React.FC = () => {
                 <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Client Name</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <input
+                  <Input
                     type="text"
                     placeholder="John Doe"
                     value={recipient.name}
                     onChange={(e) => setRecipient({ ...recipient, name: e.target.value })}
-                    className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                    className="pl-12"
                   />
                 </div>
               </div>
@@ -895,12 +977,12 @@ const Invoices: React.FC = () => {
                 <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <input
+                  <Input
                     type="email"
                     placeholder="john@example.com"
                     value={recipient.email}
                     onChange={(e) => setRecipient({ ...recipient, email: e.target.value })}
-                    className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                    className="pl-12"
                   />
                 </div>
               </div>
@@ -908,12 +990,12 @@ const Invoices: React.FC = () => {
                 <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Phone Number</label>
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <input
+                  <Input
                     type="tel"
                     placeholder="+234..."
                     value={recipient.phone}
                     onChange={(e) => setRecipient({ ...recipient, phone: e.target.value })}
-                    className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all"
+                    className="pl-12"
                   />
                 </div>
               </div>
@@ -921,73 +1003,29 @@ const Invoices: React.FC = () => {
                 <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Address</label>
                 <div className="relative">
                   <MapPin className="absolute left-4 top-4 w-4 h-4 text-zinc-400" />
-                  <textarea
+                  <Textarea
                     placeholder="123 Street, City, Country"
                     value={recipient.address}
                     onChange={(e) => setRecipient({ ...recipient, address: e.target.value })}
                     rows={3}
-                    className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all font-medium resize-none"
+                    className="pl-12"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Totals */}
-          <div className="bg-zinc-900 dark:bg-black rounded-[2.5rem] p-8 space-y-6 shadow-2xl border border-white/5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 blur-[80px] rounded-full -mr-16 -mt-16 group-hover:bg-brand/20 transition-all duration-700" />
-            
-            <div className="space-y-4 relative z-10">
-              <h2 className="text-xl font-bold mb-4 font-display tracking-tight text-white">Invoice Summary</h2>
-              <div className="flex items-center justify-between text-zinc-400">
-                <span className="text-[10px] font-bold uppercase tracking-widest">Subtotal</span>
-                <span className="font-bold text-white">{settings?.currency || '₦'}{calculateSubtotal().toLocaleString()}</span>
-              </div>
-              
-              <div className="flex items-center justify-between text-zinc-400">
-                <span className="text-[10px] font-bold uppercase tracking-widest">Discount (%)</span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={discount}
-                    onChange={(e) => setDiscount(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
-                    className={`w-20 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white text-right focus:ring-4 focus:ring-brand/20 outline-none transition-all ${NUMBER_STYLE}`}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-white/10">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 block">Invoice Terms</span>
-                <textarea
-                  value={invoiceTerms}
-                  onChange={(e) => setInvoiceTerms(e.target.value)}
-                  placeholder="e.g. Payment is due within 30 days."
-                  rows={3}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-medium text-white placeholder:text-zinc-500 focus:ring-4 focus:ring-brand/20 outline-none transition-all resize-none"
-                />
-              </div>
-
-              {settings?.vat_enabled && (
-                <div className="flex items-center justify-between text-zinc-400">
-                  <span className="text-[10px] font-bold uppercase tracking-widest">VAT (7.5%)</span>
-                  <span className="font-bold text-white">
-                    <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
-                    {calculateVAT().toLocaleString()}
-                  </span>
-                </div>
-              )}
-              
-              <div className="pt-8 border-t border-white/5 flex justify-between items-end">
-                <div>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Total Amount</p>
-                  <p className={cn(NUMBER_STYLE, "text-5xl tracking-tighter text-white")}>
-                    <span className="opacity-30 mr-2 text-xl">{settings?.currency || '₦'}</span>
-                    {calculateTotal().toLocaleString()}
-                  </p>
-                </div>
+          {/* Payment Details moved to its own section */}
+          {(settings?.bank_name || settings?.account_name || settings?.account_number) && (
+            <div className="glass-card p-8">
+              <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Payment Details</h5>
+              <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
+                {settings?.bank_name && <p><span className="font-bold text-zinc-900 dark:text-zinc-300">Bank:</span> {settings.bank_name}</p>}
+                {settings?.account_name && <p><span className="font-bold text-zinc-900 dark:text-zinc-300">Account Name:</span> {settings.account_name}</p>}
+                {settings?.account_number && <p><span className="font-bold text-zinc-900 dark:text-zinc-300">Account Number:</span> {settings.account_number}</p>}
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     )}

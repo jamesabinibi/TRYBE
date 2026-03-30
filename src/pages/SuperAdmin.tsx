@@ -30,6 +30,8 @@ import {
   AlertCircle,
   Cloud
 } from 'lucide-react';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 import { useAuth } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -911,12 +913,12 @@ export default function SuperAdmin() {
           <h2 className="text-xl font-black text-zinc-900 dark:text-white">Users</h2>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-            <input 
+            <Input 
               type="text"
               placeholder="Search users..."
               value={userSearchQuery}
               onChange={(e) => setUserSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white outline-none focus:border-emerald-500 transition-all"
+              className="pl-11"
             />
           </div>
         </div>
@@ -1177,10 +1179,10 @@ export default function SuperAdmin() {
                     <FileText className="w-4 h-4 text-emerald-500" />
                     Terms & Conditions
                   </label>
-                  <textarea
+                  <Textarea
                     value={legalDocs.terms_and_conditions}
                     onChange={(e) => setLegalDocs({ ...legalDocs, terms_and_conditions: e.target.value })}
-                    className="w-full h-64 p-6 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-3xl text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono text-sm resize-none"
+                    className="h-64 font-mono resize-none"
                     placeholder="Enter Terms & Conditions content (HTML or Plain Text)..."
                   />
                 </div>
@@ -1190,10 +1192,10 @@ export default function SuperAdmin() {
                     <Shield className="w-4 h-4 text-emerald-500" />
                     Privacy Policy
                   </label>
-                  <textarea
+                  <Textarea
                     value={legalDocs.privacy_policy}
                     onChange={(e) => setLegalDocs({ ...legalDocs, privacy_policy: e.target.value })}
-                    className="w-full h-64 p-6 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-3xl text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono text-sm resize-none"
+                    className="h-64 font-mono resize-none"
                     placeholder="Enter Privacy Policy content (HTML or Plain Text)..."
                   />
                 </div>
@@ -1373,11 +1375,11 @@ export default function SuperAdmin() {
               <form onSubmit={handleBroadcast} className="p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Message Content</label>
-                  <textarea 
+                  <Textarea 
                     required
                     value={broadcastMessage}
                     onChange={(e) => setBroadcastMessage(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all min-h-[120px] resize-none"
+                    className="min-h-[120px] resize-none"
                     placeholder="Enter message to send to all users..."
                   />
                 </div>
@@ -1717,12 +1719,11 @@ export default function SuperAdmin() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">New Password</label>
-                  <input 
+                  <Input 
                     required
                     type="text" 
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
                     placeholder="Enter new password"
                   />
                 </div>
@@ -1767,12 +1768,11 @@ export default function SuperAdmin() {
               <form onSubmit={handleUpdateSmtpConfig} className="p-8 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">SMTP Host</label>
-                  <input 
+                  <Input 
                     required
                     type="text"
                     value={smtpConfig.host}
                     onChange={(e) => setSmtpConfig({...smtpConfig, host: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     placeholder="e.g. email-smtp.us-east-1.amazonaws.com"
                   />
                 </div>
@@ -1780,12 +1780,11 @@ export default function SuperAdmin() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Port</label>
-                    <input 
+                    <Input 
                       required
                       type="number"
                       value={smtpConfig.port}
                       onChange={(e) => setSmtpConfig({...smtpConfig, port: parseInt(e.target.value)})}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1810,36 +1809,33 @@ export default function SuperAdmin() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">SMTP User</label>
-                  <input 
+                  <Input 
                     required
                     type="text"
                     value={smtpConfig.user}
                     onChange={(e) => setSmtpConfig({...smtpConfig, user: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     placeholder="SMTP Username"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">SMTP Password</label>
-                  <input 
+                  <Input 
                     required
                     type="password"
                     value={smtpConfig.pass}
                     onChange={(e) => setSmtpConfig({...smtpConfig, pass: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     placeholder="SMTP Password"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">From Address</label>
-                  <input 
+                  <Input 
                     required
                     type="text"
                     value={smtpConfig.from}
                     onChange={(e) => setSmtpConfig({...smtpConfig, from: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     placeholder='"Gryndee" <noreply@gryndee.com>'
                   />
                 </div>
@@ -1898,12 +1894,12 @@ export default function SuperAdmin() {
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Gemini API Key</label>
                   <div className="relative">
                     <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                    <input 
+                    <Input 
                       required
                       type="password"
                       value={geminiKey}
                       onChange={(e) => setGeminiKey(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="pl-12"
                       placeholder="AIzaSy..."
                     />
                   </div>
@@ -1972,12 +1968,11 @@ export default function SuperAdmin() {
                   <form onSubmit={handleTestSmtp} className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Test SMTP Connection</p>
                     <div className="flex gap-2">
-                      <input 
+                      <Input 
                         type="email"
                         value={testEmail}
                         onChange={(e) => setTestEmail(e.target.value)}
                         placeholder="Recipient email"
-                        className="flex-1 px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
                       />
                       <button 
                         type="submit"
@@ -2069,91 +2064,82 @@ export default function SuperAdmin() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Supabase URL</label>
-                    <input 
+                    <Input 
                       type="text"
                       value={secrets.SUPABASE_URL === 'Configured' ? '' : secrets.SUPABASE_URL}
                       onChange={(e) => setSecrets(prev => ({ ...prev, SUPABASE_URL: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder={secrets.SUPABASE_URL === 'Configured' ? 'Already Configured' : "https://your-project.supabase.co"}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Supabase Anon Key</label>
-                    <input 
+                    <Input 
                       type="password"
                       value={secrets.SUPABASE_ANON_KEY === 'Configured' ? '' : secrets.SUPABASE_ANON_KEY}
                       onChange={(e) => setSecrets(prev => ({ ...prev, SUPABASE_ANON_KEY: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder={secrets.SUPABASE_ANON_KEY === 'Configured' ? 'Already Configured' : "Your public anon key"}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Access Key ID</label>
-                    <input 
+                    <Input 
                       type="text"
                       value={secrets.AWS_ACCESS_KEY_ID === 'Configured' ? '' : secrets.AWS_ACCESS_KEY_ID}
                       onChange={(e) => setSecrets(prev => ({ ...prev, AWS_ACCESS_KEY_ID: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder={secrets.AWS_ACCESS_KEY_ID === 'Configured' ? 'Already Configured' : "AKIA..."}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Secret Access Key</label>
-                    <input 
+                    <Input 
                       type="password"
                       value={secrets.AWS_SECRET_ACCESS_KEY === 'Configured' ? '' : secrets.AWS_SECRET_ACCESS_KEY}
                       onChange={(e) => setSecrets(prev => ({ ...prev, AWS_SECRET_ACCESS_KEY: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder={secrets.AWS_SECRET_ACCESS_KEY === 'Configured' ? 'Already Configured' : "Your secret key"}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">S3 Bucket Name</label>
-                    <input 
+                    <Input 
                       type="text"
                       value={secrets.AWS_S3_BUCKET_NAME === 'Configured' ? '' : secrets.AWS_S3_BUCKET_NAME}
                       onChange={(e) => setSecrets(prev => ({ ...prev, AWS_S3_BUCKET_NAME: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder={secrets.AWS_S3_BUCKET_NAME === 'Configured' ? 'Already Configured' : "my-app-images"}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Region</label>
-                    <input 
+                    <Input 
                       type="text"
                       value={secrets.AWS_REGION}
                       onChange={(e) => setSecrets(prev => ({ ...prev, AWS_REGION: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder="us-east-1"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Paystack Public Key</label>
-                    <input 
+                    <Input 
                       type="text"
                       value={secrets.PAYSTACK_PUBLIC_KEY === 'Configured' ? '' : secrets.PAYSTACK_PUBLIC_KEY}
                       onChange={(e) => setSecrets(prev => ({ ...prev, PAYSTACK_PUBLIC_KEY: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder={secrets.PAYSTACK_PUBLIC_KEY === 'Configured' ? 'Already Configured' : "pk_test_..."}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Paystack Secret Key</label>
-                    <input 
+                    <Input 
                       type="password"
                       value={secrets.PAYSTACK_SECRET_KEY === 'Configured' ? '' : secrets.PAYSTACK_SECRET_KEY}
                       onChange={(e) => setSecrets(prev => ({ ...prev, PAYSTACK_SECRET_KEY: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder={secrets.PAYSTACK_SECRET_KEY === 'Configured' ? 'Already Configured' : "sk_test_..."}
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Gemini API Key</label>
-                    <input 
+                    <Input 
                       type="password"
                       value={secrets.GEMINI_API_KEY === 'Configured' ? '' : secrets.GEMINI_API_KEY}
                       onChange={(e) => setSecrets(prev => ({ ...prev, GEMINI_API_KEY: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder={secrets.GEMINI_API_KEY === 'Configured' ? 'Already Configured' : "Your Gemini API Key"}
                     />
                   </div>

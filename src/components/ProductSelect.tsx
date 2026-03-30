@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, ChevronDown, Package } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Product } from '../types';
+import { Input } from './Input';
 
 const getOptimizedImageUrl = (url: string, width: number = 100) => {
   if (!url) return '';
@@ -96,11 +97,11 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
           <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-              <input
+              <Input
                 type="text"
                 autoFocus
                 placeholder="Search products..."
-                className="w-full pl-9 pr-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand/20"
+                className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onClick={(e) => e.stopPropagation()}

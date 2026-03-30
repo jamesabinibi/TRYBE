@@ -21,8 +21,10 @@ import {
 } from 'lucide-react';
 import { Product, Category, Service } from '../types';
 import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
-import { CurrencyDisplay } from '../components/CurrencyDisplay';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 import { NumberDisplay } from '../components/NumberDisplay';
+import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
@@ -573,16 +575,16 @@ export default function Products() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1 max-w-3xl">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                <input 
+                <Input 
                   type="text" 
                   placeholder="Search products..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none"
                 />
               </div>
               <div className="relative group">
-                <select 
+                <Input 
+                  as="select"
                   value={searchParams.get('category') || 'all'}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -591,13 +593,12 @@ export default function Products() {
                     else newParams.set('category', val);
                     setSearchParams(newParams);
                   }}
-                  className="w-full sm:w-auto pl-4 pr-10 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer min-w-[180px]"
                 >
                   <option value="all" className="dark:bg-zinc-900">All Categories</option>
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id} className="dark:bg-zinc-900">{cat.name}</option>
                   ))}
-                </select>
+                </Input>
                 <Filter className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none group-hover:text-brand transition-colors" />
               </div>
               {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_products)) && (
@@ -875,45 +876,42 @@ export default function Products() {
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Service Name</label>
-                    <input 
+                    <Input 
                       required
                       value={newService.name}
                       onChange={(e) => setNewService({...newService, name: e.target.value})}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Price ({currency === 'NGN' ? '₦' : currency})</label>
-                      <input 
+                      <Input 
                         required
                         type="number"
                         value={newService.price}
                         onChange={(e) => setNewService({...newService, price: e.target.value})}
-                        className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
-                    <select
+                    <Input
+                      as="select"
                       value={newService.category}
                       onChange={(e) => setNewService({...newService, category: e.target.value})}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none text-zinc-900 dark:text-white"
                     >
                       <option value="">Select a category</option>
                       {categories.map(cat => (
                         <option key={cat.id} value={cat.name}>{cat.name}</option>
                       ))}
-                    </select>
+                    </Input>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Description</label>
-                    <textarea 
+                    <Textarea 
                       value={newService.description}
                       onChange={(e) => setNewService({...newService, description: e.target.value})}
                       rows={3}
-                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 rounded-2xl text-sm focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none resize-none text-zinc-900 dark:text-white"
                     />
                   </div>
                   <button 
@@ -1027,28 +1025,27 @@ export default function Products() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
                             <div className="space-y-2">
                               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Product name</label>
-                              <input 
+                              <Input 
                                 required
                                 type="text" 
                                 value={newProduct.name}
                                 onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
                                 placeholder="e.g. Vintage Denim Jacket"
                               />
                             </div>
                             <div className="space-y-2">
                               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
                               <div className="relative group">
-                                <select 
+                                <Input 
+                                  as="select"
                                   value={newProduct.category_id}
                                   onChange={(e) => setNewProduct({...newProduct, category_id: e.target.value})}
-                                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer"
                                 >
                                   <option value="" className="dark:bg-zinc-900">Select Category</option>
                                   {categories.map(cat => (
                                     <option key={cat.id} value={cat.id} className="dark:bg-zinc-900">{cat.name}</option>
                                   ))}
-                                </select>
+                                </Input>
                                 <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-brand transition-colors" />
                               </div>
                             </div>
@@ -1058,24 +1055,23 @@ export default function Products() {
                             <div className="space-y-2">
                               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Select unit</label>
                               <div className="relative group">
-                                <select 
+                                <Input 
+                                  as="select"
                                   value={newProduct.unit}
                                   onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
-                                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all outline-none appearance-none cursor-pointer"
                                 >
                                   <option value="Pieces" className="dark:bg-zinc-900">Pieces</option>
                                   <option value="Kilograms" className="dark:bg-zinc-900">Kilograms</option>
-                                </select>
+                                </Input>
                                 <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-brand transition-colors" />
                               </div>
                             </div>
                             <div className="space-y-2">
                               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Supplier Name</label>
-                              <input 
+                              <Input 
                                 type="text" 
                                 value={newProduct.supplier_name}
                                 onChange={(e) => setNewProduct({...newProduct, supplier_name: e.target.value})}
-                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
                                 placeholder="e.g. Global Supplies Ltd"
                               />
                             </div>
@@ -1085,22 +1081,20 @@ export default function Products() {
                             <div className="space-y-2">
                               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">How many pieces in 1 unit?</label>
                               <div className="relative">
-                                <input 
+                                <Input 
                                   type="number" 
                                   value={newProduct.pieces_per_unit}
                                   onChange={(e) => setNewProduct({...newProduct, pieces_per_unit: e.target.value})}
-                                  className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all"
                                 />
                                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-[10px] text-zinc-400 font-bold cursor-help">i</div>
                               </div>
                             </div>
                             <div className="space-y-2">
                               <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Description</label>
-                              <input 
+                              <Input 
                                 type="text" 
                                 value={newProduct.description}
                                 onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-                                className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
                                 placeholder="Short description of the product"
                               />
                             </div>
@@ -1159,7 +1153,7 @@ export default function Products() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Initial Stock Quantity</label>
-                            <input 
+                            <Input 
                               type="number" 
                               value={newProduct.variants[0]?.quantity || '0'}
                               onChange={(e) => {
@@ -1171,13 +1165,12 @@ export default function Products() {
                                 }
                                 setNewProduct({...newProduct, variants: updated});
                               }}
-                              className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all"
                               placeholder="0"
                             />
                           </div>
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Low Stock Alert at</label>
-                            <input 
+                            <Input 
                               type="number" 
                               value={newProduct.variants[0]?.low_stock_threshold || '5'}
                               onChange={(e) => {
@@ -1189,7 +1182,6 @@ export default function Products() {
                                 }
                                 setNewProduct({...newProduct, variants: updated});
                               }}
-                              className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all"
                               placeholder="5"
                             />
                           </div>
@@ -1222,7 +1214,7 @@ export default function Products() {
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                               {newProduct.variants.map((v, i) => (
                                 <div key={i} className="bg-zinc-50 dark:bg-zinc-800/50 p-3 sm:p-4 rounded-2xl border border-zinc-100 dark:border-zinc-700 space-y-3 relative group">
-                                  <input 
+                                  <Input 
                                     placeholder="Size"
                                     value={v.size}
                                     onChange={(e) => {
@@ -1230,9 +1222,8 @@ export default function Products() {
                                       updated[i].size = e.target.value;
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
-                                    className="w-full bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-white outline-none focus:border-brand"
                                   />
-                                  <input 
+                                  <Input 
                                     type="number"
                                     placeholder="Qty"
                                     value={v.quantity}
@@ -1241,7 +1232,6 @@ export default function Products() {
                                       updated[i].quantity = e.target.value;
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
-                                    className="bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none focus:border-brand"
                                   />
                                   <button 
                                     type="button"
@@ -1265,24 +1255,22 @@ export default function Products() {
                     <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Cost Price (₦)</label>
-                        <input 
+                        <Input 
                           required
                           type="number" 
                           step="0.01"
                           value={newProduct.cost_price}
                           onChange={(e) => setNewProduct({...newProduct, cost_price: e.target.value})}
-                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all"
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Selling Price (₦)</label>
-                        <input 
+                        <Input 
                           required
                           type="number" 
                           step="0.01"
                           value={newProduct.selling_price}
                           onChange={(e) => setNewProduct({...newProduct, selling_price: e.target.value})}
-                          className="w-full px-0 py-2 bg-transparent border-b border-zinc-200 dark:border-zinc-700 text-base sm:text-lg font-bold text-zinc-900 dark:text-white focus:border-brand outline-none transition-all"
                         />
                       </div>
                     </div>
