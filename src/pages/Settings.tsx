@@ -872,8 +872,9 @@ NOTIFY pgrst, 'reload schema';
     }
 
     setIsGeneratingLogo(true);
+    const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey });
       
       const prompt = `Create a professional, modern, and minimalist business logo for a company named "${settings.business_name}". 
       The primary brand color should be ${settings.brand_color}. 
