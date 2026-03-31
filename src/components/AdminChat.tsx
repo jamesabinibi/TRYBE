@@ -83,8 +83,10 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
 
   const connectWebSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}?userId=${user?.id}&accountId=${user?.account_id}`;
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}?userId=${user?.id}&accountId=${user?.account_id}`;
     
+    console.log('Admin connecting to WebSocket:', wsUrl);
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 

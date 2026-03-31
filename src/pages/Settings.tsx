@@ -52,7 +52,7 @@ export default function Settings() {
     vat_enabled: globalSettings?.vat_enabled || false,
     low_stock_threshold: (globalSettings?.low_stock_threshold || 5).toString(),
     logo_url: globalSettings?.logo_url || '',
-    brand_color: globalSettings?.brand_color || '#10b981',
+    brand_color: globalSettings?.brand_color || '#ff4d00',
     slogan: globalSettings?.slogan || '',
     address: globalSettings?.address || '',
     email: globalSettings?.email || '',
@@ -103,7 +103,7 @@ export default function Settings() {
         vat_enabled: globalSettings.vat_enabled || false,
         low_stock_threshold: (globalSettings.low_stock_threshold || 5).toString(),
         logo_url: globalSettings.logo_url || '',
-        brand_color: globalSettings.brand_color || '#10b981',
+        brand_color: globalSettings.brand_color || '#ff4d00',
         slogan: globalSettings.slogan || '',
         address: globalSettings.address || '',
         email: globalSettings.email || '',
@@ -563,7 +563,7 @@ CREATE TABLE IF NOT EXISTS settings (
   vat_enabled BOOLEAN DEFAULT false,
   low_stock_threshold INTEGER DEFAULT 5,
   logo_url TEXT,
-  brand_color TEXT DEFAULT '#10b981',
+  brand_color TEXT DEFAULT '#ff4d00',
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(account_id)
 );
@@ -1295,7 +1295,7 @@ NOTIFY pgrst, 'reload schema';
                         />
                       </div>
                       <div className="space-y-2 text-left">
-                        <label className="label-text ml-1">Brand Color</label>
+                        <label className="label-text ml-1">Invoice Brand Color</label>
                         <div className="flex items-center gap-2">
                           <input 
                             type="color" 
@@ -1386,7 +1386,7 @@ NOTIFY pgrst, 'reload schema';
                       className="w-full h-10 bg-white dark:bg-black/50 border border-zinc-200 dark:border-zinc-700 rounded-xl px-1 py-1 focus:outline-none focus:border-brand"
                     />
                   </div>
-                  <p className="body-text mt-2">Enter a valid HEX code (e.g. #10b981)</p>
+                  <p className="body-text mt-2">Enter a valid HEX code (e.g. #ff4d00)</p>
                 </div>
               </div>
               

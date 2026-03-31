@@ -146,7 +146,7 @@ export default function Login() {
             </p>
             <div className="pt-4 border-t border-zinc-200 dark:border-zinc-700">
               <p className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-                Demo Credentials: admin / admin123
+                Protected by Gryndee Security
               </p>
             </div>
           </div>

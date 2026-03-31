@@ -252,8 +252,8 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#ff4d00" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#ff4d00" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
@@ -283,7 +283,7 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
                   fontWeight: '700'
                 }}
               />
-              <Area type="monotone" dataKey="revenue" stroke="#10b981" fillOpacity={1} fill="url(#colorRev)" strokeWidth={3} />
+              <Area type="monotone" dataKey="revenue" stroke="#ff4d00" fillOpacity={1} fill="url(#colorRev)" strokeWidth={3} />
               <Area type="monotone" dataKey="expenses" stroke="#ef4444" fillOpacity={1} fill="url(#colorExp)" strokeWidth={3} />
             </AreaChart>
           </ResponsiveContainer>

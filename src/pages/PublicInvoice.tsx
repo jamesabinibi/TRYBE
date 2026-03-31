@@ -117,7 +117,7 @@ export default function PublicInvoice() {
           {/* Decorative Brand Bar */}
           <div 
             className="h-3 w-full" 
-            style={{ backgroundColor: settings.brand_color?.includes('gradient') ? '#10b981' : (settings.brand_color || '#10b981') }} 
+            style={{ backgroundColor: settings.brand_color?.includes('gradient') ? '#ff4d00' : (settings.brand_color || '#ff4d00') }} 
           />
 
           {/* Header Section */}
@@ -282,7 +282,7 @@ export default function PublicInvoice() {
             {invoice.invoice_terms && (
               <div className="mt-12 p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-[32px] border border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-2 mb-4">
-                  <FileText className="w-3.5 h-3.5" style={{ color: settings?.brand_color || '#10b981' }} />
+                  <FileText className="w-3.5 h-3.5" style={{ color: settings?.brand_color || '#ff4d00' }} />
                   Terms & Conditions
                 </h3>
                 <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">

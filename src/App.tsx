@@ -138,7 +138,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     ...(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data) ? [{ icon: SettingsIcon, label: 'Settings', path: '/settings' }] : []),
   ];
 
-  const brandColor = settings?.brand_color || '#10b981';
+  const brandColor = '#ff4d00';
 
   return (
     <>
@@ -270,7 +270,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { searchQuery, setSearchQuery } = useSearch();
 
-  const brandColor = settings?.brand_color || '#10b981';
+  const brandColor = '#ff4d00';
 
   return (
     <div className={cn(
@@ -424,26 +424,14 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (settings?.brand_color) {
-      const root = document.documentElement;
-      const color = settings.brand_color;
-      const isGradient = color.includes('gradient');
-      
-      root.style.setProperty('--brand-color', color);
-      
-      if (isGradient) {
-        // For gradients, we use the same for hover and specific fallbacks for muted/light
-        root.style.setProperty('--brand-color-hover', color);
-        root.style.setProperty('--brand-color-muted', 'rgba(0,0,0,0.05)');
-        root.style.setProperty('--brand-color-light', 'rgba(0,0,0,0.1)');
-      } else {
-        // Generate variants for solid colors
-        root.style.setProperty('--brand-color-hover', `${color}dd`);
-        root.style.setProperty('--brand-color-muted', `${color}1a`);
-        root.style.setProperty('--brand-color-light', `${color}33`);
-      }
-    }
-  }, [settings]);
+    const root = document.documentElement;
+    const color = '#ff4d00';
+    
+    root.style.setProperty('--brand-color', color);
+    root.style.setProperty('--brand-color-hover', `${color}dd`);
+    root.style.setProperty('--brand-color-muted', `${color}1a`);
+    root.style.setProperty('--brand-color-light', `${color}33`);
+  }, []);
 
   useEffect(() => {
     if (settings?.business_name) {

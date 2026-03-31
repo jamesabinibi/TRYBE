@@ -69,14 +69,14 @@ const Walkthrough = () => {
       callback={handleJoyrideCallback}
       styles={{
         options: {
-          primaryColor: '#10b981',
+          primaryColor: '#ff4d00',
           zIndex: 10000,
         },
         tooltipContainer: {
           textAlign: 'left'
         },
         buttonNext: {
-          backgroundColor: '#10b981',
+          backgroundColor: '#ff4d00',
           borderRadius: '8px',
           padding: '8px 16px',
           fontWeight: 'bold',

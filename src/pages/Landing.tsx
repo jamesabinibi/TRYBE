@@ -83,7 +83,7 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-zinc-900 selection:bg-brand/30 selection:text-brand font-sans overflow-x-hidden" style={{ '--brand-color': config.brandColor } as any}>
+    <div className="min-h-screen bg-white text-zinc-900 selection:bg-brand/30 selection:text-brand font-sans overflow-x-hidden" style={{ '--brand-color': '#ff4d00' } as any}>
       {/* CMS Toggle for Admins */}
       {(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com') && (
         <div className="fixed bottom-8 right-8 z-[70]">

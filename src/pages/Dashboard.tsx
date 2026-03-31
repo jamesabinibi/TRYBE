@@ -117,7 +117,7 @@ export default function Dashboard() {
       </div>
     );
   }
-  const brandColor = globalSettings?.brand_color || '#10b981';
+  const brandColor = '#ff4d00';
   const currency = globalSettings?.currency || 'NGN';
   const [summary, setSummary] = useState<any>(null);
   const [trends, setTrends] = useState<any[]>([]);

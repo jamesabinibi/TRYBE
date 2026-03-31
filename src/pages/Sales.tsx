@@ -79,7 +79,6 @@ export default function Sales() {
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('month');
   const [itemType, setItemType] = useState<'product' | 'service'>('product');
 
-  const brandColor = settings?.brand_color || '#10b981';
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [customInvoiceTerms, setCustomInvoiceTerms] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -361,7 +360,7 @@ export default function Sales() {
 
   const handleDownloadInvoice = (sale: any) => {
     const doc = new jsPDF();
-    const brandColor = settings?.brand_color || '#10b981';
+    const brandColor = settings?.brand_color || '#ff4d00';
     
     // Header
     doc.setFillColor(brandColor);

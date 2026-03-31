@@ -794,42 +794,7 @@ async function initAwsDb() {
         await client.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser[0].id, sysAccId]);
       }
 
-      // Ensure default admin exists
-      const hashedAdminPass = await bcrypt.hash('admin123', 10);
-      const { rows: existingAdmin } = await client.query("SELECT id FROM users WHERE username = 'admin'");
-      if (existingAdmin.length === 0) {
-        console.log('[DB] Creating admin with password: admin123');
-        
-        // Check if a "Gryndee Demo Account" already exists without an owner
-        const { rows: existingDemoAccs } = await client.query("SELECT id FROM accounts WHERE name = 'Gryndee Demo Account' AND owner_id IS NULL LIMIT 1");
-        
-        let accountId;
-        if (existingDemoAccs.length > 0) {
-          accountId = existingDemoAccs[0].id;
-          console.log(`[DB] Using existing orphaned Gryndee Demo account (ID: ${accountId})`);
-        } else {
-          const { rows: accounts } = await client.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo Account']);
-          accountId = accounts[0].id;
-          console.log(`[DB] Created new Gryndee Demo account (ID: ${accountId})`);
-        }
-        
-        const { rows: newUser } = await client.query(
-          'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-          [accountId, 'admin', 'admin@gryndee.com', hashedAdminPass, 'admin', 'Demo Admin']
-        );
-        
-        // Update account owner
-        await client.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [newUser[0].id, accountId]);
-        
-        // Ensure settings exist
-        const { rows: existingSettings } = await client.query('SELECT id FROM settings WHERE account_id = $1', [accountId]);
-        if (existingSettings.length === 0) {
-          await client.query(
-            'INSERT INTO settings (account_id, business_name, currency) VALUES ($1, $2, $3)',
-            [accountId, 'Gryndee Demo', 'NGN']
-          );
-        }
-      }
+      // Removed default admin creation for security
       console.log('[DB] RDS Initialization complete.');
     } finally {
       client.release();
@@ -1978,7 +1943,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const { name, description, price, duration_minutes, category, image_url } = req.body;
       let finalImageUrl = image_url;
       if (image_url && image_url.startsWith('data:image')) {
-        finalImageUrl = await uploadToS3(image_url, 'services');
+        finalImageUrl = await uploadToCloudinary(image_url, 'services');
       }
 
       const { rows } = await pool.query(
@@ -2001,7 +1966,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       let finalImageUrl = image_url;
       if (image_url && image_url.startsWith('data:image')) {
-        finalImageUrl = await uploadToS3(image_url, 'services');
+        finalImageUrl = await uploadToCloudinary(image_url, 'services');
       }
 
       const { rows } = await pool.query(
@@ -2610,8 +2575,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const { image, folder } = req.body;
       if (!image) return res.status(400).json({ error: "Image is required" });
 
-      const uploadedUrl = await uploadToS3(image, folder || 'landing');
-      if (uploadedUrl && uploadedUrl.startsWith('http')) {
+      const uploadedUrl = await uploadToCloudinary(image, folder || 'landing');
+      if (uploadedUrl) {
         return res.json({ url: uploadedUrl });
       }
       throw new Error("Failed to upload image");
@@ -2776,12 +2741,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     console.log(`[AUTH] Login attempt for: "${normalizedUsername}"`);
     
     // Virtual superadmin login
-    const superAdminPass = process.env.SUPERADMIN_PASSWORD || 'superpassword123';
+    const superAdminPass = process.env.SUPERADMIN_PASSWORD;
     const isSuperAdminEmail = normalizedUsername === 'superadmin' || 
                              normalizedUsername === 'admin@gryndee.com' || 
                              normalizedUsername === 'abinibimultimedia@yahoo.com';
                              
-    if (isSuperAdminEmail && password === superAdminPass) {
+    if (superAdminPass && isSuperAdminEmail && password === superAdminPass) {
       console.log(`[AUTH] Virtual superadmin login success: "${normalizedUsername}"`);
       return res.json({ id: '0', username: 'superadmin', email: normalizedUsername, role: 'super_admin', name: 'System Admin' });
     }
@@ -3845,7 +3810,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
           if (images && Array.isArray(images) && images.length > 0) {
             for (const img of images) {
-              const finalUrl = await uploadToS3(img);
+              const finalUrl = await uploadToCloudinary(img);
               await client.query(
                 'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
                 [userInfo.account_id, productId, finalUrl]
@@ -3891,7 +3856,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (images && Array.isArray(images) && images.length > 0) {
         const imagesToInsert = await Promise.all(images.map(async (img) => {
-          const finalUrl = await uploadToS3(img);
+          const finalUrl = await uploadToCloudinary(img);
           return { account_id: userInfo.account_id, product_id: productId, image_data: finalUrl };
         }));
         await supabase.from('product_images').insert(imagesToInsert);
@@ -4027,7 +3992,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       await supabase.from('product_images').delete().eq('product_id', id);
       if (images && Array.isArray(images) && images.length > 0) {
         const imagesToInsert = await Promise.all(images.map(async (img) => {
-          const finalUrl = await uploadToS3(img);
+          const finalUrl = await uploadToCloudinary(img);
           return { product_id: id, image_data: finalUrl };
         }));
         await supabase.from('product_images').insert(imagesToInsert);
@@ -6171,7 +6136,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (process.env.AWS_S3_BUCKET_NAME && process.env.AWS_ACCESS_KEY_ID) {
         try {
           const testBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-          const testUrl = await uploadToS3(testBase64, 'test');
+          const testUrl = await uploadToCloudinary(testBase64, 'test');
           s3Test = testUrl.startsWith('http') ? 'SUCCESS' : 'FAILED: Returned base64';
         } catch (e: any) {
           s3Test = `ERROR: ${e.message}`;
@@ -6219,7 +6184,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         for (const img of images) {
           if (img.image_data && img.image_data.startsWith('data:image')) {
             console.log(`[MIGRATE] Migrating base64 product image ${img.id}`);
-            const uploadedUrl = await uploadToS3(img.image_data);
+            const uploadedUrl = await uploadToCloudinary(img.image_data);
             if (uploadedUrl && uploadedUrl.startsWith('http')) {
               await pool.query('UPDATE product_images SET image_data = $1 WHERE id = $2', [uploadedUrl, img.id]);
               migratedCount++;
@@ -6237,7 +6202,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
                 const contentType = response.headers.get('content-type') || 'image/jpeg';
                 const base64Data = `data:${contentType};base64,${buffer.toString('base64')}`;
                 
-                const uploadedUrl = await uploadToS3(base64Data);
+                const uploadedUrl = await uploadToCloudinary(base64Data);
                 if (uploadedUrl && uploadedUrl.startsWith('http')) {
                   await pool.query('UPDATE product_images SET image_data = $1 WHERE id = $2', [uploadedUrl, img.id]);
                   migratedCount++;
@@ -6267,7 +6232,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         for (const srv of services) {
           if (srv.image_url && srv.image_url.startsWith('data:image')) {
             console.log(`[MIGRATE] Migrating base64 service image ${srv.id}`);
-            const uploadedUrl = await uploadToS3(srv.image_url, 'services');
+            const uploadedUrl = await uploadToCloudinary(srv.image_url, 'services');
             if (uploadedUrl && uploadedUrl.startsWith('http')) {
               await pool.query('UPDATE services SET image_url = $1 WHERE id = $2', [uploadedUrl, srv.id]);
               migratedCount++;
@@ -6285,7 +6250,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
                 const contentType = response.headers.get('content-type') || 'image/jpeg';
                 const base64Data = `data:${contentType};base64,${buffer.toString('base64')}`;
                 
-                const uploadedUrl = await uploadToS3(base64Data, 'services');
+                const uploadedUrl = await uploadToCloudinary(base64Data, 'services');
                 if (uploadedUrl && uploadedUrl.startsWith('http')) {
                   await pool.query('UPDATE services SET image_url = $1 WHERE id = $2', [uploadedUrl, srv.id]);
                   migratedCount++;
@@ -6310,7 +6275,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         for (const set of settings) {
           if (set.logo_url && set.logo_url.startsWith('data:image')) {
             console.log(`[MIGRATE] Migrating base64 logo ${set.id}`);
-            const uploadedUrl = await uploadToS3(set.logo_url, 'logos');
+            const uploadedUrl = await uploadToCloudinary(set.logo_url, 'logos');
             if (uploadedUrl && uploadedUrl.startsWith('http')) {
               await pool.query('UPDATE settings SET logo_url = $1 WHERE id = $2', [uploadedUrl, set.id]);
               migratedCount++;
@@ -6328,7 +6293,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
                 const contentType = response.headers.get('content-type') || 'image/jpeg';
                 const base64Data = `data:${contentType};base64,${buffer.toString('base64')}`;
                 
-                const uploadedUrl = await uploadToS3(base64Data, 'logos');
+                const uploadedUrl = await uploadToCloudinary(base64Data, 'logos');
                 if (uploadedUrl && uploadedUrl.startsWith('http')) {
                   await pool.query('UPDATE settings SET logo_url = $1 WHERE id = $2', [uploadedUrl, set.id]);
                   migratedCount++;
@@ -7184,10 +7149,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   // Vite / Static Files
   const distPath = path.resolve(__dirname, "dist");
   
+  const server = createHttpServer(app);
+  
   if (process.env.NODE_ENV !== "production") {
     console.log(`[VITE] Starting in DEVELOPMENT mode`);
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { 
+        middlewareMode: true,
+        hmr: {
+          server: server // Share the same HTTP server for HMR
+        }
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -7666,22 +7638,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (!existingAdmin) {
         console.log('[INIT] No super admin found. Creating default super admin...');
-        const hashedPassword = await bcrypt.hash('superpassword123', 10);
-        
-        if (process.env.AWS_DB_PASSWORD) {
-          const { rows: accRows } = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['System Administration']);
-          const account = accRows[0];
-          await pool.query(
-            'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
-            [account.id, 'superadmin', 'admin@gryndee.com', hashedPassword, 'super_admin', 'System Admin']
-          );
-        }
-        console.log('[INIT] Default super admin created: superadmin / superpassword123');
-      } else {
-        console.log('[INIT] Super admin already exists. Updating password...');
-        const hashedPassword = await bcrypt.hash('superpassword123', 10);
-        if (process.env.AWS_DB_PASSWORD) {
-          await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, existingAdmin.id]);
+        const superPass = process.env.SUPERADMIN_PASSWORD;
+        if (superPass) {
+          const hashedPassword = await bcrypt.hash(superPass, 10);
+          
+          if (process.env.AWS_DB_PASSWORD) {
+            const { rows: accRows } = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['System Administration']);
+            const account = accRows[0];
+            await pool.query(
+              'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6)',
+              [account.id, 'superadmin', 'admin@gryndee.com', hashedPassword, 'super_admin', 'System Admin']
+            );
+          }
+          console.log('[INIT] Default super admin created');
+        } else {
+          console.log('[INIT] SUPERADMIN_PASSWORD not set, skipping default super admin creation');
         }
       }
 
@@ -7693,50 +7664,32 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       if (!demoAdmin) {
-        console.log('[INIT] No demo admin found. Creating default demo admin...');
-        const hashedPassword = await bcrypt.hash('admin123', 10);
-        
-        if (process.env.AWS_DB_PASSWORD) {
-          const { rows: accRows } = await pool.query('INSERT INTO accounts (name) VALUES ($1) RETURNING id', ['Gryndee Demo']);
-          const account = accRows[0];
-          const { rows: userRows } = await pool.query(
-            'INSERT INTO users (account_id, username, email, password, role, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-            [account.id, 'admin', 'admin@gryndee.com', hashedPassword, 'admin', 'Demo Admin']
-          );
-          await pool.query('UPDATE accounts SET owner_id = $1 WHERE id = $2', [userRows[0].id, account.id]);
-          await pool.query(
-            'INSERT INTO settings (account_id, business_name, currency, brand_color) VALUES ($1, $2, $3, $4)',
-            [account.id, 'Gryndee Demo', 'NGN', '#10b981']
-          );
-        }
-        console.log('[INIT] Default demo admin created: admin / admin123');
-      } else {
-        console.log('[INIT] Demo admin already exists. Updating password...');
-        const hashedPassword = await bcrypt.hash('admin123', 10);
-        if (process.env.AWS_DB_PASSWORD) {
-          await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, demoAdmin.id]);
-        }
+        console.log('[INIT] No demo admin found. Skipping demo admin creation for security.');
       }
     }
   } catch (e) {
     console.error('[INIT] Failed to ensure super admin:', e);
   }
 
-  const server = createHttpServer(app);
   const wss = new WebSocketServer({ server });
   const clients = new Map<string, WebSocket>();
   const lastEmailSent = new Map<string, number>();
 
   wss.on('connection', (ws, req) => {
+    console.log(`[WS] New connection attempt: ${req.url}`);
     const url = new URL(req.url || '', `http://${req.headers.host}`);
     const userId = url.searchParams.get('userId');
     const accountId = url.searchParams.get('accountId');
     const guestId = url.searchParams.get('guestId');
     
     const clientId = userId || guestId;
+    console.log(`[WS] Client ID resolved: ${clientId}`);
 
     if (clientId) {
       clients.set(clientId, ws);
+      console.log(`[WS] Client ${clientId} connected. Total clients: ${clients.size}`);
+    } else {
+      console.log(`[WS] Connection without clientId (maybe Vite HMR)`);
     }
 
     ws.on('message', async (data) => {

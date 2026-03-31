@@ -20,10 +20,10 @@ export const generatePDF = async (data: any, settings: any) => {
     const pageWidth = doc.internal.pageSize.getWidth();
     
     // Handle potential gradient brand color
-    let brandColor = settings?.brand_color || '#10b981';
+    let brandColor = settings?.brand_color || '#ff4d00';
     if (brandColor.includes('gradient')) {
       const hexMatch = brandColor.match(/#[a-fA-F0-9]{3,6}/);
-      brandColor = hexMatch ? hexMatch[0] : '#10b981';
+      brandColor = hexMatch ? hexMatch[0] : '#ff4d00';
     }
     
     // Header Background

@@ -76,8 +76,6 @@ const Invoices: React.FC = () => {
   const [showItemDropdown, setShowItemDropdown] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<any>(null);
 
-  const brandColor = settings?.brand_color || '#10b981';
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -531,7 +529,6 @@ const Invoices: React.FC = () => {
                 onClick={generatePDF}
                 disabled={isGenerating}
                 className="btn-primary flex-1 sm:flex-none"
-                style={{ backgroundColor: brandColor }}
               >
                 {isGenerating ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

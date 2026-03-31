@@ -79,7 +79,9 @@ export default function ChatSupport() {
 
   const connectWebSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    let wsUrl = `${protocol}//${window.location.host}?`;
+    // Use the correct host and protocol for the WebSocket connection
+    const host = window.location.host;
+    let wsUrl = `${protocol}//${host}?`;
     
     if (user) {
       wsUrl += `userId=${user.id}&accountId=${user.account_id}`;
@@ -89,6 +91,7 @@ export default function ChatSupport() {
       return; // Wait for guestId to be set
     }
     
+    console.log('Connecting to WebSocket:', wsUrl);
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 

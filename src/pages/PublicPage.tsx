@@ -39,7 +39,7 @@ export default function PublicPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-zinc-900 selection:bg-brand/30 selection:text-brand font-sans" style={{ '--brand-color': config?.brandColor || '#10b981' } as any}>
+    <div className="min-h-screen bg-white text-zinc-900 selection:bg-brand/30 selection:text-brand font-sans" style={{ '--brand-color': '#ff4d00' } as any}>
       {/* Header */}
       <header className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-100">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
