@@ -1095,28 +1095,77 @@ async function createServer() {
   // Data Migration Tool
   // Migration route removed as migration to AWS RDS is complete.
 
+  // Chat Endpoints
   app.get('/api/chat/messages', requireAuth, async (req, res) => {
     const userId = (req as any).userId;
     const accountId = (req as any).accountId;
-    const role = (req as any).role;
-
     try {
       if (process.env.AWS_DB_PASSWORD) {
-        let query = 'SELECT * FROM chat_messages WHERE account_id = $1 ORDER BY created_at ASC';
-        let params = [accountId];
-        
-        if (role === 'super_admin') {
-          // Super admin can see all messages for a specific account if they are chatting with them
-          // For now, let's just return messages for the current account
-        }
-
-        const { rows } = await pool.query(query, params);
+        const { rows } = await pool.query('SELECT * FROM chat_messages WHERE account_id = $1 OR user_id = $2 ORDER BY created_at ASC', [accountId, userId]);
         res.json(rows);
       } else {
         res.json([]);
       }
     } catch (err) {
       console.error('Failed to fetch chat messages:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/chat/guest/messages', async (req, res) => {
+    const guestId = req.query.guestId;
+    if (!guestId) return res.status(400).json({ error: 'guestId required' });
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT * FROM chat_messages WHERE guest_id = $1 ORDER BY created_at ASC', [guestId]);
+        res.json(rows);
+      } else {
+        res.json([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch guest chat messages:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/chat/admin/sessions', requireAuth, async (req, res) => {
+    const role = (req as any).role;
+    if (role !== 'super_admin') return res.status(403).json({ error: 'Forbidden' });
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        // Get unique users and guests who have sent messages
+        const { rows } = await pool.query(`
+          SELECT DISTINCT ON (COALESCE(user_id, guest_id))
+            user_id, guest_id, account_id, created_at, message
+          FROM chat_messages
+          ORDER BY COALESCE(user_id, guest_id), created_at DESC
+        `);
+        
+        // Sort by latest message overall
+        rows.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        res.json(rows);
+      } else {
+        res.json([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch chat sessions:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/chat/admin/messages/:id', requireAuth, async (req, res) => {
+    const role = (req as any).role;
+    if (role !== 'super_admin') return res.status(403).json({ error: 'Forbidden' });
+    const id = req.params.id;
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT * FROM chat_messages WHERE user_id = $1 OR guest_id = $1 ORDER BY created_at ASC', [id]);
+        res.json(rows);
+      } else {
+        res.json([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch admin chat messages:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -2491,6 +2540,24 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         { name: "Facebook", url: "#" }
       ],
       copyright: "© 2026 Gryndee. All rights reserved."
+    },
+    pages: {
+      about: {
+        title: "About Us",
+        content: "Gryndee is the intelligent business management app designed specifically for African MSMEs. Our mission is to simplify operations, automate bookkeeping, and provide AI-powered insights to help your business thrive.\n\nWe understand the unique challenges faced by small and medium-sized enterprises in Africa, from managing inventory across multiple locations to handling complex tax reporting. That's why we built Gryndee—a comprehensive, easy-to-use platform that brings all your business tools into one place.\n\nWhether you're running a retail store, a boutique, or a service-based business, Gryndee is here to support your growth every step of the way."
+      },
+      privacy: {
+        title: "Privacy Policy",
+        content: "At Gryndee, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our application.\n\nInformation We Collect:\nWe collect personal information that you voluntarily provide to us when registering for the app, expressing an interest in obtaining information about us or our products and services, or otherwise contacting us.\n\nHow We Use Your Information:\nWe use personal information collected via our app for a variety of business purposes described below. We process your personal information for these purposes in reliance on our legitimate business interests, in order to enter into or perform a contract with you, with your consent, and/or for compliance with our legal obligations.\n\nData Security:\nWe have implemented appropriate technical and organizational security measures designed to protect the security of any personal information we process. However, please also remember that we cannot guarantee that the internet itself is 100% secure."
+      },
+      terms: {
+        title: "Terms of Service",
+        content: "Welcome to Gryndee! These Terms of Service outline the rules and regulations for the use of Gryndee's Website and Application.\n\nBy accessing this app we assume you accept these terms and conditions. Do not continue to use Gryndee if you do not agree to take all of the terms and conditions stated on this page.\n\nLicense:\nUnless otherwise stated, Gryndee and/or its licensors own the intellectual property rights for all material on Gryndee. All intellectual property rights are reserved. You may access this from Gryndee for your own personal use subjected to restrictions set in these terms and conditions.\n\nUser Responsibilities:\nYou must not republish material from Gryndee, sell, rent or sub-license material from Gryndee, reproduce, duplicate or copy material from Gryndee, or redistribute content from Gryndee."
+      },
+      contact: {
+        title: "Contact Support",
+        content: "We're here to help! If you have any questions, concerns, or feedback, please don't hesitate to reach out to our support team.\n\nEmail Support:\nFor general inquiries and technical support, email us at support@gryndee.com. We aim to respond to all emails within 24 hours.\n\nPhone Support:\nNeed immediate assistance? Call our support hotline at +234 (0) 800 GRYNDEE during our business hours (Monday - Friday, 9:00 AM - 5:00 PM WAT).\n\nOffice Address:\nGryndee Headquarters\n123 Innovation Drive\nLagos, Nigeria"
+      }
     }
   };
 
@@ -7658,14 +7725,18 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   const server = createHttpServer(app);
   const wss = new WebSocketServer({ server });
   const clients = new Map<string, WebSocket>();
+  const lastEmailSent = new Map<string, number>();
 
   wss.on('connection', (ws, req) => {
     const url = new URL(req.url || '', `http://${req.headers.host}`);
     const userId = url.searchParams.get('userId');
     const accountId = url.searchParams.get('accountId');
+    const guestId = url.searchParams.get('guestId');
+    
+    const clientId = userId || guestId;
 
-    if (userId) {
-      clients.set(userId, ws);
+    if (clientId) {
+      clients.set(clientId, ws);
     }
 
     ws.on('message', async (data) => {
@@ -7676,8 +7747,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         if (type === 'chat_message') {
           if (process.env.AWS_DB_PASSWORD) {
             await pool.query(
-              'INSERT INTO chat_messages (account_id, user_id, message, is_from_admin) VALUES ($1, $2, $3, $4)',
-              [accountId, userId, message, isFromAdmin]
+              'INSERT INTO chat_messages (account_id, user_id, guest_id, message, is_from_admin) VALUES ($1, $2, $3, $4, $5)',
+              [accountId, userId, guestId, message, isFromAdmin]
             );
           }
 
@@ -7685,23 +7756,41 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             clients.get(targetUserId)?.send(JSON.stringify({
               type: 'chat_message',
               message,
-              fromUserId: userId,
+              fromUserId: clientId,
               isFromAdmin
             }));
           }
           
           if (!isFromAdmin) {
+            // Broadcast to all connected superadmins (they might be connected without a specific targetUserId)
             wss.clients.forEach((client) => {
               if (client !== ws && client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({
                   type: 'chat_message',
                   message,
-                  fromUserId: userId,
+                  fromUserId: clientId,
                   accountId,
+                  guestId,
                   isFromAdmin: false
                 }));
               }
             });
+
+            // Send email notification to superadmin
+            const now = Date.now();
+            const lastSent = lastEmailSent.get(clientId || 'unknown') || 0;
+            if (now - lastSent > 5 * 60 * 1000) { // 5 minutes throttle
+              lastEmailSent.set(clientId || 'unknown', now);
+              try {
+                await sendEmail(
+                  'abinibimultimedia@yahoo.com',
+                  'New Chat Message on Gryndee',
+                  `You have received a new chat message from ${userId ? 'User ' + userId : 'Guest ' + guestId}:\n\n"${message}"\n\nLogin to the admin dashboard to reply.`
+                );
+              } catch (emailErr) {
+                console.error('Failed to send chat notification email:', emailErr);
+              }
+            }
           }
         }
       } catch (e) {
@@ -7710,7 +7799,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     });
 
     ws.on('close', () => {
-      if (userId) clients.delete(userId);
+      if (clientId) clients.delete(clientId);
     });
   });
 

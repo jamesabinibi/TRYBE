@@ -46,6 +46,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import PublicInvoice from './pages/PublicInvoice';
+import PublicPage from './pages/PublicPage';
 import { cn } from './lib/utils';
 import NotificationCenter from './components/NotificationCenter';
 import Walkthrough from './components/Walkthrough';
@@ -278,7 +279,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     )} style={{ '--brand-color': brandColor } as any}>
       {user && <Walkthrough />}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <ChatSupport />
       <main className="flex-1 flex flex-col min-w-0 relative">
         <header id="main-header" className={cn(
           "h-16 border-b flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 transition-colors duration-300",
@@ -496,6 +496,7 @@ export default function App() {
         <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
           <SearchProvider>
             <Toaster position="top-right" richColors />
+            <ChatSupport />
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
@@ -503,6 +504,7 @@ export default function App() {
                 <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
                 <Route path="/invoice/:id" element={<PublicInvoice />} />
                 <Route path="/landing" element={<Landing />} />
+                <Route path="/p/:pageId" element={<PublicPage />} />
                 <Route 
                   path="/*" 
                   element={

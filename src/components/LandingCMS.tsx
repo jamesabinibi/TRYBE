@@ -28,7 +28,7 @@ interface LandingCMSProps {
 export default function LandingCMS({ config: initialConfig, onSave, onClose }: LandingCMSProps) {
   const [config, setConfig] = useState(initialConfig);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'hero' | 'features' | 'how' | 'testimonials' | 'logo' | 'faq' | 'footer'>('hero');
+  const [activeTab, setActiveTab] = useState<'hero' | 'features' | 'how' | 'testimonials' | 'logo' | 'faq' | 'footer' | 'pages'>('hero');
 
   const handleUpdate = (path: string, value: any) => {
     const newConfig = { ...config };
@@ -101,7 +101,8 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
           { id: 'how', label: 'How' },
           { id: 'testimonials', label: 'Reviews' },
           { id: 'faq', label: 'FAQ' },
-          { id: 'footer', label: 'Footer' }
+          { id: 'footer', label: 'Footer' },
+          { id: 'pages', label: 'Pages' }
         ].map(tab => (
           <button
             key={tab.id}
@@ -357,6 +358,33 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'pages' && (
+          <div className="space-y-8">
+            {['about', 'privacy', 'terms', 'contact'].map((pageKey) => (
+              <div key={pageKey} className="space-y-6 pb-8 border-b border-white/10 last:border-0">
+                <h3 className="text-sm font-bold text-white capitalize">{pageKey.replace('-', ' ')} Page</h3>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Page Title</label>
+                  <input
+                    type="text"
+                    value={config.pages?.[pageKey]?.title || ''}
+                    onChange={(e) => handleUpdate(`pages.${pageKey}.title`, e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-brand outline-none transition-colors"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Content</label>
+                  <textarea
+                    value={config.pages?.[pageKey]?.content || ''}
+                    onChange={(e) => handleUpdate(`pages.${pageKey}.content`, e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-brand outline-none transition-colors min-h-[200px]"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

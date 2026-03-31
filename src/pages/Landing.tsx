@@ -555,10 +555,10 @@ export default function Landing() {
             <div className="space-y-5">
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-900">Company</h4>
               <ul className="space-y-3">
-                <li><a href="#" className="text-zinc-600 hover:text-brand text-xs font-medium transition-colors">About Us</a></li>
-                <li><a href="#" className="text-zinc-600 hover:text-brand text-xs font-medium transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="text-zinc-600 hover:text-brand text-xs font-medium transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="text-zinc-600 hover:text-brand text-xs font-medium transition-colors">Contact Support</a></li>
+                <li><Link to="/p/about" className="text-zinc-600 hover:text-brand text-xs font-medium transition-colors">About Us</Link></li>
+                <li><Link to="/p/privacy" className="text-zinc-600 hover:text-brand text-xs font-medium transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/p/terms" className="text-zinc-600 hover:text-brand text-xs font-medium transition-colors">Terms of Service</Link></li>
+                <li><Link to="/p/contact" className="text-zinc-600 hover:text-brand text-xs font-medium transition-colors">Contact Support</Link></li>
               </ul>
             </div>
           </div>

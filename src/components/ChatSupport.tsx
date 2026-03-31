@@ -21,11 +21,24 @@ export default function ChatSupport() {
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const isPremium = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial' || user?.role === 'super_admin';
+  const [guestId, setGuestId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && isPremium) {
+    // Initialize guest ID if not logged in
+    if (!user) {
+      let storedGuestId = localStorage.getItem('gryndee_guest_id');
+      if (!storedGuestId) {
+        storedGuestId = 'guest_' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('gryndee_guest_id', storedGuestId);
+      }
+      setGuestId(storedGuestId);
+    } else {
+      setGuestId(null);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (isOpen) {
       fetchMessages();
       connectWebSocket();
     }
@@ -34,7 +47,7 @@ export default function ChatSupport() {
         socketRef.current.close();
       }
     };
-  }, [isOpen, isPremium]);
+  }, [isOpen, user, guestId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -46,10 +59,18 @@ export default function ChatSupport() {
 
   const fetchMessages = async () => {
     try {
-      const res = await fetchWithAuth('/api/chat/messages');
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(data);
+      if (user) {
+        const res = await fetchWithAuth('/api/chat/messages');
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(data);
+        }
+      } else if (guestId) {
+        const res = await fetch(`/api/chat/guest/messages?guestId=${guestId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(data);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch messages:', err);
@@ -58,7 +79,15 @@ export default function ChatSupport() {
 
   const connectWebSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}?userId=${user?.id}&accountId=${user?.account_id}`;
+    let wsUrl = `${protocol}//${window.location.host}?`;
+    
+    if (user) {
+      wsUrl += `userId=${user.id}&accountId=${user.account_id}`;
+    } else if (guestId) {
+      wsUrl += `guestId=${guestId}`;
+    } else {
+      return; // Wait for guestId to be set
+    }
     
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
@@ -81,8 +110,10 @@ export default function ChatSupport() {
 
     socket.onclose = () => {
       setIsConnected(false);
-      // Reconnect after 3 seconds
-      setTimeout(connectWebSocket, 3000);
+      // Reconnect after 3 seconds if still open
+      if (isOpen) {
+        setTimeout(connectWebSocket, 3000);
+      }
     };
   };
 
@@ -109,7 +140,8 @@ export default function ChatSupport() {
     setNewMessage('');
   };
 
-  if (!isPremium) return null;
+  // Remove isPremium check so everyone can chat
+  // if (!isPremium) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-[100]">

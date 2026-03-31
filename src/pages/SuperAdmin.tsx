@@ -30,7 +30,8 @@ import {
   Image as ImageIcon,
   AlertCircle,
   Cloud,
-  Trophy
+  Trophy,
+  MessageCircle
 } from 'lucide-react';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
@@ -38,6 +39,7 @@ import { useAuth } from '../App';
 import { formatCurrency, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import AdminChat from '../components/AdminChat';
 
 interface AdminStats {
   accounts: number;
@@ -98,6 +100,7 @@ export default function SuperAdmin() {
 
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
   const [isLegalDocsModalOpen, setIsLegalDocsModalOpen] = useState(false);
+  const [isAdminChatOpen, setIsAdminChatOpen] = useState(false);
   const [isPromoCodesModalOpen, setIsPromoCodesModalOpen] = useState(false);
   const [expandedPromoId, setExpandedPromoId] = useState<number | null>(null);
   const [promoCodes, setPromoCodes] = useState<any[]>([]);
@@ -899,6 +902,14 @@ export default function SuperAdmin() {
               <span className="hidden sm:inline label-text">Promo Codes</span>
             </button>
             <button 
+              onClick={() => setIsAdminChatOpen(true)}
+              className="btn-primary flex items-center gap-2"
+              title="Live Support"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden sm:inline label-text">Live Support</span>
+            </button>
+            <button 
               onClick={() => {
                 fetchLegalDocs();
                 setIsLegalDocsModalOpen(true);
@@ -1203,6 +1214,9 @@ export default function SuperAdmin() {
       <AnimatePresence>
         {/* Modals */}
       </AnimatePresence>
+
+      {/* Admin Chat Modal */}
+      <AdminChat isOpen={isAdminChatOpen} onClose={() => setIsAdminChatOpen(false)} />
 
       {/* Promo Codes Modal */}
       <AnimatePresence>
