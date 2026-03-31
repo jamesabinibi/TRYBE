@@ -60,6 +60,7 @@
 
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
+  height: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -67,7 +68,7 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-zinc-200 dark:bg-zinc-800 rounded-full;
+  @apply bg-zinc-300 dark:bg-white/20 rounded-full;
 }
 
 /* Fix for nested scrollbars and mobile layout */

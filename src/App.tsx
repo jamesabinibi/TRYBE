@@ -231,7 +231,12 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                 {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={cn("text-sm font-medium truncate", isDarkMode ? "text-white" : "text-zinc-900")}>{user?.name}</p>
+                <p className={cn("text-sm font-medium truncate flex items-center gap-1", isDarkMode ? "text-white" : "text-zinc-900")}>
+                  {user?.name}
+                  {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
+                    <ShieldCheck className="w-3.5 h-3.5 text-brand fill-brand/10" />
+                  )}
+                </p>
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium">{user?.role}</p>
               </div>
             </div>
@@ -270,7 +275,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     <div className={cn(
       "flex min-h-screen w-full font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300 overflow-x-hidden",
       isDarkMode ? "bg-[#050505] text-white" : "bg-zinc-50 text-zinc-900"
-    )}>
+    )} style={{ '--brand-color': brandColor } as any}>
       {user && <Walkthrough />}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <ChatSupport />
@@ -316,14 +321,24 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {user?.role === 'admin' || user?.role === 'super_admin' ? (
               <Link 
                 to="/settings"
-                className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05] hover:bg-zinc-300 dark:hover:bg-white/[0.1] transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05] hover:bg-zinc-300 dark:hover:bg-white/[0.1] transition-colors cursor-pointer relative"
                 title="Settings"
               >
                 {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
+                {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
+                  <div className="absolute -top-1 -right-1 bg-white dark:bg-[#050505] rounded-full p-0.5">
+                    <ShieldCheck className="w-3 h-3 text-brand fill-brand/10" />
+                  </div>
+                )}
               </Link>
             ) : (
-              <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05]">
+              <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05] relative">
                 {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
+                {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
+                  <div className="absolute -top-1 -right-1 bg-white dark:bg-[#050505] rounded-full p-0.5">
+                    <ShieldCheck className="w-3 h-3 text-brand fill-brand/10" />
+                  </div>
+                )}
               </div>
             )}
           </div>

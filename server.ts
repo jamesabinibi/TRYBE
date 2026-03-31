@@ -2406,12 +2406,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       title: "The Smartest Way To Run Your Business.",
       subtitle: "Gryndee simplifies your operations, automates your bookkeeping, and provides AI-powered insights to help your business thrive.",
       ctaText: "Get Started Free",
-      image: "https://picsum.photos/seed/gryndee-dashboard/1200/1400"
+      image: "https://picsum.photos/seed/gryndee-dashboard/1200/1400",
+      appStoreUrl: "#",
+      playStoreUrl: "#"
     },
     logo: {
       text: "Gryndee",
       url: ""
     },
+    brandColor: "#10b981",
     features: [
       {
         id: 1,
@@ -2466,7 +2469,29 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         role: "Boutique Owner",
         content: "The AI Advisor is like having a business consultant in my pocket. It helped me identify which products were my best sellers."
       }
-    ]
+    ],
+    faq: [
+      {
+        id: 1,
+        question: "Is Gryndee free to use?",
+        answer: "Yes, Gryndee offers a free tier for small businesses to get started. As you grow, you can upgrade to a pro plan for more advanced features."
+      },
+      {
+        id: 2,
+        question: "Can I use Gryndee offline?",
+        answer: "Absolutely! Gryndee's POS works offline, and your data will automatically sync once you're back online."
+      }
+    ],
+    footer: {
+      description: "The intelligent business management app for African MSMEs. Simple, smart, and stress-free.",
+      socials: [
+        { name: "Twitter", url: "#" },
+        { name: "Instagram", url: "#" },
+        { name: "LinkedIn", url: "#" },
+        { name: "Facebook", url: "#" }
+      ],
+      copyright: "© 2026 Gryndee. All rights reserved."
+    }
   };
 
   app.get("/api/landing-config", async (req, res) => {
@@ -4029,7 +4054,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   // (Moved to top)
 
   app.get("/api/settings", async (req, res) => {
-    const defaultSettings = { 
+    let defaultSettings = { 
       business_name: 'Gryndee', 
       currency: 'NGN', 
       vat_enabled: false, 
@@ -4043,6 +4068,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       phone_number: '',
       invoice_terms: ''
     };
+
+    // Try to get defaults from landing config
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'LANDING_CONFIG' LIMIT 1");
+        if (rows.length > 0 && rows[0].value) {
+          const landingConfig = JSON.parse(rows[0].value);
+          if (landingConfig.brandColor) defaultSettings.brand_color = landingConfig.brandColor;
+          if (landingConfig.logo?.url) defaultSettings.logo_url = landingConfig.logo.url;
+          if (landingConfig.logo?.text) defaultSettings.business_name = landingConfig.logo.text;
+        }
+      }
+    } catch (e) {
+      console.error('[SETTINGS] Error fetching landing config for defaults:', e);
+    }
+
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json(defaultSettings);

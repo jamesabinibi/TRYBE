@@ -80,22 +80,38 @@ export default function Subscription() {
     toast.info('Payment integration coming soon! Use a promo code for now.');
   };
 
+  const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional';
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
       <div className="text-center space-y-4">
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-brand/10 text-brand rounded-full border border-brand/20"
+          className={cn(
+            "inline-flex items-center gap-2 px-4 py-2 rounded-full border transition-all",
+            isPro 
+              ? "bg-green-500/10 text-green-500 border-green-500/20" 
+              : "bg-brand/10 text-brand rounded-full border border-brand/20"
+          )}
         >
-          <Crown className="w-4 h-4" />
-          <span className="label-text text-brand">Gryndee Pro</span>
+          {isPro ? <ShieldCheck className="w-4 h-4" /> : <Crown className="w-4 h-4" />}
+          <span className="label-text font-black uppercase tracking-widest text-[10px]">
+            {isPro ? 'Active Pro Subscription' : 'Gryndee Pro'}
+          </span>
         </motion.div>
         <h1 className="h1">
-          Scale Your Business with <span className="text-brand">Premium</span>
+          {isPro ? (
+            <>You're a <span className="text-brand">Pro</span> Member</>
+          ) : (
+            <>Scale Your Business with <span className="text-brand">Premium</span></>
+          )}
         </h1>
         <p className="body-text max-w-xl mx-auto">
-          Unlock the full power of Gryndee and take your business to the next level with our professional tools.
+          {isPro 
+            ? "You have full access to all premium features. Manage your subscription or explore your tools below."
+            : "Unlock the full power of Gryndee and take your business to the next level with our professional tools."
+          }
         </p>
       </div>
 
@@ -104,8 +120,16 @@ export default function Subscription() {
         <motion.div 
           initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          className="glass-card p-8 relative overflow-hidden group"
+          className={cn(
+            "glass-card p-8 relative overflow-hidden group",
+            isPro && "ring-2 ring-brand ring-offset-4 dark:ring-offset-[#050505]"
+          )}
         >
+          {isPro && (
+            <div className="absolute top-0 left-0 bg-brand text-white px-4 py-1 text-[10px] font-black uppercase tracking-widest rounded-br-xl z-10">
+              Current Plan
+            </div>
+          )}
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Crown className="w-24 h-24 rotate-12" />
           </div>
@@ -122,28 +146,47 @@ export default function Subscription() {
             <div className="space-y-4">
               <button 
                 onClick={handleUpgrade}
-                className="btn-primary w-full py-4 text-base"
+                disabled={isPro}
+                className={cn(
+                  "w-full py-4 text-base flex items-center justify-center gap-2 rounded-2xl font-black uppercase tracking-widest transition-all",
+                  isPro 
+                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-default" 
+                    : "bg-brand text-white shadow-xl shadow-brand/20 hover:opacity-90"
+                )}
               >
-                Upgrade Now
-                <ArrowRight className="w-4 h-4" />
+                {isPro ? (
+                  <>
+                    <Check className="w-5 h-5" />
+                    Active Plan
+                  </>
+                ) : (
+                  <>
+                    Upgrade Now
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-zinc-200 dark:border-zinc-800"></div>
-                </div>
-                <div className="relative flex justify-center text-xs uppercase tracking-widest">
-                  <span className="bg-white dark:bg-[#0A0A0B] px-4 text-zinc-400 font-bold">Or</span>
-                </div>
-              </div>
+              {!isPro && (
+                <>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-zinc-200 dark:border-zinc-800"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase tracking-widest">
+                      <span className="bg-white dark:bg-[#0A0A0B] px-4 text-zinc-400 font-bold">Or</span>
+                    </div>
+                  </div>
 
-              <button 
-                onClick={() => setIsPromoModalOpen(true)}
-                className="w-full py-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
-              >
-                <Gift className="w-4 h-4" />
-                Have a promo code?
-              </button>
+                  <button 
+                    onClick={() => setIsPromoModalOpen(true)}
+                    className="w-full py-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Gift className="w-4 h-4" />
+                    Have a promo code?
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800/50">
@@ -175,9 +218,9 @@ export default function Subscription() {
                   <span className="text-[13px] font-bold text-zinc-700 dark:text-zinc-300">{feature.label}</span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="text-[10px] font-black text-brand uppercase tracking-widest">Premium</div>
-                    <div className="text-[11px] font-bold text-zinc-900 dark:text-white">
+                  <div className={cn("text-right", isPro && "text-brand")}>
+                    <div className="text-[10px] font-black uppercase tracking-widest">Premium</div>
+                    <div className={cn("text-[11px] font-bold", isPro ? "text-brand" : "text-zinc-900 dark:text-white")}>
                       {feature.premium === true ? <Check className="w-4 h-4 ml-auto" /> : feature.premium}
                     </div>
                   </div>

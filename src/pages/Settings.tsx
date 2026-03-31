@@ -5,6 +5,7 @@ import {
   Tag, 
   Bell, 
   Shield, 
+  ShieldCheck,
   Globe, 
   Database, 
   Trash2, 
@@ -1864,8 +1865,13 @@ NOTIFY pgrst, 'reload schema';
         </div>
         <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-700/50">
-            <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-brand/20 shrink-0">
+            <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-brand/20 shrink-0 relative">
               {user?.name?.charAt(0) || 'U'}
+              {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
+                <div className="absolute -top-1 -right-1 bg-white dark:bg-zinc-900 rounded-full p-1 shadow-sm border border-zinc-100 dark:border-zinc-800">
+                  <ShieldCheck className="w-4 h-4 text-brand fill-brand/10" />
+                </div>
+              )}
             </div>
             <div className="flex-1 w-full">
               {isEditingProfile ? (
@@ -1896,7 +1902,12 @@ NOTIFY pgrst, 'reload schema';
               ) : (
                 <div className="flex items-center justify-between">
                   <div className="text-center sm:text-left">
-                    <h4 className="h3">{user?.name}</h4>
+                    <h4 className="h3 flex items-center gap-2">
+                      {user?.name}
+                      {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
+                        <ShieldCheck className="w-5 h-5 text-brand fill-brand/10" />
+                      )}
+                    </h4>
                     <p className="label-text">{user?.role}</p>
                   </div>
                   <button 
