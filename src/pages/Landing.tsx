@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Brain, 
@@ -21,14 +21,101 @@ import {
   Layout,
   PieChart,
   MessageSquare,
-  Clock
+  Clock,
+  Edit3,
+  Check,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../App';
+import LandingCMS from '../components/LandingCMS';
 
 export default function Landing() {
+  const { user } = useAuth() || {};
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [config, setConfig] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  const fetchConfig = async () => {
+    try {
+      const res = await fetch('/api/landing-config');
+      const data = await res.json();
+      setConfig(data);
+    } catch (err) {
+      console.error('Failed to fetch landing config:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveConfig = async (newConfig: any) => {
+    try {
+      const res = await fetch('/api/landing-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': localStorage.getItem('userId') || '0'
+        },
+        body: JSON.stringify(newConfig)
+      });
+      if (res.ok) {
+        setConfig(newConfig);
+      } else {
+        throw new Error('Failed to save');
+      }
+    } catch (err) {
+      console.error('Error saving config:', err);
+      throw err;
+    }
+  };
+
+  if (isLoading || !config) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-brand/30 selection:text-brand font-sans overflow-x-hidden">
+      {/* CMS Toggle for Admins */}
+      {user?.role === 'super_admin' && (
+        <div className="fixed bottom-8 right-8 z-[70]">
+          <button
+            onClick={() => setIsEditMode(!isEditMode)}
+            className="flex items-center gap-2 px-6 py-3 bg-brand text-white rounded-full font-bold shadow-2xl shadow-brand/40 hover:scale-105 transition-all active:scale-95"
+          >
+            {isEditMode ? <Check className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
+            {isEditMode ? 'Finish Editing' : 'Edit Landing Page'}
+          </button>
+        </div>
+      )}
+
+      {/* CMS Sidebar */}
+      <AnimatePresence>
+        {isEditMode && (
+          <motion.div
+            initial={{ x: 400 }}
+            animate={{ x: 0 }}
+            exit={{ x: 400 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 right-0 z-[60]"
+          >
+            <LandingCMS 
+              config={config} 
+              onSave={handleSaveConfig} 
+              onClose={() => setIsEditMode(false)} 
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-white/[0.04]">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -36,7 +123,7 @@ export default function Landing() {
             <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/20">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-display font-extrabold tracking-tight">Gryndee</span>
+            <span className="text-2xl font-display font-extrabold tracking-tight">{config.logo.text}</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Features</a>
@@ -73,30 +160,32 @@ export default function Landing() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.03] border border-white/[0.08] rounded-full text-xs font-semibold text-brand backdrop-blur-sm"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Empowering African MSMEs</span>
+              <span>{config.hero.badge}</span>
             </motion.div>
-
+ 
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
               className="text-6xl md:text-7xl xl:text-8xl font-display font-extrabold tracking-tight leading-[0.9] text-white"
             >
-              The Smartest Way <br />
-              To Run Your <br />
-              <span className="text-brand">Business.</span>
+              {config.hero.title.split('\n').map((line: string, i: number) => (
+                <React.Fragment key={i}>
+                  {line}
+                  <br />
+                </React.Fragment>
+              ))}
             </motion.h1>
-
+ 
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
               className="max-w-xl mx-auto lg:mx-0 text-lg md:text-xl text-zinc-400 font-medium leading-relaxed"
             >
-              Gryndee simplifies your operations, automates your bookkeeping, 
-              and provides AI-powered insights to help your business thrive.
+              {config.hero.subtitle}
             </motion.p>
-
+ 
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -107,7 +196,7 @@ export default function Landing() {
                 to="/register" 
                 className="w-full sm:w-auto px-10 py-5 bg-brand text-white rounded-2xl text-lg font-bold hover:opacity-90 transition-all shadow-2xl shadow-brand/30 flex items-center justify-center gap-3 active:scale-95"
               >
-                Get Started Free
+                {config.hero.ctaText}
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <div className="flex items-center gap-4">
@@ -136,7 +225,7 @@ export default function Landing() {
             <div className="relative rounded-[2.5rem] border border-white/[0.1] bg-white/[0.02] p-3 shadow-2xl backdrop-blur-sm overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-tr from-brand/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <img 
-                src="https://picsum.photos/seed/gryndee-dashboard/1200/1400" 
+                src={config.hero.image} 
                 alt="Gryndee Dashboard" 
                 className="rounded-[2rem] w-full shadow-2xl transform group-hover:scale-[1.02] transition-transform duration-700"
                 referrerPolicy="no-referrer"
@@ -196,119 +285,64 @@ export default function Landing() {
 
       {/* Feature Highlights - Alternating Sections */}
       <section id="features" className="py-32 space-y-32">
-        {/* Feature 1 */}
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-6 order-2 lg:order-1">
-            <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center text-brand">
-              <ShoppingCart className="w-6 h-6" />
+        {config.features.map((feature: any, index: number) => (
+          <div key={feature.id} className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+            <div className={cn("space-y-6", index % 2 === 0 ? "order-2 lg:order-1" : "order-2")}>
+              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", 
+                index === 0 ? "bg-brand/10 text-brand" : 
+                index === 1 ? "bg-blue-500/10 text-blue-400" : 
+                "bg-purple-500/10 text-purple-400")}>
+                {index === 0 ? <ShoppingCart className="w-6 h-6" /> : 
+                 index === 1 ? <Package className="w-6 h-6" /> : 
+                 <Users className="w-6 h-6" />}
+              </div>
+              <h2 className="text-4xl md:text-5xl font-display font-extrabold tracking-tight text-white leading-tight">
+                {feature.title}
+              </h2>
+              <p className="text-zinc-400 text-lg leading-relaxed">
+                {feature.description}
+              </p>
+              <ul className="space-y-4 pt-4">
+                {(index === 0 ? [
+                  "Instant digital receipts via WhatsApp",
+                  "Multiple payment method support",
+                  "Real-time sales tracking & history",
+                  "Offline mode with auto-sync"
+                ] : index === 1 ? [
+                  "Low stock alerts & notifications",
+                  "Product variant management",
+                  "Bulk inventory updates",
+                  "Multi-location stock tracking"
+                ] : [
+                  "Customer & Supplier ledgers",
+                  "Automated debt reminders",
+                  "Transaction history per party",
+                  "Credit limit management"
+                ]).map((item) => (
+                  <li key={item} className="flex items-center gap-3 text-zinc-300">
+                    <CheckCircle2 className={cn("w-5 h-5", 
+                      index === 0 ? "text-brand" : 
+                      index === 1 ? "text-blue-400" : 
+                      "text-purple-400")} />
+                    <span className="font-medium">{item}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <h2 className="text-4xl md:text-5xl font-display font-extrabold tracking-tight text-white leading-tight">
-              Effortless Sales <br /> & <span className="text-brand">POS Management.</span>
-            </h2>
-            <p className="text-zinc-400 text-lg leading-relaxed">
-              Record sales in seconds, whether you're online or offline. 
-              Our intuitive POS interface is designed for speed, helping you serve customers faster and never miss a transaction.
-            </p>
-            <ul className="space-y-4 pt-4">
-              {[
-                "Instant digital receipts via WhatsApp",
-                "Multiple payment method support",
-                "Real-time sales tracking & history",
-                "Offline mode with auto-sync"
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-3 text-zinc-300">
-                  <CheckCircle2 className="w-5 h-5 text-brand" />
-                  <span className="font-medium">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="order-1 lg:order-2 relative">
-            <div className="absolute inset-0 bg-brand/10 blur-[80px] -z-10" />
-            <img 
-              src="https://picsum.photos/seed/gryndee-sales/1000/800" 
-              alt="Sales Management" 
-              className="rounded-[2.5rem] border border-white/10 shadow-2xl"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-        </div>
-
-        {/* Feature 2 */}
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
-          <div className="relative">
-            <div className="absolute inset-0 bg-blue-500/10 blur-[80px] -z-10" />
-            <img 
-              src="https://picsum.photos/seed/gryndee-inventory/1000/800" 
-              alt="Inventory Management" 
-              className="rounded-[2.5rem] border border-white/10 shadow-2xl"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-          <div className="space-y-6">
-            <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400">
-              <Package className="w-6 h-6" />
+            <div className={cn("relative", index % 2 === 0 ? "order-1 lg:order-2" : "order-1")}>
+              <div className={cn("absolute inset-0 blur-[80px] -z-10", 
+                index === 0 ? "bg-brand/10" : 
+                index === 1 ? "bg-blue-500/10" : 
+                "bg-purple-500/10")} />
+              <img 
+                src={feature.image} 
+                alt={feature.title} 
+                className="rounded-[2.5rem] border border-white/10 shadow-2xl"
+                referrerPolicy="no-referrer"
+              />
             </div>
-            <h2 className="text-4xl md:text-5xl font-display font-extrabold tracking-tight text-white leading-tight">
-              Master Your <br /> <span className="text-blue-400">Inventory Control.</span>
-            </h2>
-            <p className="text-zinc-400 text-lg leading-relaxed">
-              Stop losing money to stockouts or overstocking. 
-              Gryndee gives you a bird's-eye view of your products, variants, and stock levels across all locations.
-            </p>
-            <ul className="space-y-4 pt-4">
-              {[
-                "Low stock alerts & notifications",
-                "Product variant management",
-                "Bulk inventory updates",
-                "Multi-location stock tracking"
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-3 text-zinc-300">
-                  <CheckCircle2 className="w-5 h-5 text-blue-400" />
-                  <span className="font-medium">{item}</span>
-                </li>
-              ))}
-            </ul>
           </div>
-        </div>
-
-        {/* Feature 3 */}
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-6 order-2 lg:order-1">
-            <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400">
-              <Users className="w-6 h-6" />
-            </div>
-            <h2 className="text-4xl md:text-5xl font-display font-extrabold tracking-tight text-white leading-tight">
-              Keep Your <br /> <span className="text-purple-400">Parties Organized.</span>
-            </h2>
-            <p className="text-zinc-400 text-lg leading-relaxed">
-              Manage relationships with customers and suppliers effortlessly. 
-              Track debts, credits, and transaction histories in one centralized ledger.
-            </p>
-            <ul className="space-y-4 pt-4">
-              {[
-                "Customer & Supplier ledgers",
-                "Automated debt reminders",
-                "Transaction history per party",
-                "Credit limit management"
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-3 text-zinc-300">
-                  <CheckCircle2 className="w-5 h-5 text-purple-400" />
-                  <span className="font-medium">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="order-1 lg:order-2 relative">
-            <div className="absolute inset-0 bg-purple-500/10 blur-[80px] -z-10" />
-            <img 
-              src="https://picsum.photos/seed/gryndee-parties/1000/800" 
-              alt="Party Management" 
-              className="rounded-[2.5rem] border border-white/10 shadow-2xl"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-        </div>
+        ))}
       </section>
 
       {/* How It Works Section */}
@@ -316,29 +350,20 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
             <h2 className="text-xs font-bold text-brand uppercase tracking-[0.3em]">How it works</h2>
-            <h3 className="text-4xl md:text-6xl font-display font-extrabold tracking-tight text-white">Three Steps to <span className="text-brand">Success.</span></h3>
-            <p className="text-zinc-500 text-lg font-medium">Getting your business on Gryndee is faster than your morning coffee.</p>
+            <h3 className="text-4xl md:text-6xl font-display font-extrabold tracking-tight text-white">{config.howItWorks.title}</h3>
+            <p className="text-zinc-500 text-lg font-medium">{config.howItWorks.subtitle}</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-12">
-            <StepCard 
-              number="01"
-              title="Create Account"
-              description="Sign up in seconds and set up your business profile with basic details."
-              icon={Users}
-            />
-            <StepCard 
-              number="02"
-              title="Add Products"
-              description="Upload your inventory or import products via CSV to get started instantly."
-              icon={Package}
-            />
-            <StepCard 
-              number="03"
-              title="Start Selling"
-              description="Record your first sale and watch your business insights come to life."
-              icon={TrendingUp}
-            />
+            {config.howItWorks.steps.map((step: any, index: number) => (
+              <StepCard 
+                key={step.id}
+                number={`0${index + 1}`}
+                title={step.title}
+                description={step.description}
+                icon={index === 0 ? Users : index === 1 ? Package : TrendingUp}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -399,24 +424,15 @@ export default function Landing() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <TestimonialCard 
-              quote="The best business app with a truly user-friendly design. It changed how I track my sales and inventory completely."
-              author="Kabiru Fatai"
-              role="Retail Store Owner"
-              image="https://picsum.photos/seed/kabiru/100/100"
-            />
-            <TestimonialCard 
-              quote="I love it! Easy to navigate and very useful for my inventory management. The AI advisor is a game changer."
-              author="Law Jove"
-              role="Wholesaler"
-              image="https://picsum.photos/seed/law/100/100"
-            />
-            <TestimonialCard 
-              quote="I highly recommend Gryndee for all business owners. It's packed with impressive features that make growth easy."
-              author="Esther Godwin"
-              role="Fashion Designer"
-              image="https://picsum.photos/seed/esther/100/100"
-            />
+            {config.testimonials.map((testimonial: any) => (
+              <TestimonialCard 
+                key={testimonial.id}
+                quote={testimonial.content}
+                author={testimonial.name}
+                role={testimonial.role}
+                image={testimonial.image || `https://picsum.photos/seed/${testimonial.name}/100/100`}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -486,7 +502,7 @@ export default function Landing() {
                 <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-2xl font-display font-extrabold tracking-tight">Gryndee</span>
+                <span className="text-2xl font-display font-extrabold tracking-tight">{config.logo.text}</span>
               </div>
               <p className="text-zinc-500 text-lg font-medium max-w-sm leading-relaxed">
                 The intelligent business management app for African MSMEs. Simple, smart, and stress-free.

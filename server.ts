@@ -2391,6 +2391,133 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  // Landing Page CMS API
+  const DEFAULT_LANDING_CONFIG = {
+    hero: {
+      badge: "Empowering African MSMEs",
+      title: "The Smartest Way To Run Your Business.",
+      subtitle: "Gryndee simplifies your operations, automates your bookkeeping, and provides AI-powered insights to help your business thrive.",
+      ctaText: "Get Started Free",
+      image: "https://picsum.photos/seed/gryndee-dashboard/1200/1400"
+    },
+    logo: {
+      text: "Gryndee",
+      url: ""
+    },
+    features: [
+      {
+        id: 1,
+        title: "Effortless Sales & POS Management.",
+        description: "Record sales in seconds, whether you're online or offline. Our intuitive POS interface is designed for speed, helping you serve customers faster and never miss a transaction.",
+        image: "https://picsum.photos/seed/gryndee-sales/1000/800"
+      },
+      {
+        id: 2,
+        title: "Automated Bookkeeping & Finance.",
+        description: "Say goodbye to manual spreadsheets. Gryndee automatically tracks your income, expenses, and taxes, giving you a clear picture of your financial health at all times.",
+        image: "https://picsum.photos/seed/gryndee-finance/1000/800"
+      },
+      {
+        id: 3,
+        title: "AI-Powered Business Insights.",
+        description: "Get personalized advice from Gryndee AI. Our intelligent advisor analyzes your data to help you optimize pricing, manage stock, and grow your revenue.",
+        image: "https://picsum.photos/seed/gryndee-ai/1000/800"
+      }
+    ],
+    howItWorks: {
+      title: "How Gryndee Works",
+      subtitle: "Three simple steps to transform your business operations.",
+      steps: [
+        {
+          id: 1,
+          title: "Set Up Your Profile",
+          description: "Create your account and customize your business settings in minutes."
+        },
+        {
+          id: 2,
+          title: "Record Your Data",
+          description: "Start tracking sales, expenses, and inventory with ease."
+        },
+        {
+          id: 3,
+          title: "Grow Your Business",
+          description: "Use AI insights and detailed reports to make smarter decisions."
+        }
+      ]
+    },
+    testimonials: [
+      {
+        id: 1,
+        name: "Chidi Okafor",
+        role: "Retail Store Owner",
+        content: "Gryndee has completely changed how I manage my shop. I can now track every sale and know exactly how much profit I'm making each day."
+      },
+      {
+        id: 2,
+        name: "Amina Yusuf",
+        role: "Boutique Owner",
+        content: "The AI Advisor is like having a business consultant in my pocket. It helped me identify which products were my best sellers."
+      }
+    ]
+  };
+
+  app.get("/api/landing-config", async (req, res) => {
+    try {
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'LANDING_CONFIG' LIMIT 1");
+        if (rows.length > 0 && rows[0].value) {
+          return res.json(JSON.parse(rows[0].value));
+        }
+      }
+      return res.json(DEFAULT_LANDING_CONFIG);
+    } catch (error: any) {
+      console.error('[CMS] Error fetching landing config:', error);
+      res.json(DEFAULT_LANDING_CONFIG);
+    }
+  });
+
+  app.post("/api/landing-config", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'super_admin') {
+        return res.status(403).json({ error: "Forbidden: Only Super Admin can edit landing page" });
+      }
+
+      const config = req.body;
+      if (process.env.AWS_DB_PASSWORD) {
+        await pool.query(
+          "INSERT INTO system_settings (key, value) VALUES ('LANDING_CONFIG', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()",
+          [JSON.stringify(config)]
+        );
+        return res.json({ success: true });
+      }
+      res.status(503).json({ error: "Database not available" });
+    } catch (error: any) {
+      console.error('[CMS] Error updating landing config:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/upload", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo || userInfo.role !== 'super_admin') {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const { image, folder } = req.body;
+      if (!image) return res.status(400).json({ error: "Image is required" });
+
+      const uploadedUrl = await uploadToS3(image, folder || 'landing');
+      if (uploadedUrl && uploadedUrl.startsWith('http')) {
+        return res.json({ url: uploadedUrl });
+      }
+      throw new Error("Failed to upload image");
+    } catch (error: any) {
+      console.error('[UPLOAD] Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   app.get("/api/test", async (req, res) => {
     const dbStatus = {
@@ -2548,9 +2675,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     
     // Virtual superadmin login
     const superAdminPass = process.env.SUPERADMIN_PASSWORD || 'superpassword123';
-    if ((normalizedUsername === 'superadmin' || normalizedUsername === 'admin@gryndee.com') && password === superAdminPass) {
+    if ((normalizedUsername === 'superadmin' || normalizedUsername === 'admin@gryndee.com' || normalizedUsername === 'connectabinibi@gmail.com') && password === superAdminPass) {
       console.log(`[AUTH] Virtual superadmin login success: "${normalizedUsername}"`);
-      return res.json({ id: '0', username: 'superadmin', email: 'admin@gryndee.com', role: 'super_admin', name: 'System Admin' });
+      return res.json({ id: '0', username: 'superadmin', email: normalizedUsername, role: 'super_admin', name: 'System Admin' });
     }
 
     if (!supabase) {
