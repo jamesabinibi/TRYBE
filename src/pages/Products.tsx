@@ -73,7 +73,7 @@ const getInitialProductState = () => ({
   unit: 'Pieces',
   pieces_per_unit: '1',
   product_type: 'one' as 'one' | 'multiple',
-  variants: [{ size: '', color: '', quantity: '0', low_stock_threshold: '5' }],
+  variants: [{ size: '', color: '', quantity: '0', low_stock_threshold: '' }],
   images: []
 });
 
@@ -159,13 +159,15 @@ export default function Products() {
               endpoints: ['/api/products', '/api/services', '/api/categories']
             })
           });
+          if (!batchRes.ok) {
+            throw new Error(`Batch fetch failed with status ${batchRes.status}`);
+          }
           const [productsData, servicesData, categoriesData] = await batchRes.json();
           setProducts(Array.isArray(productsData) ? productsData : []);
           setServices(Array.isArray(servicesData) ? servicesData : []);
           setCategories(Array.isArray(categoriesData) ? categoriesData : []);
         } catch (err) {
           console.error("Batch fetch failed", err);
-          Promise.all([fetchProducts(), fetchServices(), fetchCategories()]);
         } finally {
           setIsLoading(false);
         }
@@ -244,10 +246,10 @@ export default function Products() {
         unit: newProduct.unit,
         pieces_per_unit: parseInt(newProduct.pieces_per_unit as any) || 1,
         product_type: newProduct.product_type,
-        variants: (newProduct.product_type === 'one' ? [newProduct.variants[0] || { size: '', color: '', quantity: '0', low_stock_threshold: '5' }] : newProduct.variants).map(v => ({
+        variants: (newProduct.product_type === 'one' ? [newProduct.variants[0] || { size: '', color: '', quantity: '0', low_stock_threshold: '' }] : newProduct.variants).map(v => ({
           ...v,
           quantity: parseInt(v.quantity as any) || 0,
-          low_stock_threshold: parseInt(v.low_stock_threshold as any) || 5
+          low_stock_threshold: v.low_stock_threshold === '' || v.low_stock_threshold === null || v.low_stock_threshold === undefined ? null : parseInt(v.low_stock_threshold as any)
         })),
         images: newProduct.images
       };
@@ -290,7 +292,7 @@ export default function Products() {
         size: v.size || '',
         color: v.color || '',
         quantity: (v.quantity || 0).toString(),
-        low_stock_threshold: (v.low_stock_threshold || 5).toString(),
+        low_stock_threshold: v.low_stock_threshold !== null && v.low_stock_threshold !== undefined ? v.low_stock_threshold.toString() : '',
         price_override: v.price_override
       })),
       images: product.images || []
@@ -477,7 +479,7 @@ export default function Products() {
   const addVariant = () => {
     setNewProduct({
       ...newProduct,
-      variants: [...newProduct.variants, { size: '', color: '', quantity: '0', low_stock_threshold: '5' }]
+      variants: [...newProduct.variants, { size: '', color: '', quantity: '0', low_stock_threshold: '' }]
     });
   };
 
@@ -1129,7 +1131,7 @@ export default function Products() {
                         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                           <button 
                             type="button"
-                            onClick={() => setNewProduct({...newProduct, product_type: 'one', variants: [newProduct.variants[0] || { size: '', color: '', quantity: '0', low_stock_threshold: '5' }]})}
+                            onClick={() => setNewProduct({...newProduct, product_type: 'one', variants: [newProduct.variants[0] || { size: '', color: '', quantity: '0', low_stock_threshold: '' }]})}
                             className={cn(
                               "flex-1 sm:flex-none px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all border",
                               newProduct.product_type === 'one' 
@@ -1150,7 +1152,7 @@ export default function Products() {
                                   size,
                                   color: '',
                                   quantity: '0',
-                                  low_stock_threshold: '5'
+                                  low_stock_threshold: ''
                                 }))
                               });
                               setIsBulkEditing(true);
@@ -1178,7 +1180,7 @@ export default function Products() {
                               onChange={(e) => {
                                 const updated = [...newProduct.variants];
                                 if (updated.length === 0) {
-                                  updated.push({ size: '', color: '', quantity: e.target.value, low_stock_threshold: '5' });
+                                  updated.push({ size: '', color: '', quantity: e.target.value, low_stock_threshold: '' });
                                 } else {
                                   updated[0].quantity = e.target.value;
                                 }
@@ -1191,7 +1193,7 @@ export default function Products() {
                             <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Low Stock Alert at</label>
                             <Input 
                               type="number" 
-                              value={newProduct.variants[0]?.low_stock_threshold || '5'}
+                              value={newProduct.variants[0]?.low_stock_threshold !== undefined ? newProduct.variants[0].low_stock_threshold : ''}
                               onChange={(e) => {
                                 const updated = [...newProduct.variants];
                                 if (updated.length === 0) {
@@ -1220,7 +1222,7 @@ export default function Products() {
                                 onClick={() => {
                                   setNewProduct({
                                     ...newProduct,
-                                    variants: [...newProduct.variants, { size: '', color: '', quantity: '0', low_stock_threshold: '5' }]
+                                    variants: [...newProduct.variants, { size: '', color: '', quantity: '0', low_stock_threshold: '' }]
                                   });
                                 }}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-brand/10 text-brand rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-brand/20 transition-all"

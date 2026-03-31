@@ -133,6 +133,9 @@ export default function Sales() {
               endpoints: ['/api/products', '/api/services', '/api/sales', '/api/customers']
             })
           });
+          if (!batchRes.ok) {
+            throw new Error(`Batch fetch failed with status ${batchRes.status}`);
+          }
           const [productsData, servicesData, salesData, customersData] = await batchRes.json();
           setProducts(Array.isArray(productsData) ? productsData : []);
           setServices(Array.isArray(servicesData) ? servicesData : []);
@@ -140,7 +143,6 @@ export default function Sales() {
           setCustomers(Array.isArray(customersData) ? customersData : []);
         } catch (err) {
           console.error("Batch fetch failed", err);
-          Promise.all([fetchProducts(), fetchServices(), fetchSales(), fetchCustomers()]);
         }
       };
       loadInitialData();

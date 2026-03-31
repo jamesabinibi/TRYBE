@@ -147,6 +147,10 @@ export default function Dashboard() {
           })
         });
 
+        if (!batchRes.ok) {
+          throw new Error(`Batch fetch failed with status ${batchRes.status}`);
+        }
+
         const [sumData, trendData, salesData, staffData, topSalesData, topExpData, productsData] = await batchRes.json();
 
         setSummary(sumData || {});

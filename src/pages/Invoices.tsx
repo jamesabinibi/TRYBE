@@ -87,6 +87,10 @@ const Invoices: React.FC = () => {
           })
         });
 
+        if (!batchRes.ok) {
+          throw new Error(`Batch fetch failed with status ${batchRes.status}`);
+        }
+
         const [productsData, servicesData, salesData] = await batchRes.json();
         setProducts(Array.isArray(productsData) ? productsData : []);
         setServices(Array.isArray(servicesData) ? servicesData : []);
@@ -347,6 +351,10 @@ const Invoices: React.FC = () => {
           endpoints: ['/api/products', '/api/services']
         })
       });
+
+      if (!batchRes.ok) {
+        throw new Error(`Batch fetch failed with status ${batchRes.status}`);
+      }
 
       const [productsData, servicesData] = await batchRes.json();
       setProducts(Array.isArray(productsData) ? productsData : []);

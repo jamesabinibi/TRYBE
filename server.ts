@@ -560,12 +560,18 @@ async function initAwsDb() {
             ALTER TABLE product_variants ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE;
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='low_stock_threshold') THEN
-            ALTER TABLE product_variants ADD COLUMN low_stock_threshold INTEGER DEFAULT 5;
+            ALTER TABLE product_variants ADD COLUMN low_stock_threshold INTEGER;
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='price_override') THEN
             ALTER TABLE product_variants ADD COLUMN price_override DECIMAL(12, 2);
           END IF;
         END $$;
+      `);
+
+      // Migration: Remove default value and set existing 5s to null so global threshold applies
+      await client.query(`
+        ALTER TABLE product_variants ALTER COLUMN low_stock_threshold DROP DEFAULT;
+        UPDATE product_variants SET low_stock_threshold = NULL WHERE low_stock_threshold = 5;
       `);
 
       await client.query(`
@@ -3918,8 +3924,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             await client.query('DELETE FROM product_variants WHERE product_id = $1', [id]);
             for (const v of variants) {
               await client.query(
-                'INSERT INTO product_variants (product_id, size, color, quantity, low_stock_threshold) VALUES ($1, $2, $3, $4, $5)',
-                [id, v.size, v.color, v.quantity, v.low_stock_threshold]
+                'INSERT INTO product_variants (account_id, product_id, size, color, quantity, low_stock_threshold, price_override) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                [userInfo.account_id, id, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override]
               );
             }
           }
@@ -4577,6 +4583,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           let total_profit = 0;
           let cost_price_total = 0;
 
+          const { rows: settingsRows } = await client.query('SELECT low_stock_threshold FROM settings WHERE account_id = $1', [userInfo.account_id]);
+          const globalThreshold = settingsRows[0]?.low_stock_threshold || 5;
+
           for (const item of items) {
             let itemName = '';
             let sellingPrice = 0;
@@ -4606,8 +4615,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               const newQuantity = (v.quantity || 0) - item.quantity;
               await client.query('UPDATE product_variants SET quantity = $1 WHERE id = $2', [newQuantity, item.variant_id]);
               
-              // Low stock check (simplified for now)
-              if (newQuantity <= (v.low_stock_threshold || 5)) {
+              // Low stock check
+              const threshold = v.low_stock_threshold !== null && v.low_stock_threshold !== undefined ? Number(v.low_stock_threshold) : Number(globalThreshold);
+              if (newQuantity <= threshold) {
                 console.log(`[SALES] Low stock alert for ${itemName}`);
               }
 
@@ -4741,6 +4751,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (saleError) throw saleError;
       const saleId = sale.id;
 
+      const { data: settings } = await supabase.from('settings').select('low_stock_threshold').eq('account_id', userInfo.account_id).maybeSingle();
+      const globalThreshold = settings?.low_stock_threshold || 5;
+
       for (const item of items) {
         let sellingPrice = 0;
         let costPrice = 0;
@@ -4773,7 +4786,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
           // Low Stock Alert
           const newQuantity = variant.quantity - item.quantity;
-          const threshold = variant.low_stock_threshold || 5;
+          const threshold = variant.low_stock_threshold !== null && variant.low_stock_threshold !== undefined ? Number(variant.low_stock_threshold) : Number(globalThreshold);
           if (newQuantity <= threshold) {
             console.log(`[ALERT] Low stock for ${itemName}: ${newQuantity}`);
             // Find account owner email
@@ -7578,7 +7591,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           color TEXT,
           sku TEXT,
           quantity INTEGER DEFAULT 0,
-          low_stock_threshold INTEGER DEFAULT 5,
+          low_stock_threshold INTEGER,
           price_override DECIMAL(12,2),
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
@@ -7610,12 +7623,18 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             ALTER TABLE product_variants ADD COLUMN quantity INTEGER DEFAULT 0;
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='low_stock_threshold') THEN
-            ALTER TABLE product_variants ADD COLUMN low_stock_threshold INTEGER DEFAULT 5;
+            ALTER TABLE product_variants ADD COLUMN low_stock_threshold INTEGER;
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='product_variants' AND column_name='price_override') THEN
             ALTER TABLE product_variants ADD COLUMN price_override DECIMAL(12,2);
           END IF;
         END $$;
+      `);
+
+      // Migration: Remove default value and set existing 5s to null so global threshold applies
+      await runSql(`
+        ALTER TABLE product_variants ALTER COLUMN low_stock_threshold DROP DEFAULT;
+        UPDATE product_variants SET low_stock_threshold = NULL WHERE low_stock_threshold = 5;
       `);
 
       await runSql(`

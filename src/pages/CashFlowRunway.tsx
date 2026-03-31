@@ -29,6 +29,10 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
         })
       });
 
+      if (!batchRes.ok) {
+        throw new Error(`Batch fetch failed with status ${batchRes.status}`);
+      }
+
       const [salesData, expensesData] = await batchRes.json();
 
       setSales(salesData);

@@ -49,6 +49,10 @@ export default function AIAdvisor() {
         })
       });
 
+      if (!batchRes.ok) {
+        throw new Error(`Batch fetch failed with status ${batchRes.status}`);
+      }
+
       const [sales, expenses, products] = await batchRes.json();
 
       const businessData = {
