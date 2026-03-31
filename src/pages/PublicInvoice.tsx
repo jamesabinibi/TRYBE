@@ -132,7 +132,7 @@ export default function PublicInvoice() {
                   </div>
                 )}
                 <div>
-                  <h1 className="text-4xl font-black tracking-tighter text-zinc-900 dark:text-white uppercase leading-none">
+                  <h1 className="text-4xl font-bold tracking-tighter text-zinc-900 dark:text-white uppercase leading-none">
                     Invoice
                   </h1>
                   <p className="text-zinc-400 dark:text-zinc-500 font-sans font-bold text-sm mt-2 tracking-widest">
@@ -143,7 +143,7 @@ export default function PublicInvoice() {
 
               <div className="text-left md:text-right space-y-4">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Issued By</p>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em]">Issued By</p>
                   <h3 className="font-bold text-2xl text-zinc-950 dark:text-white tracking-tight">{settings.business_name || 'Business Name'}</h3>
                 </div>
                 <div className="space-y-1.5 text-zinc-500 dark:text-zinc-400 text-sm font-medium">
@@ -162,7 +162,7 @@ export default function PublicInvoice() {
             {/* Meta Info Grid */}
             <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-10 p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-[32px] border border-zinc-100 dark:border-zinc-800">
               <div>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Billed To</p>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-2">Billed To</p>
                 <h4 className="font-bold text-lg text-zinc-950 dark:text-white tracking-tight leading-tight">
                   {invoice.customer_name || invoice.customers?.name || invoice.customer_name_from_table || 'Walk-in Customer'}
                 </h4>
@@ -172,14 +172,14 @@ export default function PublicInvoice() {
                 </div>
               </div>
               <div>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Date Issued</p>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-2">Date Issued</p>
                 <p className="font-bold text-zinc-950 dark:text-white text-lg tracking-tight">
                   {new Date(invoice.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Payment Status</p>
-                <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-2">Payment Status</p>
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-brand/10  text-brand  text-[10px] font-bold uppercase tracking-widest">
                   {invoice.payment_method || 'Paid'}
                 </div>
               </div>
@@ -190,10 +190,10 @@ export default function PublicInvoice() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 w-1/2">Description</th>
-                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Qty</th>
-                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Price</th>
-                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total</th>
+                    <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 w-1/2">Description</th>
+                    <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 text-center">Qty</th>
+                    <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 text-right">Price</th>
+                    <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
@@ -231,7 +231,7 @@ export default function PublicInvoice() {
             <div className="mt-12 flex flex-col sm:flex-row justify-between items-start gap-12 pt-12 border-t border-zinc-100 dark:border-zinc-800">
               <div className="max-w-xs space-y-6">
                 <div>
-                  <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Terms & Conditions</h5>
+                  <h5 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-4">Terms & Conditions</h5>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                     {invoice.invoice_terms || settings.invoice_terms || `Thank you for your business. We appreciate your trust in ${settings.business_name || 'us'}.`}
                   </p>
@@ -239,7 +239,7 @@ export default function PublicInvoice() {
 
                 {(settings?.bank_name || settings?.account_name || settings?.account_number) && (
                   <div>
-                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Payment Details</h5>
+                    <h5 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-4">Payment Details</h5>
                     <div className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                       {settings?.bank_name && <p><span className="font-bold text-zinc-700 dark:text-zinc-300">Bank:</span> {settings.bank_name}</p>}
                       {settings?.account_name && <p><span className="font-bold text-zinc-700 dark:text-zinc-300">Account Name:</span> {settings.account_name}</p>}
@@ -251,27 +251,27 @@ export default function PublicInvoice() {
 
               <div className="w-full sm:w-80 space-y-4">
                 <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Subtotal</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Subtotal</span>
                   <span className={NUMBER_STYLE}>{formatCurrency((parseFloat(invoice.total_amount) || 0) + (parseFloat(invoice.discount_amount) || 0) - (parseFloat(invoice.vat_amount) || 0), currency)}</span>
                 </div>
                 
                 {invoice.discount_amount > 0 && (
-                  <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Discount ({invoice.discount_percentage}%)</span>
+                  <div className="flex justify-between items-center text-brand ">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Discount ({invoice.discount_percentage}%)</span>
                     <span className={NUMBER_STYLE}>-{formatCurrency(invoice.discount_amount, currency)}</span>
                   </div>
                 )}
 
                 {invoice.vat_amount > 0 && (
                   <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">VAT</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em]">VAT</span>
                     <span className={NUMBER_STYLE}>{formatCurrency(invoice.vat_amount, currency)}</span>
                   </div>
                 )}
 
                 <div className="pt-6 border-t-4 border-zinc-950 dark:border-white flex justify-between items-center">
-                  <span className="text-sm font-black uppercase tracking-[0.3em] text-zinc-950 dark:text-white">Total</span>
-                  <span className="text-4xl font-black tracking-tighter text-zinc-950 dark:text-white">
+                  <span className="text-sm font-bold uppercase tracking-[0.3em] text-zinc-950 dark:text-white">Total</span>
+                  <span className="text-4xl font-bold tracking-tighter text-zinc-950 dark:text-white">
                     {formatCurrency(invoice.total_amount || 0, currency)}
                   </span>
                 </div>
@@ -294,14 +294,14 @@ export default function PublicInvoice() {
 
           {/* Footer Branding */}
           <div className="bg-zinc-50 dark:bg-zinc-800/30 p-8 text-center border-t border-zinc-100 dark:border-zinc-800">
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em]">
-              Generated by {settings.business_name || 'StockFlow'}
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.4em]">
+              Generated by {settings.business_name || 'Gryndee'}
             </p>
           </div>
         </motion.div>
 
         <p className="mt-12 text-center text-zinc-400 dark:text-zinc-600 text-[10px] font-bold uppercase tracking-[0.2em]">
-          &copy; {new Date().getFullYear()} {settings.business_name || 'StockFlow'}. All rights reserved.
+          &copy; {new Date().getFullYear()} {settings.business_name || 'Gryndee'}. All rights reserved.
         </p>
       </div>
     </div>

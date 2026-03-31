@@ -150,7 +150,27 @@ export default function Products() {
 
   useEffect(() => {
     if (user) {
-      Promise.all([fetchProducts(), fetchServices(), fetchCategories()]).finally(() => setIsLoading(false));
+      const loadInitialData = async () => {
+        try {
+          const batchRes = await fetchWithAuth('/api/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              endpoints: ['/api/products', '/api/services', '/api/categories']
+            })
+          });
+          const [productsData, servicesData, categoriesData] = await batchRes.json();
+          setProducts(Array.isArray(productsData) ? productsData : []);
+          setServices(Array.isArray(servicesData) ? servicesData : []);
+          setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        } catch (err) {
+          console.error("Batch fetch failed", err);
+          Promise.all([fetchProducts(), fetchServices(), fetchCategories()]);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadInitialData();
     }
   }, [user]);
 
@@ -284,7 +304,7 @@ export default function Products() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete Service</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Delete Service</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this service? This action cannot be undone.</p>
         <div className="flex gap-3">
@@ -304,11 +324,11 @@ export default function Products() {
                 toast.error('An error occurred');
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
           >
             Delete
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -373,7 +393,7 @@ export default function Products() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Confirm Deletion</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Confirm Deletion</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this product? This action cannot be undone.</p>
         <div className="flex gap-3">
@@ -393,13 +413,13 @@ export default function Products() {
                 toast.error('Network error');
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
           >
             Delete
           </button>
           <button 
             onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+            className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all"
           >
             Cancel
           </button>
@@ -683,7 +703,7 @@ export default function Products() {
                               <p className={cn(
                                 NUMBER_STYLE,
                                 "text-sm",
-                                (item.total_stock || 0) <= (item.low_stock_threshold || 5) ? "text-red-500" : ""
+                                (Number(item.total_stock) || 0) <= (item.low_stock_threshold !== null && item.low_stock_threshold !== undefined ? Number(item.low_stock_threshold) : (Number(settings?.low_stock_threshold) || 5)) ? "text-red-500" : ""
                               )}>
                                 <NumberDisplay value={item.total_stock || 0} size="sm" />
                               </p>
@@ -976,7 +996,7 @@ export default function Products() {
                       <div className="flex flex-col md:flex-row gap-8 sm:gap-10">
                         {/* Image Upload Area */}
                         <div className="w-full md:w-48 space-y-4">
-                          <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Product Image</label>
+                          <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Product Image</label>
                           <div className="flex flex-wrap gap-4">
                             {imagePreviews.length > 0 ? (
                               <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-700 group">
@@ -992,7 +1012,7 @@ export default function Products() {
                             ) : (
                               <label className="w-full aspect-square flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-2xl hover:border-brand dark:hover:border-brand hover:bg-brand/5 dark:hover:bg-brand/5 transition-all cursor-pointer group">
                                 <ImageIcon className="w-8 h-8 text-zinc-300 dark:text-zinc-600 group-hover:text-brand transition-colors" />
-                                <span className="text-[10px] font-black text-zinc-300 dark:text-zinc-600 group-hover:text-brand mt-2 uppercase tracking-widest">Upload</span>
+                                <span className="text-[10px] font-bold text-zinc-300 dark:text-zinc-600 group-hover:text-brand mt-2 uppercase tracking-widest">Upload</span>
                                 <input 
                                   type="file" 
                                   accept="image/*" 
@@ -1023,7 +1043,7 @@ export default function Products() {
                         <div className="flex-1 space-y-8 sm:space-y-10">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Product name</label>
+                              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Product name</label>
                               <Input 
                                 required
                                 type="text" 
@@ -1033,7 +1053,7 @@ export default function Products() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
+                              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
                               <div className="relative group">
                                 <Input 
                                   as="select"
@@ -1052,7 +1072,7 @@ export default function Products() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Select unit</label>
+                              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Select unit</label>
                               <div className="relative group">
                                 <Input 
                                   as="select"
@@ -1066,7 +1086,7 @@ export default function Products() {
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Supplier Name</label>
+                              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Supplier Name</label>
                               <Input 
                                 type="text" 
                                 value={newProduct.supplier_name}
@@ -1078,7 +1098,7 @@ export default function Products() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">How many pieces in 1 unit?</label>
+                              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">How many pieces in 1 unit?</label>
                               <div className="relative">
                                 <Input 
                                   type="number" 
@@ -1089,7 +1109,7 @@ export default function Products() {
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Description</label>
+                              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Description</label>
                               <Input 
                                 type="text" 
                                 value={newProduct.description}
@@ -1105,7 +1125,7 @@ export default function Products() {
                     {/* Product Type Section */}
                     <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
                       <div className="space-y-4">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select product type:</label>
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Select product type:</label>
                         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                           <button 
                             type="button"
@@ -1151,7 +1171,7 @@ export default function Products() {
                       {newProduct.product_type === 'one' && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Initial Stock Quantity</label>
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Initial Stock Quantity</label>
                             <Input 
                               type="number" 
                               value={newProduct.variants[0]?.quantity || '0'}
@@ -1168,7 +1188,7 @@ export default function Products() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Low Stock Alert at</label>
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Low Stock Alert at</label>
                             <Input 
                               type="number" 
                               value={newProduct.variants[0]?.low_stock_threshold || '5'}
@@ -1193,7 +1213,7 @@ export default function Products() {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 bg-brand rounded-full"></span>
-                                <h4 className="text-sm font-black text-zinc-900 dark:text-white tracking-tight">Size & Stock</h4>
+                                <h4 className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">Size & Stock</h4>
                               </div>
                               <button 
                                 type="button"
@@ -1203,7 +1223,7 @@ export default function Products() {
                                     variants: [...newProduct.variants, { size: '', color: '', quantity: '0', low_stock_threshold: '5' }]
                                   });
                                 }}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-brand/10 text-brand rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-brand/20 transition-all"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-brand/10 text-brand rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-brand/20 transition-all"
                               >
                                 <Plus className="w-3 h-3" />
                                 Add more
@@ -1232,6 +1252,16 @@ export default function Products() {
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
                                   />
+                                  <Input 
+                                    type="number"
+                                    placeholder="Low Stock Alert"
+                                    value={v.low_stock_threshold}
+                                    onChange={(e) => {
+                                      const updated = [...newProduct.variants];
+                                      updated[i].low_stock_threshold = e.target.value;
+                                      setNewProduct({...newProduct, variants: updated});
+                                    }}
+                                  />
                                   <button 
                                     type="button"
                                     onClick={() => {
@@ -1253,7 +1283,7 @@ export default function Products() {
                     {/* Pricing Section */}
                     <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Cost Price (₦)</label>
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Cost Price (₦)</label>
                         <Input 
                           required
                           type="number" 
@@ -1263,7 +1293,7 @@ export default function Products() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Selling Price (₦)</label>
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Selling Price (₦)</label>
                         <Input 
                           required
                           type="number" 
@@ -1279,7 +1309,7 @@ export default function Products() {
                 {/* Summary Sidebar */}
                 <div className="w-full lg:w-80 bg-zinc-50/50 lg:bg-white dark:bg-zinc-900/50 border-b lg:border-b-0 lg:border-l border-zinc-100 dark:border-zinc-800 p-6 sm:p-8 flex flex-col order-1 lg:order-2 shrink-0 lg:overflow-y-auto">
                   <div className="flex-1 space-y-6 sm:space-y-8">
-                    <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white tracking-tight">Summary</h3>
+                    <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Summary</h3>
                     
                     <div className="grid grid-cols-2 lg:grid-cols-1 gap-6">
                       {imagePreviews.length > 0 && (
@@ -1290,15 +1320,15 @@ export default function Products() {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <span className="text-xs sm:text-sm font-bold text-zinc-400 dark:text-zinc-500">Product:</span>
-                          <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white truncate max-w-[100px] sm:max-w-[150px]">{newProduct.name || '-'}</span>
+                          <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate max-w-[100px] sm:max-w-[150px]">{newProduct.name || '-'}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs sm:text-sm font-bold text-zinc-400 dark:text-zinc-500">Unit:</span>
-                          <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white">{newProduct.unit}</span>
+                          <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">{newProduct.unit}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs sm:text-sm font-bold text-zinc-400 dark:text-zinc-500">Qty:</span>
-                          <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white">{totalQuantity}</span>
+                          <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">{totalQuantity}</span>
                         </div>
                       </div>
                     </div>
@@ -1309,7 +1339,7 @@ export default function Products() {
                       type="submit"
                       form="product-form"
                       disabled={isSaving}
-                      className="w-full py-3.5 sm:py-4 bg-brand text-white rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                      className="w-full py-3.5 sm:py-4 bg-brand text-white rounded-xl text-xs sm:text-sm font-bold uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                     >
                       {isSaving ? 'Saving...' : editingProduct ? 'Update Product' : 'Save Product'}
                     </button>

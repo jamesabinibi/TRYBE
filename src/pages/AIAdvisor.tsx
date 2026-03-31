@@ -37,15 +37,19 @@ export default function AIAdvisor() {
   const fetchBusinessData = async () => {
     setLoadingPulse(true);
     try {
-      const [salesRes, expensesRes, productsRes] = await Promise.all([
-        fetchWithAuth('/api/sales'),
-        fetchWithAuth('/api/expenses'),
-        fetchWithAuth('/api/products')
-      ]);
+      const batchRes = await fetchWithAuth('/api/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoints: [
+            '/api/sales',
+            '/api/expenses',
+            '/api/products'
+          ]
+        })
+      });
 
-      const sales = await salesRes.json();
-      const expenses = await expensesRes.json();
-      const products = await productsRes.json();
+      const [sales, expenses, products] = await batchRes.json();
 
       const businessData = {
         sales: sales.slice(0, 50), // Last 50 sales
@@ -305,12 +309,12 @@ export default function AIAdvisor() {
                   
                   <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                      <div className="w-12 h-12 rounded-2xl bg-brand/10 flex items-center justify-center text-brand">
                         <DollarSign className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Forecasted Revenue (Next 30 Days)</p>
-                        <p className="text-3xl font-black text-zinc-900 dark:text-white mt-1">
+                        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Forecasted Revenue (Next 30 Days)</p>
+                        <p className="text-3xl font-bold text-zinc-900 dark:text-white mt-1">
                           {formatCurrency(forecast.forecasted_revenue, currency)}
                         </p>
                       </div>
@@ -325,7 +329,7 @@ export default function AIAdvisor() {
                       <Package className="w-6 h-6" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-zinc-900 dark:text-white">Restock Suggestions</h2>
+                      <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Restock Suggestions</h2>
                       <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Inventory Action Plan</p>
                     </div>
                   </div>
@@ -335,7 +339,7 @@ export default function AIAdvisor() {
                       forecast.restock_suggestions.map((item: any, idx: number) => (
                         <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
                           <span className="font-bold text-zinc-900 dark:text-white">{item.product_name}</span>
-                          <span className="px-3 py-1 bg-brand/10 text-brand rounded-xl text-sm font-black">
+                          <span className="px-3 py-1 bg-brand/10 text-brand rounded-xl text-sm font-bold">
                             +{item.suggested_quantity} units
                           </span>
                         </div>
@@ -358,19 +362,19 @@ export default function AIAdvisor() {
       </AnimatePresence>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 bg-emerald-50 dark:bg-emerald-900/10 rounded-3xl border border-emerald-100 dark:border-emerald-900/20">
-          <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mb-3" />
-          <h4 className="text-xs font-black uppercase tracking-widest text-emerald-900 dark:text-emerald-100">Growth Focus</h4>
-          <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium mt-1">AI identifies your fastest growing categories.</p>
+        <div className="p-6 bg-brand/5 rounded-3xl border border-brand/10">
+          <TrendingUp className="w-6 h-6 text-brand mb-3" />
+          <h4 className="text-xs font-bold uppercase tracking-widest text-brand">Growth Focus</h4>
+          <p className="text-[10px] text-brand/80 font-medium mt-1">AI identifies your fastest growing categories.</p>
         </div>
         <div className="p-6 bg-amber-50 dark:bg-amber-900/10 rounded-3xl border border-amber-100 dark:border-amber-900/20">
           <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400 mb-3" />
-          <h4 className="text-xs font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Risk Mitigation</h4>
+          <h4 className="text-xs font-bold uppercase tracking-widest text-amber-900 dark:text-amber-100">Risk Mitigation</h4>
           <p className="text-[10px] text-amber-600/80 dark:text-amber-400/80 font-medium mt-1">Detects unusual expense spikes or low stock.</p>
         </div>
         <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/20">
           <Brain className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-3" />
-          <h4 className="text-xs font-black uppercase tracking-widest text-blue-900 dark:text-blue-100">Smart Strategy</h4>
+          <h4 className="text-xs font-bold uppercase tracking-widest text-blue-900 dark:text-blue-100">Smart Strategy</h4>
           <p className="text-[10px] text-blue-600/80 dark:text-blue-400/80 font-medium mt-1">Actionable steps to improve your bottom line.</p>
         </div>
       </div>

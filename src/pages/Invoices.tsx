@@ -79,7 +79,21 @@ const Invoices: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await Promise.all([fetchInventory(), fetchPastInvoices()]);
+        const batchRes = await fetchWithAuth('/api/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            endpoints: ['/api/products', '/api/services', '/api/sales']
+          })
+        });
+
+        const [productsData, servicesData, salesData] = await batchRes.json();
+        setProducts(Array.isArray(productsData) ? productsData : []);
+        setServices(Array.isArray(servicesData) ? servicesData : []);
+        
+        if (Array.isArray(salesData)) {
+          setPastInvoices(salesData.filter((s: any) => s.invoice_number));
+        }
       } catch (err) {
         console.error('Failed to fetch initial data:', err);
       }
@@ -326,13 +340,17 @@ const Invoices: React.FC = () => {
 
   const fetchInventory = async () => {
     try {
-      const [productsRes, servicesRes] = await Promise.all([
-        fetchWithAuth('/api/products'),
-        fetchWithAuth('/api/services')
-      ]);
+      const batchRes = await fetchWithAuth('/api/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoints: ['/api/products', '/api/services']
+        })
+      });
 
-      if (productsRes.ok) setProducts(await productsRes.json());
-      if (servicesRes.ok) setServices(await servicesRes.json());
+      const [productsData, servicesData] = await batchRes.json();
+      setProducts(Array.isArray(productsData) ? productsData : []);
+      setServices(Array.isArray(servicesData) ? servicesData : []);
     } catch (error) {
       console.error('Error fetching inventory:', error);
       toast.error('Failed to load inventory items');
@@ -491,7 +509,7 @@ const Invoices: React.FC = () => {
             <button
               onClick={() => setActiveTab('create')}
               className={cn(
-                "flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em]",
+                "flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all uppercase tracking-[0.2em]",
                 activeTab === 'create' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               )}
             >
@@ -500,7 +518,7 @@ const Invoices: React.FC = () => {
             <button
               onClick={() => setActiveTab('history')}
               className={cn(
-                "flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em]",
+                "flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all uppercase tracking-[0.2em]",
                 activeTab === 'history' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               )}
             >
@@ -1015,7 +1033,7 @@ const Invoices: React.FC = () => {
           {/* Payment Details moved to its own section */}
           {(settings?.bank_name || settings?.account_name || settings?.account_number) && (
             <div className="glass-card p-8">
-              <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Payment Details</h5>
+              <h5 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-4">Payment Details</h5>
               <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
                 {settings?.bank_name && <p><span className="font-bold text-zinc-900 dark:text-zinc-300">Bank:</span> {settings.bank_name}</p>}
                 {settings?.account_name && <p><span className="font-bold text-zinc-900 dark:text-zinc-300">Account Name:</span> {settings.account_name}</p>}
@@ -1048,7 +1066,7 @@ const Invoices: React.FC = () => {
               </button>
               <button
                 onClick={() => handleShareWhatsApp(previewInvoice)}
-                className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+                className="p-4 bg-brand hover:bg-brand-hover text-white rounded-2xl transition-all active:scale-95 shadow-lg shadow-brand/20"
                 title="Share on WhatsApp"
               >
                 <MessageCircle className="w-6 h-6" />
@@ -1097,14 +1115,14 @@ const Invoices: React.FC = () => {
 
               <div className="text-left md:text-right space-y-6">
                 <div>
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Date Issued</p>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-2">Date Issued</p>
                   <p className="font-bold text-zinc-950 dark:text-white text-lg tracking-tight">
                     {new Date(previewInvoice.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Payment Status</p>
-                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-2">Payment Status</p>
+                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-brand/10 text-brand text-[10px] font-bold uppercase tracking-widest">
                     {previewInvoice.payment_method || 'Paid'}
                   </div>
                 </div>
@@ -1113,7 +1131,7 @@ const Invoices: React.FC = () => {
 
             {/* Billed To Section */}
             <div className="p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-[32px] border border-zinc-100 dark:border-zinc-800">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Billed To</p>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-2">Billed To</p>
               <h4 className="font-bold text-xl text-zinc-950 dark:text-white tracking-tight leading-tight">
                 {previewInvoice.customer_name || 'Walk-in Customer'}
               </h4>
@@ -1129,10 +1147,10 @@ const Invoices: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 w-1/2">Description</th>
-                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Qty</th>
-                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Price</th>
-                    <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total</th>
+                    <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 w-1/2">Description</th>
+                    <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 text-center">Qty</th>
+                    <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 text-right">Price</th>
+                    <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
@@ -1167,7 +1185,7 @@ const Invoices: React.FC = () => {
             <div className="mt-12 flex flex-col sm:flex-row justify-between items-start gap-12 pt-12 border-t border-zinc-100 dark:border-zinc-800">
               <div className="max-w-xs space-y-6">
                 <div>
-                  <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Terms & Conditions</h5>
+                  <h5 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-4">Terms & Conditions</h5>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                     {previewInvoice.invoice_terms || settings?.invoice_terms || `Thank you for your business. We appreciate your trust in ${settings?.business_name || 'us'}.`}
                   </p>
@@ -1175,7 +1193,7 @@ const Invoices: React.FC = () => {
                 
                 {(settings?.bank_name || settings?.account_name || settings?.account_number) && (
                   <div>
-                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Payment Details</h5>
+                    <h5 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-4">Payment Details</h5>
                     <div className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                       {settings?.bank_name && <p><span className="font-bold text-zinc-700 dark:text-zinc-300">Bank:</span> {settings.bank_name}</p>}
                       {settings?.account_name && <p><span className="font-bold text-zinc-700 dark:text-zinc-300">Account Name:</span> {settings.account_name}</p>}
@@ -1187,27 +1205,27 @@ const Invoices: React.FC = () => {
 
               <div className="w-full sm:w-80 space-y-4">
                 <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Subtotal</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Subtotal</span>
                   <span className={NUMBER_STYLE}>{formatCurrency((parseFloat(previewInvoice.total_amount) || 0) + (parseFloat(previewInvoice.discount_amount) || 0) - (parseFloat(previewInvoice.vat_amount) || 0), settings?.currency || 'NGN')}</span>
                 </div>
                 
                 {previewInvoice.discount_amount > 0 && (
-                  <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Discount ({previewInvoice.discount_percentage}%)</span>
+                  <div className="flex justify-between items-center text-brand ">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Discount ({previewInvoice.discount_percentage}%)</span>
                     <span className={NUMBER_STYLE}>-{formatCurrency(previewInvoice.discount_amount, settings?.currency || 'NGN')}</span>
                   </div>
                 )}
 
                 {previewInvoice.vat_amount > 0 && (
                   <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">VAT (7.5%)</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em]">VAT (7.5%)</span>
                     <span className={NUMBER_STYLE}>{formatCurrency(previewInvoice.vat_amount, settings?.currency || 'NGN')}</span>
                   </div>
                 )}
 
                 <div className="pt-6 border-t-4 border-zinc-950 dark:border-white flex justify-between items-center">
-                  <span className="text-sm font-black uppercase tracking-[0.3em] text-zinc-950 dark:text-white">Total</span>
-                  <span className="text-4xl font-black tracking-tighter text-zinc-950 dark:text-white">
+                  <span className="text-sm font-bold uppercase tracking-[0.3em] text-zinc-950 dark:text-white">Total</span>
+                  <span className="text-4xl font-bold tracking-tighter text-zinc-950 dark:text-white">
                     {formatCurrency(previewInvoice.total_amount || 0, settings?.currency || 'NGN')}
                   </span>
                 </div>

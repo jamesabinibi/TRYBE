@@ -96,7 +96,7 @@ export default function Subscription() {
           )}
         >
           {isPro ? <ShieldCheck className="w-4 h-4" /> : <Crown className="w-4 h-4" />}
-          <span className="label-text font-black uppercase tracking-widest text-[10px]">
+          <span className="label-text font-bold uppercase tracking-widest text-[10px]">
             {isPro ? 'Active Pro Subscription' : 'Gryndee Pro'}
           </span>
         </motion.div>
@@ -126,7 +126,7 @@ export default function Subscription() {
           )}
         >
           {isPro && (
-            <div className="absolute top-0 left-0 bg-brand text-white px-4 py-1 text-[10px] font-black uppercase tracking-widest rounded-br-xl z-10">
+            <div className="absolute top-0 left-0 bg-brand text-white px-4 py-1 text-[10px] font-bold uppercase tracking-widest rounded-br-xl z-10">
               Current Plan
             </div>
           )}
@@ -143,12 +143,30 @@ export default function Subscription() {
               </div>
             </div>
 
-            <div className="space-y-4">
+            {isPro && (user?.last_payment_date || user?.trial_expiry) && (
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl space-y-2 border border-zinc-100 dark:border-zinc-800 relative z-10">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-zinc-500">Started:</span>
+                  <span className="font-medium text-zinc-900 dark:text-white">
+                    {user.last_payment_date ? new Date(user.last_payment_date).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-zinc-500">Expires:</span>
+                  <span className="font-medium text-zinc-900 dark:text-white">
+                    {user.trial_expiry ? new Date(user.trial_expiry).toLocaleDateString() : 
+                     user.last_payment_date ? new Date(new Date(user.last_payment_date).setMonth(new Date(user.last_payment_date).getMonth() + 1)).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4 relative z-10">
               <button 
                 onClick={handleUpgrade}
                 disabled={isPro}
                 className={cn(
-                  "w-full py-4 text-base flex items-center justify-center gap-2 rounded-2xl font-black uppercase tracking-widest transition-all",
+                  "w-full py-4 text-base flex items-center justify-center gap-2 rounded-2xl font-bold uppercase tracking-widest transition-all",
                   isPro 
                     ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-default" 
                     : "bg-brand text-white shadow-xl shadow-brand/20 hover:opacity-90"
@@ -204,7 +222,7 @@ export default function Subscription() {
           animate={{ x: 0, opacity: 1 }}
           className="space-y-6"
         >
-          <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Plan Comparison</h3>
+          <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Plan Comparison</h3>
           <div className="space-y-3">
             {features.map((feature, idx) => (
               <div 
@@ -219,14 +237,14 @@ export default function Subscription() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className={cn("text-right", isPro && "text-brand")}>
-                    <div className="text-[10px] font-black uppercase tracking-widest">Premium</div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest">Premium</div>
                     <div className={cn("text-[11px] font-bold", isPro ? "text-brand" : "text-zinc-900 dark:text-white")}>
                       {feature.premium === true ? <Check className="w-4 h-4 ml-auto" /> : feature.premium}
                     </div>
                   </div>
                   <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800" />
                   <div className="text-right min-w-[80px]">
-                    <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Free</div>
+                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Free</div>
                     <div className="text-[11px] font-bold text-zinc-500">
                       {feature.free === false ? 'No' : feature.free}
                     </div>
@@ -267,26 +285,26 @@ export default function Subscription() {
                   <div className="w-16 h-16 bg-brand/10 rounded-3xl flex items-center justify-center text-brand mx-auto mb-4">
                     <Gift className="w-8 h-8" />
                   </div>
-                  <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight uppercase">Redeem Code</h2>
+                  <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight uppercase">Redeem Code</h2>
                   <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Enter your promo code below</p>
                 </div>
 
                 <form onSubmit={handleApplyPromo} className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Promo Code</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-1">Promo Code</label>
                     <input 
                       type="text"
                       autoFocus
                       value={promoCode}
                       onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                       placeholder="E.G. GRYNDEE30"
-                      className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-6 py-4 text-lg font-black tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand/50 transition-all uppercase"
+                      className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-6 py-4 text-lg font-bold tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand/50 transition-all uppercase"
                     />
                   </div>
                   <button 
                     type="submit"
                     disabled={isApplyingPromo || !promoCode.trim()}
-                    className="w-full py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-brand/20 hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-4 bg-brand text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-xl shadow-brand/20 hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                   >
                     {isApplyingPromo ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Apply Code'}
                   </button>
@@ -314,15 +332,15 @@ export default function Subscription() {
           <Gift className="w-8 h-8" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Want it for Free?</h2>
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Want it for Free?</h2>
           <div className="flex flex-col md:flex-row justify-center gap-4 text-sm">
             <div className="bg-white dark:bg-zinc-900/50 p-4 rounded-2xl border border-brand/10 flex-1">
-              <p className="text-brand font-black uppercase tracking-widest text-[10px] mb-1">Reward 1</p>
+              <p className="text-brand font-bold uppercase tracking-widest text-[10px] mb-1">Reward 1</p>
               <p className="text-zinc-700 dark:text-zinc-300 font-bold">1 Month Free Pro</p>
               <p className="text-zinc-500 text-xs">For every 3 successful referrals</p>
             </div>
             <div className="bg-white dark:bg-zinc-900/50 p-4 rounded-2xl border border-brand/10 flex-1">
-              <p className="text-brand font-black uppercase tracking-widest text-[10px] mb-1">Reward 2</p>
+              <p className="text-brand font-bold uppercase tracking-widest text-[10px] mb-1">Reward 2</p>
               <p className="text-zinc-700 dark:text-zinc-300 font-bold">10% Renewal Discount</p>
               <p className="text-zinc-500 text-xs">For every active referral</p>
             </div>
@@ -331,30 +349,30 @@ export default function Subscription() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
           <div className="p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total Referrals</p>
-            <p className="text-xl font-black text-zinc-900 dark:text-white">{user?.referral_count || 0}</p>
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Referrals</p>
+            <p className="text-xl font-bold text-zinc-900 dark:text-white">{user?.referral_count || 0}</p>
           </div>
           <div className="p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Active Referrals</p>
-            <p className="text-xl font-black text-brand">{user?.active_referral_count || 0}</p>
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Active Referrals</p>
+            <p className="text-xl font-bold text-brand">{user?.active_referral_count || 0}</p>
           </div>
           <div className="p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 col-span-2 md:col-span-1">
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Next Reward In</p>
-            <p className="text-xl font-black text-zinc-900 dark:text-white">{3 - (user?.referrals_for_reward || 0)} <span className="text-xs font-bold text-zinc-400">Referrals</span></p>
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Next Reward In</p>
+            <p className="text-xl font-bold text-zinc-900 dark:text-white">{3 - (user?.referrals_for_reward || 0)} <span className="text-xs font-bold text-zinc-400">Referrals</span></p>
           </div>
         </div>
 
         <div className="flex flex-col items-center gap-4">
           <div className="px-6 py-3 bg-white dark:bg-zinc-900 rounded-2xl border border-brand/20 shadow-sm inline-flex items-center gap-4">
-            <span className="text-xs font-black uppercase tracking-widest text-zinc-400">Your Referral Code:</span>
-            <span className="text-lg font-black text-brand tracking-widest uppercase">{user?.referral_code}</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Your Referral Code:</span>
+            <span className="text-lg font-bold text-brand tracking-widest uppercase">{user?.referral_code}</span>
           </div>
           <button 
             onClick={() => {
               navigator.clipboard.writeText(user?.referral_code || '');
               toast.success('Referral code copied!');
             }}
-            className="text-xs font-black text-brand uppercase tracking-widest hover:underline"
+            className="text-xs font-bold text-brand uppercase tracking-widest hover:underline"
           >
             Copy & Share
           </button>

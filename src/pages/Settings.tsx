@@ -192,7 +192,7 @@ export default function Settings() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-brand">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Migrate Database</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Migrate Database</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">This will copy all data (users, products, sales, etc.) from Supabase to AWS RDS. This process may take a while. Continue?</p>
         <div className="flex gap-3">
@@ -234,7 +234,7 @@ export default function Settings() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-brand">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Migrate Images</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Migrate Images</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">This will move all existing images (products, services, logos) to AWS S3. Continue?</p>
         <div className="flex gap-3">
@@ -256,11 +256,11 @@ export default function Settings() {
                 setIsMigrating(false);
               }
             }}
-            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-brand-hover transition-all"
           >
             Migrate
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -333,7 +333,7 @@ export default function Settings() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete Category</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Delete Category</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Are you sure? This will only work if no products are assigned to this category.</p>
         <div className="flex gap-3">
@@ -361,11 +361,11 @@ export default function Settings() {
                 error: (err) => err
               });
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
           >
             Delete
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -434,7 +434,7 @@ export default function Settings() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-brand">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Initialize Database</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Initialize Database</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">This will create all necessary tables. Existing data will be preserved. Continue?</p>
         <div className="flex gap-3">
@@ -456,11 +456,11 @@ export default function Settings() {
                 setIsInitializing(false);
               }
             }}
-            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-hover transition-all"
+            className="flex-1 py-2 bg-brand text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-brand-hover transition-all"
           >
             Initialize
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -831,7 +831,7 @@ NOTIFY pgrst, 'reload schema';
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete User</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Delete User</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this user? This action cannot be undone.</p>
         <div className="flex gap-3">
@@ -851,11 +851,11 @@ NOTIFY pgrst, 'reload schema';
                 toast.error('Network error');
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
           >
             Delete
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -886,13 +886,7 @@ NOTIFY pgrst, 'reload schema';
       const generateOption = async () => {
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-flash-image',
-          contents: [{ parts: [{ text: prompt }] }],
-          config: {
-            imageConfig: {
-              aspectRatio: "1:1",
-              imageSize: "1K"
-            }
-          }
+          contents: { parts: [{ text: prompt }] },
         });
 
         const candidates = response.candidates;
@@ -911,7 +905,12 @@ NOTIFY pgrst, 'reload schema';
       toast.success('Generated 2 logo options for you!');
     } catch (err: any) {
       console.error('[AI] Logo generation failed:', err);
-      toast.error('Failed to generate logo: ' + (err.message || 'Unknown error'));
+      const errorMsg = err.message || 'Unknown error';
+      if (errorMsg.toLowerCase().includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate')) {
+        toast.error('AI service is currently busy or quota exceeded. Please try again later.');
+      } else {
+        toast.error('Failed to generate logo: ' + errorMsg);
+      }
     } finally {
       setIsGeneratingLogo(false);
     }
@@ -1104,7 +1103,7 @@ NOTIFY pgrst, 'reload schema';
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Clear All Sales</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Clear All Sales</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Warning: This will permanently delete ALL sales history and records. This action cannot be undone.</p>
         <div className="flex gap-3">
@@ -1131,11 +1130,11 @@ NOTIFY pgrst, 'reload schema';
                 error: (err) => err
               });
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
           >
             Clear All
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -1674,7 +1673,7 @@ NOTIFY pgrst, 'reload schema';
                         </button>
                       </div>
                     ) : (
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 rounded-xl text-xs font-black uppercase tracking-widest text-zinc-600 border border-zinc-200/50 group-hover:bg-white group-hover:border-brand/20 transition-all">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 rounded-xl text-xs font-bold uppercase tracking-widest text-zinc-600 border border-zinc-200/50 group-hover:bg-white group-hover:border-brand/20 transition-all">
                         {c.name}
                         <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
@@ -1777,14 +1776,14 @@ NOTIFY pgrst, 'reload schema';
               <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
                 <p className="label-text mb-1">Server Status</p>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <div className="w-2 h-2 rounded-full bg-brand animate-pulse"></div>
                   <p className="text-sm font-bold text-zinc-900 dark:text-white">Operational</p>
                 </div>
               </div>
               <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
                 <p className="label-text mb-1">Database</p>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <div className="w-2 h-2 rounded-full bg-brand animate-pulse"></div>
                   <p className="text-sm font-bold text-zinc-900 dark:text-white">Connected</p>
                 </div>
               </div>
@@ -1889,7 +1888,7 @@ NOTIFY pgrst, 'reload schema';
         </div>
         <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-700/50">
-            <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-brand/20 shrink-0 relative">
+            <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-brand/20 shrink-0 relative">
               {user?.name?.charAt(0) || 'U'}
               {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
                 <div className="absolute -top-1 -right-1 bg-white dark:bg-zinc-900 rounded-full p-1 shadow-sm border border-zinc-100 dark:border-zinc-800">
@@ -2049,7 +2048,7 @@ NOTIFY pgrst, 'reload schema';
                     <tr key={u.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-black text-zinc-600 dark:text-zinc-400">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-600 dark:text-zinc-400">
                             {u.name?.charAt(0) || u.username?.charAt(0) || '?'}
                           </div>
                           <div>
@@ -2099,7 +2098,7 @@ NOTIFY pgrst, 'reload schema';
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-brand" />
-                <h3 className="font-black text-zinc-950 dark:text-white tracking-tight uppercase text-xs tracking-widest">Subscription Plan</h3>
+                <h3 className="font-bold text-zinc-950 dark:text-white tracking-tight uppercase text-xs tracking-widest">Subscription Plan</h3>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Manage your subscription and billing details.</p>
             </div>
@@ -2114,7 +2113,7 @@ NOTIFY pgrst, 'reload schema';
                   {/* Current Plan Card */}
                   <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-6">
-                      <div className="bg-brand/10 text-brand px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                      <div className="bg-brand/10 text-brand px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
                         Current
                       </div>
                     </div>
@@ -2123,7 +2122,7 @@ NOTIFY pgrst, 'reload schema';
                         {(subscription?.subscription_plan === 'pro' || subscription?.subscription_plan === 'professional') ? <Zap className="w-8 h-8 text-brand" /> : <Crown className="w-8 h-8 text-brand" />}
                       </div>
                       <div>
-                        <h4 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">
+                        <h4 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
                           {(subscription?.subscription_plan === 'pro' || subscription?.subscription_plan === 'professional') ? 'Pro' : 'Starter'}
                         </h4>
                         <p className="text-sm text-zinc-500 font-medium">
@@ -2132,7 +2131,7 @@ NOTIFY pgrst, 'reload schema';
                       </div>
                       <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</span>
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</span>
                           <span className="text-xs font-bold text-green-600 capitalize">{subscription?.subscription_status || 'Active'}</span>
                         </div>
                       </div>
@@ -2150,7 +2149,7 @@ NOTIFY pgrst, 'reload schema';
                         <div>
                           <h4 className="h2 text-white">Pro</h4>
                           <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-black">₦2,000</span>
+                            <span className="text-3xl font-bold">₦2,000</span>
                             <span className="label-text text-zinc-400">/month</span>
                           </div>
                         </div>

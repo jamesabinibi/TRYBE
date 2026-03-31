@@ -253,20 +253,20 @@ export default function Customers() {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Customer CRM</h1>
+          <h1 className="text-3xl font-bold text-zinc-950 dark:text-white tracking-tight">Customer CRM</h1>
           <p className="text-zinc-600 dark:text-zinc-400 font-medium">Manage your relationships and loyalty programs</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <button 
             onClick={exportCSV}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all active:scale-95"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all active:scale-95"
           >
             <Download className="w-4 h-4" />
             CSV
           </button>
           <button 
             onClick={exportPDF}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all active:scale-95"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all active:scale-95"
           >
             <FileText className="w-4 h-4" />
             PDF
@@ -276,7 +276,7 @@ export default function Customers() {
               setNewCustomer({ name: '', phone: '', email: '', address: '' });
               setIsAddModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
           >
             <UserPlus className="w-4 h-4" />
             Add Customer
@@ -296,7 +296,7 @@ export default function Customers() {
           <h3 className="h1">
             {customers.length}
           </h3>
-          <div className="mt-4 flex items-center gap-2 text-emerald-500 label-text">
+          <div className="mt-4 flex items-center gap-2 text-brand label-text">
             <TrendingUp className="w-3.5 h-3.5" />
             Active Growth
           </div>
@@ -427,7 +427,7 @@ export default function Customers() {
                   <div className="w-10 h-10 bg-brand/10 rounded-2xl flex items-center justify-center text-brand">
                     {isAddModalOpen ? <UserPlus className="w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
                   </div>
-                  <h2 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">
+                  <h2 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
                     {isAddModalOpen ? 'Add New Customer' : 'Edit Customer'}
                   </h2>
                 </div>
@@ -571,14 +571,14 @@ export default function Customers() {
                           {sale.sale_items.map((item) => (
                             <div key={item.id} className="flex items-center justify-between text-sm">
                               <div className="flex items-center gap-2">
-                                <span className="w-6 h-6 bg-white dark:bg-zinc-800 rounded flex items-center justify-center text-[10px] font-black text-zinc-400 border border-zinc-100 dark:border-zinc-700">
+                                <span className="w-6 h-6 bg-white dark:bg-zinc-800 rounded flex items-center justify-center text-[10px] font-bold text-zinc-400 border border-zinc-100 dark:border-zinc-700">
                                   {item.quantity}x
                                 </span>
                                 <span className="font-bold text-zinc-700 dark:text-zinc-300">
                                   {item.product_variants?.products?.name || 'Unknown Product'}
                                 </span>
                               </div>
-                              <span className="font-black text-zinc-950 dark:text-white">
+                              <span className="font-bold text-zinc-950 dark:text-white">
                                 {formatCurrency((item.unit_price || item.price || 0) * item.quantity, currency)}
                               </span>
                             </div>

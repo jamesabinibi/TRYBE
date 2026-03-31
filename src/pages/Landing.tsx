@@ -570,7 +570,7 @@ export default function Landing() {
                 <span className="text-sm font-medium text-zinc-600">Lagos, Nigeria</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
                 <span className="text-sm font-medium text-zinc-600">System Operational</span>
               </div>
             </div>
@@ -584,7 +584,7 @@ export default function Landing() {
 function StepCard({ number, title, description, icon: Icon }: any) {
   return (
     <div className="relative p-8 rounded-3xl bg-white border border-zinc-100 group hover:border-brand/20 transition-all shadow-sm hover:shadow-xl hover:-translate-y-1 duration-300">
-      <div className="absolute top-6 right-8 text-5xl font-display font-black text-zinc-900/10 group-hover:text-brand/15 transition-colors">
+      <div className="absolute top-6 right-8 text-5xl font-display font-bold text-zinc-900/10 group-hover:text-brand/15 transition-colors">
         {number}
       </div>
       <div className="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand mb-6 group-hover:scale-110 transition-transform duration-300">

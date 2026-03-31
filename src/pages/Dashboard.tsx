@@ -131,23 +131,23 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [sumRes, trendRes, salesRes, staffRes, topSalesRes, topExpRes, productsRes] = await Promise.all([
-          fetchWithAuth('/api/analytics/summary'),
-          fetchWithAuth('/api/analytics/trends'),
-          fetchWithAuth('/api/sales'),
-          fetchWithAuth('/api/analytics/staff-performance'),
-          fetchWithAuth('/api/analytics/top-sales'),
-          fetchWithAuth('/api/analytics/top-expenses'),
-          fetchWithAuth('/api/products')
-        ]);
+        const batchRes = await fetchWithAuth('/api/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            endpoints: [
+              '/api/analytics/summary',
+              '/api/analytics/trends',
+              '/api/sales',
+              '/api/analytics/staff-performance',
+              '/api/analytics/top-sales',
+              '/api/analytics/top-expenses',
+              '/api/products'
+            ]
+          })
+        });
 
-        const sumData = await sumRes.json();
-        const trendData = await trendRes.json();
-        const salesData = await salesRes.json();
-        const staffData = await staffRes.json();
-        const topSalesData = await topSalesRes.json();
-        const topExpData = await topExpRes.json();
-        const productsData = await productsRes.json();
+        const [sumData, trendData, salesData, staffData, topSalesData, topExpData, productsData] = await batchRes.json();
 
         setSummary(sumData || {});
         setTrends(Array.isArray(trendData) ? trendData : []);
@@ -158,8 +158,14 @@ export default function Dashboard() {
 
         // Filter for low stock products
         const lowStock = productsData.filter((p: any) => {
-          const globalThreshold = globalSettings?.low_stock_threshold || 5;
-          return p.variants?.some((v: any) => v.quantity <= (v.low_stock_threshold || globalThreshold));
+          const globalThreshold = Number(globalSettings?.low_stock_threshold) || 5;
+          return p.variants?.some((v: any) => {
+            const qty = Number(v.quantity) || 0;
+            const threshold = v.low_stock_threshold !== null && v.low_stock_threshold !== undefined 
+              ? Number(v.low_stock_threshold) 
+              : globalThreshold;
+            return qty <= threshold;
+          });
         });
         setLowStockProducts(lowStock);
       } catch (err) {

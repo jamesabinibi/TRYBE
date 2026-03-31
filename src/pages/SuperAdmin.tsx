@@ -802,7 +802,7 @@ export default function SuperAdmin() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin" />
           <p className="text-zinc-500 font-medium animate-pulse">Loading system metrics...</p>
         </div>
       </div>
@@ -825,8 +825,8 @@ export default function SuperAdmin() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <ShieldCheck className="w-5 h-5 text-emerald-500" />
-            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]">System Administration</span>
+            <ShieldCheck className="w-5 h-5 text-brand" />
+            <span className="text-[10px] font-bold text-brand uppercase tracking-[0.2em]">System Administration</span>
           </div>
           <h1 className="h1">Global Overview</h1>
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">Monitoring Gryndee system-wide performance</p>
@@ -876,7 +876,7 @@ export default function SuperAdmin() {
             onClick={() => setIsSmtpModalOpen(true)}
             className={cn(
               "btn-secondary flex items-center gap-2",
-              smtpStatus?.configured ? "text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/5" : "text-amber-500 border-amber-500/20 hover:bg-amber-500/5"
+              smtpStatus?.configured ? "text-brand border-brand/20 hover:bg-brand/5" : "text-amber-500 border-amber-500/20 hover:bg-amber-500/5"
             )}
           >
             <Mail className="w-4 h-4" />
@@ -981,7 +981,7 @@ export default function SuperAdmin() {
           title="System Sales" 
           value={stats?.sales} 
           icon={ShoppingCart} 
-          color="bg-emerald-500/10 text-emerald-600"
+          color="bg-brand/10 text-brand"
         />
       </div>
 
@@ -1058,7 +1058,7 @@ export default function SuperAdmin() {
                       <td className="px-8 py-5">
                         <span className={cn(
                           "label-text px-2 py-0.5 rounded-full",
-                          user.is_verified ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                          user.is_verified ? "bg-brand/10 text-brand" : "bg-amber-500/10 text-amber-500"
                         )}>
                           {user.is_verified ? 'Yes' : 'No'}
                         </span>
@@ -1066,7 +1066,7 @@ export default function SuperAdmin() {
                       <td className="px-8 py-5">
                         <span className={cn(
                           "label-text px-2 py-0.5 rounded-full",
-                          user.account_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                          user.account_active ? "bg-brand/10 text-brand" : "bg-red-500/10 text-red-500"
                         )}>
                           {user.account_active ? 'Active' : 'Inactive'}
                         </span>
@@ -1078,7 +1078,7 @@ export default function SuperAdmin() {
                               setSelectedUser(user);
                               setIsResetModalOpen(true);
                             }}
-                            className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors"
+                            className="p-2 text-zinc-400 hover:text-brand transition-colors"
                             title="Reset Password"
                           >
                             <Key className="w-4 h-4" />
@@ -1149,11 +1149,11 @@ export default function SuperAdmin() {
               <div key={user.id} className="p-6 space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-black text-lg">
+                    <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-bold text-lg">
                       {user.name?.charAt(0) || user.username?.charAt(0) || '?'}
                     </div>
                     <div>
-                      <h3 className="text-sm font-black text-zinc-900 dark:text-white">{user.name}</h3>
+                      <h3 className="text-sm font-bold text-zinc-900 dark:text-white">{user.name}</h3>
                       <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{user.email}</p>
                     </div>
                   </div>
@@ -1163,7 +1163,7 @@ export default function SuperAdmin() {
                         setSelectedUser(user);
                         setIsResetModalOpen(true);
                       }}
-                      className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl active:scale-95 transition-all"
+                      className="p-2.5 bg-brand/10 text-brand rounded-xl active:scale-95 transition-all"
                     >
                       <Key className="w-4 h-4" />
                     </button>
@@ -1190,14 +1190,14 @@ export default function SuperAdmin() {
                     <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Role & Status</p>
                     <div className="flex items-center justify-end gap-2">
                       <span className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
+                        "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
                         user.role === 'admin' ? "bg-purple-500/10 text-purple-500" : "bg-blue-500/10 text-blue-500"
                       )}>
                         {user.role}
                       </span>
                       <span className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
-                        user.account_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                        "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
+                        user.account_active ? "bg-brand/10 text-brand" : "bg-red-500/10 text-red-500"
                       )}>
                         {user.account_active ? 'Active' : 'Inactive'}
                       </span>
@@ -1257,18 +1257,18 @@ export default function SuperAdmin() {
                 {/* Create Promo Code */}
                 <form onSubmit={handleCreatePromo} className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white">Generate New Code</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900 dark:text-white">Generate New Code</h3>
                     <button 
                       type="button"
                       onClick={() => setNewPromoCode({ ...newPromoCode, code: Math.random().toString(36).substring(2, 10).toUpperCase() })}
-                      className="text-[10px] font-black text-brand uppercase tracking-widest hover:underline"
+                      className="text-[10px] font-bold text-brand uppercase tracking-widest hover:underline"
                     >
                       Randomize
                     </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Code (Optional)</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-1">Code (Optional)</label>
                       <Input 
                         placeholder="e.g. PREMIUM30" 
                         value={newPromoCode.code}
@@ -1276,7 +1276,7 @@ export default function SuperAdmin() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Duration (Months)</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-1">Duration (Months)</label>
                       <Input 
                         type="number"
                         min="1"
@@ -1287,7 +1287,7 @@ export default function SuperAdmin() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Max Usages</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-1">Max Usages</label>
                       <Input 
                         type="number"
                         min="1"
@@ -1309,8 +1309,8 @@ export default function SuperAdmin() {
                 {/* Promo Codes List */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white">Active Codes</h3>
-                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{promoCodes.length} Total</span>
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900 dark:text-white">Active Codes</h3>
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{promoCodes.length} Total</span>
                   </div>
                   <div className="space-y-3">
                     {promoCodes.map((promo) => (
@@ -1321,7 +1321,7 @@ export default function SuperAdmin() {
                               <p className="text-xl font-bold text-brand tracking-tight">{promo.code}</p>
                               <span className={cn(
                                 "px-2 py-0.5 rounded-full label-text",
-                                promo.is_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                                promo.is_active ? "bg-brand/10 text-brand" : "bg-red-500/10 text-red-500"
                               )}>
                                 {promo.is_active ? 'Active' : 'Inactive'}
                               </span>
@@ -1373,21 +1373,21 @@ export default function SuperAdmin() {
                               className="overflow-hidden"
                             >
                               <div className="mx-4 p-4 bg-zinc-50 dark:bg-zinc-800/30 rounded-b-[1.5rem] border-x border-b border-zinc-100 dark:border-zinc-800 space-y-3">
-                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-2">Users who used this code:</p>
+                                <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Users who used this code:</p>
                                 <div className="space-y-2">
                                   {promo.usages.map((usage: any, idx: number) => (
                                     <div key={idx} className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
                                       <div className="flex items-center gap-3">
-                                        <div className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-[10px] font-black text-zinc-400">
+                                        <div className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
                                           {idx + 1}
                                         </div>
                                         <div>
-                                          <p className="text-xs font-black text-zinc-900 dark:text-white">{usage.username}</p>
+                                          <p className="text-xs font-bold text-zinc-900 dark:text-white">{usage.username}</p>
                                           <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-tight">{usage.email}</p>
                                         </div>
                                       </div>
                                       <div className="text-right">
-                                        <p className="text-[9px] font-black text-brand uppercase tracking-widest">{usage.account_name}</p>
+                                        <p className="text-[9px] font-bold text-brand uppercase tracking-widest">{usage.account_name}</p>
                                         <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest">
                                           {new Date(usage.used_at).toLocaleDateString()}
                                         </p>
@@ -1432,11 +1432,11 @@ export default function SuperAdmin() {
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-                    <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                  <div className="w-12 h-12 rounded-2xl bg-brand/10 flex items-center justify-center">
+                    <ShieldCheck className="w-6 h-6 text-brand" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Legal Documents</h2>
+                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Legal Documents</h2>
                     <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Update global Terms & Conditions and Privacy Policy</p>
                   </div>
                 </div>
@@ -1451,7 +1451,7 @@ export default function SuperAdmin() {
               <div className="p-8 max-h-[70vh] overflow-y-auto space-y-8">
                 <div className="space-y-4">
                   <label className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-emerald-500" />
+                    <FileText className="w-4 h-4 text-brand" />
                     Terms & Conditions
                   </label>
                   <Textarea
@@ -1464,7 +1464,7 @@ export default function SuperAdmin() {
 
                 <div className="space-y-4">
                   <label className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-emerald-500" />
+                    <Shield className="w-4 h-4 text-brand" />
                     Privacy Policy
                   </label>
                   <Textarea
@@ -1486,7 +1486,7 @@ export default function SuperAdmin() {
                 <button
                   onClick={saveLegalDocs}
                   disabled={isSavingLegalDocs}
-                  className="px-10 py-4 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-2xl font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
+                  className="px-10 py-4 bg-brand hover:brightness-110 disabled:opacity-50 text-white rounded-2xl font-bold text-sm shadow-lg shadow-brand/20 transition-all flex items-center gap-2"
                 >
                   {isSavingLegalDocs ? (
                     <>
@@ -1525,7 +1525,7 @@ export default function SuperAdmin() {
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
                 <div>
-                  <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Native Mobile Assets</h3>
+                  <h3 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Native Mobile Assets</h3>
                   <p className="text-xs text-zinc-500 font-medium mt-1">Generate high-resolution icons and splash screens for iOS & Android</p>
                 </div>
                 <button onClick={() => setIsMobileAssetsModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
@@ -1537,11 +1537,11 @@ export default function SuperAdmin() {
                 {/* App Icon */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">App Icon (1024x1024)</h4>
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">App Icon (1024x1024)</h4>
                     {mobileAssets.icon && (
                       <button 
                         onClick={() => downloadAsset(mobileAssets.icon!, 'icon.png')}
-                        className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest hover:underline"
+                        className="flex items-center gap-2 text-[10px] font-bold text-brand uppercase tracking-widest hover:underline"
                       >
                         <Download className="w-3 h-3" />
                         Download PNG
@@ -1561,7 +1561,7 @@ export default function SuperAdmin() {
                       <button 
                         onClick={() => handleGenerateAsset('icon')}
                         disabled={isGeneratingAsset}
-                        className="px-6 py-3 bg-white text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
+                        className="px-6 py-3 bg-white text-zinc-900 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
                       >
                         {isGeneratingAsset ? 'Generating...' : mobileAssets.icon ? 'Regenerate Icon' : 'Generate Icon'}
                       </button>
@@ -1572,11 +1572,11 @@ export default function SuperAdmin() {
                 {/* Splash Screen */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">Splash Screen (1920x1080)</h4>
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Splash Screen (1920x1080)</h4>
                     {mobileAssets.splash && (
                       <button 
                         onClick={() => downloadAsset(mobileAssets.splash!, 'splash.png')}
-                        className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest hover:underline"
+                        className="flex items-center gap-2 text-[10px] font-bold text-brand uppercase tracking-widest hover:underline"
                       >
                         <Download className="w-3 h-3" />
                         Download PNG
@@ -1596,7 +1596,7 @@ export default function SuperAdmin() {
                       <button 
                         onClick={() => handleGenerateAsset('splash')}
                         disabled={isGeneratingAsset}
-                        className="px-6 py-3 bg-white text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
+                        className="px-6 py-3 bg-white text-zinc-900 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
                       >
                         {isGeneratingAsset ? 'Generating...' : mobileAssets.splash ? 'Regenerate Splash' : 'Generate Splash'}
                       </button>
@@ -1607,11 +1607,11 @@ export default function SuperAdmin() {
 
               <div className="p-8 bg-zinc-50 dark:bg-zinc-800/30 border-t border-zinc-100 dark:border-zinc-800">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-5 h-5 text-emerald-500" />
+                  <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-5 h-5 text-brand" />
                   </div>
                   <div>
-                    <h5 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-widest mb-1">AI-Powered Assets</h5>
+                    <h5 className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest mb-1">AI-Powered Assets</h5>
                     <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
                       These assets are generated using Gemini 3.1 Flash Image. Once downloaded, you can use them with the Capacitor Assets tool to automatically generate all required sizes for the App Store and Play Store.
                     </p>
@@ -1641,7 +1641,7 @@ export default function SuperAdmin() {
               className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Broadcast Message</h3>
+                <h3 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Broadcast Message</h3>
                 <button onClick={() => setIsBroadcastModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
                   <X className="w-5 h-5" />
                 </button>
@@ -1649,7 +1649,7 @@ export default function SuperAdmin() {
 
               <form onSubmit={handleBroadcast} className="p-8 space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Message Content</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Message Content</label>
                   <Textarea 
                     required
                     value={broadcastMessage}
@@ -1662,7 +1662,7 @@ export default function SuperAdmin() {
                 <button 
                   type="submit"
                   disabled={isBroadcasting}
-                  className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                  className="w-full py-4 bg-brand text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-brand/20 disabled:opacity-50"
                 >
                   {isBroadcasting ? 'Sending...' : 'Send Broadcast'}
                 </button>
@@ -1690,7 +1690,7 @@ export default function SuperAdmin() {
               className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">System Settings</h3>
+                <h3 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs">System Settings</h3>
                 <button onClick={() => setIsSettingsModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
                   <X className="w-5 h-5" />
                 </button>
@@ -1700,7 +1700,7 @@ export default function SuperAdmin() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                     <div>
-                      <p className="text-sm font-black text-zinc-900 dark:text-white">Maintenance Mode</p>
+                      <p className="text-sm font-bold text-zinc-900 dark:text-white">Maintenance Mode</p>
                       <p className="text-[10px] text-zinc-500 font-medium">Disable access for all users</p>
                     </div>
                     <div className="w-12 h-6 bg-zinc-200 dark:bg-zinc-700 rounded-full relative cursor-not-allowed">
@@ -1709,10 +1709,10 @@ export default function SuperAdmin() {
                   </div>
                   <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                     <div>
-                      <p className="text-sm font-black text-zinc-900 dark:text-white">New Registrations</p>
+                      <p className="text-sm font-bold text-zinc-900 dark:text-white">New Registrations</p>
                       <p className="text-[10px] text-zinc-500 font-medium">Allow new users to sign up</p>
                     </div>
-                    <div className="w-12 h-6 bg-emerald-500 rounded-full relative cursor-not-allowed">
+                    <div className="w-12 h-6 bg-brand rounded-full relative cursor-not-allowed">
                       <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
                     </div>
                   </div>
@@ -1720,7 +1720,7 @@ export default function SuperAdmin() {
 
                 <button 
                   onClick={() => setIsSettingsModalOpen(false)}
-                  className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all"
+                  className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all"
                 >
                   Close Settings
                 </button>
@@ -1751,9 +1751,9 @@ export default function SuperAdmin() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Activity className="w-5 h-5 text-brand" />
-                    <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">System Diagnostics</span>
+                    <span className="text-[10px] font-bold text-brand uppercase tracking-[0.2em]">System Diagnostics</span>
                   </div>
-                  <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">System Logs</h2>
+                  <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">System Logs</h2>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -1799,7 +1799,7 @@ export default function SuperAdmin() {
                 </p>
                 <button
                   onClick={() => setIsLogsModalOpen(false)}
-                  className="px-8 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
+                  className="px-8 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
                 >
                   Close Console
                 </button>
@@ -1827,9 +1827,9 @@ export default function SuperAdmin() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Activity className="w-5 h-5 text-indigo-500" />
-                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Image Migration Status</span>
+                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-[0.2em]">Image Migration Status</span>
                   </div>
-                  <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Diagnostic Results</h2>
+                  <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Diagnostic Results</h2>
                 </div>
                 <button
                   onClick={() => setIsDiagnosticModalOpen(false)}
@@ -1842,7 +1842,7 @@ export default function SuperAdmin() {
               <div className="p-8 space-y-8 overflow-y-auto max-h-[60vh]">
                 {/* AWS Config Section */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                     <Cloud className="w-4 h-4" />
                     AWS S3 Configuration
                   </h3>
@@ -1850,21 +1850,21 @@ export default function SuperAdmin() {
                     <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                       <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Bucket Status</p>
                       <div className="flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full", diagnosticData?.awsConfig?.bucketSet ? "bg-emerald-500" : "bg-red-500")} />
-                        <p className="text-sm font-black text-zinc-900 dark:text-white">
+                        <div className={cn("w-2 h-2 rounded-full", diagnosticData?.awsConfig?.bucketSet ? "bg-brand" : "bg-red-500")} />
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">
                           {diagnosticData?.awsConfig?.bucketName || 'Not Configured'}
                         </p>
                       </div>
                     </div>
                     <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                       <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Region</p>
-                      <p className="text-sm font-black text-zinc-900 dark:text-white">{diagnosticData?.awsConfig?.region}</p>
+                      <p className="text-sm font-bold text-zinc-900 dark:text-white">{diagnosticData?.awsConfig?.region}</p>
                     </div>
                     <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                       <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Access Keys</p>
                       <div className="flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full", diagnosticData?.awsConfig?.accessKeySet && diagnosticData?.awsConfig?.secretKeySet ? "bg-emerald-500" : "bg-red-500")} />
-                        <p className="text-sm font-black text-zinc-900 dark:text-white">
+                        <div className={cn("w-2 h-2 rounded-full", diagnosticData?.awsConfig?.accessKeySet && diagnosticData?.awsConfig?.secretKeySet ? "bg-brand" : "bg-red-500")} />
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">
                           {diagnosticData?.awsConfig?.accessKeySet ? 'Keys Configured' : 'Keys Missing'}
                         </p>
                       </div>
@@ -1872,8 +1872,8 @@ export default function SuperAdmin() {
                     <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                       <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">S3 Connection Test</p>
                       <div className="flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full", diagnosticData?.awsConfig?.s3Test === 'SUCCESS' ? "bg-emerald-500" : diagnosticData?.awsConfig?.s3Test === 'NOT RUN' ? "bg-zinc-400" : "bg-red-500")} />
-                        <p className="text-sm font-black text-zinc-900 dark:text-white">{diagnosticData?.awsConfig?.s3Test}</p>
+                        <div className={cn("w-2 h-2 rounded-full", diagnosticData?.awsConfig?.s3Test === 'SUCCESS' ? "bg-brand" : diagnosticData?.awsConfig?.s3Test === 'NOT RUN' ? "bg-zinc-400" : "bg-red-500")} />
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{diagnosticData?.awsConfig?.s3Test}</p>
                       </div>
                     </div>
                   </div>
@@ -1881,40 +1881,40 @@ export default function SuperAdmin() {
 
                 {/* RDS Counts Section */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                     <Database className="w-4 h-4" />
                     RDS Image Counts
                   </h3>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                       <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Products</p>
-                      <p className="text-2xl font-black text-zinc-900 dark:text-white">{diagnosticData?.productImagesCount}</p>
+                      <p className="text-2xl font-bold text-zinc-900 dark:text-white">{diagnosticData?.productImagesCount}</p>
                     </div>
                     <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                       <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Services</p>
-                      <p className="text-2xl font-black text-zinc-900 dark:text-white">{diagnosticData?.servicesCount}</p>
+                      <p className="text-2xl font-bold text-zinc-900 dark:text-white">{diagnosticData?.servicesCount}</p>
                     </div>
                     <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                       <p className="text-[10px] text-zinc-500 font-bold uppercase mb-1">Logos</p>
-                      <p className="text-2xl font-black text-zinc-900 dark:text-white">{diagnosticData?.settingsCount}</p>
+                      <p className="text-2xl font-bold text-zinc-900 dark:text-white">{diagnosticData?.settingsCount}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Samples Section */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
                     Data Format Samples
                   </h3>
                   <div className="space-y-2">
                     {diagnosticData?.samples?.productImages?.length > 0 && (
                       <div className="p-4 bg-zinc-950 rounded-2xl border border-zinc-800 font-mono text-[10px]">
-                        <p className="text-indigo-400 mb-2 uppercase font-black tracking-widest">Product Images Sample:</p>
+                        <p className="text-indigo-400 mb-2 uppercase font-bold tracking-widest">Product Images Sample:</p>
                         {diagnosticData.samples.productImages.map((s: string, i: number) => (
                           <div key={i} className="text-zinc-500 truncate mb-1">
                             {s.startsWith('http') ? (
-                              <span className={cn(s.includes('amazonaws.com') ? "text-emerald-500" : "text-amber-500")}>
+                              <span className={cn(s.includes('amazonaws.com') ? "text-brand" : "text-amber-500")}>
                                 {s.includes('amazonaws.com') ? '[S3] ' : '[EXTERNAL URL] '}
                                 {s}
                               </span>
@@ -1927,11 +1927,11 @@ export default function SuperAdmin() {
                     )}
                     {diagnosticData?.samples?.services?.length > 0 && (
                       <div className="p-4 bg-zinc-950 rounded-2xl border border-zinc-800 font-mono text-[10px]">
-                        <p className="text-indigo-400 mb-2 uppercase font-black tracking-widest">Services Sample:</p>
+                        <p className="text-indigo-400 mb-2 uppercase font-bold tracking-widest">Services Sample:</p>
                         {diagnosticData.samples.services.map((s: string, i: number) => (
                           <div key={i} className="text-zinc-500 truncate mb-1">
                             {s.startsWith('http') ? (
-                              <span className={cn(s.includes('amazonaws.com') ? "text-emerald-500" : "text-amber-500")}>
+                              <span className={cn(s.includes('amazonaws.com') ? "text-brand" : "text-amber-500")}>
                                 {s.includes('amazonaws.com') ? '[S3] ' : '[EXTERNAL URL] '}
                                 {s}
                               </span>
@@ -1949,13 +1949,13 @@ export default function SuperAdmin() {
               <div className="p-8 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-3">
                 <button
                   onClick={() => setIsDiagnosticModalOpen(false)}
-                  className="px-8 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-all"
+                  className="px-8 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-all"
                 >
                   Close
                 </button>
                 <button
                   onClick={handleMigrateImages}
-                  className="px-8 py-3 bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-indigo-500/25"
+                  className="px-8 py-3 bg-indigo-500 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-indigo-500/25"
                 >
                   Start Migration
                 </button>
@@ -1980,7 +1980,7 @@ export default function SuperAdmin() {
               className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Reset Password</h3>
+                <h3 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Reset Password</h3>
                 <button onClick={() => setIsResetModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
                   <X className="w-5 h-5" />
                 </button>
@@ -1989,11 +1989,11 @@ export default function SuperAdmin() {
               <form onSubmit={handleResetPassword} className="p-8 space-y-6">
                 <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                   <p className="text-xs text-zinc-500 font-medium">Resetting password for:</p>
-                  <p className="text-sm font-black text-zinc-900 dark:text-white mt-1">@{selectedUser?.username}</p>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white mt-1">@{selectedUser?.username}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">New Password</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">New Password</label>
                   <Input 
                     required
                     type="text" 
@@ -2006,7 +2006,7 @@ export default function SuperAdmin() {
                 <button 
                   type="submit"
                   disabled={isResetting}
-                  className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                  className="w-full py-4 bg-brand text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-brand/20 disabled:opacity-50"
                 >
                   {isResetting ? 'Resetting...' : 'Update Password'}
                 </button>
@@ -2034,7 +2034,7 @@ export default function SuperAdmin() {
               className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Manual SMTP Setup</h3>
+                <h3 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Manual SMTP Setup</h3>
                 <button onClick={() => setIsSmtpConfigModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
                   <X className="w-5 h-5" />
                 </button>
@@ -2042,7 +2042,7 @@ export default function SuperAdmin() {
 
               <form onSubmit={handleUpdateSmtpConfig} className="p-8 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">SMTP Host</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">SMTP Host</label>
                   <Input 
                     required
                     type="text"
@@ -2054,7 +2054,7 @@ export default function SuperAdmin() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Port</label>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Port</label>
                     <Input 
                       required
                       type="number"
@@ -2063,14 +2063,14 @@ export default function SuperAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Secure (SSL/TLS)</label>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Secure (SSL/TLS)</label>
                     <div className="flex items-center h-[44px]">
                       <button
                         type="button"
                         onClick={() => setSmtpConfig({...smtpConfig, secure: !smtpConfig.secure})}
                         className={cn(
                           "w-12 h-6 rounded-full relative transition-colors",
-                          smtpConfig.secure ? "bg-emerald-500" : "bg-zinc-200 dark:bg-zinc-700"
+                          smtpConfig.secure ? "bg-brand" : "bg-zinc-200 dark:bg-zinc-700"
                         )}
                       >
                         <div className={cn(
@@ -2083,7 +2083,7 @@ export default function SuperAdmin() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">SMTP User</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">SMTP User</label>
                   <Input 
                     required
                     type="text"
@@ -2094,7 +2094,7 @@ export default function SuperAdmin() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">SMTP Password</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">SMTP Password</label>
                   <Input 
                     required
                     type="password"
@@ -2105,7 +2105,7 @@ export default function SuperAdmin() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">From Address</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">From Address</label>
                   <Input 
                     required
                     type="text"
@@ -2118,7 +2118,7 @@ export default function SuperAdmin() {
                 <button 
                   type="submit"
                   disabled={isSavingSmtp}
-                  className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 mt-4"
+                  className="w-full py-4 bg-brand text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-brand/20 disabled:opacity-50 mt-4"
                 >
                   {isSavingSmtp ? 'Saving...' : 'Save Configuration'}
                 </button>
@@ -2151,7 +2151,7 @@ export default function SuperAdmin() {
                   <div className="p-2 bg-purple-500/10 rounded-xl">
                     <Sparkles className="w-5 h-5 text-purple-500" />
                   </div>
-                  <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Gemini AI Config</h3>
+                  <h3 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs">Gemini AI Config</h3>
                 </div>
                 <button onClick={() => setIsGeminiModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
                   <X className="w-5 h-5" />
@@ -2166,7 +2166,7 @@ export default function SuperAdmin() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Gemini API Key</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Gemini API Key</label>
                   <div className="relative">
                     <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                     <Input 
@@ -2183,7 +2183,7 @@ export default function SuperAdmin() {
                 <button 
                   type="submit"
                   disabled={isSavingGemini || !geminiKey}
-                  className="w-full py-4 bg-purple-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-purple-600 transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
+                  className="w-full py-4 bg-purple-500 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-purple-600 transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
                 >
                   {isSavingGemini ? 'Updating...' : 'Save Gemini Key'}
                 </button>
@@ -2210,7 +2210,7 @@ export default function SuperAdmin() {
               className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">SMTP Configuration</h3>
+                <h3 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs">SMTP Configuration</h3>
                 <button onClick={() => setIsSmtpModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
                   <X className="w-5 h-5" />
                 </button>
@@ -2219,18 +2219,18 @@ export default function SuperAdmin() {
               <div className="p-8 space-y-6">
                 <div className="space-y-4">
                   <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Host</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Host</p>
                     <p className="text-sm font-bold text-zinc-900 dark:text-white">{smtpStatus?.host || 'Not set'}</p>
                   </div>
                   <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">From Address</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">From Address</p>
                     <p className="text-sm font-bold text-zinc-900 dark:text-white">{smtpStatus?.from || 'Not set'}</p>
                   </div>
                   <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">User</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">User</p>
                     <p className="text-sm font-bold text-zinc-900 dark:text-white">{smtpStatus?.user || 'Not set'}</p>
                     {smtpStatus?.env_keys && smtpStatus.env_keys.length > 0 && (
-                      <p className="text-[8px] text-emerald-500 font-bold mt-1 uppercase tracking-widest">
+                      <p className="text-[8px] text-brand font-bold mt-1 uppercase tracking-widest">
                         Keys Found: {smtpStatus.env_keys.join(', ')}
                       </p>
                     )}
@@ -2241,7 +2241,7 @@ export default function SuperAdmin() {
                   </div>
 
                   <form onSubmit={handleTestSmtp} className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Test SMTP Connection</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Test SMTP Connection</p>
                     <div className="flex gap-2">
                       <Input 
                         type="email"
@@ -2252,7 +2252,7 @@ export default function SuperAdmin() {
                       <button 
                         type="submit"
                         disabled={isTestingSmtp || !testEmail}
-                        className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all disabled:opacity-50"
+                        className="px-4 py-2 bg-brand text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50"
                       >
                         {isTestingSmtp ? 'Sending...' : 'Test'}
                       </button>
@@ -2273,7 +2273,7 @@ export default function SuperAdmin() {
                         });
                         setIsSmtpConfigModalOpen(true);
                       }}
-                      className="w-full py-3 bg-emerald-500/10 text-emerald-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-brand/10 text-brand rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-brand/20 transition-all flex items-center justify-center gap-2"
                     >
                       <SettingsIcon className="w-3 h-3" />
                       Manual Configuration (Database)
@@ -2288,7 +2288,7 @@ export default function SuperAdmin() {
                       type="button"
                       onClick={handleRefreshEnv}
                       disabled={isRefreshing}
-                      className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       <RefreshCw className={cn("w-3 h-3", isRefreshing && "animate-spin")} />
                       {isRefreshing ? 'Refreshing...' : 'Refresh System Environment'}
@@ -2301,7 +2301,7 @@ export default function SuperAdmin() {
 
                 <button 
                   onClick={() => setIsSmtpModalOpen(false)}
-                  className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all"
+                  className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all"
                 >
                   Close
                 </button>
@@ -2323,7 +2323,7 @@ export default function SuperAdmin() {
                     <Key className="w-6 h-6 text-indigo-500" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">Manage Secrets</h2>
+                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">Manage Secrets</h2>
                     <p className="text-xs text-zinc-500 font-medium">Update system environment variables</p>
                   </div>
                 </div>
@@ -2338,7 +2338,7 @@ export default function SuperAdmin() {
               <form onSubmit={handleUpdateSecrets} className="p-8 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Supabase URL</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Supabase URL</label>
                     <Input 
                       type="text"
                       value={secrets.SUPABASE_URL === 'Configured' ? '' : secrets.SUPABASE_URL}
@@ -2347,7 +2347,7 @@ export default function SuperAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Supabase Anon Key</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Supabase Anon Key</label>
                     <Input 
                       type="password"
                       value={secrets.SUPABASE_ANON_KEY === 'Configured' ? '' : secrets.SUPABASE_ANON_KEY}
@@ -2356,7 +2356,7 @@ export default function SuperAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Access Key ID</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">AWS Access Key ID</label>
                     <Input 
                       type="text"
                       value={secrets.AWS_ACCESS_KEY_ID === 'Configured' ? '' : secrets.AWS_ACCESS_KEY_ID}
@@ -2365,7 +2365,7 @@ export default function SuperAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Secret Access Key</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">AWS Secret Access Key</label>
                     <Input 
                       type="password"
                       value={secrets.AWS_SECRET_ACCESS_KEY === 'Configured' ? '' : secrets.AWS_SECRET_ACCESS_KEY}
@@ -2374,7 +2374,7 @@ export default function SuperAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">S3 Bucket Name</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">S3 Bucket Name</label>
                     <Input 
                       type="text"
                       value={secrets.AWS_S3_BUCKET_NAME === 'Configured' ? '' : secrets.AWS_S3_BUCKET_NAME}
@@ -2383,7 +2383,7 @@ export default function SuperAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AWS Region</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">AWS Region</label>
                     <Input 
                       type="text"
                       value={secrets.AWS_REGION}
@@ -2392,7 +2392,7 @@ export default function SuperAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Paystack Public Key</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Paystack Public Key</label>
                     <Input 
                       type="text"
                       value={secrets.PAYSTACK_PUBLIC_KEY === 'Configured' ? '' : secrets.PAYSTACK_PUBLIC_KEY}
@@ -2401,7 +2401,7 @@ export default function SuperAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Paystack Secret Key</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Paystack Secret Key</label>
                     <Input 
                       type="password"
                       value={secrets.PAYSTACK_SECRET_KEY === 'Configured' ? '' : secrets.PAYSTACK_SECRET_KEY}
@@ -2410,7 +2410,7 @@ export default function SuperAdmin() {
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Gemini API Key</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Gemini API Key</label>
                     <Input 
                       type="password"
                       value={secrets.GEMINI_API_KEY === 'Configured' ? '' : secrets.GEMINI_API_KEY}
@@ -2424,14 +2424,14 @@ export default function SuperAdmin() {
                   <button 
                     type="button"
                     onClick={() => setIsSecretsModalOpen(false)}
-                    className="flex-1 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                    className="flex-1 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
                     disabled={isSavingSecrets}
-                    className="flex-1 py-4 bg-indigo-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 py-4 bg-indigo-500 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isSavingSecrets ? (
                       <>

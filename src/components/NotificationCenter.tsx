@@ -105,7 +105,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Clear Notifications</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Clear Notifications</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Are you sure you want to clear all notifications?</p>
         <div className="flex gap-3">
@@ -122,11 +122,11 @@ export default function NotificationCenter({ userId }: { userId: number }) {
                 console.error('Failed to clear notifications:', error);
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
           >
             Clear All
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -168,9 +168,9 @@ export default function NotificationCenter({ userId }: { userId: number }) {
           >
               <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-black text-zinc-950 dark:text-white uppercase tracking-widest">Notifications</h3>
+                  <h3 className="text-sm font-bold text-zinc-950 dark:text-white uppercase tracking-widest">Notifications</h3>
                   {unreadCount > 0 && (
-                    <span className="px-2 py-1 bg-brand/10 text-brand rounded-lg text-[10px] font-black">
+                    <span className="px-2 py-1 bg-brand/10 text-brand rounded-lg text-[10px] font-bold">
                       {unreadCount} New
                     </span>
                   )}
@@ -180,14 +180,14 @@ export default function NotificationCenter({ userId }: { userId: number }) {
                     <>
                       <button 
                         onClick={markAllAsRead}
-                        className="text-[10px] font-black text-brand uppercase tracking-widest hover:opacity-70 transition-opacity"
+                        className="text-[10px] font-bold text-brand uppercase tracking-widest hover:opacity-70 transition-opacity"
                         title="Mark all as read"
                       >
                         Read All
                       </button>
                       <button 
                         onClick={clearAll}
-                        className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:opacity-70 transition-opacity"
+                        className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:opacity-70 transition-opacity"
                         title="Clear all"
                       >
                         Clear
@@ -217,7 +217,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <p className="text-xs font-black text-zinc-950 dark:text-white truncate tracking-tight">
+                            <p className="text-xs font-bold text-zinc-950 dark:text-white truncate tracking-tight">
                               {notification.title}
                             </p>
                             <span className="text-[10px] font-bold text-zinc-400">
@@ -246,7 +246,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
                   onClick={() => {
                     alert("You are viewing the most recent 50 notifications.");
                   }}
-                  className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest hover:text-brand transition-colors"
+                  className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest hover:text-brand transition-colors"
                 >
                   View All Notifications
                 </button>

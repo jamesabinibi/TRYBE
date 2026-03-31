@@ -124,7 +124,26 @@ export default function Sales() {
 
   useEffect(() => {
     if (user) {
-      Promise.all([fetchProducts(), fetchServices(), fetchSales(), fetchCustomers()]);
+      const loadInitialData = async () => {
+        try {
+          const batchRes = await fetchWithAuth('/api/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              endpoints: ['/api/products', '/api/services', '/api/sales', '/api/customers']
+            })
+          });
+          const [productsData, servicesData, salesData, customersData] = await batchRes.json();
+          setProducts(Array.isArray(productsData) ? productsData : []);
+          setServices(Array.isArray(servicesData) ? servicesData : []);
+          setSales(Array.isArray(salesData) ? salesData : []);
+          setCustomers(Array.isArray(customersData) ? customersData : []);
+        } catch (err) {
+          console.error("Batch fetch failed", err);
+          Promise.all([fetchProducts(), fetchServices(), fetchSales(), fetchCustomers()]);
+        }
+      };
+      loadInitialData();
     }
   }, [user]);
 
@@ -992,7 +1011,7 @@ export default function Sales() {
                           </div>
                           <button
                             onClick={() => addServiceToCart(selectedService)}
-                            className="w-full py-4 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+                            className="w-full py-4 bg-brand text-white rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
                           >
                             Add to Cart
                           </button>
@@ -1195,7 +1214,7 @@ export default function Sales() {
                         />
                       </div>
                       {discountAmount > 0 && (
-                        <div className="flex items-center justify-between text-emerald-500">
+                        <div className="flex items-center justify-between text-brand">
                           <span className="text-[10px] font-bold uppercase tracking-widest">Discount Amount</span>
                           <span className="text-xs font-bold">-{formatCurrency(discountAmount, currency)}</span>
                         </div>
@@ -1298,7 +1317,7 @@ export default function Sales() {
                             <div className="p-2 bg-brand/10 rounded-lg">
                               <TrendingUp className="w-4 h-4 text-brand" />
                             </div>
-                            <span className="label-text text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+12.5%</span>
+                            <span className="label-text text-brand bg-brand/10 px-2 py-0.5 rounded-full">+12.5%</span>
                           </div>
                           <p className="label-text mb-1">Total Revenue</p>
                           <h3 className="h2">
@@ -1312,13 +1331,13 @@ export default function Sales() {
                       <div className="relative z-10 flex flex-col h-full justify-between">
                         <div>
                           <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-emerald-500/10 rounded-lg">
-                              <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+                            <div className="p-2 bg-brand/10 rounded-lg">
+                              <ArrowUpRight className="w-4 h-4 text-brand" />
                             </div>
-                            <span className="label-text text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+8.2%</span>
+                            <span className="label-text text-brand bg-brand/10 px-2 py-0.5 rounded-full">+8.2%</span>
                           </div>
                           <p className="label-text mb-1">Total Profit</p>
-                          <h3 className="h2 text-emerald-500">
+                          <h3 className="h2 text-brand">
                             {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0), currency)}
                           </h3>
                         </div>
@@ -1476,7 +1495,7 @@ export default function Sales() {
                               </button>
                               <button 
                                 onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(sale); }}
-                                className="p-2 text-zinc-400 hover:text-emerald-500 group-hover:text-white dark:group-hover:text-emerald-400 transition-all active:scale-90"
+                                className="p-2 text-zinc-400 hover:text-brand group-hover:text-white  transition-all active:scale-90"
                                 title="Share via WhatsApp"
                               >
                                 <Share2 className="w-3.5 h-3.5" />
@@ -1550,35 +1569,35 @@ export default function Sales() {
                             className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-brand transition-all"
                           >
                             <Eye className="w-4 h-4" />
-                            <span className="text-[8px] font-black uppercase tracking-widest">View</span>
+                            <span className="text-[8px] font-bold uppercase tracking-widest">View</span>
                           </button>
                           <button 
                             onClick={() => handleDownloadInvoice(sale)}
                             className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-brand transition-all"
                           >
                             <Download className="w-4 h-4" />
-                            <span className="text-[8px] font-black uppercase tracking-widest">PDF</span>
+                            <span className="text-[8px] font-bold uppercase tracking-widest">PDF</span>
                           </button>
                           <button 
                             onClick={() => handleShareEmail(sale)}
                             className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-blue-500 transition-all"
                           >
                             <Mail className="w-4 h-4" />
-                            <span className="text-[8px] font-black uppercase tracking-widest">Email</span>
+                            <span className="text-[8px] font-bold uppercase tracking-widest">Email</span>
                           </button>
                           <button 
                             onClick={() => handleCopyLink(sale)}
                             className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-brand transition-all"
                           >
                             <LinkIcon className="w-4 h-4" />
-                            <span className="text-[8px] font-black uppercase tracking-widest">Link</span>
+                            <span className="text-[8px] font-bold uppercase tracking-widest">Link</span>
                           </button>
                           <button 
                             onClick={() => handleShareWhatsApp(sale)}
-                            className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-emerald-500 transition-all"
+                            className="flex-1 flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-brand transition-all"
                           >
                             <Share2 className="w-4 h-4" />
-                            <span className="text-[8px] font-black uppercase tracking-widest">WA</span>
+                            <span className="text-[8px] font-bold uppercase tracking-widest">WA</span>
                           </button>
                         </div>
                       </div>
@@ -1631,7 +1650,7 @@ export default function Sales() {
                       </button>
                       <button
                         onClick={() => handleShareWhatsApp(selectedSaleForPreview)}
-                        className="p-4 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all"
+                        className="p-4 bg-brand hover:bg-brand-hover text-white rounded-2xl transition-all active:scale-95 shadow-lg shadow-brand/20"
                         title="Share via WhatsApp"
                       >
                         <Share2 className="w-5 h-5" />
@@ -1681,14 +1700,14 @@ export default function Sales() {
 
                     <div className="text-left md:text-right space-y-6">
                       <div>
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Date Issued</p>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-2">Date Issued</p>
                         <p className="font-bold text-zinc-950 dark:text-white text-lg tracking-tight">
                           {new Date(selectedSaleForPreview.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Payment Status</p>
-                        <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-2">Payment Status</p>
+                        <div className="inline-flex items-center px-3 py-1 rounded-full bg-brand/10 text-brand text-[10px] font-bold uppercase tracking-widest">
                           {selectedSaleForPreview.payment_method || 'Paid'}
                         </div>
                       </div>
@@ -1697,7 +1716,7 @@ export default function Sales() {
 
                   {/* Billed To Section */}
                   <div className="p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-[32px] border border-zinc-100 dark:border-zinc-800">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Billed To</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-2">Billed To</p>
                     <h4 className="font-bold text-xl text-zinc-950 dark:text-white tracking-tight leading-tight">
                       {selectedSaleForPreview.customer_name || 'Walk-in Customer'}
                     </h4>
@@ -1713,10 +1732,10 @@ export default function Sales() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                          <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 w-1/2">Description</th>
-                          <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Qty</th>
-                          <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Price</th>
-                          <th className="pb-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total</th>
+                          <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 w-1/2">Description</th>
+                          <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 text-center">Qty</th>
+                          <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 text-right">Price</th>
+                          <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 text-right">Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
@@ -1750,7 +1769,7 @@ export default function Sales() {
                   {/* Summary Section */}
                   <div className="mt-12 flex flex-col sm:flex-row justify-between items-start gap-12 pt-12 border-t border-zinc-100 dark:border-zinc-800">
                     <div className="max-w-xs">
-                      <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Note</h5>
+                      <h5 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-4">Note</h5>
                       <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                         {settings?.invoice_footer || `Thank you for your business. We appreciate your trust in ${settings?.business_name || 'us'}.`}
                       </p>
@@ -1758,27 +1777,27 @@ export default function Sales() {
 
                     <div className="w-full sm:w-80 space-y-4">
                       <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Subtotal</span>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Subtotal</span>
                         <span className={NUMBER_STYLE}>{formatCurrency((selectedSaleForPreview.total_amount || 0) + (selectedSaleForPreview.discount_amount || 0) - (selectedSaleForPreview.vat_amount || 0), currency)}</span>
                       </div>
                       
                       {selectedSaleForPreview.discount_amount > 0 && (
-                        <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Discount ({selectedSaleForPreview.discount_percentage}%)</span>
+                        <div className="flex justify-between items-center text-brand ">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Discount ({selectedSaleForPreview.discount_percentage}%)</span>
                           <span className={NUMBER_STYLE}>-{formatCurrency(selectedSaleForPreview.discount_amount, currency)}</span>
                         </div>
                       )}
 
                       {selectedSaleForPreview.vat_amount > 0 && (
                         <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">VAT (7.5%)</span>
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">VAT (7.5%)</span>
                           <span className={NUMBER_STYLE}>{formatCurrency(selectedSaleForPreview.vat_amount, currency)}</span>
                         </div>
                       )}
 
                       <div className="pt-6 border-t-4 border-zinc-950 dark:border-white flex justify-between items-center">
-                        <span className="text-sm font-black uppercase tracking-[0.3em] text-zinc-950 dark:text-white">Total</span>
-                        <span className="text-4xl font-black tracking-tighter text-zinc-950 dark:text-white">
+                        <span className="text-sm font-bold uppercase tracking-[0.3em] text-zinc-950 dark:text-white">Total</span>
+                        <span className="text-4xl font-bold tracking-tighter text-zinc-950 dark:text-white">
                           {formatCurrency(selectedSaleForPreview.total_amount || 0, currency)}
                         </span>
                       </div>
@@ -1795,7 +1814,7 @@ export default function Sales() {
                       <button
                         onClick={saveCustomTerms}
                         disabled={isSavingTerms}
-                        className="text-[10px] font-black uppercase tracking-widest text-brand hover:text-brand-hover disabled:opacity-50"
+                        className="text-[10px] font-bold uppercase tracking-widest text-brand hover:text-brand-hover disabled:opacity-50"
                       >
                         {isSavingTerms ? 'Saving...' : 'Save Terms'}
                       </button>

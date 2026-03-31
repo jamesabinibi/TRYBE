@@ -30,6 +30,8 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
   const socketRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       fetchSessions();
@@ -37,7 +39,11 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
     }
     return () => {
       if (socketRef.current) {
+        socketRef.current.onclose = null;
         socketRef.current.close();
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
       }
     };
   }, [isOpen]);
@@ -84,7 +90,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
   const connectWebSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
-    const wsUrl = `${protocol}//${host}?userId=${user?.id}&accountId=${user?.account_id}`;
+    const wsUrl = `${protocol}//${host}/api/chat?userId=${user?.id}&accountId=${user?.account_id}`;
     
     console.log('Admin connecting to WebSocket:', wsUrl);
     const socket = new WebSocket(wsUrl);
@@ -118,9 +124,11 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
     socket.onclose = () => {
       setIsConnected(false);
       // Reconnect after 3 seconds if modal is still open
-      if (isOpen) {
-        setTimeout(connectWebSocket, 3000);
-      }
+      reconnectTimeoutRef.current = setTimeout(() => {
+        if (isOpen) {
+          connectWebSocket();
+        }
+      }, 3000);
     };
   };
 
@@ -171,7 +179,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
               <div>
                 <h2 className="font-bold text-zinc-900 dark:text-white">Live Support</h2>
                 <div className="flex items-center gap-1.5">
-                  <div className={cn("w-2 h-2 rounded-full", isConnected ? "bg-emerald-400" : "bg-zinc-400")} />
+                  <div className={cn("w-2 h-2 rounded-full", isConnected ? "bg-brand" : "bg-zinc-400")} />
                   <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest text-zinc-500">
                     {isConnected ? 'Online' : 'Connecting...'}
                   </p>

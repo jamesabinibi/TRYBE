@@ -52,7 +52,7 @@ export const generatePDF = async (data: any, settings: any) => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(28);
     doc.setFont('helvetica', 'bold');
-    doc.text(settings?.business_name || 'StockFlow', logoLoaded ? 55 : 20, 35);
+    doc.text(settings?.business_name || 'Gryndee', logoLoaded ? 55 : 20, 35);
     
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
@@ -76,7 +76,7 @@ export const generatePDF = async (data: any, settings: any) => {
     doc.setTextColor(40, 40, 40);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text(settings?.business_name || 'StockFlow', 20, y);
+    doc.text(settings?.business_name || 'Gryndee', 20, y);
     doc.text(rec.name, 110, y);
 
     y += 5;
@@ -239,7 +239,7 @@ export const generatePDF = async (data: any, settings: any) => {
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text(settings?.business_name || 'StockFlow', pageWidth / 2, adjustedFooterY + (splitTerms.length * 4) + 1, { align: 'center' });
+    doc.text(settings?.business_name || 'Gryndee', pageWidth / 2, adjustedFooterY + (splitTerms.length * 4) + 1, { align: 'center' });
 
     doc.save(`Invoice_${num}.pdf`);
   } catch (error) {

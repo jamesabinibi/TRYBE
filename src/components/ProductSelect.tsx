@@ -132,10 +132,10 @@ export default function ProductSelect({ products, selectedProduct, onSelect, for
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{product.name}</p>
-                    <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest truncate">{product.category_name}</p>
+                    <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest truncate">{product.category_name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-brand">{formatCurrency(product.selling_price)}</p>
+                    <p className="text-sm font-bold text-brand">{formatCurrency(product.selling_price)}</p>
                     <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
                       {product.variants?.reduce((acc, v) => acc + (v.quantity || 0), 0) || 0} in stock
                     </p>

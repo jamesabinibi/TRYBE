@@ -37,7 +37,7 @@ export const TotalDisplay: React.FC<TotalDisplayProps> = ({
           </div>
         )}
         <p className={cn(
-          "text-xs font-black text-zinc-500 uppercase tracking-widest",
+          "text-xs font-bold text-zinc-500 uppercase tracking-widest",
           labelClassName
         )}>
           {label}

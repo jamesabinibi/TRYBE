@@ -102,7 +102,7 @@ const TaxReport = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Nigeria Tax Report</h1>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Nigeria Tax Report</h1>
           <p className="text-zinc-600 dark:text-zinc-400 mt-1 font-medium">
             Estimated tax assessment based on Finance Act 2023 and Nigerian tax laws.
           </p>
@@ -112,7 +112,7 @@ const TaxReport = () => {
           <button 
             onClick={exportToCSV}
             disabled={!taxData}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95 disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95 disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
             Export CSV
@@ -121,7 +121,7 @@ const TaxReport = () => {
             <button
               onClick={() => setPeriod('month')}
               className={cn(
-                "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                "px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
                 period === 'month' 
                   ? "bg-brand text-white shadow-lg" 
                   : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
@@ -132,7 +132,7 @@ const TaxReport = () => {
             <button
               onClick={() => setPeriod('year')}
               className={cn(
-                "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                "px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
                 period === 'year' 
                   ? "bg-brand text-white shadow-lg" 
                   : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
@@ -167,11 +167,11 @@ const TaxReport = () => {
               />
               <div className="mt-4">
                 {taxData.vat_exempt ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 text-brand rounded-full text-[10px] font-bold uppercase tracking-widest">
                     <CheckCircle2 className="w-3 h-3" /> Zero Tax Bracket
                   </div>
                 ) : (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full text-[10px] font-bold uppercase tracking-widest">
                     <AlertCircle className="w-3 h-3" /> VAT Registrable
                   </div>
                 )}
@@ -193,11 +193,11 @@ const TaxReport = () => {
               />
               <div className="mt-4">
                 {taxData.net_profit >= 0 ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 text-brand rounded-full text-[10px] font-bold uppercase tracking-widest">
                     Making Money
                   </div>
                 ) : (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-[10px] font-bold uppercase tracking-widest">
                     Operating at Deficit
                   </div>
                 )}
@@ -218,7 +218,7 @@ const TaxReport = () => {
                 labelClassName="text-white opacity-80"
                 valueClassName="text-white"
               />
-              <p className="mt-4 text-[10px] font-black uppercase tracking-widest opacity-70">
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-widest opacity-70">
                 CIT ({taxData.cit_rate}%) + EDU TAX ({taxData.edu_tax_rate}%)
               </p>
             </motion.div>
@@ -227,7 +227,7 @@ const TaxReport = () => {
           {/* Detailed Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-6">
-              <h2 className="text-xl font-black text-zinc-950 dark:text-white flex items-center gap-3">
+              <h2 className="text-xl font-bold text-zinc-950 dark:text-white flex items-center gap-3">
                 <FileText className="w-6 h-6 text-brand" />
                 Financial Performance
               </h2>
@@ -237,7 +237,7 @@ const TaxReport = () => {
                   <div className="flex justify-between items-center">
                     <div className="space-y-1">
                       <div className="text-sm font-bold text-zinc-950 dark:text-white">Total Turnover</div>
-                      <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">All Sales Revenue</div>
+                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">All Sales Revenue</div>
                     </div>
                     <div className={cn(NUMBER_STYLE, "text-lg text-zinc-950 dark:text-white")}>
                       <CurrencyDisplay amount={taxData.turnover} currencyCode={settings?.currency} />
@@ -247,7 +247,7 @@ const TaxReport = () => {
                   <div className="flex justify-between items-center">
                     <div className="space-y-1">
                       <div className="text-sm font-bold text-zinc-950 dark:text-white">Total Expenses</div>
-                      <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Operational Costs</div>
+                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Operational Costs</div>
                     </div>
                     <div className={cn(NUMBER_STYLE, "text-lg text-red-600 dark:text-red-400")}>
                       -<CurrencyDisplay amount={taxData.total_expenses} currencyCode={settings?.currency} />
@@ -257,22 +257,22 @@ const TaxReport = () => {
                   <div className="flex justify-between items-center">
                     <div className="space-y-1">
                       <div className="text-sm font-bold text-zinc-950 dark:text-white">Other Inflows</div>
-                      <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Loans, Investments, etc.</div>
+                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Loans, Investments, etc.</div>
                     </div>
-                    <div className={cn(NUMBER_STYLE, "text-lg text-emerald-600 dark:text-emerald-400")}>
+                    <div className={cn(NUMBER_STYLE, "text-lg text-brand ")}>
                       +<CurrencyDisplay amount={taxData.total_inflows} currencyCode={settings?.currency} />
                     </div>
                   </div>
 
                   <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
                     <div className="space-y-1">
-                      <div className="text-lg font-black text-zinc-950 dark:text-white">Net Cash Flow</div>
-                      <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Real Money in Bank</div>
+                      <div className="text-lg font-bold text-zinc-950 dark:text-white">Net Cash Flow</div>
+                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Real Money in Bank</div>
                     </div>
                     <div className={cn(
                       NUMBER_STYLE,
                       "text-2xl",
-                      taxData.net_cash_flow >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                      taxData.net_cash_flow >= 0 ? "text-brand " : "text-red-600 dark:text-red-400"
                     )}>
                       <CurrencyDisplay amount={taxData.net_cash_flow} currencyCode={settings?.currency} />
                     </div>
@@ -290,7 +290,7 @@ const TaxReport = () => {
             </div>
 
             <div className="space-y-6">
-              <h2 className="text-xl font-black text-zinc-950 dark:text-white flex items-center gap-3">
+              <h2 className="text-xl font-bold text-zinc-950 dark:text-white flex items-center gap-3">
                 <ShieldCheck className="w-6 h-6 text-brand" />
                 Tax Compliance Guide
               </h2>
@@ -298,11 +298,11 @@ const TaxReport = () => {
               <div className="grid grid-cols-1 gap-4">
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-                      <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                    <div className="w-12 h-12 rounded-2xl bg-brand/10 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-6 h-6 text-brand" />
                     </div>
                     <div>
-                      <h4 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">Small Business Exemption</h4>
+                      <h4 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">Small Business Exemption</h4>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                         Companies with turnover &lt; N25m are exempt from CIT and VAT. However, you are still required to file annual returns.
                       </p>
@@ -316,7 +316,7 @@ const TaxReport = () => {
                       <AlertCircle className="w-6 h-6 text-amber-600" />
                     </div>
                     <div>
-                      <h4 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">VAT Compliance (7.5%)</h4>
+                      <h4 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">VAT Compliance (7.5%)</h4>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                         Once turnover hits N25m, you must register for VAT and remit collections by the 21st of every month.
                       </p>
@@ -329,7 +329,7 @@ const TaxReport = () => {
                     <HelpCircle className="w-8 h-8 text-zinc-900 dark:text-white" />
                   </div>
                   <div>
-                    <h4 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-sm">Need Help?</h4>
+                    <h4 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-sm">Need Help?</h4>
                     <p className="text-xs text-zinc-500 dark:text-white/70 mt-2 leading-relaxed font-medium">
                       Consult with a certified Nigerian tax professional for a formal audit and filing.
                     </p>
@@ -342,7 +342,7 @@ const TaxReport = () => {
       ) : (
         <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[3rem] text-center">
           <FileText className="w-20 h-20 text-zinc-200 dark:text-zinc-800 mb-6" />
-          <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">No tax data available</h3>
+          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">No tax data available</h3>
           <p className="text-zinc-500 dark:text-zinc-400 max-w-xs mt-2 font-medium">
             Record some sales and expenses to see your tax assessment.
           </p>

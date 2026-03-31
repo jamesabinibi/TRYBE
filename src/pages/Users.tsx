@@ -104,7 +104,7 @@ export default function Users() {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete User</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Delete User</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Are you sure? This will permanently remove this staff member's access.</p>
         <div className="flex gap-3">
@@ -124,11 +124,11 @@ export default function Users() {
                 toast.error('Network error');
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
           >
             Delete
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -245,11 +245,11 @@ export default function Users() {
               <div key={user.id} className="p-6 space-y-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-black text-lg">
+                    <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 font-bold text-lg">
                       {user.name?.charAt(0) || user.username?.charAt(0) || '?'}
                     </div>
                     <div>
-                      <h3 className="text-sm font-black text-zinc-900 dark:text-white">{user.name}</h3>
+                      <h3 className="text-sm font-bold text-zinc-900 dark:text-white">{user.name}</h3>
                       <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">@{user.username}</p>
                     </div>
                   </div>
@@ -316,7 +316,7 @@ export default function Users() {
               className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
-                <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-widest text-xs">
+                <h3 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs">
                   {editingUser ? 'Edit User' : 'Add New User'}
                 </h3>
                 <button onClick={() => setIsModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
@@ -326,7 +326,7 @@ export default function Users() {
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-600 dark:text-zinc-400 uppercase tracking-widest">Full Name</label>
+                  <label className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-widest">Full Name</label>
                   <Input 
                     required
                     type="text" 
@@ -337,7 +337,7 @@ export default function Users() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Username</label>
+                  <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Username</label>
                   <Input 
                     required
                     type="text" 
@@ -348,7 +348,7 @@ export default function Users() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Address</label>
+                  <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Address</label>
                   <Input 
                     required
                     type="email" 
@@ -360,7 +360,7 @@ export default function Users() {
 
                 {!editingUser && (
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Password</label>
+                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Password</label>
                     <Input 
                       required
                       type="password" 
@@ -372,7 +372,7 @@ export default function Users() {
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Role</label>
+                  <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Role</label>
                   <Input 
                     as="select"
                     value={formData.role}
@@ -388,7 +388,7 @@ export default function Users() {
                   <button 
                     type="submit"
                     disabled={isSaving}
-                    className="w-full py-4 bg-brand text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 disabled:opacity-50"
+                    className="w-full py-4 bg-brand text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 disabled:opacity-50"
                   >
                     {isSaving ? 'Saving...' : editingUser ? 'Update User' : 'Create User'}
                   </button>

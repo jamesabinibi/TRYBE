@@ -18,6 +18,7 @@ export interface User {
   invoice_count_month?: number;
   last_invoice_reset?: string;
   trial_expiry?: string;
+  last_payment_date?: string;
   permissions?: {
     can_view_dashboard: boolean;
     can_view_account_data: boolean;

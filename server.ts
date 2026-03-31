@@ -762,6 +762,22 @@ async function initAwsDb() {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
       `);
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_sales_account_id ON sales(account_id);
+        CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
+        CREATE INDEX IF NOT EXISTS idx_sales_staff_id ON sales(staff_id);
+        CREATE INDEX IF NOT EXISTS idx_sale_items_account_id ON sale_items(account_id);
+        CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
+        CREATE INDEX IF NOT EXISTS idx_expenses_account_id ON expenses(account_id);
+        CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+        CREATE INDEX IF NOT EXISTS idx_products_account_id ON products(account_id);
+        CREATE INDEX IF NOT EXISTS idx_product_variants_account_id ON product_variants(account_id);
+        CREATE INDEX IF NOT EXISTS idx_bookkeeping_account_id ON bookkeeping(account_id);
+        CREATE INDEX IF NOT EXISTS idx_notifications_account_id ON notifications(account_id);
+        CREATE INDEX IF NOT EXISTS idx_users_account_id ON users(account_id);
+        CREATE INDEX IF NOT EXISTS idx_customers_account_id ON customers(account_id);
+      `);
+
       console.log('[DB] RDS Schema check complete.');
       
       // Ensure superadmin exists with the correct hashed password
@@ -2284,7 +2300,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       res.json(JSON.parse(text));
     } catch (error: any) {
       console.error('[AI] Transaction processing error:', error);
-      res.status(500).json({ error: error.message || "Failed to process image with AI" });
+      const errorMsg = error.message || "Failed to process image with AI";
+      if (errorMsg.toLowerCase().includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate')) {
+        return res.status(429).json({ error: "AI service is currently busy or quota exceeded. Please try again later." });
+      }
+      res.status(500).json({ error: errorMsg });
     }
   });
 
@@ -2337,7 +2357,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       res.json({ insight: response.text || "I couldn't generate insights at this moment. Please try again later." });
     } catch (error: any) {
       console.error('[AI] Insight generation error:', error);
-      res.status(500).json({ error: error.message || "Failed to generate AI insight" });
+      const errorMsg = error.message || "Failed to generate AI insight";
+      if (errorMsg.toLowerCase().includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate')) {
+        return res.status(429).json({ error: "AI service is currently busy or quota exceeded. Please try again later." });
+      }
+      res.status(500).json({ error: errorMsg });
     }
   });
 
@@ -2409,7 +2433,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       res.json(JSON.parse(response.text || '{}'));
     } catch (error: any) {
       console.error('[AI] Forecast error:', error);
-      res.status(500).json({ error: error.message });
+      const errorMsg = error.message || "Failed to generate AI forecast";
+      if (errorMsg.toLowerCase().includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate')) {
+        return res.status(429).json({ error: "AI service is currently busy or quota exceeded. Please try again later." });
+      }
+      res.status(500).json({ error: errorMsg });
     }
   });
 
@@ -2765,7 +2793,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const { rows } = await pool.query(
           `SELECT u.id, u.username, u.email, u.role, u.name, u.password, u.account_id, u.is_active as user_active, 
                   a.is_active as account_active, a.subscription_plan, a.subscription_status, a.referral_code, 
-                  a.referral_count, a.referrals_for_reward, a.active_referral_count, a.trial_expiry, a.invoice_count_month
+                  a.referral_count, a.referrals_for_reward, a.active_referral_count, a.trial_expiry, a.invoice_count_month, a.last_payment_date
            FROM users u 
            LEFT JOIN accounts a ON u.account_id = a.id 
            WHERE u.username ILIKE $1 OR u.email ILIKE $1 LIMIT 1`,
@@ -3241,7 +3269,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const { rows } = await pool.query(
           `SELECT u.id, u.username, u.email, u.role, u.name, u.account_id, u.is_active as user_active, 
                   a.is_active as account_active, a.subscription_plan, a.subscription_status, a.referral_code, 
-                  a.referral_count, a.referrals_for_reward, a.active_referral_count, a.trial_expiry, a.invoice_count_month
+                  a.referral_count, a.referrals_for_reward, a.active_referral_count, a.trial_expiry, a.invoice_count_month, a.last_payment_date
            FROM users u 
            LEFT JOIN accounts a ON u.account_id = a.id 
            WHERE u.id = $1 LIMIT 1`,
@@ -5318,10 +5346,14 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const globalThreshold = settings?.low_stock_threshold || 5;
 
       // 2. Filter for low stock
-      const lowStockVariants = variants.filter(v => 
-        v.quantity !== null && 
-        v.quantity <= (v.low_stock_threshold || globalThreshold)
-      );
+      const lowStockVariants = variants.filter(v => {
+        if (v.quantity === null) return false;
+        const qty = Number(v.quantity) || 0;
+        const threshold = v.low_stock_threshold !== null && v.low_stock_threshold !== undefined 
+          ? Number(v.low_stock_threshold) 
+          : Number(globalThreshold) || 5;
+        return qty <= threshold;
+      });
       
       if (lowStockVariants.length === 0) return;
 
@@ -5492,7 +5524,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const totalProducts = parseInt(productsCount[0].count);
         const totalSalesCount = parseInt(salesCount[0].count);
         const totalStock = variants?.reduce((acc, v) => acc + (v.quantity || 0), 0) || 0;
-        const low_stock_count = variants?.filter(v => v.quantity <= (v.low_stock_threshold || 0)).length || 0;
+        const { rows: settingsRows } = await pool.query('SELECT low_stock_threshold FROM settings WHERE account_id = $1', [userInfo.account_id]);
+        const globalThreshold = settingsRows[0]?.low_stock_threshold || 5;
+        const low_stock_count = variants?.filter(v => {
+          const qty = Number(v.quantity) || 0;
+          const threshold = v.low_stock_threshold !== null && v.low_stock_threshold !== undefined 
+            ? Number(v.low_stock_threshold) 
+            : Number(globalThreshold) || 5;
+          return qty <= threshold;
+        }).length || 0;
 
         const { rows: todaySalesData } = await pool.query(todaySalesQuery, todayParams);
         const todaySales = todaySalesData?.reduce((acc, s) => acc + (parseFloat(s.total_amount) || 0), 0) || 0;
@@ -5534,7 +5574,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       
       const { data: variants } = await supabase.from('product_variants').select('quantity, low_stock_threshold').eq('account_id', userInfo.account_id);
       const totalStock = variants?.reduce((acc, v) => acc + (v.quantity || 0), 0) || 0;
-      const lowStockCount = variants?.filter(v => v.quantity <= (v.low_stock_threshold || 0)).length || 0;
+      const { data: settings } = await supabase.from('settings').select('low_stock_threshold').eq('account_id', userInfo.account_id).maybeSingle();
+      const globalThreshold = settings?.low_stock_threshold || 5;
+      const lowStockCount = variants?.filter(v => {
+        const qty = Number(v.quantity) || 0;
+        const threshold = v.low_stock_threshold !== null && v.low_stock_threshold !== undefined 
+          ? Number(v.low_stock_threshold) 
+          : Number(globalThreshold) || 5;
+        return qty <= threshold;
+      }).length || 0;
 
       const { data: todaySalesData } = await todaySalesQuery;
 
@@ -6449,7 +6497,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       res.json({ base64: base64Data });
     } catch (error: any) {
       console.error('[ADMIN] Asset generation error:', error);
-      res.status(500).json({ error: error.message });
+      const errorMsg = error.message || "Failed to generate image";
+      if (errorMsg.toLowerCase().includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate')) {
+        return res.status(429).json({ error: "AI service is currently busy or quota exceeded. Please try again later." });
+      }
+      res.status(500).json({ error: errorMsg });
     }
   });
 
@@ -7135,6 +7187,40 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.post("/api/batch", async (req, res) => {
+    try {
+      const { endpoints } = req.body;
+      if (!Array.isArray(endpoints)) {
+        return res.status(400).json({ error: "endpoints array is required" });
+      }
+
+      const results = await Promise.all(endpoints.map(async (endpoint) => {
+        try {
+          const response = await fetch(`http://127.0.0.1:${PORT}${endpoint}`, {
+            headers: {
+              'Authorization': req.headers.authorization || '',
+              'Content-Type': 'application/json',
+              'Cookie': req.headers.cookie || '',
+              'x-user-id': req.headers['x-user-id'] as string || ''
+            }
+          });
+          
+          if (!response.ok) {
+            return { error: `Failed with status ${response.status}` };
+          }
+          
+          return await response.json();
+        } catch (err: any) {
+          return { error: err.message };
+        }
+      }));
+
+      res.json(results);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // API 404 handler
   app.all("/api/*", (req, res) => {
     console.log(`[API 404] ${req.method} ${req.url} - No route matched`);
@@ -7611,6 +7697,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         `);
       }
 
+      await runSql(`
+        CREATE INDEX IF NOT EXISTS idx_sales_account_id ON sales(account_id);
+        CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
+        CREATE INDEX IF NOT EXISTS idx_sales_staff_id ON sales(staff_id);
+        CREATE INDEX IF NOT EXISTS idx_sale_items_account_id ON sale_items(account_id);
+        CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
+        CREATE INDEX IF NOT EXISTS idx_expenses_account_id ON expenses(account_id);
+        CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+        CREATE INDEX IF NOT EXISTS idx_products_account_id ON products(account_id);
+        CREATE INDEX IF NOT EXISTS idx_product_variants_account_id ON product_variants(account_id);
+        CREATE INDEX IF NOT EXISTS idx_bookkeeping_account_id ON bookkeeping(account_id);
+        CREATE INDEX IF NOT EXISTS idx_notifications_account_id ON notifications(account_id);
+        CREATE INDEX IF NOT EXISTS idx_users_account_id ON users(account_id);
+        CREATE INDEX IF NOT EXISTS idx_customers_account_id ON customers(account_id);
+      `);
+
       // Reload schema cache
       await runSql(`NOTIFY pgrst, 'reload schema';`);
 
@@ -7671,7 +7773,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     console.error('[INIT] Failed to ensure super admin:', e);
   }
 
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocketServer({ server, path: '/api/chat' });
   const clients = new Map<string, WebSocket>();
   const lastEmailSent = new Map<string, number>();
 

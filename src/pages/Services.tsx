@@ -65,7 +65,7 @@ const Services = () => {
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
-          <h3 className="font-black text-zinc-900 uppercase tracking-widest text-xs">Delete Service</h3>
+          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Delete Service</h3>
         </div>
         <p className="text-sm text-zinc-500 font-medium">Are you sure you want to delete this service? This action cannot be undone.</p>
         <div className="flex gap-3">
@@ -88,11 +88,11 @@ const Services = () => {
                 toast.error(error.message);
               }
             }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
           >
             Delete
           </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
+          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
             Cancel
           </button>
         </div>
@@ -155,7 +155,7 @@ const Services = () => {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">Services</h1>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Services</h1>
           <p className="text-zinc-600 dark:text-zinc-400 font-medium">Manage your service offerings and pricing</p>
         </div>
         <button 
@@ -163,7 +163,7 @@ const Services = () => {
             setEditingService(null);
             setIsAddModalOpen(true);
           }}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
         >
           <Plus className="w-4 h-4" />
           Add Service
@@ -217,13 +217,13 @@ const Services = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">{service.name}</h3>
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">{service.name}</h3>
                   <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{service.category}</p>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">{service.description}</p>
                 </div>
 
                 <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-end">
-                  <span className="text-lg font-black text-brand">{formatCurrency(service.price, settings?.currency || 'NGN')}</span>
+                  <span className="text-lg font-bold text-brand">{formatCurrency(service.price, settings?.currency || 'NGN')}</span>
                 </div>
               </motion.div>
             ))}
@@ -233,7 +233,7 @@ const Services = () => {
             <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
               <Briefcase className="w-10 h-10 text-zinc-200 dark:text-zinc-700" />
             </div>
-            <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">No services found</h3>
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">No services found</h3>
             <p className="text-zinc-500 dark:text-zinc-400 mt-2">Try adjusting your search or add a new service</p>
           </div>
         )}
@@ -259,7 +259,7 @@ const Services = () => {
               <div className="p-8 sm:p-10">
                 <div className="flex items-center justify-between mb-8">
                   <div>
-                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
+                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
                       {editingService ? 'Edit Service' : 'Add New Service'}
                     </h2>
                     <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1">Fill in the details below</p>
@@ -274,7 +274,7 @@ const Services = () => {
 
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Service Name</label>
+                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Service Name</label>
                     <Input 
                       name="name"
                       required
@@ -284,7 +284,7 @@ const Services = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Price (₦)</label>
+                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Price (₦)</label>
                     <Input 
                       name="price"
                       type="number"
@@ -296,7 +296,7 @@ const Services = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Category</label>
+                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Category</label>
                     <Input 
                       name="category"
                       required
@@ -306,7 +306,7 @@ const Services = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Description</label>
+                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Description</label>
                     <Textarea 
                       name="description"
                       rows={3}
@@ -318,7 +318,7 @@ const Services = () => {
                   <button 
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-5 bg-brand text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-3"
+                    className="w-full py-5 bg-brand text-white rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-3"
                   >
                     {isSubmitting ? (
                       <>

@@ -37,6 +37,8 @@ export default function ChatSupport() {
     }
   }, [user]);
 
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       fetchMessages();
@@ -44,7 +46,12 @@ export default function ChatSupport() {
     }
     return () => {
       if (socketRef.current) {
+        // Prevent reconnect on intentional close
+        socketRef.current.onclose = null;
         socketRef.current.close();
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
       }
     };
   }, [isOpen, user, guestId]);
@@ -81,7 +88,7 @@ export default function ChatSupport() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // Use the correct host and protocol for the WebSocket connection
     const host = window.location.host;
-    let wsUrl = `${protocol}//${host}?`;
+    let wsUrl = `${protocol}//${host}/api/chat?`;
     
     if (user) {
       wsUrl += `userId=${user.id}&accountId=${user.account_id}`;
@@ -114,9 +121,11 @@ export default function ChatSupport() {
     socket.onclose = () => {
       setIsConnected(false);
       // Reconnect after 3 seconds if still open
-      if (isOpen) {
-        setTimeout(connectWebSocket, 3000);
-      }
+      reconnectTimeoutRef.current = setTimeout(() => {
+        if (isOpen) {
+          connectWebSocket();
+        }
+      }, 3000);
     };
   };
 
@@ -163,9 +172,9 @@ export default function ChatSupport() {
                   <ShieldCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-black uppercase tracking-widest">Gryndee Support</p>
+                  <p className="text-sm font-bold uppercase tracking-widest">Gryndee Support</p>
                   <div className="flex items-center gap-1.5">
-                    <div className={cn("w-2 h-2 rounded-full", isConnected ? "bg-emerald-400" : "bg-zinc-400")} />
+                    <div className={cn("w-2 h-2 rounded-full", isConnected ? "bg-brand" : "bg-zinc-400")} />
                     <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">
                       {isConnected ? 'Online' : 'Connecting...'}
                     </p>

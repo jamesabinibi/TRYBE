@@ -180,7 +180,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               "font-display font-medium text-lg tracking-tight flex items-center gap-1.5",
               isDarkMode ? "text-white" : "text-zinc-900"
             )}>
-              {settings?.business_name || 'StockFlow'}
+              {settings?.business_name || 'Gryndee'}
               {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial') && (
                 <ShieldCheck className="w-4 h-4 text-brand fill-brand/10 shrink-0" />
               )}
@@ -469,6 +469,10 @@ export default function App() {
       'x-user-id': user?.id?.toString() || '',
     };
     const response = await fetch(url, { ...options, headers });
+    
+    if (response.status === 429) {
+      console.error(`[RATE LIMIT] Rate exceeded for ${url}`);
+    }
     
     if (response.status === 401) {
       console.warn('Unauthorized access detected, logging out...');

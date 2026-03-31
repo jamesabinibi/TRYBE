@@ -21,13 +21,15 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [salesRes, expensesRes] = await Promise.all([
-        fetchWithAuth('/api/sales'),
-        fetchWithAuth('/api/expenses')
-      ]);
+      const batchRes = await fetchWithAuth('/api/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoints: ['/api/sales', '/api/expenses']
+        })
+      });
 
-      const salesData = await salesRes.json();
-      const expensesData = await expensesRes.json();
+      const [salesData, expensesData] = await batchRes.json();
 
       setSales(salesData);
       setExpenses(expensesData);
@@ -132,7 +134,7 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
       {!hideHeader && (
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-zinc-950 dark:text-white tracking-tight flex items-center gap-3">
               <Wallet className="w-8 h-8 text-brand" />
               Cash Flow Runway
             </h1>
@@ -141,7 +143,7 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
           
           <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Current Cash on Hand</p>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Current Cash on Hand</p>
               {isEditingCash ? (
                 <div className="flex items-center gap-2">
                   <Input 
@@ -150,11 +152,11 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
                     onChange={(e) => setTempCash(e.target.value)}
                     autoFocus
                   />
-                  <button onClick={handleSaveCash} className="text-brand font-black text-[10px] uppercase tracking-widest">Save</button>
+                  <button onClick={handleSaveCash} className="text-brand font-bold text-[10px] uppercase tracking-widest">Save</button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <p className="text-xl font-black text-zinc-950 dark:text-white">
+                  <p className="text-xl font-bold text-zinc-950 dark:text-white">
                     {settings?.currency} {cashOnHand.toLocaleString()}
                   </p>
                   <button onClick={() => setIsEditingCash(true)} className="text-zinc-400 hover:text-brand transition-colors">
@@ -177,7 +179,7 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
             <div className="p-3 bg-red-50 dark:bg-red-900/10 rounded-2xl text-red-600 dark:text-red-400">
               <TrendingDown className="w-6 h-6" />
             </div>
-            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Avg. Monthly Burn</span>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Avg. Monthly Burn</span>
           </div>
           <h3 className={cn(NUMBER_STYLE, "text-3xl text-zinc-950 dark:text-white")}>
             <CurrencyDisplay amount={avgBurn} currencyCode={settings?.currency} size="xl" />
@@ -192,10 +194,10 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
           className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl text-emerald-600 dark:text-emerald-400">
+            <div className="p-3 bg-brand/10 rounded-2xl text-brand">
               <ArrowUpRight className="w-6 h-6" />
             </div>
-            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Avg. Monthly Revenue</span>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Avg. Monthly Revenue</span>
           </div>
           <h3 className={cn(NUMBER_STYLE, "text-3xl text-zinc-950 dark:text-white")}>
             <CurrencyDisplay amount={avgRev} currencyCode={settings?.currency} size="xl" />
@@ -210,7 +212,7 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
           className={cn(
             "p-8 rounded-[2.5rem] border shadow-xl relative overflow-hidden",
             runwayMonths > 6 
-              ? "bg-emerald-600 border-emerald-500 text-white" 
+              ? "bg-brand border-brand text-white" 
               : runwayMonths > 3 
                 ? "bg-amber-500 border-amber-400 text-white"
                 : "bg-red-600 border-red-500 text-white"
@@ -220,9 +222,9 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
             <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
               <Calendar className="w-6 h-6" />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Survival Runway</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Survival Runway</span>
           </div>
-          <h3 className="text-4xl font-black">
+          <h3 className="text-4xl font-bold">
             {runwayMonths === Infinity ? '∞' : runwayMonths.toFixed(1)} <span className="text-lg">Months</span>
           </h3>
           <p className="text-xs font-medium mt-2 opacity-90">
@@ -242,7 +244,7 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
       <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h3 className="text-lg font-black text-zinc-950 dark:text-white tracking-tight uppercase tracking-widest text-xs">Cash Flow Trends</h3>
+            <h3 className="text-lg font-bold text-zinc-950 dark:text-white tracking-tight uppercase tracking-widest text-xs">Cash Flow Trends</h3>
             <p className="text-xs text-zinc-500 font-medium">Revenue vs Expenses over the last 6 months.</p>
           </div>
         </div>

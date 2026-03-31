@@ -242,7 +242,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
             label="Total Inflows" 
             value={totalInflows} 
             icon={<ArrowUpRight className="w-6 h-6" />}
-            iconClassName="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+            iconClassName="bg-brand/10 text-brand"
           />
         </div>
       </div>
@@ -297,9 +297,9 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                   </td>
                   <td className="px-6 py-4">
                     <span className={cn(
-                      "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
                       record.type === 'loan' ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" :
-                      record.type === 'debt_recovery' ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                      record.type === 'debt_recovery' ? "bg-brand/10 text-brand" :
                       record.type === 'investment' ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" :
                       "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
                     )}>
@@ -308,8 +308,8 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                   </td>
                   <td className="px-6 py-4">
                     <span className={cn(
-                      "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                      record.nature === 'income' ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                      record.nature === 'income' ? "bg-brand/10 text-brand" :
                       record.nature === 'expense' ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" :
                       "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
                     )}>
@@ -323,7 +323,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                     <span className={cn(
                       NUMBER_STYLE,
                       "text-sm",
-                      record.nature === 'income' ? "text-emerald-600 dark:text-emerald-400" :
+                      record.nature === 'income' ? "text-brand " :
                       record.nature === 'expense' ? "text-red-600 dark:text-red-400" :
                       "text-zinc-950 dark:text-white"
                     )}>
