@@ -124,7 +124,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    ...(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'connectabinibi@gmail.com' ? [{ icon: Globe, label: 'Landing Page', path: '/landing' }] : []),
+    ...(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com' ? [{ icon: Globe, label: 'Landing Page', path: '/landing' }] : []),
     ...(user?.role !== 'staff' ? [{ icon: Brain, label: 'AI Intelligence', path: '/ai-advisor' }] : []),
     ...(user?.role !== 'staff' ? [{ icon: Wallet, label: 'Finance', path: '/finance' }] : []),
     { icon: Package, label: 'Inventory', path: '/products' },
@@ -133,7 +133,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     { icon: FileText, label: 'Invoices', path: '/invoices' },
     { icon: Users, label: 'Customers', path: '/customers' },
     ...(user?.role !== 'staff' ? [{ icon: Crown, label: 'Subscription', path: '/subscription' }] : []),
-    ...(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'connectabinibi@gmail.com' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
+    ...(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
     ...(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data) ? [{ icon: SettingsIcon, label: 'Settings', path: '/settings' }] : []),
   ];
 

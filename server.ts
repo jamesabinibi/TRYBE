@@ -1276,7 +1276,7 @@ async function createServer() {
         `, [userId]);
         if (rows.length > 0) {
           const user = rows[0];
-          if (user.email?.toLowerCase() === 'connectabinibi@gmail.com') {
+          if (user.email?.toLowerCase() === 'abinibimultimedia@yahoo.com') {
             user.role = 'super_admin';
           }
           console.log(`[AUTH] User ${userId} found in RDS. Role: ${user.role}, Plan: ${user.subscription_plan}`);
@@ -1302,7 +1302,7 @@ async function createServer() {
           return null;
         }
         
-        if (user.email?.toLowerCase() === 'connectabinibi@gmail.com') {
+        if (user.email?.toLowerCase() === 'abinibimultimedia@yahoo.com') {
           user.role = 'super_admin';
         }
         
@@ -2534,7 +2534,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post("/api/upload", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role !== 'super_admin') {
+      const isSuperAdmin = userInfo?.role === 'super_admin' || userInfo?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com';
+      
+      if (!userInfo || !isSuperAdmin) {
         return res.status(403).json({ error: "Forbidden" });
       }
 
@@ -2710,7 +2712,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const superAdminPass = process.env.SUPERADMIN_PASSWORD || 'superpassword123';
     const isSuperAdminEmail = normalizedUsername === 'superadmin' || 
                              normalizedUsername === 'admin@gryndee.com' || 
-                             normalizedUsername === 'connectabinibi@gmail.com';
+                             normalizedUsername === 'abinibimultimedia@yahoo.com';
                              
     if (isSuperAdminEmail && password === superAdminPass) {
       console.log(`[AUTH] Virtual superadmin login success: "${normalizedUsername}"`);
@@ -2795,7 +2797,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           console.log(`[AUTH] Login success: "${normalizedUsername}" (ID: ${user.id})`);
           
           // Promote specific user to super_admin
-          if (user.email?.toLowerCase() === 'connectabinibi@gmail.com') {
+          if (user.email?.toLowerCase() === 'abinibimultimedia@yahoo.com') {
             user.role = 'super_admin';
             console.log(`[AUTH] User promoted to super_admin based on email: "${user.email}"`);
           }

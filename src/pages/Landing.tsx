@@ -85,7 +85,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-white text-zinc-900 selection:bg-brand/30 selection:text-brand font-sans overflow-x-hidden" style={{ '--brand-color': config.brandColor } as any}>
       {/* CMS Toggle for Admins */}
-      {(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'connectabinibi@gmail.com') && (
+      {(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com') && (
         <div className="fixed bottom-8 right-8 z-[70]">
           <button
             onClick={() => setIsEditMode(!isEditMode)}
@@ -155,9 +155,9 @@ export default function Landing() {
       <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
         {/* Background Gradients */}
         <div className="absolute inset-0 -z-10">
-          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-brand/20 rounded-full blur-[120px] animate-pulse opacity-50" />
-          <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px] animate-pulse delay-1000 opacity-30" />
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
+          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-brand/30 rounded-full blur-[120px] animate-pulse opacity-60" />
+          <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-[120px] animate-pulse delay-1000 opacity-40" />
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 mix-blend-overlay" />
         </div>
 
         <div className="max-w-7xl mx-auto px-6 w-full grid lg:grid-cols-2 gap-16 items-center">
@@ -198,51 +198,53 @@ export default function Landing() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4"
+              className="space-y-8 pt-4"
             >
-              <Link 
-                to="/register" 
-                className="w-full sm:w-auto px-6 py-3 bg-brand text-white rounded-xl text-base font-bold hover:opacity-90 transition-all shadow-lg shadow-brand/10 flex items-center justify-center gap-2 active:scale-95"
-              >
-                {config.hero.ctaText}
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <a 
-                  href={config.hero.appStoreUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex-1 sm:flex-none flex items-center gap-2 px-3 py-1.5 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-all active:scale-95 border border-white/10"
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+                <Link 
+                  to="/register" 
+                  className="w-full sm:w-auto px-8 py-4 bg-brand text-white rounded-xl text-base font-bold hover:opacity-90 transition-all shadow-lg shadow-brand/10 flex items-center justify-center gap-2 active:scale-95"
                 >
-                  <svg viewBox="0 0 384 512" className="w-4 h-4 fill-current">
-                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
-                  </svg>
-                  <div className="text-left">
-                    <div className="text-[7px] uppercase font-bold opacity-60 leading-none">Download on the</div>
-                    <div className="text-[11px] font-bold leading-none">App Store</div>
-                  </div>
-                </a>
-                <a 
-                  href={config.hero.playStoreUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex-1 sm:flex-none flex items-center gap-2 px-3 py-1.5 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-all active:scale-95 border border-white/10"
-                >
-                  <svg viewBox="0 0 512 512" className="w-4 h-4 fill-current">
-                    <path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/>
-                  </svg>
-                  <div className="text-left">
-                    <div className="text-[7px] uppercase font-bold opacity-60 leading-none">Get it on</div>
-                    <div className="text-[11px] font-bold leading-none">Google Play</div>
-                  </div>
-                </a>
+                  {config.hero.ctaText}
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <a 
+                    href={config.hero.appStoreUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex-1 sm:flex-none flex items-center gap-2.5 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-all active:scale-95 border border-white/10"
+                  >
+                    <svg viewBox="0 0 384 512" className="w-5 h-5 fill-current">
+                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+                    </svg>
+                    <div className="text-left">
+                      <div className="text-[8px] uppercase font-bold opacity-60 leading-none">Download on the</div>
+                      <div className="text-[12px] font-bold leading-none">App Store</div>
+                    </div>
+                  </a>
+                  <a 
+                    href={config.hero.playStoreUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex-1 sm:flex-none flex items-center gap-2.5 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-all active:scale-95 border border-white/10"
+                  >
+                    <svg viewBox="0 0 512 512" className="w-5 h-5 fill-current">
+                      <path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/>
+                    </svg>
+                    <div className="text-left">
+                      <div className="text-[8px] uppercase font-bold opacity-60 leading-none">Get it on</div>
+                      <div className="text-[12px] font-bold leading-none">Google Play</div>
+                    </div>
+                  </a>
+                </div>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center justify-center lg:justify-start gap-4">
                 <div className="flex -space-x-3">
                   {[1,2,3,4].map(i => (
-                    <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-zinc-100 overflow-hidden ring-1 ring-zinc-200">
+                    <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-zinc-100 overflow-hidden ring-1 ring-zinc-200 shadow-sm">
                       <img src={`https://picsum.photos/seed/user${i}/100/100`} alt="User" className="w-full h-full object-cover" />
                     </div>
                   ))}
@@ -276,14 +278,14 @@ export default function Landing() {
       </section>
 
       {/* Trusted By Section */}
-      <section className="py-8 border-y border-zinc-100 bg-zinc-50/30">
+      <section className="py-12 border-y border-zinc-100 bg-zinc-50/30">
         <div className="max-w-7xl mx-auto px-6">
-          <p className="text-center text-zinc-400 text-[9px] font-bold mb-6 uppercase tracking-[0.4em]">Trusted by businesses across Africa</p>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-40 grayscale">
+          <p className="text-center text-zinc-500 text-[10px] font-bold mb-8 uppercase tracking-[0.4em]">Trusted by businesses across Africa</p>
+          <div className="flex flex-wrap justify-center items-center gap-10 md:gap-16 opacity-60 grayscale hover:opacity-100 transition-opacity duration-500">
             {['Retail', 'Fashion', 'Tech', 'Food', 'Logistics'].map((name) => (
-              <div key={name} className="flex items-center gap-1.5">
-                <div className="w-4 h-4 bg-zinc-200 rounded-sm" />
-                <span className="text-sm font-display font-bold tracking-tight text-zinc-500">{name}</span>
+              <div key={name} className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-zinc-300 rounded-md" />
+                <span className="text-base font-display font-bold tracking-tight text-zinc-600">{name}</span>
               </div>
             ))}
           </div>
@@ -581,15 +583,15 @@ export default function Landing() {
 
 function StepCard({ number, title, description, icon: Icon }: any) {
   return (
-    <div className="relative p-6 rounded-2xl bg-zinc-50 border border-zinc-100 group hover:border-brand/20 transition-all">
-      <div className="absolute top-4 right-6 text-4xl font-display font-black text-zinc-900/5 group-hover:text-brand/10 transition-colors">
+    <div className="relative p-8 rounded-3xl bg-white border border-zinc-100 group hover:border-brand/20 transition-all shadow-sm hover:shadow-xl hover:-translate-y-1 duration-300">
+      <div className="absolute top-6 right-8 text-5xl font-display font-black text-zinc-900/10 group-hover:text-brand/15 transition-colors">
         {number}
       </div>
-      <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center text-brand mb-5 group-hover:scale-105 transition-transform">
-        <Icon className="w-5 h-5" />
+      <div className="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand mb-6 group-hover:scale-110 transition-transform duration-300">
+        <Icon className="w-6 h-6" />
       </div>
-      <h4 className="text-lg font-display font-bold text-zinc-900 mb-2">{title}</h4>
-      <p className="text-zinc-700 text-xs leading-relaxed">{description}</p>
+      <h4 className="text-xl font-display font-bold text-zinc-900 mb-3">{title}</h4>
+      <p className="text-zinc-600 text-sm leading-relaxed font-medium">{description}</p>
     </div>
   );
 }
