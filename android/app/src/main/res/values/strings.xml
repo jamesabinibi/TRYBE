@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Gryndee</string>
+    <string name="title_activity_main">Gryndee</string>
+    <string name="package_name">com.gryndee.app</string>
+    <string name="custom_url_scheme">com.gryndee.app</string>
+</resources>
