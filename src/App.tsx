@@ -176,10 +176,13 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               </div>
             )}
             <span className={cn(
-              "font-display font-medium text-lg tracking-tight",
+              "font-display font-medium text-lg tracking-tight flex items-center gap-1.5",
               isDarkMode ? "text-white" : "text-zinc-900"
             )}>
               {settings?.business_name || 'StockFlow'}
+              {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial') && (
+                <ShieldCheck className="w-4 h-4 text-brand fill-brand/10 shrink-0" />
+              )}
             </span>
           </div>
           <button onClick={onClose} className="lg:hidden p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
@@ -231,11 +234,8 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                 {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={cn("text-sm font-medium truncate flex items-center gap-1", isDarkMode ? "text-white" : "text-zinc-900")}>
+                <p className={cn("text-sm font-medium truncate", isDarkMode ? "text-white" : "text-zinc-900")}>
                   {user?.name}
-                  {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
-                    <ShieldCheck className="w-3.5 h-3.5 text-brand fill-brand/10" />
-                  )}
                 </p>
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium">{user?.role}</p>
               </div>

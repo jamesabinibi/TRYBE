@@ -6485,58 +6485,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
-  // Super Admin List All Accounts
-  app.post("/api/ai/generate-logo", requireAuth, async (req: any, res) => {
-    const { businessName, brandColor } = req.body;
-    const { subscription_plan } = req.user;
-
-    if (subscription_plan !== 'professional' && req.user.role !== 'super_admin') {
-      return res.status(403).json({ error: 'AI Logo Generator is a Pro feature. Please upgrade to use it.' });
-    }
-
-    if (!businessName || !brandColor) {
-      return res.status(400).json({ error: 'Business name and brand color are required' });
-    }
-
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      
-      const prompt = `Create a professional, modern, and minimalist business logo for a company named "${businessName}". 
-      The primary brand color should be ${brandColor}. 
-      The logo should be clean, high-quality, and suitable for a business profile. 
-      Avoid complex details. Focus on a strong icon or typography.
-      Provide the logo on a clean white background.`;
-
-      // Generate two options
-      const generateOption = async () => {
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
-          contents: [{ parts: [{ text: prompt }] }],
-          config: {
-            imageConfig: {
-              aspectRatio: "1:1",
-              imageSize: "1K"
-            }
-          }
-        });
-
-        for (const part of response.candidates[0].content.parts) {
-          if (part.inlineData) {
-            return `data:image/png;base64,${part.inlineData.data}`;
-          }
-        }
-        throw new Error('No image generated');
-      };
-
-      const [logo1, logo2] = await Promise.all([generateOption(), generateOption()]);
-
-      res.json({ logos: [logo1, logo2] });
-    } catch (error: any) {
-      console.error('[AI] Logo generation failed:', error);
-      res.status(500).json({ error: 'Failed to generate logo: ' + error.message });
-    }
-  });
-
   app.get("/api/admin/promo-codes", requireSuperAdmin, async (req: any, res) => {
     try {
       const { rows } = await pool.query(`

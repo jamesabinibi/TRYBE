@@ -22,7 +22,7 @@ export default function ChatSupport() {
   const socketRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const isPremium = user?.subscription_plan === 'professional' || user?.role === 'super_admin';
+  const isPremium = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial' || user?.role === 'super_admin';
 
   useEffect(() => {
     if (isOpen && isPremium) {

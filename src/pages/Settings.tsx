@@ -36,6 +36,7 @@ import { toast } from 'sonner';
 import { useAuth, useSettings } from '../App';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
+import { GoogleGenAI } from "@google/genai";
 
 export default function Settings() {
   const { user, fetchWithAuth } = useAuth();
@@ -863,31 +864,53 @@ NOTIFY pgrst, 'reload schema';
   };
 
   const handleGenerateLogo = async () => {
-    if (user?.subscription_plan === 'starter' && user?.role !== 'super_admin') {
+    const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial' || user?.role === 'super_admin';
+    
+    if (!isPro) {
       toast.error('AI Logo Generator is a Pro feature. Please upgrade to use it.');
       return;
     }
 
     setIsGeneratingLogo(true);
     try {
-      const response = await fetchWithAuth('/api/ai/generate-logo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          businessName: settings.business_name,
-          brandColor: settings.brand_color
-        })
-      });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      
+      const prompt = `Create a professional, modern, and minimalist business logo for a company named "${settings.business_name}". 
+      The primary brand color should be ${settings.brand_color}. 
+      The logo should be clean, high-quality, and suitable for a business profile. 
+      Avoid complex details. Focus on a strong icon or typography.
+      Provide the logo on a clean white background.`;
 
-      const data = await response.json();
-      if (response.ok) {
-        setGeneratedLogos(data.logos);
-        toast.success('Generated 2 logo options for you!');
-      } else {
-        toast.error(data.error || 'Failed to generate logos');
-      }
-    } catch (err) {
-      toast.error('Network error during logo generation');
+      // Generate two options
+      const generateOption = async () => {
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-image',
+          contents: [{ parts: [{ text: prompt }] }],
+          config: {
+            imageConfig: {
+              aspectRatio: "1:1",
+              imageSize: "1K"
+            }
+          }
+        });
+
+        const candidates = response.candidates;
+        if (!candidates || candidates.length === 0) throw new Error('No candidates returned');
+        
+        for (const part of candidates[0].content.parts) {
+          if (part.inlineData) {
+            return `data:image/png;base64,${part.inlineData.data}`;
+          }
+        }
+        throw new Error('No image generated');
+      };
+
+      const [logo1, logo2] = await Promise.all([generateOption(), generateOption()]);
+      setGeneratedLogos([logo1, logo2]);
+      toast.success('Generated 2 logo options for you!');
+    } catch (err: any) {
+      console.error('[AI] Logo generation failed:', err);
+      toast.error('Failed to generate logo: ' + (err.message || 'Unknown error'));
     } finally {
       setIsGeneratingLogo(false);
     }
@@ -1252,7 +1275,7 @@ NOTIFY pgrst, 'reload schema';
                         <p className="label-text">Create a professional logo in seconds</p>
                       </div>
                     </div>
-                    {user?.subscription_plan === 'starter' && (
+                    {!(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.role === 'super_admin') && (
                       <div className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-lg label-text flex items-center gap-1">
                         <Crown className="w-3 h-3" />
                         Premium
@@ -2096,14 +2119,14 @@ NOTIFY pgrst, 'reload schema';
                     </div>
                     <div className="space-y-6">
                       <div className="p-4 bg-brand/5 rounded-3xl w-fit">
-                        {subscription?.subscription_plan === 'pro' ? <Zap className="w-8 h-8 text-brand" /> : <Crown className="w-8 h-8 text-brand" />}
+                        {(subscription?.subscription_plan === 'pro' || subscription?.subscription_plan === 'professional') ? <Zap className="w-8 h-8 text-brand" /> : <Crown className="w-8 h-8 text-brand" />}
                       </div>
                       <div>
                         <h4 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">
-                          {subscription?.subscription_plan === 'pro' ? 'Pro' : 'Starter'}
+                          {(subscription?.subscription_plan === 'pro' || subscription?.subscription_plan === 'professional') ? 'Pro' : 'Starter'}
                         </h4>
                         <p className="text-sm text-zinc-500 font-medium">
-                          {subscription?.subscription_plan === 'pro' ? 'Advanced features for growing businesses.' : 'Basic features for small businesses.'}
+                          {(subscription?.subscription_plan === 'pro' || subscription?.subscription_plan === 'professional') ? 'Advanced features for growing businesses.' : 'Basic features for small businesses.'}
                         </p>
                       </div>
                       <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
@@ -2116,7 +2139,7 @@ NOTIFY pgrst, 'reload schema';
                   </div>
 
                   {/* Upgrade Card */}
-                  {subscription?.subscription_plan !== 'pro' && (
+                  {(subscription?.subscription_plan !== 'pro' && subscription?.subscription_plan !== 'professional') && (
                     <div className="bg-zinc-900 text-white p-8 rounded-[2.5rem] border border-zinc-800 shadow-2xl relative overflow-hidden group">
                       <div className="absolute -top-12 -right-12 w-40 h-40 bg-brand/20 rounded-full blur-3xl group-hover:bg-brand/30 transition-all" />
                       <div className="space-y-6 relative z-10">

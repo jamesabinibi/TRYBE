@@ -14,7 +14,7 @@ export default function AIAdvisor() {
   const navigate = useNavigate();
   const currency = settings?.currency || 'NGN';
   
-  const isPro = user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial';
+  const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial';
   const [showOverlay, setShowOverlay] = useState(true);
   
   // Pulse State
