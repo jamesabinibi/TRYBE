@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Loader2, User as UserIcon, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../App';
-import { cn } from '../lib/utils';
+import { cn, apiFetch } from '../lib/utils';
 import { Input } from './Input';
 
 interface Message {
@@ -73,7 +73,7 @@ export default function ChatSupport() {
           setMessages(data);
         }
       } else if (guestId) {
-        const res = await fetch(`/api/chat/guest/messages?guestId=${guestId}`);
+        const res = await apiFetch(`/api/chat/guest/messages?guestId=${guestId}`);
         if (res.ok) {
           const data = await res.json();
           setMessages(data);
@@ -85,10 +85,9 @@ export default function ChatSupport() {
   };
 
   const connectWebSocket = () => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Use the correct host and protocol for the WebSocket connection
-    const host = window.location.host;
-    let wsUrl = `${protocol}//${host}/api/chat?`;
+    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+    const wsBaseUrl = baseUrl.replace(/^http/, 'ws');
+    let wsUrl = `${wsBaseUrl}/api/chat?`;
     
     if (user) {
       wsUrl += `userId=${user.id}&accountId=${user.account_id}`;

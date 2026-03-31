@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import { apiFetch } from '../lib/utils';
 
 interface LandingCMSProps {
   config: any;
@@ -46,7 +47,7 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
     reader.onloadend = async () => {
       const base64 = reader.result as string;
       try {
-        const res = await fetch('/api/upload', {
+        const res = await apiFetch('/api/upload', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

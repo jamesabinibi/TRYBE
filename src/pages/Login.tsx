@@ -4,6 +4,7 @@ import { useAuth } from '../App';
 import { Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Input } from '../components/Input';
+import { apiFetch } from '../lib/utils';
 
 export default function Login() {
   const { login } = useAuth();
@@ -21,7 +22,7 @@ export default function Login() {
     console.log('[DEBUG] Login attempt:', { username: username.trim() });
 
     try {
-      const response = await fetch('/api/login', {
+      const response = await apiFetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim(), password })

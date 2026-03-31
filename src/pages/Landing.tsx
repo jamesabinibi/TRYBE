@@ -27,7 +27,7 @@ import {
   Settings as SettingsIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '../lib/utils';
+import { cn, apiFetch } from '../lib/utils';
 import { useAuth } from '../App';
 import LandingCMS from '../components/LandingCMS';
 
@@ -43,7 +43,7 @@ export default function Landing() {
 
   const fetchConfig = async () => {
     try {
-      const res = await fetch('/api/landing-config');
+      const res = await apiFetch('/api/landing-config');
       const data = await res.json();
       setConfig(data);
     } catch (err) {
@@ -55,7 +55,7 @@ export default function Landing() {
 
   const handleSaveConfig = async (newConfig: any) => {
     try {
-      const res = await fetch('/api/landing-config', {
+      const res = await apiFetch('/api/landing-config', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -18,3 +18,9 @@ export function formatCurrency(amount: number | string | undefined | null, curre
   const currency = currencyCode || 'NGN';
   return `${currency} ${value.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`;
 }
+
+export async function apiFetch(url: string, options: RequestInit = {}) {
+  const baseUrl = import.meta.env.VITE_APP_URL || '';
+  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+  return fetch(fullUrl, options);
+}

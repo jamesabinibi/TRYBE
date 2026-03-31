@@ -88,9 +88,9 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
   };
 
   const connectWebSocket = () => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/api/chat?userId=${user?.id}&accountId=${user?.account_id}`;
+    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+    const wsBaseUrl = baseUrl.replace(/^http/, 'ws');
+    const wsUrl = `${wsBaseUrl}/api/chat?userId=${user?.id}&accountId=${user?.account_id}`;
     
     console.log('Admin connecting to WebSocket:', wsUrl);
     const socket = new WebSocket(wsUrl);

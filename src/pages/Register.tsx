@@ -4,7 +4,7 @@ import { Lock, User, ArrowRight, ShieldCheck, Mail, UserPlus, Eye, EyeOff, X } f
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { useAuth } from '../App';
-import { cn } from '../lib/utils';
+import { cn, apiFetch } from '../lib/utils';
 import { Input } from '../components/Input';
 
 export default function Register() {
@@ -47,7 +47,7 @@ export default function Register() {
   useEffect(() => {
     const fetchLegalDocs = async () => {
       try {
-        const response = await fetch(`/api/legal-docs?t=${Date.now()}`);
+        const response = await apiFetch(`/api/legal-docs?t=${Date.now()}`);
         if (response.ok) {
           const data = await response.json();
           setLegalDocs(data);
@@ -65,7 +65,7 @@ export default function Register() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/verify-email', {
+      const response = await apiFetch('/api/auth/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), code: verificationCode.trim() })
@@ -94,7 +94,7 @@ export default function Register() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/auth/resend-verification', {
+      const response = await apiFetch('/api/auth/resend-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() })
@@ -134,7 +134,7 @@ export default function Register() {
     }
     
     try {
-      const response = await fetch('/api/register', {
+      const response = await apiFetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

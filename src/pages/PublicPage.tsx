@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { apiFetch } from '../lib/utils';
 
 export default function PublicPage() {
   const { pageId } = useParams<{ pageId: string }>();
@@ -10,7 +11,7 @@ export default function PublicPage() {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const res = await fetch('/api/landing-config');
+        const res = await apiFetch('/api/landing-config');
         if (res.ok) {
           const data = await res.json();
           setConfig(data);

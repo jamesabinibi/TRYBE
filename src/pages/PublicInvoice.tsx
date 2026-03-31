@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Download, Building2, MapPin, Phone, Mail, FileText } from 'lucide-react';
 import { generatePDF } from '../utils/pdfGenerator';
-import { NUMBER_STYLE } from '../lib/utils';
+import { NUMBER_STYLE, apiFetch } from '../lib/utils';
 
 export default function PublicInvoice() {
   const { id } = useParams();
@@ -14,7 +14,7 @@ export default function PublicInvoice() {
   useEffect(() => {
     const fetchInvoice = async () => {
       try {
-        const res = await fetch(`/api/public/invoice/${id}`);
+        const res = await apiFetch(`/api/public/invoice/${id}`);
         if (!res.ok) throw new Error('Invoice not found');
         const data = await res.json();
         setInvoice(data);

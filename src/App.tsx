@@ -47,7 +47,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import PublicInvoice from './pages/PublicInvoice';
 import PublicPage from './pages/PublicPage';
-import { cn } from './lib/utils';
+import { cn, apiFetch } from './lib/utils';
 import NotificationCenter from './components/NotificationCenter';
 import Walkthrough from './components/Walkthrough';
 import ChatSupport from './components/ChatSupport';
@@ -468,7 +468,12 @@ export default function App() {
       ...options.headers,
       'x-user-id': user?.id?.toString() || '',
     };
-    const response = await fetch(url, { ...options, headers });
+    
+    // Ensure absolute URL for Capacitor/Mobile environments
+    const baseUrl = import.meta.env.VITE_APP_URL || '';
+    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+    
+    const response = await fetch(fullUrl, { ...options, headers });
     
     if (response.status === 429) {
       console.error(`[RATE LIMIT] Rate exceeded for ${url}`);
