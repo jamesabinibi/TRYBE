@@ -85,7 +85,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-brand/30 selection:text-brand font-sans overflow-x-hidden">
       {/* CMS Toggle for Admins */}
-      {user?.role === 'super_admin' && (
+      {(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'connectabinibi@gmail.com') && (
         <div className="fixed bottom-8 right-8 z-[70]">
           <button
             onClick={() => setIsEditMode(!isEditMode)}
@@ -132,12 +132,16 @@ export default function Landing() {
             <a href="#faq" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">FAQ</a>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/login" className="hidden sm:block text-sm font-medium text-zinc-400 hover:text-white transition-colors">Sign In</Link>
+            {user ? (
+              <Link to="/" className="hidden sm:block text-sm font-medium text-zinc-400 hover:text-white transition-colors">Dashboard</Link>
+            ) : (
+              <Link to="/login" className="hidden sm:block text-sm font-medium text-zinc-400 hover:text-white transition-colors">Sign In</Link>
+            )}
             <Link 
-              to="/register" 
+              to={user ? "/" : "/register"} 
               className="px-6 py-2.5 bg-brand text-white rounded-full text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-brand/20 active:scale-95"
             >
-              Get Started
+              {user ? 'Go to App' : 'Get Started'}
             </Link>
           </div>
         </div>

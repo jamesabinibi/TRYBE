@@ -22,7 +22,8 @@ import {
   Sun,
   ShieldCheck,
   Crown,
-  FileText
+  FileText,
+  Globe
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
@@ -123,6 +124,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    ...(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'connectabinibi@gmail.com' ? [{ icon: Globe, label: 'Landing Page', path: '/landing' }] : []),
     ...(user?.role !== 'staff' ? [{ icon: Brain, label: 'AI Intelligence', path: '/ai-advisor' }] : []),
     ...(user?.role !== 'staff' ? [{ icon: Wallet, label: 'Finance', path: '/finance' }] : []),
     { icon: Package, label: 'Inventory', path: '/products' },
@@ -131,7 +133,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     { icon: FileText, label: 'Invoices', path: '/invoices' },
     { icon: Users, label: 'Customers', path: '/customers' },
     ...(user?.role !== 'staff' ? [{ icon: Crown, label: 'Subscription', path: '/subscription' }] : []),
-    ...(user?.role === 'super_admin' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
+    ...(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'connectabinibi@gmail.com' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
     ...(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data) ? [{ icon: SettingsIcon, label: 'Settings', path: '/settings' }] : []),
   ];
 
@@ -485,6 +487,7 @@ export default function App() {
                 <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
                 <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
                 <Route path="/invoice/:id" element={<PublicInvoice />} />
+                <Route path="/landing" element={<Landing />} />
                 <Route 
                   path="/*" 
                   element={
@@ -492,6 +495,7 @@ export default function App() {
                       <Layout>
                         <Routes>
                           <Route path="/" element={user?.role === 'super_admin' ? <Navigate to="/super-admin" /> : <Dashboard />} />
+                          <Route path="/landing" element={<Landing />} />
                           <Route path="/ai-advisor" element={user?.role === 'staff' ? <Navigate to="/" /> : <AIAdvisor />} />
                           <Route path="/finance" element={user?.role === 'staff' ? <Navigate to="/" /> : <Finance />} />
                           <Route path="/products" element={<Products />} />

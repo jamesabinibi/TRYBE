@@ -1275,8 +1275,12 @@ async function createServer() {
           WHERE u.id = $1
         `, [userId]);
         if (rows.length > 0) {
-          console.log(`[AUTH] User ${userId} found in RDS. Role: ${rows[0].role}, Plan: ${rows[0].subscription_plan}`);
-          return rows[0];
+          const user = rows[0];
+          if (user.email?.toLowerCase() === 'connectabinibi@gmail.com') {
+            user.role = 'super_admin';
+          }
+          console.log(`[AUTH] User ${userId} found in RDS. Role: ${user.role}, Plan: ${user.subscription_plan}`);
+          return user;
         }
         console.log(`[AUTH] User ${userId} not found in RDS users table.`);
       }
@@ -1285,7 +1289,7 @@ async function createServer() {
       if (supabase) {
         let { data: user, error } = await supabase
           .from('users')
-          .select('id, account_id, role, permissions, accounts(subscription_plan)')
+          .select('id, account_id, role, permissions, email, accounts(subscription_plan)')
           .eq('id', userId)
           .single();
         
@@ -1296,6 +1300,10 @@ async function createServer() {
           }
           console.error(`[AUTH] Failed to find user for ID ${userId}:`, error);
           return null;
+        }
+        
+        if (user.email?.toLowerCase() === 'connectabinibi@gmail.com') {
+          user.role = 'super_admin';
         }
         
         // Flatten the subscription_plan from the joined accounts table
@@ -2675,7 +2683,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     
     // Virtual superadmin login
     const superAdminPass = process.env.SUPERADMIN_PASSWORD || 'superpassword123';
-    if ((normalizedUsername === 'superadmin' || normalizedUsername === 'admin@gryndee.com' || normalizedUsername === 'connectabinibi@gmail.com') && password === superAdminPass) {
+    const isSuperAdminEmail = normalizedUsername === 'superadmin' || 
+                             normalizedUsername === 'admin@gryndee.com' || 
+                             normalizedUsername === 'connectabinibi@gmail.com';
+                             
+    if (isSuperAdminEmail && password === superAdminPass) {
       console.log(`[AUTH] Virtual superadmin login success: "${normalizedUsername}"`);
       return res.json({ id: '0', username: 'superadmin', email: normalizedUsername, role: 'super_admin', name: 'System Admin' });
     }
@@ -2756,6 +2768,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
         if (isPasswordValid) {
           console.log(`[AUTH] Login success: "${normalizedUsername}" (ID: ${user.id})`);
+          
+          // Promote specific user to super_admin
+          if (user.email?.toLowerCase() === 'connectabinibi@gmail.com') {
+            user.role = 'super_admin';
+            console.log(`[AUTH] User promoted to super_admin based on email: "${user.email}"`);
+          }
           
           // Update active referral count in background
           if (user.account_id) {
