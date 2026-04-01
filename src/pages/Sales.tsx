@@ -130,7 +130,7 @@ export default function Sales() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              endpoints: ['/api/products', '/api/services', '/api/sales', '/api/customers']
+              endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/sales', '/api/customers']
             })
           });
           if (!batchRes.ok) {

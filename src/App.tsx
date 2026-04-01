@@ -470,19 +470,30 @@ export default function App() {
     };
     
     const fullUrl = url;
-    
-    const response = await fetch(fullUrl, { ...options, headers });
-    
-    if (response.status === 429) {
-      console.error(`[RATE LIMIT] Rate exceeded for ${url}`);
+    const start = performance.now();
+    try {
+      const response = await fetch(fullUrl, { ...options, headers });
+      const end = performance.now();
+      
+      if (end - start > 1000) {
+        console.warn(`[API] Slow request: ${url} took ${(end - start).toFixed(2)}ms`);
+      }
+      
+      if (response.status === 429) {
+        console.error(`[RATE LIMIT] Rate exceeded for ${url}`);
+      }
+      
+      if (response.status === 401) {
+        console.warn('Unauthorized access detected, logging out...');
+        logout();
+      }
+      
+      return response;
+    } catch (err) {
+      const end = performance.now();
+      console.error(`[API] Request failed: ${url} after ${(end - start).toFixed(2)}ms`, err);
+      throw err;
     }
-    
-    if (response.status === 401) {
-      console.warn('Unauthorized access detected, logging out...');
-      logout();
-    }
-    
-    return response;
   };
 
   return (

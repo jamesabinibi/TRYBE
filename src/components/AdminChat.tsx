@@ -68,7 +68,11 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
       const res = await fetchWithAuth('/api/chat/admin/sessions');
       if (res.ok) {
         const data = await res.json();
-        setSessions(data);
+        if (Array.isArray(data)) {
+          setSessions(data);
+        } else {
+          setSessions([]);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch sessions:', err);
@@ -81,7 +85,11 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
       const res = await fetchWithAuth(`/api/chat/admin/messages/${targetId}`);
       if (res.ok) {
         const data = await res.json();
-        setMessages(data);
+        if (Array.isArray(data)) {
+          setMessages(data);
+        } else {
+          setMessages([]);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch messages:', err);
@@ -202,7 +210,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
             ) : (
               sessions.map((session, idx) => {
                 const isSelected = selectedSession?.user_id === session.user_id && selectedSession?.guest_id === session.guest_id;
-                const displayName = session.user_id ? `User ${session.user_id.substring(0, 8)}` : `Guest ${session.guest_id?.substring(6, 14)}`;
+                const displayName = session.user_id ? `User ${String(session.user_id).substring(0, 8)}` : `Guest ${session.guest_id?.substring(6, 14)}`;
                 
                 return (
                   <button
@@ -221,7 +229,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
                         "text-[10px] font-bold uppercase tracking-widest",
                         isSelected ? "text-white/80" : "text-zinc-400"
                       )}>
-                        {new Date(session.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {session.created_at ? new Date(session.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
                     </div>
                     <p className={cn(
@@ -275,7 +283,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
                       {msg.message}
                     </div>
                     <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                   </div>
                 ))}

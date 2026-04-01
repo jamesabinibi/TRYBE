@@ -70,13 +70,21 @@ export default function ChatSupport() {
         const res = await fetchWithAuth('/api/chat/messages');
         if (res.ok) {
           const data = await res.json();
-          setMessages(data);
+          if (Array.isArray(data)) {
+            setMessages(data);
+          } else {
+            setMessages([]);
+          }
         }
       } else if (guestId) {
         const res = await apiFetch(`/api/chat/guest/messages?guestId=${guestId}`);
         if (res.ok) {
           const data = await res.json();
-          setMessages(data);
+          if (Array.isArray(data)) {
+            setMessages(data);
+          } else {
+            setMessages([]);
+          }
         }
       }
     } catch (err) {
@@ -214,7 +222,7 @@ export default function ChatSupport() {
                       {msg.message}
                     </div>
                     <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                   </div>
                 ))

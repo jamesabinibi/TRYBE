@@ -20,6 +20,17 @@ export function formatCurrency(amount: number | string | undefined | null, curre
 }
 
 export async function apiFetch(url: string, options: RequestInit = {}) {
-  const fullUrl = url;
-  return fetch(fullUrl, options);
+  const start = performance.now();
+  try {
+    const res = await fetch(url, options);
+    const end = performance.now();
+    if (end - start > 1000) {
+      console.warn(`[API] Slow request: ${url} took ${(end - start).toFixed(2)}ms`);
+    }
+    return res;
+  } catch (err) {
+    const end = performance.now();
+    console.error(`[API] Request failed: ${url} after ${(end - start).toFixed(2)}ms`, err);
+    throw err;
+  }
 }

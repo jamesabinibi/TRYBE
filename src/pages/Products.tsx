@@ -156,7 +156,7 @@ export default function Products() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              endpoints: ['/api/products', '/api/services', '/api/categories']
+              endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/categories']
             })
           });
           if (!batchRes.ok) {
@@ -166,6 +166,9 @@ export default function Products() {
           setProducts(Array.isArray(productsData) ? productsData : []);
           setServices(Array.isArray(servicesData) ? servicesData : []);
           setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+          
+          // Load images in the background
+          fetchProducts();
         } catch (err) {
           console.error("Batch fetch failed", err);
         } finally {

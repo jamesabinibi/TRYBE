@@ -142,7 +142,7 @@ export default function Dashboard() {
               '/api/analytics/staff-performance',
               '/api/analytics/top-sales',
               '/api/analytics/top-expenses',
-              '/api/products'
+              '/api/products?exclude_images=true'
             ]
           })
         });
