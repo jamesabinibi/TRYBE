@@ -1240,15 +1240,10 @@ async function createServer() {
   });
 
   // Helper to get account_id from headers or user_id
-  const getAccountId = async (req: any) => {
-    let userId = req.headers['x-user-id'];
-    if (!userId) {
-      console.log(`[AUTH] Missing x-user-id header for ${req.method} ${req.url}`);
-      return null;
-    }
-    
-    userId = String(userId).trim();
+  const accountIdCache = new Map<string, { data: any, timestamp: number }>();
+  const CACHE_TTL = 30000; // 30 seconds
 
+  const _getAccountId = async (req: any, userId: string) => {
     // Handle virtual superadmin
     if (userId === '0') {
       console.log(`[AUTH] Virtual superadmin detected (ID: 0). Checking RDS status...`);
@@ -1354,6 +1349,27 @@ async function createServer() {
       console.error(`[AUTH] Exception in getAccountId for ID ${userId}:`, e);
       return null;
     }
+  };
+
+  const getAccountId = async (req: any) => {
+    let userId = req.headers['x-user-id'];
+    if (!userId) {
+      console.log(`[AUTH] Missing x-user-id header for ${req.method} ${req.url}`);
+      return null;
+    }
+    
+    userId = String(userId).trim();
+
+    const cached = accountIdCache.get(userId);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+
+    const data = await _getAccountId(req, userId);
+    if (data) {
+      accountIdCache.set(userId, { data, timestamp: Date.now() });
+    }
+    return data;
   };
 
   const authenticateToken = async (req: any, res: any, next: any) => {
@@ -3725,15 +3741,29 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           [userInfo.account_id]
         );
         
-        for (const product of products) {
-          const { rows: variants } = await pool.query('SELECT * FROM product_variants WHERE product_id = $1', [product.id]);
-          const { rows: images } = await pool.query('SELECT image_data FROM product_images WHERE product_id = $1', [product.id]);
+        if (products.length > 0) {
+          const productIds = products.map(p => p.id);
           
-          product.product_variants = variants;
-          product.categories = { name: product.category_name };
-          product.variants = variants;
-          product.total_stock = variants.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0);
-          product.images = images.map((img: any) => img.image_data);
+          const { rows: allVariants } = await pool.query(
+            'SELECT * FROM product_variants WHERE product_id = ANY($1)',
+            [productIds]
+          );
+          
+          const { rows: allImages } = await pool.query(
+            'SELECT product_id, image_data FROM product_images WHERE product_id = ANY($1)',
+            [productIds]
+          );
+
+          for (const product of products) {
+            const variants = allVariants.filter(v => v.product_id === product.id);
+            const images = allImages.filter(i => i.product_id === product.id);
+            
+            product.product_variants = variants;
+            product.categories = { name: product.category_name };
+            product.variants = variants;
+            product.total_stock = variants.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0);
+            product.images = images.map((img: any) => img.image_data);
+          }
         }
 
         return res.json(products);
@@ -5084,7 +5114,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           params.push(userInfo.id);
         }
 
-        query += ` ORDER BY s.created_at DESC `;
+        query += ` ORDER BY s.created_at DESC LIMIT 1000`;
 
         const { rows: sales } = await pool.query(query, params);
 
@@ -5637,7 +5667,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         return res.status(503).json({ error: "Database not available (AWS RDS not configured)" });
       }
 
-      let salesQuery = 'SELECT created_at, total_amount FROM sales WHERE account_id = $1';
+      let salesQuery = "SELECT created_at, total_amount FROM sales WHERE account_id = $1 AND created_at >= NOW() - INTERVAL '7 days'";
       const salesParams: any[] = [userInfo.account_id];
 
       if (!hasPermission(userInfo, 'can_view_account_data')) {
@@ -5653,7 +5683,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       let expenses: any[] = [];
       if (hasPermission(userInfo, 'can_view_expenses')) {
         const { rows: expensesRows } = await pool.query(
-          'SELECT date, amount FROM expenses WHERE account_id = $1 ORDER BY date ASC',
+          "SELECT date, amount FROM expenses WHERE account_id = $1 AND date >= CURRENT_DATE - INTERVAL '7 days' ORDER BY date ASC",
           [userInfo.account_id]
         );
         expenses = expensesRows;
@@ -5834,7 +5864,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       let users: any[] = [];
 
       if (process.env.AWS_DB_PASSWORD) {
-        let salesQuery = 'SELECT staff_id, total_amount, total_profit FROM sales WHERE account_id = $1';
+        let salesQuery = "SELECT staff_id, total_amount, total_profit FROM sales WHERE account_id = $1 AND created_at >= NOW() - INTERVAL '30 days'";
         let usersQuery = 'SELECT id, name FROM users WHERE account_id = $1';
         const params: any[] = [userInfo.account_id];
 
@@ -7796,6 +7826,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   }
 
   const io = new SocketIOServer(server, {
+    path: '/socket.io',
     cors: {
       origin: "*",
       methods: ["GET", "POST"]

@@ -91,6 +91,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
   const connectWebSocket = () => {
     console.log('Admin connecting to Socket.IO');
     const socket = io({
+      path: '/socket.io',
       query: { userId: user?.id, accountId: user?.account_id, isAdmin: 'true' },
       transports: ['polling', 'websocket']
     });

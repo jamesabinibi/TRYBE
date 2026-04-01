@@ -96,6 +96,7 @@ export default function ChatSupport() {
     
     console.log('Connecting to Socket.IO');
     const socket = io({
+      path: '/socket.io',
       query,
       transports: ['polling', 'websocket']
     });
