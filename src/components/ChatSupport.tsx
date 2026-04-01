@@ -12,6 +12,8 @@ interface Message {
   created_at: string;
 }
 
+import { io, Socket } from 'socket.io-client';
+
 export default function ChatSupport() {
   const { user, fetchWithAuth } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -19,7 +21,7 @@ export default function ChatSupport() {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
 
@@ -46,9 +48,7 @@ export default function ChatSupport() {
     }
     return () => {
       if (socketRef.current) {
-        // Prevent reconnect on intentional close
-        socketRef.current.onclose = null;
-        socketRef.current.close();
+        socketRef.current.disconnect();
       }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -86,59 +86,52 @@ export default function ChatSupport() {
 
   const connectWebSocket = () => {
     const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    const wsBaseUrl = baseUrl.replace(/^http/, 'ws');
-    let wsUrl = `${wsBaseUrl}/api/chat?`;
     
+    let query: any = {};
     if (user) {
-      wsUrl += `userId=${user.id}&accountId=${user.account_id}`;
+      query = { userId: user.id, accountId: user.account_id };
     } else if (guestId) {
-      wsUrl += `guestId=${guestId}`;
+      query = { guestId };
     } else {
       return; // Wait for guestId to be set
     }
     
-    console.log('Connecting to WebSocket:', wsUrl);
-    const socket = new WebSocket(wsUrl);
+    console.log('Connecting to Socket.IO:', baseUrl);
+    const socket = io(baseUrl, {
+      path: '/api/chat',
+      query,
+      transports: ['websocket', 'polling']
+    });
     socketRef.current = socket;
 
-    socket.onopen = () => {
+    socket.on('connect', () => {
       setIsConnected(true);
-    };
+    });
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'chat_message') {
-        setMessages(prev => [...prev, {
-          id: Math.random().toString(),
-          message: data.message,
-          is_from_admin: data.isFromAdmin,
-          created_at: new Date().toISOString()
-        }]);
-      }
-    };
+    socket.on('chat_message', (data) => {
+      setMessages(prev => [...prev, {
+        id: Math.random().toString(),
+        message: data.message,
+        is_from_admin: data.isFromAdmin,
+        created_at: new Date().toISOString()
+      }]);
+    });
 
-    socket.onclose = () => {
+    socket.on('disconnect', () => {
       setIsConnected(false);
-      // Reconnect after 3 seconds if still open
-      reconnectTimeoutRef.current = setTimeout(() => {
-        if (isOpen) {
-          connectWebSocket();
-        }
-      }, 3000);
-    };
+    });
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
+    if (!newMessage.trim() || !socketRef.current || !socketRef.current.connected) return;
 
     const messageData = {
-      type: 'chat_message',
       message: newMessage,
       isFromAdmin: user?.role === 'super_admin'
     };
 
-    socketRef.current.send(JSON.stringify(messageData));
+    socketRef.current.emit('chat_message', messageData);
     
     // Optimistic update
     setMessages(prev => [...prev, {

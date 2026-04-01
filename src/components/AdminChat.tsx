@@ -20,6 +20,8 @@ interface Message {
   created_at: string;
 }
 
+import { io, Socket } from 'socket.io-client';
+
 export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { user, fetchWithAuth } = useAuth();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -27,7 +29,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -39,8 +41,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
     }
     return () => {
       if (socketRef.current) {
-        socketRef.current.onclose = null;
-        socketRef.current.close();
+        socketRef.current.disconnect();
       }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -89,63 +90,55 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
 
   const connectWebSocket = () => {
     const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    const wsBaseUrl = baseUrl.replace(/^http/, 'ws');
-    const wsUrl = `${wsBaseUrl}/api/chat?userId=${user?.id}&accountId=${user?.account_id}`;
     
-    console.log('Admin connecting to WebSocket:', wsUrl);
-    const socket = new WebSocket(wsUrl);
+    console.log('Admin connecting to Socket.IO:', baseUrl);
+    const socket = io(baseUrl, {
+      path: '/api/chat',
+      query: { userId: user?.id, accountId: user?.account_id },
+      transports: ['websocket', 'polling']
+    });
     socketRef.current = socket;
 
-    socket.onopen = () => {
+    socket.on('connect', () => {
       setIsConnected(true);
-    };
+    });
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'chat_message') {
-        // Refresh sessions to show latest message
-        fetchSessions();
-        
-        // If we are currently viewing this chat, append the message
-        if (selectedSession) {
-          const targetId = selectedSession.user_id || selectedSession.guest_id;
-          if (data.fromUserId === targetId || data.isFromAdmin) {
-            setMessages(prev => [...prev, {
-              id: Math.random().toString(),
-              message: data.message,
-              is_from_admin: data.isFromAdmin,
-              created_at: new Date().toISOString()
-            }]);
-          }
+    socket.on('chat_message', (data) => {
+      // Refresh sessions to show latest message
+      fetchSessions();
+      
+      // If we are currently viewing this chat, append the message
+      if (selectedSession) {
+        const targetId = selectedSession.user_id || selectedSession.guest_id;
+        if (data.fromUserId === targetId || data.isFromAdmin) {
+          setMessages(prev => [...prev, {
+            id: Math.random().toString(),
+            message: data.message,
+            is_from_admin: data.isFromAdmin,
+            created_at: new Date().toISOString()
+          }]);
         }
       }
-    };
+    });
 
-    socket.onclose = () => {
+    socket.on('disconnect', () => {
       setIsConnected(false);
-      // Reconnect after 3 seconds if modal is still open
-      reconnectTimeoutRef.current = setTimeout(() => {
-        if (isOpen) {
-          connectWebSocket();
-        }
-      }, 3000);
-    };
+    });
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN || !selectedSession) return;
+    if (!newMessage.trim() || !socketRef.current || !socketRef.current.connected || !selectedSession) return;
 
     const targetId = selectedSession.user_id || selectedSession.guest_id;
 
     const messageData = {
-      type: 'chat_message',
       message: newMessage,
       targetUserId: targetId,
       isFromAdmin: true
     };
 
-    socketRef.current.send(JSON.stringify(messageData));
+    socketRef.current.emit('chat_message', messageData);
     
     // Optimistic update
     setMessages(prev => [...prev, {

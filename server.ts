@@ -1,6 +1,6 @@
 import express from "express";
 import { createServer as createHttpServer } from "http";
-import { WebSocketServer, WebSocket } from "ws";
+import { Server as SocketIOServer } from "socket.io";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -411,10 +411,12 @@ async function initAwsDb() {
           id SERIAL PRIMARY KEY,
           account_id INTEGER REFERENCES accounts(id),
           user_id INTEGER REFERENCES users(id),
+          guest_id TEXT,
           message TEXT NOT NULL,
           is_from_admin BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+        ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS guest_id TEXT;
       `);
 
       await client.query(`
@@ -1086,8 +1088,8 @@ async function createServer() {
 
   // Chat Endpoints
   app.get('/api/chat/messages', requireAuth, async (req, res) => {
-    const userId = (req as any).userId;
-    const accountId = (req as any).accountId;
+    const userId = (req as any).user.id;
+    const accountId = (req as any).user.account_id;
     try {
       if (process.env.AWS_DB_PASSWORD) {
         const { rows } = await pool.query('SELECT * FROM chat_messages WHERE account_id = $1 OR user_id = $2 ORDER BY created_at ASC', [accountId, userId]);
@@ -1117,17 +1119,15 @@ async function createServer() {
     }
   });
 
-  app.get('/api/chat/admin/sessions', requireAuth, async (req, res) => {
-    const role = (req as any).role;
-    if (role !== 'super_admin') return res.status(403).json({ error: 'Forbidden' });
+  app.get('/api/chat/admin/sessions', requireSuperAdmin, async (req, res) => {
     try {
       if (process.env.AWS_DB_PASSWORD) {
         // Get unique users and guests who have sent messages
         const { rows } = await pool.query(`
-          SELECT DISTINCT ON (COALESCE(user_id, guest_id))
+          SELECT DISTINCT ON (COALESCE(user_id::text, guest_id))
             user_id, guest_id, account_id, created_at, message
           FROM chat_messages
-          ORDER BY COALESCE(user_id, guest_id), created_at DESC
+          ORDER BY COALESCE(user_id::text, guest_id), created_at DESC
         `);
         
         // Sort by latest message overall
@@ -1142,13 +1142,11 @@ async function createServer() {
     }
   });
 
-  app.get('/api/chat/admin/messages/:id', requireAuth, async (req, res) => {
-    const role = (req as any).role;
-    if (role !== 'super_admin') return res.status(403).json({ error: 'Forbidden' });
+  app.get('/api/chat/admin/messages/:id', requireSuperAdmin, async (req, res) => {
     const id = req.params.id;
     try {
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT * FROM chat_messages WHERE user_id = $1 OR guest_id = $1 ORDER BY created_at ASC', [id]);
+        const { rows } = await pool.query('SELECT * FROM chat_messages WHERE user_id::text = $1 OR guest_id = $1 ORDER BY created_at ASC', [id]);
         res.json(rows);
       } else {
         res.json([]);
@@ -7236,6 +7234,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.get("/api/logs", (req, res) => {
+    res.json(logHistory);
+  });
+
   // API 404 handler
   app.all("/api/*", (req, res) => {
     console.log(`[API 404] ${req.method} ${req.url} - No route matched`);
@@ -7794,78 +7796,75 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     console.error('[INIT] Failed to ensure super admin:', e);
   }
 
-  const wss = new WebSocketServer({ server, path: '/api/chat' });
-  const clients = new Map<string, WebSocket>();
+  const io = new SocketIOServer(server, {
+    path: '/api/chat',
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
+
+  const clients = new Map<string, any>();
   const lastEmailSent = new Map<string, number>();
 
-  wss.on('connection', (ws, req) => {
-    console.log(`[WS] New connection attempt: ${req.url}`);
-    const url = new URL(req.url || '', `http://${req.headers.host}`);
-    const userId = url.searchParams.get('userId');
-    const accountId = url.searchParams.get('accountId');
-    const guestId = url.searchParams.get('guestId');
+  io.on('connection', (socket) => {
+    console.log(`[WS] New connection attempt: ${socket.id}`);
+    const userId = socket.handshake.query.userId as string;
+    const accountId = socket.handshake.query.accountId as string;
+    const guestId = socket.handshake.query.guestId as string;
     
     const clientId = userId || guestId;
     console.log(`[WS] Client ID resolved: ${clientId}`);
 
     if (clientId) {
-      clients.set(clientId, ws);
+      clients.set(clientId, socket);
       console.log(`[WS] Client ${clientId} connected. Total clients: ${clients.size}`);
     } else {
-      console.log(`[WS] Connection without clientId (maybe Vite HMR)`);
+      console.log(`[WS] Connection without clientId`);
     }
 
-    ws.on('message', async (data) => {
+    socket.on('chat_message', async (payload) => {
       try {
-        const payload = JSON.parse(data.toString());
-        const { type, message, targetUserId, isFromAdmin } = payload;
+        const { message, targetUserId, isFromAdmin } = payload;
 
-        if (type === 'chat_message') {
-          if (process.env.AWS_DB_PASSWORD) {
-            await pool.query(
-              'INSERT INTO chat_messages (account_id, user_id, guest_id, message, is_from_admin) VALUES ($1, $2, $3, $4, $5)',
-              [accountId, userId, guestId, message, isFromAdmin]
-            );
-          }
+        if (process.env.AWS_DB_PASSWORD) {
+          await pool.query(
+            'INSERT INTO chat_messages (account_id, user_id, guest_id, message, is_from_admin) VALUES ($1, $2, $3, $4, $5)',
+            [accountId || null, userId || null, guestId || null, message, isFromAdmin]
+          );
+        }
 
-          if (targetUserId && clients.has(targetUserId)) {
-            clients.get(targetUserId)?.send(JSON.stringify({
-              type: 'chat_message',
-              message,
-              fromUserId: clientId,
-              isFromAdmin
-            }));
-          }
-          
-          if (!isFromAdmin) {
-            // Broadcast to all connected superadmins (they might be connected without a specific targetUserId)
-            wss.clients.forEach((client) => {
-              if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({
-                  type: 'chat_message',
-                  message,
-                  fromUserId: clientId,
-                  accountId,
-                  guestId,
-                  isFromAdmin: false
-                }));
-              }
-            });
+        if (targetUserId && clients.has(targetUserId)) {
+          clients.get(targetUserId)?.emit('chat_message', {
+            message,
+            fromUserId: clientId,
+            isFromAdmin
+          });
+        }
+        
+        if (!isFromAdmin) {
+          // Broadcast to all connected superadmins
+          socket.broadcast.emit('chat_message', {
+            message,
+            fromUserId: clientId,
+            accountId,
+            guestId,
+            isFromAdmin: false
+          });
 
-            // Send email notification to superadmin
-            const now = Date.now();
-            const lastSent = lastEmailSent.get(clientId || 'unknown') || 0;
-            if (now - lastSent > 5 * 60 * 1000) { // 5 minutes throttle
-              lastEmailSent.set(clientId || 'unknown', now);
-              try {
-                await sendEmail(
-                  'abinibimultimedia@yahoo.com',
-                  'New Chat Message on Gryndee',
-                  `You have received a new chat message from ${userId ? 'User ' + userId : 'Guest ' + guestId}:\n\n"${message}"\n\nLogin to the admin dashboard to reply.`
-                );
-              } catch (emailErr) {
-                console.error('Failed to send chat notification email:', emailErr);
-              }
+          // Send email notification to superadmin
+          const now = Date.now();
+          const lastSent = lastEmailSent.get(clientId || 'unknown') || 0;
+          if (now - lastSent > 5 * 60 * 1000) { // 5 minutes throttle
+            lastEmailSent.set(clientId || 'unknown', now);
+            try {
+              await sendEmail(
+                'abinibimultimedia@yahoo.com',
+                'New Chat Message on Gryndee',
+                `You have received a new chat message from ${userId ? 'User ' + userId : 'Guest ' + guestId}:\n\n"${message}"\n\nLogin to the admin dashboard to reply.`
+              );
+            } catch (emailErr) {
+              console.error('Failed to send chat notification email:', emailErr);
             }
           }
         }
@@ -7874,7 +7873,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
     });
 
-    ws.on('close', () => {
+    socket.on('disconnect', () => {
       if (clientId) clients.delete(clientId);
     });
   });
