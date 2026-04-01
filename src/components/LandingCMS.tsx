@@ -228,6 +228,37 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
             </div>
 
             <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Favicon (Optional)</label>
+              <div className="relative group aspect-square w-12 rounded-xl overflow-hidden border border-white/10 bg-black/30">
+                {config.logo.favicon ? (
+                  <img src={config.logo.favicon} alt="Favicon" className="w-full h-full object-contain p-1" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                    <ImageIcon className="w-4 h-4" />
+                  </div>
+                )}
+                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => e.target.files?.[0] && handleImageUpload('logo.favicon', e.target.files[0])}
+                  />
+                  <ImageIcon className="w-4 h-4 text-white" />
+                </label>
+                {config.logo.favicon && (
+                  <button 
+                    onClick={() => handleUpdate('logo.favicon', '')}
+                    className="absolute top-1 right-1 p-1 bg-red-500/80 rounded-md text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-2 h-2" />
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-zinc-500">The small icon in browser tabs.</p>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Brand Major Color</label>
               <div className="flex items-center gap-3">
                 <div 

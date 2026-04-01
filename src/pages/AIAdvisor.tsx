@@ -7,7 +7,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, retryWithBackoff } from '../lib/utils';
 
 export default function AIAdvisor() {
   const { fetchWithAuth, user } = useAuth();
@@ -32,6 +32,7 @@ export default function AIAdvisor() {
   useEffect(() => {
     if (isPro) {
       fetchBusinessData();
+      generateForecast();
     }
   }, [isPro]);
 
@@ -85,22 +86,25 @@ export default function AIAdvisor() {
       }
 
       const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: {
-          parts: [
-            { text: `Analyze this business data and provide a strategic business pulse insight.
-            Sales Data (Last 50): ${JSON.stringify(businessData.sales)}
-            Expenses Data (Last 50): ${JSON.stringify(businessData.expenses)}
-            Inventory Data: ${JSON.stringify(businessData.inventory)}
-            
-            Provide actionable insights in Markdown format. Focus on:
-            - Revenue trends
-            - Expense management
-            - Inventory health
-            - Growth opportunities` }
-          ]
-        }
+      
+      const response = await retryWithBackoff(async () => {
+        return await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: {
+            parts: [
+              { text: `Analyze this business data and provide a strategic business pulse insight.
+              Sales Data (Last 50): ${JSON.stringify(businessData.sales)}
+              Expenses Data (Last 50): ${JSON.stringify(businessData.expenses)}
+              Inventory Data: ${JSON.stringify(businessData.inventory)}
+              
+              Provide actionable insights in Markdown format. Focus on:
+              - Revenue trends
+              - Expense management
+              - Inventory health
+              - Growth opportunities` }
+            ]
+          }
+        });
       });
       
       if (response.text) {
@@ -127,42 +131,45 @@ export default function AIAdvisor() {
       }
 
       const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: {
-          parts: [
-            { text: `Analyze this business data and provide a strategic forecast.
-            Sales Data: ${JSON.stringify(data?.sales || [])}
-            Inventory Data: ${JSON.stringify(data?.inventory || [])}
-            Expenses Data: ${JSON.stringify(data?.expenses || [])}
-            
-            Return a JSON object with:
-            - strategic_advice: A paragraph of actionable advice.
-            - forecasted_revenue: A number representing expected revenue for next month.
-            - restock_suggestions: Array of { product_name: string, suggested_quantity: number } for items running low or selling fast.
-            ` }
-          ]
-        },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              strategic_advice: { type: Type.STRING },
-              forecasted_revenue: { type: Type.NUMBER },
-              restock_suggestions: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    product_name: { type: Type.STRING },
-                    suggested_quantity: { type: Type.NUMBER }
+      
+      const response = await retryWithBackoff(async () => {
+        return await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: {
+            parts: [
+              { text: `Analyze this business data and provide a strategic forecast.
+              Sales Data: ${JSON.stringify(data?.sales || [])}
+              Inventory Data: ${JSON.stringify(data?.inventory || [])}
+              Expenses Data: ${JSON.stringify(data?.expenses || [])}
+              
+              Return a JSON object with:
+              - strategic_advice: A paragraph of actionable advice.
+              - forecasted_revenue: A number representing expected revenue for next month.
+              - restock_suggestions: Array of { product_name: string, suggested_quantity: number } for items running low or selling fast.
+              ` }
+            ]
+          },
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                strategic_advice: { type: Type.STRING },
+                forecasted_revenue: { type: Type.NUMBER },
+                restock_suggestions: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      product_name: { type: Type.STRING },
+                      suggested_quantity: { type: Type.NUMBER }
+                    }
                   }
                 }
               }
             }
           }
-        }
+        });
       });
 
       const result = JSON.parse(response.text || '{}');
@@ -174,13 +181,6 @@ export default function AIAdvisor() {
       setLoadingForecast(false);
     }
   };
-
-  useEffect(() => {
-    if (isPro) {
-      fetchBusinessData();
-      generateForecast();
-    }
-  }, [isPro]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20 relative">

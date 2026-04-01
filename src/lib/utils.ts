@@ -34,3 +34,32 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     throw err;
   }
 }
+
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  initialDelay: number = 1000
+): Promise<T> {
+  let retries = 0;
+  while (retries < maxRetries) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      const isRateLimit = 
+        error.message?.includes('429') || 
+        error.message?.toLowerCase().includes('rate limit') ||
+        error.message?.toLowerCase().includes('quota exceeded') ||
+        error.status === 429;
+
+      if (isRateLimit && retries < maxRetries - 1) {
+        const delay = initialDelay * Math.pow(2, retries);
+        console.warn(`[AI] Rate limit hit. Retrying in ${delay}ms... (Attempt ${retries + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        retries++;
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error('Max retries exceeded');
+}

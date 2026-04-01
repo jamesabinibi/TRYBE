@@ -17,7 +17,7 @@ import {
 import { useAuth, useSettings } from '../App';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { TotalDisplay } from '../components/TotalDisplay';
-import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff } from '../lib/utils';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { motion, AnimatePresence } from 'motion/react';
@@ -117,31 +117,33 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
         }
 
         const ai = new GoogleGenAI({ apiKey });
-        const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: {
-            parts: [
-              { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
-              Common formats include OPay, PalmPay, Kuda, or traditional bank receipts.
-              - Amount: Look for the total amount transferred (e.g., ₦174,000.00). Return as a number without currency symbols.
-              - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
-              - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
-              Return as JSON.` },
-              { inlineData: { mimeType: "image/png", data: base64.split(',')[1] || base64 } }
-            ]
-          },
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                amount: { type: Type.NUMBER },
-                date: { type: Type.STRING },
-                narration: { type: Type.STRING },
-                confidence: { type: Type.NUMBER }
+        const response = await retryWithBackoff(async () => {
+          return await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: {
+              parts: [
+                { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
+                Common formats include OPay, PalmPay, Kuda, or traditional bank receipts.
+                - Amount: Look for the total amount transferred (e.g., ₦174,000.00). Return as a number without currency symbols.
+                - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
+                - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
+                Return as JSON.` },
+                { inlineData: { mimeType: "image/png", data: base64.split(',')[1] || base64 } }
+              ]
+            },
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  amount: { type: Type.NUMBER },
+                  date: { type: Type.STRING },
+                  narration: { type: Type.STRING },
+                  confidence: { type: Type.NUMBER }
+                }
               }
             }
-          }
+          });
         });
         
         const data = JSON.parse(response.text || '{}');

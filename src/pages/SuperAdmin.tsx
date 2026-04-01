@@ -100,6 +100,9 @@ export default function SuperAdmin() {
 
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
   const [isLegalDocsModalOpen, setIsLegalDocsModalOpen] = useState(false);
+  const [isEmailTemplatesModalOpen, setIsEmailTemplatesModalOpen] = useState(false);
+  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
+  const [isSavingTemplates, setIsSavingTemplates] = useState(false);
   const [isAdminChatOpen, setIsAdminChatOpen] = useState(false);
   const [isPromoCodesModalOpen, setIsPromoCodesModalOpen] = useState(false);
   const [expandedPromoId, setExpandedPromoId] = useState<number | null>(null);
@@ -137,6 +140,40 @@ export default function SuperAdmin() {
       }
     } catch (error) {
       console.error('Failed to fetch legal docs:', error);
+    }
+  };
+
+  const fetchEmailTemplates = async () => {
+    try {
+      const response = await fetchWithAuth('/api/admin/email-templates');
+      if (response.ok) {
+        const data = await response.json();
+        setEmailTemplates(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch email templates:', error);
+    }
+  };
+
+  const saveEmailTemplate = async (template: any) => {
+    setIsSavingTemplates(true);
+    try {
+      const response = await fetchWithAuth('/api/admin/email-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(template)
+      });
+      if (response.ok) {
+        toast.success('Email template updated successfully');
+        fetchEmailTemplates();
+      } else {
+        toast.error('Failed to update email template');
+      }
+    } catch (error) {
+      console.error('Failed to save email template:', error);
+      toast.error('An error occurred while saving');
+    } finally {
+      setIsSavingTemplates(false);
     }
   };
 
@@ -911,6 +948,17 @@ export default function SuperAdmin() {
             </button>
             <button 
               onClick={() => {
+                fetchEmailTemplates();
+                setIsEmailTemplatesModalOpen(true);
+              }}
+              className="btn-ghost flex items-center gap-2"
+              title="Email Templates"
+            >
+              <Mail className="w-4 h-4" />
+              <span className="hidden sm:inline label-text">Email Templates</span>
+            </button>
+            <button 
+              onClick={() => {
                 fetchLegalDocs();
                 setIsLegalDocsModalOpen(true);
               }}
@@ -1414,6 +1462,133 @@ export default function SuperAdmin() {
           </div>
         )}
       </AnimatePresence>
+      {/* Email Templates Modal */}
+      <AnimatePresence>
+        {isEmailTemplatesModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsEmailTemplatesModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-brand/10 flex items-center justify-center">
+                    <Mail className="w-6 h-6 text-brand" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Automated Email Templates</h2>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Configure emails sent automatically to engage users.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsEmailTemplatesModalOpen(false)}
+                  className="p-3 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-2xl transition-colors"
+                >
+                  <X className="w-6 h-6 text-zinc-400" />
+                </button>
+              </div>
+
+              <div className="p-8 max-h-[70vh] overflow-y-auto space-y-8 custom-scrollbar">
+                {emailTemplates.map((template) => (
+                  <div key={template.id} className="p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-800/30 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white capitalize">
+                          {template.type.replace(/_/g, ' ')}
+                        </h3>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Sent after {template.delay_hours} hours of inactivity.</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={template.is_active}
+                            onChange={(e) => {
+                              const updated = { ...template, is_active: e.target.checked };
+                              saveEmailTemplate(updated);
+                            }}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-brand"></div>
+                          <span className="ml-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Active</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Subject Line</label>
+                        <Input 
+                          value={template.subject}
+                          onChange={(e) => {
+                            const updated = [...emailTemplates];
+                            const idx = updated.findIndex(t => t.id === template.id);
+                            updated[idx].subject = e.target.value;
+                            setEmailTemplates(updated);
+                          }}
+                          placeholder="Email Subject"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Delay (Hours)</label>
+                        <Input 
+                          type="number"
+                          value={template.delay_hours}
+                          onChange={(e) => {
+                            const updated = [...emailTemplates];
+                            const idx = updated.findIndex(t => t.id === template.id);
+                            updated[idx].delay_hours = parseInt(e.target.value);
+                            setEmailTemplates(updated);
+                          }}
+                          placeholder="24"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">
+                        Email Body
+                        <span className="text-[8px] text-zinc-400 ml-2">(Use {'{name}'} and {'{username}'} as placeholders)</span>
+                      </label>
+                      <Textarea 
+                        value={template.body}
+                        onChange={(e) => {
+                          const updated = [...emailTemplates];
+                          const idx = updated.findIndex(t => t.id === template.id);
+                          updated[idx].body = e.target.value;
+                          setEmailTemplates(updated);
+                        }}
+                        rows={4}
+                        placeholder="Write your encouraging message here..."
+                      />
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => saveEmailTemplate(template)}
+                        disabled={isSavingTemplates}
+                        className="px-8 py-3 bg-brand text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-brand/20 disabled:opacity-50"
+                      >
+                        {isSavingTemplates ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {isLegalDocsModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

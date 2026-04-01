@@ -160,33 +160,35 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             {settings?.logo_url ? (
               <img 
                 src={settings.logo_url} 
                 alt={settings.business_name} 
-                className="w-8 h-8 rounded-lg object-contain"
+                className="h-9 w-auto max-w-full object-contain object-left"
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-medium text-sm shadow-lg"
-                style={{ backgroundColor: brandColor }}
-              >
-                {settings?.business_name?.charAt(0) || 'S'}
-              </div>
+              <>
+                <div 
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-medium text-sm shadow-lg shrink-0"
+                  style={{ backgroundColor: brandColor }}
+                >
+                  {settings?.business_name?.charAt(0) || 'S'}
+                </div>
+                <span className={cn(
+                  "font-display font-medium text-lg tracking-tight flex items-center gap-1.5 truncate",
+                  isDarkMode ? "text-white" : "text-zinc-900"
+                )}>
+                  {settings?.business_name || 'Gryndee'}
+                  {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial') && (
+                    <ShieldCheck className="w-4 h-4 text-brand fill-brand/10 shrink-0" />
+                  )}
+                </span>
+              </>
             )}
-            <span className={cn(
-              "font-display font-medium text-lg tracking-tight flex items-center gap-1.5",
-              isDarkMode ? "text-white" : "text-zinc-900"
-            )}>
-              {settings?.business_name || 'Gryndee'}
-              {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial') && (
-                <ShieldCheck className="w-4 h-4 text-brand fill-brand/10 shrink-0" />
-              )}
-            </span>
           </div>
-          <button onClick={onClose} className="lg:hidden p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+          <button onClick={onClose} className="lg:hidden p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0 ml-2">
             <X className="w-4 h-4" />
           </button>
         </div>

@@ -41,6 +41,15 @@ export default function Landing() {
     fetchConfig();
   }, []);
 
+  useEffect(() => {
+    if (config?.logo?.favicon) {
+      const link = document.getElementById('favicon') as HTMLLinkElement;
+      const appleLink = document.getElementById('apple-touch-icon') as HTMLLinkElement;
+      if (link) link.href = config.logo.favicon;
+      if (appleLink) appleLink.href = config.logo.favicon;
+    }
+  }, [config?.logo?.favicon]);
+
   const fetchConfig = async () => {
     try {
       const res = await apiFetch('/api/landing-config');
@@ -83,7 +92,7 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-zinc-900 selection:bg-brand/30 selection:text-brand font-sans overflow-x-hidden" style={{ '--brand-color': '#ff4d00' } as any}>
+    <div className="min-h-screen bg-white text-zinc-900 selection:bg-brand/30 selection:text-brand font-sans overflow-x-hidden" style={{ '--brand-color': config.brandColor || '#ff4d00' } as any}>
       {/* CMS Toggle for Admins */}
       {(user?.role === 'super_admin' || 
         user?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com') && (
@@ -120,15 +129,17 @@ export default function Landing() {
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center shadow-md shadow-brand/10 overflow-hidden">
-              {config.logo.url ? (
-                <img src={config.logo.url} alt="Logo" className="w-full h-full object-contain p-1" />
-              ) : (
-                <Zap className="w-5 h-5 text-white" />
-              )}
-            </div>
-            <span className="text-xl font-display font-bold tracking-tight text-zinc-900">{config.logo.text}</span>
+          <div className="flex items-center gap-3">
+            {config.logo.url ? (
+              <img src={config.logo.url} alt={config.logo.text} className="h-8 w-auto object-contain" />
+            ) : (
+              <>
+                <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center shadow-md shadow-brand/10">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-display font-bold tracking-tight text-zinc-900">{config.logo.text}</span>
+              </>
+            )}
           </div>
           <div className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-xs font-medium text-zinc-600 hover:text-brand transition-colors">Features</a>
@@ -163,6 +174,15 @@ export default function Landing() {
 
         <div className="max-w-7xl mx-auto px-6 w-full grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-8 text-center lg:text-left">
+            {config.logo.url && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex justify-center lg:justify-start"
+              >
+                <img src={config.logo.url} alt={config.logo.text} className="h-12 w-auto object-contain" />
+              </motion.div>
+            )}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

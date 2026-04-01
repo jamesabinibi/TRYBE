@@ -116,7 +116,7 @@ export default function ChatSupport() {
     const socket = io({
       path: '/socket.io',
       query,
-      transports: ['polling', 'websocket']
+      transports: ['websocket', 'polling']
     });
     socketRef.current = socket;
 
@@ -146,7 +146,8 @@ export default function ChatSupport() {
     });
 
     socket.on('typing', (data) => {
-      if (data.isFromAdmin || data.fromUserId !== (user?.id || guestId)) {
+      // If it's from an admin, or from someone else (not me)
+      if (data.isFromAdmin || (data.fromUserId && data.fromUserId !== (user?.id || guestId))) {
         setRemoteIsTyping(data.isTyping);
       }
     });
@@ -249,10 +250,10 @@ export default function ChatSupport() {
                 {hasStarted && (
                   <button 
                     onClick={handleEndChat}
-                    className="p-2 hover:bg-white/10 rounded-xl transition-colors text-[10px] font-bold uppercase tracking-widest"
+                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-[9px] font-bold uppercase tracking-widest border border-white/10"
                     title="End Chat"
                   >
-                    End
+                    End Chat
                   </button>
                 )}
                 <button 

@@ -104,7 +104,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
     const socket = io({
       path: '/socket.io',
       query: { userId: user?.id, accountId: user?.account_id, isAdmin: 'true' },
-      transports: ['polling', 'websocket']
+      transports: ['websocket', 'polling']
     });
     socketRef.current = socket;
 

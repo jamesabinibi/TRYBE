@@ -253,6 +253,30 @@ async function initAwsDb() {
           account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
           used_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS automated_email_templates (
+          id SERIAL PRIMARY KEY,
+          type TEXT UNIQUE NOT NULL,
+          subject TEXT NOT NULL,
+          body TEXT NOT NULL,
+          delay_hours INTEGER NOT NULL,
+          is_active BOOLEAN DEFAULT TRUE,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS sent_automated_emails (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          template_type TEXT NOT NULL,
+          sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        INSERT INTO automated_email_templates (type, subject, body, delay_hours)
+        VALUES 
+          ('no_product_24h', 'Start your journey with Gryndee!', 'Hi {name},\n\nWe noticed you haven''t added any products or services yet. Adding your first item is the first step to growing your business!\n\nBest regards,\nThe Gryndee Team', 24),
+          ('no_sales_48h', 'Boost your sales with Gryndee!', 'Hi {name},\n\nIt''s been a couple of days and you haven''t recorded any sales yet. Need help getting started? Check out our guides or reach out to support!\n\nBest regards,\nThe Gryndee Team', 48),
+          ('premium_feature_promo', 'Unlock Premium Features with Gryndee!', 'Hi {name},\n\nDid you know Gryndee offers powerful premium features like AI-powered receipt scanning, automated bookkeeping, and advanced analytics?\n\nUpgrade today to take your business to the next level!\n\nBest regards,\nThe Gryndee Team', 72),
+          ('referral_followup', 'Share the Love and Earn Rewards!', 'Hi {name},\n\nWe hope you''re enjoying Gryndee! Did you know you can earn rewards by referring your friends?\n\nYour unique referral code is: {referral_code}\n\nShare this code with others, and when they sign up, you both get benefits!\n\nBest regards,\nThe Gryndee Team', 168)
+        ON CONFLICT (type) DO NOTHING;
       `);
 
       // Add missing columns to promo_codes
@@ -830,6 +854,100 @@ async function initAwsDb() {
 }
 
 initAwsDb();
+
+// Background job for automated emails
+setInterval(async () => {
+  try {
+    const client = await pool.connect();
+    try {
+      // Fetch active templates
+      const { rows: templates } = await client.query('SELECT * FROM automated_email_templates WHERE is_active = TRUE');
+      
+      for (const template of templates) {
+        if (template.type === 'no_product_24h') {
+          // Find users who signed up > delay_hours ago, have 0 products, and haven't received this email
+          const { rows: users } = await client.query(`
+            SELECT u.id, u.email, u.name, u.username
+            FROM users u
+            LEFT JOIN products p ON u.account_id = p.account_id
+            LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id AND sae.template_type = 'no_product_24h'
+            WHERE u.created_at < NOW() - ($1 || ' hours')::INTERVAL
+            AND sae.id IS NULL
+            GROUP BY u.id
+            HAVING COUNT(p.id) = 0
+          `, [template.delay_hours]);
+          
+          for (const user of users) {
+            const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
+            await sendEmail(user.email, template.subject, body);
+            await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'no_product_24h']);
+            console.log(`[AUTOMATED EMAILS] Sent no_product_24h to ${user.email}`);
+          }
+        } else if (template.type === 'no_sales_48h') {
+          // Find users who signed up > delay_hours ago, have 0 sales, and haven't received this email
+          const { rows: users } = await client.query(`
+            SELECT u.id, u.email, u.name, u.username
+            FROM users u
+            LEFT JOIN sales s ON u.account_id = s.account_id
+            LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id AND sae.template_type = 'no_sales_48h'
+            WHERE u.created_at < NOW() - ($1 || ' hours')::INTERVAL
+            AND sae.id IS NULL
+            GROUP BY u.id
+            HAVING COUNT(s.id) = 0
+          `, [template.delay_hours]);
+          
+          for (const user of users) {
+            const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
+            await sendEmail(user.email, template.subject, body);
+            await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'no_sales_48h']);
+            console.log(`[AUTOMATED EMAILS] Sent no_sales_48h to ${user.email}`);
+          }
+        } else if (template.type === 'premium_feature_promo') {
+          // Find regular users who signed up > delay_hours ago and haven't received this email
+          const { rows: users } = await client.query(`
+            SELECT u.id, u.email, u.name, u.username
+            FROM users u
+            LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id AND sae.template_type = 'premium_feature_promo'
+            WHERE u.role = 'user'
+            AND u.created_at < NOW() - ($1 || ' hours')::INTERVAL
+            AND sae.id IS NULL
+          `, [template.delay_hours]);
+          
+          for (const user of users) {
+            const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
+            await sendEmail(user.email, template.subject, body);
+            await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'premium_feature_promo']);
+            console.log(`[AUTOMATED EMAILS] Sent premium_feature_promo to ${user.email}`);
+          }
+        } else if (template.type === 'referral_followup') {
+          // Find users who signed up > delay_hours ago and haven't received this email
+          const { rows: users } = await client.query(`
+            SELECT u.id, u.email, u.name, u.username, a.referral_code
+            FROM users u
+            JOIN accounts a ON u.account_id = a.id
+            LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id AND sae.template_type = 'referral_followup'
+            WHERE u.created_at < NOW() - ($1 || ' hours')::INTERVAL
+            AND sae.id IS NULL
+          `, [template.delay_hours]);
+          
+          for (const user of users) {
+            const body = template.body
+              .replace('{name}', user.name || user.username || 'there')
+              .replace('{username}', user.username || '')
+              .replace('{referral_code}', user.referral_code || 'N/A');
+            await sendEmail(user.email, template.subject, body);
+            await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'referral_followup']);
+            console.log(`[AUTOMATED EMAILS] Sent referral_followup to ${user.email}`);
+          }
+        }
+      }
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('[AUTOMATED EMAILS] Job failed:', err);
+  }
+}, 1000 * 60 * 60); // Run every hour
 
 async function getSystemSetting(key: string): Promise<string | null> {
   try {
@@ -2277,7 +2395,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     },
     logo: {
       text: "Gryndee",
-      url: ""
+      url: "",
+      favicon: ""
     },
     brandColor: "#10b981",
     features: [
@@ -6311,6 +6430,35 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  async function retryWithBackoff<T>(
+    fn: () => Promise<T>,
+    maxRetries: number = 3,
+    initialDelay: number = 1000
+  ): Promise<T> {
+    let retries = 0;
+    while (retries < maxRetries) {
+      try {
+        return await fn();
+      } catch (error: any) {
+        const errorMsg = error.message || String(error);
+        const isRateLimit = 
+          errorMsg.includes('429') || 
+          errorMsg.toLowerCase().includes('rate limit') ||
+          errorMsg.toLowerCase().includes('quota exceeded');
+
+        if (isRateLimit && retries < maxRetries - 1) {
+          const delay = initialDelay * Math.pow(2, retries);
+          console.warn(`[AI] Rate limit hit on server. Retrying in ${delay}ms... (Attempt ${retries + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          retries++;
+        } else {
+          throw error;
+        }
+      }
+    }
+    throw new Error('Max retries exceeded');
+  }
+
   // Super Admin Generate Mobile Assets
   app.post("/api/admin/generate-mobile-assets", requireSuperAdmin, async (req: any, res) => {
     try {
@@ -6325,22 +6473,39 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-image-preview',
-        contents: { parts: [{ text: prompt }] },
-        config: {
-          imageConfig: {
-            aspectRatio: type === 'icon' ? "1:1" : "16:9",
-            imageSize: "1K"
+      console.log(`[ADMIN] Generating ${type} with prompt: ${prompt}`);
+      
+      const response = await retryWithBackoff(async () => {
+        return await ai.models.generateContent({
+          model: 'gemini-3.1-flash-image-preview',
+          contents: { parts: [{ text: prompt }] },
+          config: {
+            imageConfig: {
+              aspectRatio: type === 'icon' ? "1:1" : "16:9",
+              imageSize: "1K"
+            }
           }
-        }
+        });
       });
 
+      console.log(`[ADMIN] Gemini response candidates:`, response.candidates?.length);
+      
+      if (!response.candidates || response.candidates.length === 0) {
+        throw new Error("No candidates returned from Gemini");
+      }
+
       let base64Data = '';
-      for (const part of response.candidates[0].content.parts) {
+      const parts = response.candidates[0].content.parts;
+      console.log(`[ADMIN] Parts count:`, parts.length);
+
+      for (const part of parts) {
         if (part.inlineData) {
           base64Data = part.inlineData.data;
+          console.log(`[ADMIN] Found image data in parts`);
           break;
+        }
+        if (part.text) {
+          console.log(`[ADMIN] Part text:`, part.text.substring(0, 100));
         }
       }
 
@@ -6360,6 +6525,28 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   // Super Admin Stats
+  app.get("/api/admin/email-templates", requireSuperAdmin, async (req: any, res) => {
+    try {
+      const { rows } = await pool.query('SELECT * FROM automated_email_templates ORDER BY id ASC');
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to fetch templates' });
+    }
+  });
+
+  app.post("/api/admin/email-templates", requireSuperAdmin, async (req: any, res) => {
+    const { id, subject, body, delay_hours, is_active } = req.body;
+    try {
+      await pool.query(
+        'UPDATE automated_email_templates SET subject = $1, body = $2, delay_hours = $3, is_active = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5',
+        [subject, body, delay_hours, is_active, id]
+      );
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to update template' });
+    }
+  });
+
   app.get("/api/admin/stats", requireSuperAdmin, async (req: any, res) => {
     try {
       const userInfo = req.user;
@@ -7785,13 +7972,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (targetUserId) {
         io.to(targetUserId).emit('typing', {
           fromUserId: clientId,
-          isTyping
+          isTyping,
+          isFromAdmin: isAdmin
         });
       }
       if (!isAdmin) {
         socket.to('admins').emit('typing', {
           fromUserId: clientId,
-          isTyping
+          isTyping,
+          isFromAdmin: false
         });
       }
     });

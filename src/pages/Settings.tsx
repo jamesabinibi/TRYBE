@@ -31,7 +31,7 @@ import {
   Download
 } from 'lucide-react';
 import { Category } from '../types';
-import { cn } from '../lib/utils';
+import { cn, retryWithBackoff } from '../lib/utils';
 import { toast } from 'sonner';
 import { useAuth, useSettings } from '../App';
 import { Input } from '../components/Input';
@@ -910,26 +910,28 @@ NOTIFY pgrst, 'reload schema';
 
       // Generate two options
       const generateOption = async () => {
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.1-flash-image-preview',
-          contents: { parts: [{ text: prompt }] },
-          config: {
-            imageConfig: {
-              aspectRatio: "1:1",
-              imageSize: "1K"
+        return await retryWithBackoff(async () => {
+          const response = await ai.models.generateContent({
+            model: 'gemini-3.1-flash-image-preview',
+            contents: { parts: [{ text: prompt }] },
+            config: {
+              imageConfig: {
+                aspectRatio: "1:1",
+                imageSize: "1K"
+              }
+            }
+          });
+
+          const candidates = response.candidates;
+          if (!candidates || candidates.length === 0) throw new Error('No candidates returned');
+          
+          for (const part of candidates[0].content.parts) {
+            if (part.inlineData) {
+              return `data:image/png;base64,${part.inlineData.data}`;
             }
           }
+          throw new Error('No image generated');
         });
-
-        const candidates = response.candidates;
-        if (!candidates || candidates.length === 0) throw new Error('No candidates returned');
-        
-        for (const part of candidates[0].content.parts) {
-          if (part.inlineData) {
-            return `data:image/png;base64,${part.inlineData.data}`;
-          }
-        }
-        throw new Error('No image generated');
       };
 
       const [logo1, logo2] = await Promise.all([generateOption(), generateOption()]);
