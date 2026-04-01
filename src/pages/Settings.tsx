@@ -64,7 +64,8 @@ export default function Settings() {
     bank_name: globalSettings?.bank_name || '',
     account_name: globalSettings?.account_name || '',
     account_number: globalSettings?.account_number || '',
-    business_type: globalSettings?.business_type || ''
+    business_type: globalSettings?.business_type || '',
+    legal_structure: globalSettings?.legal_structure || 'Sole Proprietorship / Business Name'
   });
   const businessTypes = [
     'Agriculture', 'Auto / Parts', 'Bakery', 'Beauty (make Up)', 'Catering', 'Clothing', 
@@ -79,7 +80,6 @@ export default function Settings() {
     'Stationery', 'Street Foods', 'Textiles', 'Tours & Travel', 'Transportation', 
     'Veterinary', 'Waste Collection'
   ];
-
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const [generatedLogos, setGeneratedLogos] = useState<string[]>([]);
@@ -115,7 +115,8 @@ export default function Settings() {
         bank_name: globalSettings.bank_name || '',
         account_name: globalSettings.account_name || '',
         account_number: globalSettings.account_number || '',
-        business_type: globalSettings.business_type || ''
+        business_type: globalSettings.business_type || '',
+        legal_structure: globalSettings.legal_structure || 'Sole Proprietorship / Business Name'
       });
       setLogoPreview(globalSettings.logo_url || null);
     }
@@ -1047,7 +1048,8 @@ NOTIFY pgrst, 'reload schema';
           bank_name: data.bank_name || '',
           account_name: data.account_name || '',
           account_number: data.account_number || '',
-          business_type: data.business_type || ''
+          business_type: data.business_type || '',
+          legal_structure: data.legal_structure || 'Sole Proprietorship / Business Name'
         });
         await refreshSettings();
         toast.success('Settings saved successfully');
@@ -1472,13 +1474,13 @@ NOTIFY pgrst, 'reload schema';
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
             <div className="space-y-2">
-              <label className="label-text">Business Type</label>
+              <label className="label-text">Business Category</label>
               <Input 
                 as="select"
                 value={settings.business_type} 
                 onChange={(e) => setSettings({...settings, business_type: e.target.value})}
               >
-                <option value="">Select Business Type</option>
+                <option value="">Select Business Category</option>
                 {businessTypes.map(type => (
                   <option key={type} value={type}>{type}</option>
                 ))}

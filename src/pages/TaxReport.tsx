@@ -16,7 +16,9 @@ import { useAuth, useSettings } from '../App';
 import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { TotalDisplay } from '../components/TotalDisplay';
+import { Select } from '../components/Select';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 interface TaxData {
   period: string;
@@ -34,14 +36,36 @@ interface TaxData {
   cit_rate: number;
   edu_tax_rate: number;
   currency: string;
+  filing_deadlines: {
+    cit: string;
+    vat: string;
+    annual_returns: string;
+  };
+  compliance_status: {
+    is_small_company: boolean;
+    requires_vat_registration: boolean;
+    must_file_even_if_zero: boolean;
+  };
+  legal_structure: string;
+  tax_category: string;
+  tax_authority: string;
 }
 
 const TaxReport = () => {
   const { fetchWithAuth } = useAuth();
-  const { settings } = useSettings();
+  const { settings, refreshSettings } = useSettings();
   const [period, setPeriod] = useState<'month' | 'year'>('year');
   const [loading, setLoading] = useState(true);
   const [taxData, setTaxData] = useState<TaxData | null>(null);
+  const [isUpdatingLegalStructure, setIsUpdatingLegalStructure] = useState(false);
+
+  const legalStructures = [
+    'Sole Proprietorship / Business Name',
+    'Partnership',
+    'Limited Liability Company (LTD)',
+    'Public Limited Company (PLC)',
+    'Incorporated Trustees (NGO/Church/Association)'
+  ];
 
   useEffect(() => {
     fetchTaxData();
@@ -59,6 +83,35 @@ const TaxReport = () => {
       toast.error('Failed to load tax report');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateLegalStructure = async (newStructure: string) => {
+    if (!settings) {
+      toast.error('Please wait for settings to load');
+      return;
+    }
+    setIsUpdatingLegalStructure(true);
+    try {
+      const response = await fetchWithAuth('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          ...settings,
+          legal_structure: newStructure 
+        })
+      });
+      
+      if (!response.ok) throw new Error('Failed to update legal structure');
+      
+      await refreshSettings();
+      await fetchTaxData();
+      toast.success('Legal structure updated successfully');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to update legal structure');
+    } finally {
+      setIsUpdatingLegalStructure(false);
     }
   };
 
@@ -208,20 +261,123 @@ const TaxReport = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-brand text-white rounded-[2.5rem] p-8 shadow-xl shadow-brand/20"
+              className={cn(
+                "rounded-[2.5rem] p-8 shadow-xl transition-all",
+                taxData.total_tax_liability > 0 
+                  ? "bg-brand text-white shadow-brand/20" 
+                  : "bg-emerald-600 text-white shadow-emerald-600/20"
+              )}
             >
               <TotalDisplay 
                 label="Est. Tax Liability" 
-                value={formatCurrency(taxData.total_tax_liability, settings?.currency)} 
+                value={taxData.total_tax_liability > 0 ? formatCurrency(taxData.total_tax_liability, settings?.currency) : "EXEMPT"} 
                 icon={<ShieldCheck className="w-6 h-6" />}
                 iconClassName="bg-white/20 text-white"
                 labelClassName="text-white opacity-80"
                 valueClassName="text-white"
               />
               <p className="mt-4 text-[10px] font-bold uppercase tracking-widest opacity-70">
-                CIT ({taxData.cit_rate}%) + EDU TAX ({taxData.edu_tax_rate}%)
+                {taxData.total_tax_liability > 0 
+                  ? `CIT (${taxData.cit_rate}%) + EDU TAX (${taxData.edu_tax_rate}%)`
+                  : "Small Business Exemption Applied"
+                }
               </p>
             </motion.div>
+          </div>
+
+          {/* Filing Deadlines & Compliance Status */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-8 shadow-sm">
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-brand" />
+                Tax Category
+              </h3>
+              <div className="space-y-4">
+                <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl relative group">
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Legal Structure</div>
+                  <div className="flex items-center justify-between gap-2">
+                    {isUpdatingLegalStructure ? (
+                      <div className="flex items-center gap-2 text-sm font-bold text-brand">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Updating...
+                      </div>
+                    ) : (
+                      <Select
+                        value={taxData.legal_structure}
+                        onChange={handleUpdateLegalStructure}
+                        options={legalStructures}
+                        className="mt-1"
+                        buttonClassName="border-none font-bold p-0 text-zinc-900 dark:text-white"
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="p-4 bg-brand/5 rounded-2xl border border-brand/10">
+                  <div className="text-[10px] font-bold text-brand uppercase tracking-widest mb-1">Tax Type</div>
+                  <div className="text-sm font-bold text-zinc-900 dark:text-white">{taxData.tax_category}</div>
+                </div>
+                <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl">
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Tax Authority</div>
+                  <div className="text-sm font-bold text-zinc-900 dark:text-white">{taxData.tax_authority}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-8 shadow-sm">
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-brand" />
+                Filing Deadlines
+              </h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-3 border-b border-zinc-50 dark:border-zinc-800/50">
+                  <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">CIT Returns</span>
+                  <span className="text-sm font-bold text-zinc-900 dark:text-white">{taxData.filing_deadlines.cit}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b border-zinc-50 dark:border-zinc-800/50">
+                  <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">VAT Remittance</span>
+                  <span className="text-sm font-bold text-zinc-900 dark:text-white">{taxData.filing_deadlines.vat}</span>
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Annual Returns</span>
+                  <span className="text-sm font-bold text-zinc-900 dark:text-white">{taxData.filing_deadlines.annual_returns}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-8 shadow-sm">
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                Compliance Checklist
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-5 h-5 rounded-full flex items-center justify-center",
+                    taxData.compliance_status.is_small_company ? "bg-emerald-100 text-emerald-600" : "bg-zinc-100 text-zinc-400"
+                  )}>
+                    <CheckCircle2 className="w-3 h-3" />
+                  </div>
+                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Small Business Exemption active</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-5 h-5 rounded-full flex items-center justify-center",
+                    !taxData.compliance_status.requires_vat_registration ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+                  )}>
+                    {taxData.compliance_status.requires_vat_registration ? <AlertCircle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                  </div>
+                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    {taxData.compliance_status.requires_vat_registration ? "VAT Registration Required" : "VAT Registration Optional"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                    <AlertCircle className="w-3 h-3" />
+                  </div>
+                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Annual Filing Mandatory for TCC</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Detailed Breakdown */}
@@ -264,6 +420,20 @@ const TaxReport = () => {
                     </div>
                   </div>
 
+                  <div className="flex justify-between items-center">
+                    <div className="space-y-1">
+                      <div className="text-sm font-bold text-zinc-950 dark:text-white">Tax-Exempt Profit</div>
+                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Deductible/Exempt Amount</div>
+                    </div>
+                    <div className={cn(NUMBER_STYLE, "text-lg text-emerald-600 dark:text-emerald-400")}>
+                      {taxData.compliance_status.is_small_company ? (
+                        <CurrencyDisplay amount={taxData.net_profit > 0 ? taxData.net_profit : 0} currencyCode={settings?.currency} />
+                      ) : (
+                        <CurrencyDisplay amount={0} currencyCode={settings?.currency} />
+                      )}
+                    </div>
+                  </div>
+
                   <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
                     <div className="space-y-1">
                       <div className="text-lg font-bold text-zinc-950 dark:text-white">Net Cash Flow</div>
@@ -296,6 +466,20 @@ const TaxReport = () => {
               </h2>
 
               <div className="grid grid-cols-1 gap-4">
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-zinc-900 dark:text-white uppercase tracking-widest text-xs mb-1">Tax Clearance Certificate (TCC)</h4>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                        Even if you owe 0 tax, you MUST file annual returns to obtain your TCC. This is required for government contracts and bank loans.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-brand/10 flex items-center justify-center shrink-0">

@@ -275,7 +275,8 @@ async function initAwsDb() {
           ('no_product_24h', 'Start your journey with Gryndee!', 'Hi {name},\n\nWe noticed you haven''t added any products or services yet. Adding your first item is the first step to growing your business!\n\nBest regards,\nThe Gryndee Team', 24),
           ('no_sales_48h', 'Boost your sales with Gryndee!', 'Hi {name},\n\nIt''s been a couple of days and you haven''t recorded any sales yet. Need help getting started? Check out our guides or reach out to support!\n\nBest regards,\nThe Gryndee Team', 48),
           ('premium_feature_promo', 'Unlock Premium Features with Gryndee!', 'Hi {name},\n\nDid you know Gryndee offers powerful premium features like AI-powered receipt scanning, automated bookkeeping, and advanced analytics?\n\nUpgrade today to take your business to the next level!\n\nBest regards,\nThe Gryndee Team', 72),
-          ('referral_followup', 'Share the Love and Earn Rewards!', 'Hi {name},\n\nWe hope you''re enjoying Gryndee! Did you know you can earn rewards by referring your friends?\n\nYour unique referral code is: {referral_code}\n\nShare this code with others, and when they sign up, you both get benefits!\n\nBest regards,\nThe Gryndee Team', 168)
+          ('referral_followup', 'Share the Love and Earn Rewards!', 'Hi {name},\n\nWe hope you''re enjoying Gryndee! Did you know you can earn rewards by referring your friends?\n\nYour unique referral code is: {referral_code}\n\nShare this code with others, and when they sign up, you both get benefits!\n\nBest regards,\nThe Gryndee Team', 168),
+          ('tax_setup_reminder', 'Simplify Your Taxes with Gryndee!', 'Hi {name},\n\nDid you know Gryndee can help you manage your Nigerian tax obligations automatically? Setting up your tax profile takes less than a minute!\n\nHead over to the Tax Report page to specify your legal structure and see your estimated tax liability and filing deadlines.\n\nBest regards,\nThe Gryndee Team', 72)
         ON CONFLICT (type) DO NOTHING;
       `);
 
@@ -938,6 +939,24 @@ setInterval(async () => {
             await sendEmail(user.email, template.subject, body);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'referral_followup']);
             console.log(`[AUTOMATED EMAILS] Sent referral_followup to ${user.email}`);
+          }
+        } else if (template.type === 'tax_setup_reminder') {
+          // Find users who signed up > delay_hours ago, have no legal_structure set, and haven't received this email
+          const { rows: users } = await client.query(`
+            SELECT u.id, u.email, u.name, u.username
+            FROM users u
+            JOIN accounts a ON u.account_id = a.id
+            LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id AND sae.template_type = 'tax_setup_reminder'
+            WHERE u.created_at < NOW() - ($1 || ' hours')::INTERVAL
+            AND (a.legal_structure IS NULL OR a.legal_structure = '')
+            AND sae.id IS NULL
+          `, [template.delay_hours]);
+          
+          for (const user of users) {
+            const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
+            await sendEmail(user.email, template.subject, body);
+            await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'tax_setup_reminder']);
+            console.log(`[AUTOMATED EMAILS] Sent tax_setup_reminder to ${user.email}`);
           }
         }
       }
@@ -4146,61 +4165,119 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const { 
       business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
       slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body,
-      invoice_terms, bank_name, account_name, account_number, business_type
+      invoice_terms, bank_name, account_name, account_number, business_type, legal_structure
     } = req.body;
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
       
       if (process.env.AWS_DB_PASSWORD) {
-        // Update business_type in accounts table
-        if (business_type) {
-          await pool.query('UPDATE accounts SET business_type = $1 WHERE id = $2', [business_type, userInfo.account_id]);
+        // Update business_type and legal_structure in accounts table
+        if (business_type || legal_structure) {
+          const updates = [];
+          const values = [];
+          if (business_type) {
+            updates.push(`business_type = $${updates.length + 1}`);
+            values.push(business_type);
+          }
+          if (legal_structure) {
+            updates.push(`legal_structure = $${updates.length + 1}`);
+            values.push(legal_structure);
+          }
+          values.push(userInfo.account_id);
+          await pool.query(`UPDATE accounts SET ${updates.join(', ')} WHERE id = $${values.length}`, values);
         }
 
         const { rows: existing } = await pool.query('SELECT id FROM settings WHERE account_id = $1', [userInfo.account_id]);
         
+        const settingsFields = {
+          business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
+          slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body,
+          invoice_terms, bank_name, account_name, account_number
+        };
+
         if (existing.length > 0) {
-          const { rows } = await pool.query(
-            'UPDATE settings SET business_name = $1, currency = $2, vat_enabled = $3, low_stock_threshold = $4, logo_url = $5, brand_color = $6, slogan = $7, address = $8, email = $9, website = $10, phone_number = $11, welcome_email_subject = $12, welcome_email_body = $13, invoice_terms = $14, bank_name = $15, account_name = $16, account_number = $17 WHERE account_id = $18 RETURNING *',
-            [business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms, bank_name, account_name, account_number, userInfo.account_id]
-          );
-          return res.json(rows[0]);
+          const updates = [];
+          const values = [];
+          for (const [key, value] of Object.entries(settingsFields)) {
+            if (value !== undefined) {
+              updates.push(`${key} = $${updates.length + 1}`);
+              values.push(value);
+            }
+          }
+          
+          if (updates.length > 0) {
+            values.push(userInfo.account_id);
+            const { rows } = await pool.query(
+              `UPDATE settings SET ${updates.join(', ')} WHERE account_id = $${values.length} RETURNING *`,
+              values
+            );
+            return res.json(rows[0]);
+          } else {
+            const { rows } = await pool.query('SELECT * FROM settings WHERE account_id = $1', [userInfo.account_id]);
+            return res.json(rows[0]);
+          }
         } else {
+          const fields = ['account_id'];
+          const values = [userInfo.account_id];
+          const placeholders = ['$1'];
+          
+          for (const [key, value] of Object.entries(settingsFields)) {
+            if (value !== undefined) {
+              fields.push(key);
+              values.push(value);
+              placeholders.push(`$${values.length}`);
+            }
+          }
+          
           const { rows } = await pool.query(
-            'INSERT INTO settings (account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms, bank_name, account_name, account_number) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *',
-            [userInfo.account_id, business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color, slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body, invoice_terms, bank_name, account_name, account_number]
+            `INSERT INTO settings (${fields.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`,
+            values
           );
           return res.json(rows[0]);
         }
       }
 
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
+      if (supabase) {
+        if (business_type || legal_structure) {
+          const updates: any = {};
+          if (business_type) updates.business_type = business_type;
+          if (legal_structure) updates.legal_structure = legal_structure;
+          await supabase.from('accounts').update(updates).eq('id', userInfo.account_id);
+        }
+
+        const { data: existing } = await supabase.from('settings').select('id').eq('account_id', userInfo.account_id).maybeSingle();
       
-      if (userInfo.role !== 'admin' && userInfo.role !== 'owner' && userInfo.role !== 'super_admin') {
-        const { data: account } = await supabase.from('accounts').select('owner_id').eq('id', userInfo.account_id).single();
-        if (account?.owner_id !== parseInt(userInfo.id as string)) {
-          return res.status(403).json({ error: "Forbidden" });
+        let result;
+        const settingsData: any = {};
+        const fields = [
+          'business_name', 'currency', 'vat_enabled', 'low_stock_threshold', 'logo_url', 'brand_color',
+          'slogan', 'address', 'email', 'website', 'phone_number', 'welcome_email_subject', 'welcome_email_body',
+          'invoice_terms', 'bank_name', 'account_name', 'account_number'
+        ];
+
+        fields.forEach(field => {
+          if (req.body[field] !== undefined) {
+            settingsData[field] = req.body[field];
+          }
+        });
+        
+        if (Object.keys(settingsData).length > 0) {
+          if (existing) {
+            result = await supabase.from('settings').update(settingsData).eq('id', existing.id).select().single();
+          } else {
+            result = await supabase.from('settings').insert([{ account_id: userInfo.account_id, ...settingsData }]).select().single();
+          }
+          
+          if (result.error) throw result.error;
+          return res.json(result.data);
+        } else {
+          const { data } = await supabase.from('settings').select('*').eq('account_id', userInfo.account_id).maybeSingle();
+          return res.json(data || { account_id: userInfo.account_id });
         }
       }
 
-      const { data: existing } = await supabase.from('settings').select('id').eq('account_id', userInfo.account_id).maybeSingle();
-      
-      let result;
-      const settingsData = { 
-        business_name, currency, vat_enabled, low_stock_threshold, logo_url, brand_color,
-        slogan, address, email, website, phone_number, welcome_email_subject, welcome_email_body,
-        invoice_terms, bank_name, account_name, account_number
-      };
-      
-      if (existing) {
-        result = await supabase.from('settings').update(settingsData).eq('id', existing.id).select().single();
-      } else {
-        result = await supabase.from('settings').insert([{ account_id: userInfo.account_id, ...settingsData }]).select().single();
-      }
-      
-      if (result.error) throw result.error;
-      res.json(result.data);
+      res.status(400).json({ error: "No database configured" });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -4219,21 +4296,26 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       let sales: any[] = [];
       let expenses: any[] = [];
       let bookkeeping: any[] = [];
+      let accountInfo: any = null;
 
       if (process.env.AWS_DB_PASSWORD) {
         const { rows: rdsSales } = await pool.query('SELECT * FROM sales WHERE account_id = $1 AND created_at >= $2', [userInfo.account_id, startDate]);
         const { rows: rdsExpenses } = await pool.query('SELECT * FROM expenses WHERE account_id = $1 AND date >= $2', [userInfo.account_id, startDate]);
         const { rows: rdsBookkeeping } = await pool.query('SELECT * FROM bookkeeping WHERE account_id = $1 AND date >= $2', [userInfo.account_id, startDate]);
+        const { rows: rdsAccount } = await pool.query('SELECT * FROM accounts WHERE id = $1', [userInfo.account_id]);
         sales = rdsSales || [];
         expenses = rdsExpenses || [];
         bookkeeping = rdsBookkeeping || [];
+        accountInfo = rdsAccount[0];
       } else if (supabase) {
         const { data: sSales } = await supabase.from('sales').select('*').eq('account_id', userInfo.account_id).gte('created_at', startDate);
         const { data: sExpenses } = await supabase.from('expenses').select('*').eq('account_id', userInfo.account_id).gte('date', startDate);
         const { data: sBookkeeping } = await supabase.from('bookkeeping').select('*').eq('account_id', userInfo.account_id).gte('date', startDate);
+        const { data: sAccount } = await supabase.from('accounts').select('*').eq('id', userInfo.account_id).single();
         sales = sSales || [];
         expenses = sExpenses || [];
         bookkeeping = sBookkeeping || [];
+        accountInfo = sAccount;
       } else {
         return res.status(503).json({ error: "Database not available" });
       }
@@ -4247,12 +4329,32 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const grossProfit = totalTurnover - totalCostOfSales;
       const netProfit = grossProfit - totalExpenses;
 
+      const legalStructure = accountInfo?.legal_structure || 'Sole Proprietorship / Business Name';
+      const isCompany = legalStructure.includes('Limited') || legalStructure.includes('PLC');
+      const isNGO = legalStructure.includes('Trustees') || legalStructure.includes('NGO');
+
       let citRate = 0;
-      if (totalTurnover > 100000000) citRate = 0.30;
-      else if (totalTurnover > 25000000) citRate = 0.20;
+      let eduTaxRate = 0;
+      let taxCategory = 'Personal Income Tax (PIT)';
+      let taxAuthority = 'State Internal Revenue Service (SIRS)';
+
+      if (isCompany) {
+        taxCategory = 'Companies Income Tax (CIT)';
+        taxAuthority = 'Federal Internal Revenue Service (FIRS)';
+        if (totalTurnover > 100000000) {
+          citRate = 0.30;
+          eduTaxRate = 0.03;
+        } else if (totalTurnover > 25000000) {
+          citRate = 0.20;
+          eduTaxRate = 0.03;
+        }
+      } else if (isNGO) {
+        taxCategory = 'Non-Profit / Exempt';
+        taxAuthority = 'FIRS (for filing)';
+      }
 
       const estimatedCIT = Math.max(0, netProfit * citRate);
-      const educationTax = Math.max(0, netProfit * 0.03);
+      const educationTax = Math.max(0, netProfit * eduTaxRate);
       const vatExempt = totalTurnover < 25000000;
 
       res.json({
@@ -4269,8 +4371,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         education_tax: educationTax,
         total_tax_liability: estimatedCIT + educationTax,
         cit_rate: citRate * 100,
-        edu_tax_rate: 3,
-        currency: 'NGN'
+        edu_tax_rate: eduTaxRate * 100,
+        currency: 'NGN',
+        legal_structure: legalStructure,
+        tax_category: taxCategory,
+        tax_authority: taxAuthority,
+        filing_deadlines: {
+          cit: isCompany ? "June 30th (or 6 months after your financial year-end)" : "March 31st (Annual Returns for PIT)",
+          vat: "21st of every month",
+          annual_returns: "Within 42 days after Annual General Meeting"
+        },
+        compliance_status: {
+          is_small_company: totalTurnover < 25000000,
+          requires_vat_registration: totalTurnover >= 25000000,
+          must_file_even_if_zero: true
+        }
       });
     } catch (err: any) {
       console.error("Tax report error:", err);

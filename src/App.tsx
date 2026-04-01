@@ -83,6 +83,7 @@ interface Settings {
   account_name?: string;
   account_number?: string;
   business_type?: string;
+  legal_structure?: string;
 }
 
 interface SettingsContextType {

@@ -14,10 +14,11 @@ interface SelectProps {
   options: (string | Option)[];
   placeholder?: string;
   className?: string;
+  buttonClassName?: string;
   required?: boolean;
 }
 
-export const Select = ({ value, onChange, options, placeholder = 'Select an option', className, required }: SelectProps) => {
+export const Select = ({ value, onChange, options, placeholder = 'Select an option', className, buttonClassName, required }: SelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +45,8 @@ export const Select = ({ value, onChange, options, placeholder = 'Select an opti
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "w-full flex items-center justify-between px-0 py-2 bg-transparent border-b border-zinc-300 dark:border-zinc-700 text-sm text-zinc-950 dark:text-white outline-none focus:border-brand transition-all text-left",
-          !selectedOption && "text-zinc-400 dark:text-zinc-500"
+          !selectedOption && "text-zinc-400 dark:text-zinc-500",
+          buttonClassName
         )}
       >
         <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
