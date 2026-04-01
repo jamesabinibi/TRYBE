@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Brain, Sparkles, TrendingUp, AlertCircle, Lightbulb, Loader2, Target, Package, DollarSign, X } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
 import { useNavigate } from 'react-router-dom';
+import { GoogleGenAI, Type } from "@google/genai";
 
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
@@ -76,22 +77,36 @@ export default function AIAdvisor() {
 
   const generateInsight = async (businessData: any) => {
     try {
-      const response = await fetchWithAuth('/api/ai/insight', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sales: businessData.sales,
-          expenses: businessData.expenses,
-          inventory: businessData.inventory
-        })
+      const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+      
+      if (!apiKey) {
+        setInsight("Gemini API key not configured. Please set it in Settings.");
+        return;
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: {
+          parts: [
+            { text: `Analyze this business data and provide a strategic business pulse insight.
+            Sales Data (Last 50): ${JSON.stringify(businessData.sales)}
+            Expenses Data (Last 50): ${JSON.stringify(businessData.expenses)}
+            Inventory Data: ${JSON.stringify(businessData.inventory)}
+            
+            Provide actionable insights in Markdown format. Focus on:
+            - Revenue trends
+            - Expense management
+            - Inventory health
+            - Growth opportunities` }
+          ]
+        }
       });
       
-      const data = await response.json();
-      if (response.ok) {
-        setInsight(data.insight);
+      if (response.text) {
+        setInsight(response.text);
       } else {
-        console.error('Insight error:', data.error);
-        setInsight(data.error || "Error connecting to AI Advisor. Please ensure your API key is configured.");
+        setInsight("No insights generated. Please try again.");
       }
     } catch (error: any) {
       console.error('Error generating AI insight:', error);
@@ -104,14 +119,54 @@ export default function AIAdvisor() {
   const generateForecast = async () => {
     setLoadingForecast(true);
     try {
-      const response = await fetchWithAuth('/api/ai/forecast', { method: 'POST' });
-      const data = await response.json();
-      if (response.ok) {
-        setForecast(data);
-      } else {
-        console.error('Forecast error:', data.error);
-        setForecast({ error: data.error || "Error connecting to AI Advisor. Please ensure your API key is configured." });
+      const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+      
+      if (!apiKey) {
+        setForecast({ error: "Gemini API key not configured. Please set it in Settings." });
+        return;
       }
+
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: {
+          parts: [
+            { text: `Analyze this business data and provide a strategic forecast.
+            Sales Data: ${JSON.stringify(data?.sales || [])}
+            Inventory Data: ${JSON.stringify(data?.inventory || [])}
+            Expenses Data: ${JSON.stringify(data?.expenses || [])}
+            
+            Return a JSON object with:
+            - strategic_advice: A paragraph of actionable advice.
+            - forecasted_revenue: A number representing expected revenue for next month.
+            - restock_suggestions: Array of { product_name: string, suggested_quantity: number } for items running low or selling fast.
+            ` }
+          ]
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              strategic_advice: { type: Type.STRING },
+              forecasted_revenue: { type: Type.NUMBER },
+              restock_suggestions: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    product_name: { type: Type.STRING },
+                    suggested_quantity: { type: Type.NUMBER }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const result = JSON.parse(response.text || '{}');
+      setForecast(result);
     } catch (error: any) {
       console.error('Error fetching forecast:', error);
       setForecast({ error: `Error connecting to AI Advisor: ${error.message || 'Unknown error'}. Please ensure your API key is configured.` });

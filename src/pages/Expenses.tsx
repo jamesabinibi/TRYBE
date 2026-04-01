@@ -22,6 +22,7 @@ import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import { GoogleGenAI, Type } from "@google/genai";
 
 interface Expense {
   id: number;
@@ -105,53 +106,61 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64 = reader.result as string;
-      console.log('AI Screenshot: Image loaded, calling API...');
+      console.log('AI Screenshot: Image loaded, calling AI...');
       try {
-        const response = await fetchWithAuth('/api/ai/process-transaction', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64 })
-        });
+        const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
         
-        const data = await response.json();
-        
-        if (response.ok && data) {
-          setNewExpense(prev => ({
-            ...prev,
-            amount: data.amount?.toString() || prev.amount,
-            description: data.narration || prev.description,
-            date: data.date || prev.date
-          }));
-          toast.success('Receipt scanned successfully!');
-        } else {
-          console.error('AI Screenshot: API Error', data);
-          if (data.error?.includes('API key not valid')) {
-            toast.error('Invalid Gemini API Key. Please check your settings.');
-          } else {
-            toast.error(data.error || 'AI failed to process image');
-          }
+        if (!apiKey) {
+          toast.error('Gemini API key not configured. Please set it in Settings.');
+          setIsProcessingAI(false);
           return;
         }
 
-        console.log('AI Screenshot: API Success', data);
+        const ai = new GoogleGenAI({ apiKey });
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: {
+            parts: [
+              { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
+              Common formats include OPay, PalmPay, Kuda, or traditional bank receipts.
+              - Amount: Look for the total amount transferred (e.g., ₦174,000.00). Return as a number without currency symbols.
+              - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
+              - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
+              Return as JSON.` },
+              { inlineData: { mimeType: "image/png", data: base64.split(',')[1] || base64 } }
+            ]
+          },
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                amount: { type: Type.NUMBER },
+                date: { type: Type.STRING },
+                narration: { type: Type.STRING },
+                confidence: { type: Type.NUMBER }
+              }
+            }
+          }
+        });
         
-        if (data.amount) {
+        const data = JSON.parse(response.text || '{}');
+        
+        if (data && data.amount) {
           // Robust date parsing
           let parsedDate = new Date().toISOString().split('T')[0];
           if (data.date) {
             try {
-              // Try standard parsing
               const d = new Date(data.date);
               if (!isNaN(d.getTime())) {
                 parsedDate = d.toISOString().split('T')[0];
               } else {
-                // Try DD/MM/YY or DD/MM/YYYY
                 const parts = data.date.split(/[\/\-]/);
                 if (parts.length === 3) {
                   let day, month, year;
-                  if (parts[0].length === 4) { // YYYY-MM-DD
+                  if (parts[0].length === 4) {
                     [year, month, day] = parts;
-                  } else { // DD/MM/YY
+                  } else {
                     [day, month, year] = parts;
                     if (year.length === 2) year = '20' + year;
                   }
@@ -173,9 +182,13 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
             date: parsedDate
           }));
           toast.success('AI extracted transaction details!');
+          setIsAddModalOpen(true);
+        } else {
+          toast.error('AI failed to extract transaction data');
         }
-      } catch (err) {
-        toast.error('AI failed to process image');
+      } catch (err: any) {
+        console.error('[AI] Transaction processing error:', err);
+        toast.error('AI processing failed: ' + (err.message || 'Unknown error'));
       } finally {
         setIsProcessingAI(false);
       }

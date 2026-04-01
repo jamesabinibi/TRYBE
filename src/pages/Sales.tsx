@@ -47,6 +47,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
+import { GoogleGenAI, Type } from "@google/genai";
 import { AlertCircle } from 'lucide-react';
 
 interface CartItem {
@@ -604,31 +605,56 @@ export default function Sales() {
     reader.onloadend = async () => {
       const base64 = reader.result as string;
       try {
-        const response = await fetchWithAuth('/api/ai/process-transaction', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64 })
+        const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+        
+        if (!apiKey) {
+          toast.error('Gemini API key not configured. Please set it in Settings.');
+          setIsProcessingAI(false);
+          return;
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: {
+            parts: [
+              { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
+              Common formats include OPay, PalmPay, Kuda, or traditional bank receipts.
+              - Amount: Look for the total amount transferred (e.g., ₦174,000.00). Return as a number without currency symbols.
+              - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
+              - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
+              Return as JSON.` },
+              { inlineData: { mimeType: "image/png", data: base64.split(',')[1] || base64 } }
+            ]
+          },
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                amount: { type: Type.NUMBER },
+                date: { type: Type.STRING },
+                narration: { type: Type.STRING },
+                confidence: { type: Type.NUMBER }
+              }
+            }
+          }
         });
         
-        const data = await response.json();
+        const data = JSON.parse(response.text || '{}');
         
-        if (response.ok) {
+        if (data.amount) {
           toast.success(`AI Extracted: ${formatCurrency(data.amount, currency)}`);
-          // For now, we just show the data. In a real app, we'd add a generic "AI Sale" item to cart
-          // or pre-fill the checkout amount.
           if (data.amount > 0) {
             setPaymentMethod('Bank Transfer');
             toast.info(`Narration: ${data.narration}`);
           }
         } else {
-          if (data.error?.includes('API key not valid')) {
-            toast.error('Invalid Gemini API Key. Please check your settings.');
-          } else {
-            toast.error(data.error || 'AI failed to process image');
-          }
+          toast.error('AI failed to extract transaction data');
         }
-      } catch (err) {
-        toast.error('Network error during AI processing');
+      } catch (err: any) {
+        console.error('[AI] Transaction processing error:', err);
+        toast.error('AI processing failed: ' + (err.message || 'Unknown error'));
       } finally {
         setIsProcessingAI(false);
       }

@@ -1,7 +1,6 @@
 import express from "express";
 import { createClient } from '@supabase/supabase-js';
 import dotenv from "dotenv";
-import { GoogleGenAI, Type } from "@google/genai";
 import { v2 as cloudinary } from 'cloudinary';
 import nodemailer from 'nodemailer';
 
@@ -269,102 +268,7 @@ app.post("/api/customers", async (req, res) => {
   }
 });
 
-// AI Bank Transaction Processing
-app.post("/api/ai/process-transaction", async (req, res) => {
-  console.log('[API] POST /api/ai/process-transaction called');
-  if (!supabase) return res.status(503).json({ error: "Database not available" });
-  try {
-    const { image } = req.body; // base64 image
-    if (!image) return res.status(400).json({ error: "Image is required" });
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
-          Common formats include OPay, PalmPay, Kuda, or traditional bank receipts.
-          - Amount: Look for the total amount transferred (e.g., ₦174,000.00). Return as a number without currency symbols.
-          - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
-          - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
-          Return as JSON.` },
-          { inlineData: { mimeType: "image/png", data: image.split(',')[1] || image } }
-        ]
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            amount: { type: Type.NUMBER },
-            date: { type: Type.STRING },
-            narration: { type: Type.STRING },
-            confidence: { type: Type.NUMBER }
-          }
-        }
-      }
-    });
-
-    res.json(JSON.parse(response.text || '{}'));
-  } catch (error: any) {
-    console.error('[AI] Transaction processing error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post("/api/ai/forecast", async (req, res) => {
-  if (!supabase) return res.status(503).json({ error: "Database not available" });
-  try {
-    // Fetch data for AI context
-    const { data: sales } = await supabase.from('sales').select('*, sale_items(*)').order('created_at', { ascending: false }).limit(50);
-    const { data: products } = await supabase.from('products').select('*, product_variants(*)');
-    const { data: expenses } = await supabase.from('expenses').select('*').order('date', { ascending: false }).limit(20);
-
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          { text: `Analyze this business data and provide a strategic forecast.
-          Sales Data: ${JSON.stringify(sales)}
-          Inventory Data: ${JSON.stringify(products)}
-          Expenses Data: ${JSON.stringify(expenses)}
-          
-          Return a JSON object with:
-          - strategic_advice: A paragraph of actionable advice.
-          - forecasted_revenue: A number representing expected revenue for next month.
-          - restock_suggestions: Array of { product_name: string, suggested_quantity: number } for items running low or selling fast.
-          ` }
-        ]
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            strategic_advice: { type: Type.STRING },
-            forecasted_revenue: { type: Type.NUMBER },
-            restock_suggestions: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  product_name: { type: Type.STRING },
-                  suggested_quantity: { type: Type.NUMBER }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
-
-    res.json(JSON.parse(response.text || '{}'));
-  } catch (error: any) {
-    console.error('[AI] Forecast error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 app.post("/api/admin/migrate-images", async (req, res) => {
   if (!supabase) return res.status(503).json({ error: "Database not available" });

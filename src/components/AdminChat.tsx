@@ -9,6 +9,7 @@ interface ChatSession {
   user_id: string | null;
   guest_id: string | null;
   account_id: string | null;
+  guest_email: string | null;
   created_at: string;
   message: string;
 }
@@ -29,8 +30,10 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
+  const [remoteIsTyping, setRemoteIsTyping] = useState<Record<string, boolean>>({});
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -57,7 +60,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, remoteIsTyping]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -135,9 +138,56 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
             is_from_admin: data.isFromAdmin,
             created_at: new Date().toISOString()
           }]);
+          setRemoteIsTyping(prev => ({ ...prev, [data.fromUserId]: false }));
         }
       }
     });
+
+    socket.on('typing', (data) => {
+      setRemoteIsTyping(prev => ({ ...prev, [data.fromUserId]: data.isTyping }));
+    });
+
+    socket.on('end_chat', (data) => {
+      if (selectedSession) {
+        const targetId = selectedSession.user_id || selectedSession.guest_id;
+        if (data.fromUserId === targetId) {
+          setMessages(prev => [...prev, {
+            id: 'end_' + Math.random(),
+            message: 'User has ended the chat session.',
+            is_from_admin: false,
+            created_at: new Date().toISOString()
+          }]);
+        }
+      }
+      fetchSessions();
+    });
+  };
+
+  const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    
+    if (socketRef.current && isConnected && selectedSession) {
+      const targetId = selectedSession.user_id || selectedSession.guest_id;
+      socketRef.current.emit('typing', { targetUserId: targetId, isTyping: true });
+      
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        socketRef.current?.emit('typing', { targetUserId: targetId, isTyping: false });
+      }, 2000);
+    }
+  };
+
+  const handleEndChat = () => {
+    if (!selectedSession || !socketRef.current || !isConnected) return;
+    const targetId = selectedSession.user_id || selectedSession.guest_id;
+    socketRef.current.emit('end_chat', { targetUserId: targetId });
+    
+    setMessages(prev => [...prev, {
+      id: 'end_admin_' + Math.random(),
+      message: 'You have ended this chat session.',
+      is_from_admin: true,
+      created_at: new Date().toISOString()
+    }]);
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -153,6 +203,8 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
     };
 
     socketRef.current.emit('chat_message', messageData);
+    socketRef.current.emit('typing', { targetUserId: targetId, isTyping: false });
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
     // Optimistic update
     setMessages(prev => [...prev, {
@@ -211,7 +263,9 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
               sessions.map((session, idx) => {
                 const isSelected = selectedSession?.user_id === session.user_id && selectedSession?.guest_id === session.guest_id;
                 const displayName = session.user_id ? `User ${String(session.user_id).substring(0, 8)}` : `Guest ${session.guest_id?.substring(6, 14)}`;
-                
+                const targetId = session.user_id || session.guest_id || '';
+                const isTyping = remoteIsTyping[targetId];
+
                 return (
                   <button
                     key={idx}
@@ -224,7 +278,14 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
                     )}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-sm">{displayName}</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm">{displayName}</span>
+                        {session.guest_email && (
+                          <span className={cn("text-[9px] font-medium", isSelected ? "text-white/70" : "text-zinc-400")}>
+                            {session.guest_email}
+                          </span>
+                        )}
+                      </div>
                       <span className={cn(
                         "text-[10px] font-bold uppercase tracking-widest",
                         isSelected ? "text-white/80" : "text-zinc-400"
@@ -232,12 +293,21 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
                         {session.created_at ? new Date(session.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
                     </div>
-                    <p className={cn(
-                      "text-xs truncate",
-                      isSelected ? "text-white/90" : "text-zinc-500 dark:text-zinc-400"
-                    )}>
-                      {session.message}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={cn(
+                        "text-xs truncate flex-1",
+                        isSelected ? "text-white/90" : "text-zinc-500 dark:text-zinc-400"
+                      )}>
+                        {isTyping ? 'Typing...' : session.message}
+                      </p>
+                      {isTyping && (
+                        <div className="flex gap-0.5">
+                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6 }} className={cn("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-brand")} />
+                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className={cn("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-brand")} />
+                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className={cn("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-brand")} />
+                        </div>
+                      )}
+                    </div>
                   </button>
                 );
               })
@@ -250,18 +320,31 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
           {selectedSession ? (
             <>
               {/* Chat Header */}
-              <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
-                  <UserIcon className="w-5 h-5" />
+              <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
+                    <UserIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-zinc-900 dark:text-white">
+                      {selectedSession.user_id ? `User ${selectedSession.user_id}` : `Guest ${selectedSession.guest_id}`}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      {selectedSession.guest_email && (
+                        <p className="text-xs text-zinc-500">{selectedSession.guest_email}</p>
+                      )}
+                      {selectedSession.account_id && (
+                        <p className="text-xs text-zinc-500">Account: {selectedSession.account_id}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-zinc-900 dark:text-white">
-                    {selectedSession.user_id ? `User ${selectedSession.user_id}` : `Guest ${selectedSession.guest_id}`}
-                  </h3>
-                  {selectedSession.account_id && (
-                    <p className="text-xs text-zinc-500">Account: {selectedSession.account_id}</p>
-                  )}
-                </div>
+                <button 
+                  onClick={handleEndChat}
+                  className="px-4 py-2 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
+                >
+                  End Session
+                </button>
               </div>
 
               {/* Messages */}
@@ -287,6 +370,16 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
                     </span>
                   </div>
                 ))}
+                {remoteIsTyping[selectedSession.user_id || selectedSession.guest_id || ''] && (
+                  <div className="flex items-center gap-2 text-zinc-400">
+                    <div className="flex gap-1">
+                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-1 h-1 bg-zinc-400 rounded-full" />
+                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-1 h-1 bg-zinc-400 rounded-full" />
+                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-1 h-1 bg-zinc-400 rounded-full" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">User is typing...</span>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -296,7 +389,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
                   <Input 
                     type="text"
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={handleTyping}
                     placeholder="Type your reply..."
                     className="pr-12 bg-white dark:bg-zinc-900"
                   />

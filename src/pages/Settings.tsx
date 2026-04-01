@@ -872,7 +872,33 @@ NOTIFY pgrst, 'reload schema';
     }
 
     setIsGeneratingLogo(true);
-    const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+    
+    // Check for AI Studio API key selection
+    const aistudio = (window as any).aistudio;
+    if (aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
+      try {
+        const hasKey = await aistudio.hasSelectedApiKey();
+        if (!hasKey) {
+          await aistudio.openSelectKey();
+        }
+      } catch (e) {
+        console.warn('AI Studio key selection failed:', e);
+      }
+    }
+
+    // Use process.env.API_KEY or GEMINI_API_KEY
+    const apiKey = 
+      process.env.API_KEY ||
+      process.env.GEMINI_API_KEY || 
+      (import.meta as any).env?.VITE_GEMINI_API_KEY || 
+      '';
+
+    if (!apiKey) {
+      setIsGeneratingLogo(false);
+      toast.error('API key must be set when using the Gemini API. Please select an API key from the AI Studio settings menu.');
+      return;
+    }
+
     try {
       const ai = new GoogleGenAI({ apiKey });
       
@@ -885,8 +911,14 @@ NOTIFY pgrst, 'reload schema';
       // Generate two options
       const generateOption = async () => {
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: 'gemini-3.1-flash-image-preview',
           contents: { parts: [{ text: prompt }] },
+          config: {
+            imageConfig: {
+              aspectRatio: "1:1",
+              imageSize: "1K"
+            }
+          }
         });
 
         const candidates = response.candidates;

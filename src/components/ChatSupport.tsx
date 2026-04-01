@@ -24,25 +24,35 @@ export default function ChatSupport() {
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
+  const [guestEmail, setGuestEmail] = useState('');
+  const [hasStarted, setHasStarted] = useState(false);
+  const [remoteIsTyping, setRemoteIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Initialize guest ID if not logged in
     if (!user) {
       let storedGuestId = localStorage.getItem('gryndee_guest_id');
+      let storedGuestEmail = localStorage.getItem('gryndee_guest_email');
       if (!storedGuestId) {
         storedGuestId = 'guest_' + Math.random().toString(36).substring(2, 15);
         localStorage.setItem('gryndee_guest_id', storedGuestId);
       }
       setGuestId(storedGuestId);
+      if (storedGuestEmail) {
+        setGuestEmail(storedGuestEmail);
+        setHasStarted(true);
+      }
     } else {
       setGuestId(null);
+      setHasStarted(true);
     }
   }, [user]);
 
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && hasStarted) {
       fetchMessages();
       connectWebSocket();
     }
@@ -54,11 +64,11 @@ export default function ChatSupport() {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [isOpen, user, guestId]);
+  }, [isOpen, user, guestId, hasStarted]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, remoteIsTyping]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -132,7 +142,53 @@ export default function ChatSupport() {
         is_from_admin: data.isFromAdmin,
         created_at: new Date().toISOString()
       }]);
+      setRemoteIsTyping(false);
     });
+
+    socket.on('typing', (data) => {
+      if (data.isFromAdmin || data.fromUserId !== (user?.id || guestId)) {
+        setRemoteIsTyping(data.isTyping);
+      }
+    });
+
+    socket.on('end_chat', () => {
+      setMessages(prev => [...prev, {
+        id: 'end_' + Math.random(),
+        message: 'Chat session has been ended by support.',
+        is_from_admin: true,
+        created_at: new Date().toISOString()
+      }]);
+    });
+  };
+
+  const handleStartChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guestEmail.trim()) return;
+    localStorage.setItem('gryndee_guest_email', guestEmail);
+    setHasStarted(true);
+  };
+
+  const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    
+    if (socketRef.current && isConnected) {
+      socketRef.current.emit('typing', { isTyping: true });
+      
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        socketRef.current?.emit('typing', { isTyping: false });
+      }, 2000);
+    }
+  };
+
+  const handleEndChat = () => {
+    if (socketRef.current && isConnected) {
+      socketRef.current.emit('end_chat', {});
+    }
+    setHasStarted(false);
+    setMessages([]);
+    localStorage.removeItem('gryndee_guest_email');
+    setGuestEmail('');
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -141,10 +197,13 @@ export default function ChatSupport() {
 
     const messageData = {
       message: newMessage,
-      isFromAdmin: false // Always false for ChatSupport, even if user is super_admin
+      isFromAdmin: false,
+      guestEmail: user ? null : guestEmail
     };
 
     socketRef.current.emit('chat_message', messageData);
+    socketRef.current.emit('typing', { isTyping: false });
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
     // Optimistic update
     setMessages(prev => [...prev, {
@@ -186,69 +245,119 @@ export default function ChatSupport() {
                   </div>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-                  <MessageCircle className="w-12 h-12 text-zinc-300" />
-                  <div>
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-widest">No messages yet</p>
-                    <p className="text-xs font-medium text-zinc-500">Start a conversation with our support team.</p>
-                  </div>
-                </div>
-              ) : (
-                messages.map((msg) => (
-                  <div 
-                    key={msg.id}
-                    className={cn(
-                      "flex flex-col max-w-[80%]",
-                      msg.is_from_admin ? "mr-auto" : "ml-auto items-end"
-                    )}
+              <div className="flex items-center gap-2">
+                {hasStarted && (
+                  <button 
+                    onClick={handleEndChat}
+                    className="p-2 hover:bg-white/10 rounded-xl transition-colors text-[10px] font-bold uppercase tracking-widest"
+                    title="End Chat"
                   >
-                    <div className={cn(
-                      "px-4 py-3 rounded-2xl text-sm font-medium",
-                      msg.is_from_admin 
-                        ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-tl-none" 
-                        : "bg-brand text-white rounded-tr-none"
-                    )}>
-                      {msg.message}
-                    </div>
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
-                      {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50">
-              <div className="relative">
-                <Input 
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  className="pr-12"
-                />
+                    End
+                  </button>
+                )}
                 <button 
-                  type="submit"
-                  disabled={!newMessage.trim() || !isConnected}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition-all disabled:opacity-50 disabled:scale-100 active:scale-90"
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 hover:bg-white/10 rounded-xl transition-colors"
                 >
-                  <Send className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </form>
+            </div>
+
+            {!hasStarted ? (
+              <div className="flex-1 p-8 flex flex-col justify-center space-y-6">
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Welcome to Support</h3>
+                  <p className="text-xs text-zinc-500">Please enter your email to start a conversation with our team.</p>
+                </div>
+                <form onSubmit={handleStartChat} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Email Address</label>
+                    <Input 
+                      type="email"
+                      required
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    className="w-full py-4 bg-brand text-white rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
+                  >
+                    Start Chat
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <>
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                  {messages.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
+                      <MessageCircle className="w-12 h-12 text-zinc-300" />
+                      <div>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-widest">No messages yet</p>
+                        <p className="text-xs font-medium text-zinc-500">Start a conversation with our support team.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    messages.map((msg) => (
+                      <div 
+                        key={msg.id}
+                        className={cn(
+                          "flex flex-col max-w-[80%]",
+                          msg.is_from_admin ? "mr-auto" : "ml-auto items-end"
+                        )}
+                      >
+                        <div className={cn(
+                          "px-4 py-3 rounded-2xl text-sm font-medium",
+                          msg.is_from_admin 
+                            ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-tl-none" 
+                            : "bg-brand text-white rounded-tr-none"
+                        )}>
+                          {msg.message}
+                        </div>
+                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
+                          {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                  {remoteIsTyping && (
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <div className="flex gap-1">
+                        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-1 h-1 bg-zinc-400 rounded-full" />
+                        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-1 h-1 bg-zinc-400 rounded-full" />
+                        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-1 h-1 bg-zinc-400 rounded-full" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Support is typing...</span>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input */}
+                <form onSubmit={handleSendMessage} className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50">
+                  <div className="relative">
+                    <Input 
+                      type="text"
+                      value={newMessage}
+                      onChange={handleTyping}
+                      placeholder="Type your message..."
+                      className="pr-12"
+                    />
+                    <button 
+                      type="submit"
+                      disabled={!newMessage.trim() || !isConnected}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition-all disabled:opacity-50 disabled:scale-100 active:scale-90"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

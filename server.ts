@@ -58,7 +58,7 @@ if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
 }
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { v2 as cloudinary } from 'cloudinary';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1124,7 +1124,7 @@ async function createServer() {
         // Get unique users and guests who have sent messages
         const { rows } = await pool.query(`
           SELECT DISTINCT ON (COALESCE(user_id::text, guest_id))
-            user_id, guest_id, account_id, created_at, message
+            user_id, guest_id, account_id, guest_email, created_at, message
           FROM chat_messages
           ORDER BY COALESCE(user_id::text, guest_id), created_at DESC
         `);
@@ -2262,205 +2262,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
-  // AI Bank Transaction Processing
-  app.post("/api/ai/process-transaction", async (req, res) => {
-    console.log('[API] POST /api/ai/process-transaction called');
-    
-    let apiKey = process.env.GEMINI_API_KEY;
-    if (process.env.AWS_DB_PASSWORD) {
-      const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'GEMINI_API_KEY' LIMIT 1");
-      if (rows.length > 0 && rows[0].value) apiKey = rows[0].value;
-    }
 
-    if (!apiKey) {
-      console.error('[AI] GEMINI_API_KEY is missing');
-      return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing. Please add it in Super Admin settings." });
-    }
-
-    try {
-      const { image } = req.body; // base64 image
-      if (!image) return res.status(400).json({ error: "Image is required" });
-
-      const ai = new GoogleGenAI({ apiKey });
-      
-      // Clean up base64 string if it contains prefix
-      const base64Data = image.includes(',') ? image.split(',')[1] : image;
-      const mimeType = image.includes(',') ? image.split(',')[0].split(':')[1].split(';')[0] : 'image/png';
-      
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: {
-          parts: [
-            { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
-            Common formats include OPay, PalmPay, Kuda, or traditional bank receipts.
-            - Amount: Look for the total amount transferred (e.g., ₦174,000.00). Return as a number without currency symbols.
-            - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
-            - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
-            Return as JSON.` },
-            { inlineData: { mimeType: mimeType, data: base64Data } }
-          ]
-        },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              amount: { type: Type.NUMBER },
-              date: { type: Type.STRING },
-              narration: { type: Type.STRING },
-              confidence: { type: Type.NUMBER }
-            }
-          }
-        }
-      });
-
-      const text = response.text;
-      if (!text) throw new Error("AI returned empty response");
-      
-      console.log('[AI] Processed transaction:', text);
-      res.json(JSON.parse(text));
-    } catch (error: any) {
-      console.error('[AI] Transaction processing error:', error);
-      const errorMsg = error.message || "Failed to process image with AI";
-      if (errorMsg.toLowerCase().includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate')) {
-        return res.status(429).json({ error: "AI service is currently busy or quota exceeded. Please try again later." });
-      }
-      res.status(500).json({ error: errorMsg });
-    }
-  });
-
-  app.post("/api/ai/insight", async (req, res) => {
-    const userInfo = await getAccountId(req);
-    if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
-    
-    const apiKey = process.env.GEMINI_API_KEY;
-    let finalApiKey = apiKey;
-    try {
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'GEMINI_API_KEY' LIMIT 1");
-        if (rows.length > 0 && rows[0].value) finalApiKey = rows[0].value;
-      }
-    } catch (err) {
-      console.error('Error fetching GEMINI_API_KEY from system_settings:', err);
-    }
-
-    if (!finalApiKey) {
-      return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing. Please add it in Super Admin settings." });
-    }
-
-    try {
-      const { sales, expenses, inventory } = req.body;
-      const ai = new GoogleGenAI({ apiKey: finalApiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `You are Gryndee AI, a proactive business partner for an entrepreneur. 
-        Look at the user's products/services in their inventory to understand their specific niche.
-        
-        Provide 3-4 SHORT, punchy, and highly personalized business tips based specifically on what they sell.
-        Vary your advice every time. Focus on areas like:
-        - Optimal price points and profit margins for their specific products.
-        - Marketing strategies (e.g., Facebook/Instagram ads, TikTok, local SEO) tailored to their niche.
-        - Upselling or bundling opportunities based on their catalog.
-
-        If the data arrays are empty, give them 3 quick, high-impact tips on how to choose their first product and start marketing. Do NOT say the data was "left blank".
-
-        Business Data:
-        Sales: ${JSON.stringify(sales)}
-        Expenses: ${JSON.stringify(expenses)}
-        Inventory: ${JSON.stringify(inventory)}
-        
-        Random Seed to ensure fresh advice: ${Math.random()}
-
-        Format your response in Markdown with clear headings (use ## or ###), bullet points, and bold text for emphasis. 
-        Keep the tone encouraging, direct, and professional. No fluff.`
-      });
-
-      res.json({ insight: response.text || "I couldn't generate insights at this moment. Please try again later." });
-    } catch (error: any) {
-      console.error('[AI] Insight generation error:', error);
-      const errorMsg = error.message || "Failed to generate AI insight";
-      if (errorMsg.toLowerCase().includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate')) {
-        return res.status(429).json({ error: "AI service is currently busy or quota exceeded. Please try again later." });
-      }
-      res.status(500).json({ error: errorMsg });
-    }
-  });
-
-  app.post("/api/ai/forecast", async (req, res) => {
-    const userInfo = await getAccountId(req);
-    if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
-    
-    const apiKey = process.env.GEMINI_API_KEY;
-    let finalApiKey = apiKey;
-    try {
-      if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'GEMINI_API_KEY' LIMIT 1");
-        if (rows.length > 0 && rows[0].value) finalApiKey = rows[0].value;
-      }
-    } catch (err) {
-      console.error('Error fetching GEMINI_API_KEY from system_settings:', err);
-    }
-
-    console.log('[AI] GEMINI_API_KEY present:', !!finalApiKey);
-    if (!finalApiKey) {
-      return res.status(500).json({ error: "AI configuration error: GEMINI_API_KEY is missing. Please add it in Super Admin settings." });
-    }
-
-    try {
-      // Fetch data for AI context using AWS RDS
-      const { rows: sales } = await pool.query('SELECT * FROM sales WHERE account_id = $1 ORDER BY created_at DESC LIMIT 50', [userInfo.account_id]);
-      const { rows: products } = await pool.query('SELECT * FROM products WHERE account_id = $1', [userInfo.account_id]);
-      const { rows: expenses } = await pool.query('SELECT * FROM expenses WHERE account_id = $1 ORDER BY date DESC LIMIT 20', [userInfo.account_id]);
-
-      const ai = new GoogleGenAI({ apiKey: finalApiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: {
-          parts: [
-            { text: `Analyze this business data and provide a strategic forecast.
-            Sales Data: ${JSON.stringify(sales)}
-            Inventory Data: ${JSON.stringify(products)}
-            Expenses Data: ${JSON.stringify(expenses)}
-            
-            Return a JSON object with:
-            - strategic_advice: A paragraph of actionable advice.
-            - forecasted_revenue: A number representing expected revenue for next month.
-            - restock_suggestions: Array of { product_name: string, suggested_quantity: number } for items running low or selling fast.
-            ` }
-          ]
-        },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              strategic_advice: { type: Type.STRING },
-              forecasted_revenue: { type: Type.NUMBER },
-              restock_suggestions: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    product_name: { type: Type.STRING },
-                    suggested_quantity: { type: Type.NUMBER }
-                  }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      res.json(JSON.parse(response.text || '{}'));
-    } catch (error: any) {
-      console.error('[AI] Forecast error:', error);
-      const errorMsg = error.message || "Failed to generate AI forecast";
-      if (errorMsg.toLowerCase().includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate')) {
-        return res.status(429).json({ error: "AI service is currently busy or quota exceeded. Please try again later." });
-      }
-      res.status(500).json({ error: errorMsg });
-    }
-  });
 
   // Landing Page CMS API
   const DEFAULT_LANDING_CONFIG = {
@@ -2615,7 +2417,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post("/api/upload", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
-      const isSuperAdmin = userInfo?.role === 'super_admin' || userInfo?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com';
+      const isSuperAdmin = userInfo?.role === 'super_admin' || 
+                           userInfo?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com';
       
       if (!userInfo || !isSuperAdmin) {
         return res.status(403).json({ error: "Forbidden" });
@@ -7702,10 +7505,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           account_id BIGINT REFERENCES accounts(id) ON DELETE CASCADE,
           user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
           guest_id TEXT,
+          guest_email TEXT,
           message TEXT NOT NULL,
           is_from_admin BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
+        ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS guest_email TEXT;
       `);
 
       await runSql(`
@@ -7889,17 +7694,23 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
     socket.on('chat_message', async (payload) => {
       try {
-        const { message, targetUserId, isFromAdmin } = payload;
+        const { message, targetUserId, isFromAdmin, guestEmail } = payload;
 
         let insertUserId = userId || null;
         let insertGuestId = guestId || null;
         let insertAccountId = accountId || null;
+        let insertGuestEmail = guestEmail || null;
 
         if (isFromAdmin && targetUserId) {
           insertAccountId = null; // Don't link admin's account ID to the message
           if (String(targetUserId).startsWith('guest_')) {
             insertGuestId = targetUserId;
             insertUserId = null;
+            // Try to find guest email from previous messages if not provided
+            if (!insertGuestEmail && process.env.AWS_DB_PASSWORD) {
+              const { rows } = await pool.query('SELECT guest_email FROM chat_messages WHERE guest_id = $1 AND guest_email IS NOT NULL LIMIT 1', [insertGuestId]);
+              if (rows.length > 0) insertGuestEmail = rows[0].guest_email;
+            }
           } else {
             insertUserId = targetUserId;
             insertGuestId = null;
@@ -7908,8 +7719,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
         if (process.env.AWS_DB_PASSWORD) {
           await pool.query(
-            'INSERT INTO chat_messages (account_id, user_id, guest_id, message, is_from_admin) VALUES ($1, $2, $3, $4, $5)',
-            [insertAccountId, insertUserId, insertGuestId, message, isFromAdmin]
+            'INSERT INTO chat_messages (account_id, user_id, guest_id, guest_email, message, is_from_admin) VALUES ($1, $2, $3, $4, $5, $6)',
+            [insertAccountId, insertUserId, insertGuestId, insertGuestEmail, message, isFromAdmin]
           );
         }
 
@@ -7943,6 +7754,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             fromUserId: clientId,
             accountId,
             guestId,
+            guestEmail: insertGuestEmail,
             isFromAdmin: false
           });
 
@@ -7952,10 +7764,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           if (now - lastSent > 5 * 60 * 1000) { // 5 minutes throttle
             lastEmailSent.set(clientId || 'unknown', now);
             try {
+              const senderInfo = userId ? 'User ' + userId : `Guest ${guestId}${insertGuestEmail ? ' (' + insertGuestEmail + ')' : ''}`;
               await sendEmail(
                 'abinibimultimedia@yahoo.com',
                 'New Chat Message on Gryndee',
-                `You have received a new chat message from ${userId ? 'User ' + userId : 'Guest ' + guestId}:\n\n"${message}"\n\nLogin to the admin dashboard to reply.`
+                `You have received a new chat message from ${senderInfo}:\n\n"${message}"\n\nLogin to the admin dashboard to reply.`
               );
             } catch (emailErr) {
               console.error('Failed to send chat notification email:', emailErr);
@@ -7964,6 +7777,36 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }
       } catch (e) {
         console.error('WS Message Error:', e);
+      }
+    });
+
+    socket.on('typing', (payload) => {
+      const { targetUserId, isTyping } = payload;
+      if (targetUserId) {
+        io.to(targetUserId).emit('typing', {
+          fromUserId: clientId,
+          isTyping
+        });
+      }
+      if (!isAdmin) {
+        socket.to('admins').emit('typing', {
+          fromUserId: clientId,
+          isTyping
+        });
+      }
+    });
+
+    socket.on('end_chat', (payload) => {
+      const { targetUserId } = payload;
+      if (targetUserId) {
+        io.to(targetUserId).emit('end_chat', {
+          fromUserId: clientId
+        });
+      }
+      if (!isAdmin) {
+        socket.to('admins').emit('end_chat', {
+          fromUserId: clientId
+        });
       }
     });
 
