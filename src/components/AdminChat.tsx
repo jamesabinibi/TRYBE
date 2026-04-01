@@ -47,7 +47,7 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [isOpen]);
+  }, [isOpen, user?.id]);
 
   useEffect(() => {
     if (selectedSession) {
@@ -89,18 +89,26 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
   };
 
   const connectWebSocket = () => {
-    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    
-    console.log('Admin connecting to Socket.IO:', baseUrl);
-    const socket = io(baseUrl, {
-      path: '/api/chat',
-      query: { userId: user?.id, accountId: user?.account_id },
-      transports: ['websocket', 'polling']
+    console.log('Admin connecting to Socket.IO');
+    const socket = io({
+      query: { userId: user?.id, accountId: user?.account_id, isAdmin: 'true' },
+      transports: ['polling', 'websocket']
     });
     socketRef.current = socket;
 
     socket.on('connect', () => {
+      console.log('Admin Socket.IO connected successfully');
       setIsConnected(true);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Admin Socket.IO connection error:', err.message);
+      setIsConnected(false);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Admin Socket.IO disconnected:', reason);
+      setIsConnected(false);
     });
 
     socket.on('chat_message', (data) => {
@@ -110,7 +118,8 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
       // If we are currently viewing this chat, append the message
       if (selectedSession) {
         const targetId = selectedSession.user_id || selectedSession.guest_id;
-        if (data.fromUserId === targetId || data.isFromAdmin) {
+        // If message is from the user we are viewing, OR if it's from another admin TO the user we are viewing
+        if (data.fromUserId === targetId || (data.isFromAdmin && data.targetUserId === targetId)) {
           setMessages(prev => [...prev, {
             id: Math.random().toString(),
             message: data.message,
@@ -119,10 +128,6 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
           }]);
         }
       }
-    });
-
-    socket.on('disconnect', () => {
-      setIsConnected(false);
     });
   };
 

@@ -469,9 +469,7 @@ export default function App() {
       'x-user-id': user?.id?.toString() || '',
     };
     
-    // Ensure absolute URL for Capacitor/Mobile environments
-    const baseUrl = import.meta.env.VITE_APP_URL || '';
-    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+    const fullUrl = url;
     
     const response = await fetch(fullUrl, { ...options, headers });
     

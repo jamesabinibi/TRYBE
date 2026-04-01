@@ -20,7 +20,6 @@ export function formatCurrency(amount: number | string | undefined | null, curre
 }
 
 export async function apiFetch(url: string, options: RequestInit = {}) {
-  const baseUrl = import.meta.env.VITE_APP_URL || '';
-  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+  const fullUrl = url;
   return fetch(fullUrl, options);
 }

@@ -1089,10 +1089,9 @@ async function createServer() {
   // Chat Endpoints
   app.get('/api/chat/messages', requireAuth, async (req, res) => {
     const userId = (req as any).user.id;
-    const accountId = (req as any).user.account_id;
     try {
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT * FROM chat_messages WHERE account_id = $1 OR user_id = $2 ORDER BY created_at ASC', [accountId, userId]);
+        const { rows } = await pool.query('SELECT * FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC', [userId]);
         res.json(rows);
       } else {
         res.json([]);
@@ -7797,7 +7796,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   }
 
   const io = new SocketIOServer(server, {
-    path: '/api/chat',
     cors: {
       origin: "*",
       methods: ["GET", "POST"]
@@ -7812,13 +7810,18 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const userId = socket.handshake.query.userId as string;
     const accountId = socket.handshake.query.accountId as string;
     const guestId = socket.handshake.query.guestId as string;
+    const isAdmin = socket.handshake.query.isAdmin === 'true';
     
     const clientId = userId || guestId;
-    console.log(`[WS] Client ID resolved: ${clientId}`);
+    console.log(`[WS] Client ID resolved: ${clientId}, isAdmin: ${isAdmin}`);
+
+    if (isAdmin) {
+      socket.join('admins');
+    }
 
     if (clientId) {
-      clients.set(clientId, socket);
-      console.log(`[WS] Client ${clientId} connected. Total clients: ${clients.size}`);
+      socket.join(clientId);
+      console.log(`[WS] Client ${clientId} connected and joined room.`);
     } else {
       console.log(`[WS] Connection without clientId`);
     }
@@ -7827,24 +7830,54 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       try {
         const { message, targetUserId, isFromAdmin } = payload;
 
+        let insertUserId = userId || null;
+        let insertGuestId = guestId || null;
+        let insertAccountId = accountId || null;
+
+        if (isFromAdmin && targetUserId) {
+          insertAccountId = null; // Don't link admin's account ID to the message
+          if (String(targetUserId).startsWith('guest_')) {
+            insertGuestId = targetUserId;
+            insertUserId = null;
+          } else {
+            insertUserId = targetUserId;
+            insertGuestId = null;
+          }
+        }
+
         if (process.env.AWS_DB_PASSWORD) {
           await pool.query(
             'INSERT INTO chat_messages (account_id, user_id, guest_id, message, is_from_admin) VALUES ($1, $2, $3, $4, $5)',
-            [accountId || null, userId || null, guestId || null, message, isFromAdmin]
+            [insertAccountId, insertUserId, insertGuestId, message, isFromAdmin]
           );
         }
 
-        if (targetUserId && clients.has(targetUserId)) {
-          clients.get(targetUserId)?.emit('chat_message', {
+        if (targetUserId) {
+          io.to(targetUserId).emit('chat_message', {
             message,
             fromUserId: clientId,
             isFromAdmin
           });
         }
         
-        if (!isFromAdmin) {
+        if (isFromAdmin) {
+          // Broadcast to other admins so they see the reply
+          socket.to('admins').emit('chat_message', {
+            message,
+            fromUserId: clientId,
+            targetUserId,
+            isFromAdmin: true
+          });
+        } else {
+          // Broadcast to other tabs of the same user
+          socket.to(clientId).emit('chat_message', {
+            message,
+            fromUserId: clientId,
+            isFromAdmin: false
+          });
+          
           // Broadcast to all connected superadmins
-          socket.broadcast.emit('chat_message', {
+          socket.to('admins').emit('chat_message', {
             message,
             fromUserId: clientId,
             accountId,
@@ -7874,7 +7907,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     });
 
     socket.on('disconnect', () => {
-      if (clientId) clients.delete(clientId);
+      console.log(`[WS] Client disconnected: ${socket.id}`);
     });
   });
 

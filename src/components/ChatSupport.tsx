@@ -85,8 +85,6 @@ export default function ChatSupport() {
   };
 
   const connectWebSocket = () => {
-    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    
     let query: any = {};
     if (user) {
       query = { userId: user.id, accountId: user.account_id };
@@ -96,16 +94,26 @@ export default function ChatSupport() {
       return; // Wait for guestId to be set
     }
     
-    console.log('Connecting to Socket.IO:', baseUrl);
-    const socket = io(baseUrl, {
-      path: '/api/chat',
+    console.log('Connecting to Socket.IO');
+    const socket = io({
       query,
-      transports: ['websocket', 'polling']
+      transports: ['polling', 'websocket']
     });
     socketRef.current = socket;
 
     socket.on('connect', () => {
+      console.log('Socket.IO connected successfully');
       setIsConnected(true);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Socket.IO connection error:', err.message);
+      setIsConnected(false);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket.IO disconnected:', reason);
+      setIsConnected(false);
     });
 
     socket.on('chat_message', (data) => {
@@ -116,10 +124,6 @@ export default function ChatSupport() {
         created_at: new Date().toISOString()
       }]);
     });
-
-    socket.on('disconnect', () => {
-      setIsConnected(false);
-    });
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -128,7 +132,7 @@ export default function ChatSupport() {
 
     const messageData = {
       message: newMessage,
-      isFromAdmin: user?.role === 'super_admin'
+      isFromAdmin: false // Always false for ChatSupport, even if user is super_admin
     };
 
     socketRef.current.emit('chat_message', messageData);
@@ -137,7 +141,7 @@ export default function ChatSupport() {
     setMessages(prev => [...prev, {
       id: Math.random().toString(),
       message: newMessage,
-      is_from_admin: user?.role === 'super_admin',
+      is_from_admin: false,
       created_at: new Date().toISOString()
     }]);
     
