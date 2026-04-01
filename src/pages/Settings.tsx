@@ -873,34 +873,38 @@ NOTIFY pgrst, 'reload schema';
     }
 
     setIsGeneratingLogo(true);
+    setGeneratedLogos([]);
     
-    // Check for AI Studio API key selection
-    const aistudio = (window as any).aistudio;
-    if (aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
-      try {
-        const hasKey = await aistudio.hasSelectedApiKey();
-        if (!hasKey) {
-          await aistudio.openSelectKey();
-        }
-      } catch (e) {
-        console.warn('AI Studio key selection failed:', e);
-      }
-    }
-
-    // Use process.env.API_KEY or GEMINI_API_KEY
-    const apiKey = 
-      process.env.API_KEY ||
-      process.env.GEMINI_API_KEY || 
-      (import.meta as any).env?.VITE_GEMINI_API_KEY || 
-      '';
-
-    if (!apiKey) {
-      setIsGeneratingLogo(false);
-      toast.error('API key must be set when using the Gemini API. Please select an API key from the AI Studio settings menu.');
-      return;
-    }
-
     try {
+      const aistudio = (window as any).aistudio;
+      
+      // Use process.env.API_KEY (from selection dialog) or GEMINI_API_KEY (environment)
+      let apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+      
+      if (!apiKey && aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
+        const hasKey = await aistudio.hasSelectedApiKey();
+        if (hasKey) {
+          // Key is selected but might not be in process.env yet
+          apiKey = process.env.API_KEY;
+        }
+      }
+
+      if (!apiKey) {
+        if (aistudio && typeof aistudio.openSelectKey === 'function') {
+          toast.info('Please select an API key to enable AI logo generation.');
+          await aistudio.openSelectKey();
+          // We proceed assuming the user will select a key. 
+          // The next attempt will have the key in process.env.API_KEY.
+          setIsGeneratingLogo(false);
+          toast.success('Key selected! Please click "Generate Logo" again to start.');
+          return;
+        } else {
+          setIsGeneratingLogo(false);
+          toast.error('AI service configuration missing. Please ensure an API key is set.');
+          return;
+        }
+      }
+
       const ai = new GoogleGenAI({ apiKey });
       
       const prompt = `Create a professional, modern, and minimalist business logo for a company named "${settings.business_name}". 
@@ -924,13 +928,18 @@ NOTIFY pgrst, 'reload schema';
           });
 
           const candidates = response.candidates;
-          if (!candidates || candidates.length === 0) throw new Error('No candidates returned');
+          if (!candidates || candidates.length === 0) {
+            console.error('[AI] No candidates in response:', response);
+            throw new Error('No candidates returned');
+          }
           
           for (const part of candidates[0].content.parts) {
             if (part.inlineData) {
               return `data:image/png;base64,${part.inlineData.data}`;
             }
           }
+          
+          console.error('[AI] No image part found in candidates:', candidates[0]);
           throw new Error('No image generated');
         });
       };
@@ -940,9 +949,26 @@ NOTIFY pgrst, 'reload schema';
       toast.success('Generated 2 logo options for you!');
     } catch (err: any) {
       console.error('[AI] Logo generation failed:', err);
-      const errorMsg = err.message || 'Unknown error';
+      let errorMsg = err.message || 'Unknown error';
+      
+      // Try to parse JSON error if it's a string
+      if (typeof err === 'string' && err.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(err);
+          errorMsg = parsed.error?.message || errorMsg;
+        } catch (e) {}
+      } else if (err.response?.data?.error?.message) {
+        errorMsg = err.response.data.error.message;
+      }
+
       if (errorMsg.toLowerCase().includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate')) {
         toast.error('AI service is currently busy or quota exceeded. Please try again later.');
+      } else if (errorMsg.toLowerCase().includes('401') || errorMsg.toLowerCase().includes('403') || errorMsg.toLowerCase().includes('key')) {
+        toast.error('Invalid API key. Please re-select your API key in the settings.');
+        const aistudio = (window as any).aistudio;
+        if (aistudio && typeof aistudio.openSelectKey === 'function') {
+          await aistudio.openSelectKey();
+        }
       } else {
         toast.error('Failed to generate logo: ' + errorMsg);
       }

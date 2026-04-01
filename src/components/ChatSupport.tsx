@@ -139,18 +139,30 @@ export default function ChatSupport() {
     });
 
     socket.on('chat_message', (data) => {
-      setMessages(prev => [...prev, {
-        id: Math.random().toString(),
-        message: data.message,
-        is_from_admin: data.isFromAdmin,
-        created_at: new Date().toISOString()
-      }]);
+      console.log('[WS] Received chat message:', data);
+      // Avoid duplicates if it's from me (already added locally)
+      if (data.fromUserId === (user?.id || guestId)) return;
+      
+      setMessages(prev => {
+        // Double check for duplicates by message content and timestamp if possible
+        const isDuplicate = prev.some(m => m.message === data.message && Math.abs(new Date(m.created_at).getTime() - new Date(data.created_at).getTime()) < 1000);
+        if (isDuplicate) return prev;
+        
+        return [...prev, {
+          id: Math.random().toString(),
+          message: data.message,
+          is_from_admin: data.isFromAdmin,
+          created_at: data.created_at || new Date().toISOString()
+        }];
+      });
       setRemoteIsTyping(false);
     });
 
     socket.on('typing', (data) => {
+      console.log('[WS] Received typing event:', data);
       // If it's from an admin, or from someone else (not me)
-      if (data.isFromAdmin || (data.fromUserId && data.fromUserId !== (user?.id || guestId))) {
+      if (data.isFromAdmin || (data.fromUserId && String(data.fromUserId) !== String(user?.id || guestId))) {
+        console.log(`[WS] Setting remoteIsTyping to ${data.isTyping}`);
         setRemoteIsTyping(data.isTyping);
       }
     });
@@ -172,16 +184,23 @@ export default function ChatSupport() {
     setHasStarted(true);
   };
 
+  const isTypingRef = useRef(false);
   const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
     
     if (socketRef.current && isConnected) {
-      socketRef.current.emit('typing', { isTyping: true });
+      if (!isTypingRef.current) {
+        console.log('[WS] Sending typing event');
+        socketRef.current.emit('typing', { isTyping: true });
+        isTypingRef.current = true;
+      }
       
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
+        console.log('[WS] Sending typing STOP event');
         socketRef.current?.emit('typing', { isTyping: false });
-      }, 2000);
+        isTypingRef.current = false;
+      }, 3000);
     }
   };
 
@@ -207,6 +226,7 @@ export default function ChatSupport() {
 
     socketRef.current.emit('chat_message', messageData);
     socketRef.current.emit('typing', { isTyping: false });
+    isTypingRef.current = false;
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
     // Optimistic update

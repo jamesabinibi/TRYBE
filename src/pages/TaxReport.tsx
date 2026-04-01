@@ -45,10 +45,14 @@ interface TaxData {
     is_small_company: boolean;
     requires_vat_registration: boolean;
     must_file_even_if_zero: boolean;
+    tcc_info?: string;
   };
   legal_structure: string;
   tax_category: string;
   tax_authority: string;
+  tax_breakdown?: string;
+  deductions_info?: string;
+  deductions_amount?: number;
 }
 
 const TaxReport = () => {
@@ -320,6 +324,18 @@ const TaxReport = () => {
                   <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Tax Authority</div>
                   <div className="text-sm font-bold text-zinc-900 dark:text-white">{taxData.tax_authority}</div>
                 </div>
+                {taxData.tax_breakdown && (
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/30">
+                    <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Tax Breakdown</div>
+                    <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 leading-relaxed">{taxData.tax_breakdown}</div>
+                  </div>
+                )}
+                {taxData.deductions_info && (
+                  <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800/30">
+                    <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Deductions & Reliefs</div>
+                    <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400 leading-relaxed">{taxData.deductions_info}</div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -376,6 +392,11 @@ const TaxReport = () => {
                   </div>
                   <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Annual Filing Mandatory for TCC</span>
                 </div>
+                {taxData.compliance_status.tcc_info && (
+                  <div className="mt-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed italic">
+                    {taxData.compliance_status.tcc_info}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -426,11 +447,7 @@ const TaxReport = () => {
                       <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Deductible/Exempt Amount</div>
                     </div>
                     <div className={cn(NUMBER_STYLE, "text-lg text-emerald-600 dark:text-emerald-400")}>
-                      {taxData.compliance_status.is_small_company ? (
-                        <CurrencyDisplay amount={taxData.net_profit > 0 ? taxData.net_profit : 0} currencyCode={settings?.currency} />
-                      ) : (
-                        <CurrencyDisplay amount={0} currencyCode={settings?.currency} />
-                      )}
+                      <CurrencyDisplay amount={taxData.deductions_amount || 0} currencyCode={settings?.currency} />
                     </div>
                   </div>
 

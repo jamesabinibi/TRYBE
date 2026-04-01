@@ -336,7 +336,8 @@ async function initAwsDb() {
         { name: 'last_invoice_reset', type: 'TIMESTAMP WITH TIME ZONE DEFAULT NOW()' },
         { name: 'referral_count', type: 'INTEGER DEFAULT 0' },
         { name: 'referrals_for_reward', type: 'INTEGER DEFAULT 0' },
-        { name: 'active_referral_count', type: 'INTEGER DEFAULT 0' }
+        { name: 'active_referral_count', type: 'INTEGER DEFAULT 0' },
+        { name: 'legal_structure', type: 'TEXT' }
       ];
 
       for (const col of accountCols) {
@@ -4134,29 +4135,47 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (process.env.AWS_DB_PASSWORD) {
         const { rows } = await pool.query(`
-          SELECT s.*, a.business_type 
-          FROM settings s 
-          LEFT JOIN accounts a ON s.account_id = a.id 
-          WHERE s.account_id = $1
+          SELECT a.business_type, a.legal_structure, s.*
+          FROM accounts a
+          LEFT JOIN settings s ON a.id = s.account_id
+          WHERE a.id = $1
         `, [userInfo.account_id]);
-        if (rows.length > 0) return res.json(rows[0]);
         
-        // If settings don't exist, get business_type from accounts
-        const { rows: accountRows } = await pool.query('SELECT business_type FROM accounts WHERE id = $1', [userInfo.account_id]);
+        if (rows.length > 0) {
+          const settings = rows[0];
+          return res.json({
+            ...defaultSettings,
+            ...settings,
+            account_id: userInfo.account_id,
+            business_type: settings.business_type || '',
+            legal_structure: settings.legal_structure || 'Sole Proprietorship / Business Name'
+          });
+        }
+        
         return res.json({ 
           account_id: userInfo.account_id, 
           ...defaultSettings, 
-          business_type: accountRows[0]?.business_type || '' 
+          business_type: '',
+          legal_structure: 'Sole Proprietorship / Business Name'
         });
       }
 
       if (!supabase) return res.json(defaultSettings);
-      const { data, error } = await supabase.from('settings').select('*').eq('account_id', userInfo.account_id);
-      if (error) throw error;
+      const { data: settingsData, error: settingsError } = await supabase.from('settings').select('*').eq('account_id', userInfo.account_id).maybeSingle();
+      const { data: accountData, error: accountError } = await supabase.from('accounts').select('business_type, legal_structure').eq('id', userInfo.account_id).maybeSingle();
       
-      let settings = data[0] || { account_id: userInfo.account_id, ...defaultSettings };
+      if (settingsError) throw settingsError;
+      
+      let settings = {
+        ...defaultSettings,
+        ...(settingsData || {}),
+        account_id: userInfo.account_id,
+        business_type: accountData?.business_type || '',
+        legal_structure: accountData?.legal_structure || 'Sole Proprietorship / Business Name'
+      };
       res.json(settings);
     } catch (error) {
+      console.error('[SETTINGS] GET error:', error);
       res.json(defaultSettings);
     }
   });
@@ -4171,21 +4190,30 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
       
+      console.log(`[SETTINGS] POST for account ${userInfo.account_id}:`, req.body);
+      
       if (process.env.AWS_DB_PASSWORD) {
         // Update business_type and legal_structure in accounts table
         if (business_type || legal_structure) {
-          const updates = [];
-          const values = [];
-          if (business_type) {
-            updates.push(`business_type = $${updates.length + 1}`);
-            values.push(business_type);
+          try {
+            const updates = [];
+            const values = [];
+            if (business_type) {
+              updates.push(`business_type = $${updates.length + 1}`);
+              values.push(business_type);
+            }
+            if (legal_structure) {
+              updates.push(`legal_structure = $${updates.length + 1}`);
+              values.push(legal_structure);
+            }
+            values.push(userInfo.account_id);
+            await pool.query(`UPDATE accounts SET ${updates.join(', ')} WHERE id = $${values.length}`, values);
+            console.log(`[SETTINGS] Updated accounts table for ${userInfo.account_id}`);
+          } catch (accErr) {
+            console.error(`[SETTINGS] Failed to update accounts table:`, accErr);
+            // Continue to update settings table even if accounts update fails, 
+            // but we might want to know why it failed.
           }
-          if (legal_structure) {
-            updates.push(`legal_structure = $${updates.length + 1}`);
-            values.push(legal_structure);
-          }
-          values.push(userInfo.account_id);
-          await pool.query(`UPDATE accounts SET ${updates.join(', ')} WHERE id = $${values.length}`, values);
         }
 
         const { rows: existing } = await pool.query('SELECT id FROM settings WHERE account_id = $1', [userInfo.account_id]);
@@ -4337,6 +4365,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       let eduTaxRate = 0;
       let taxCategory = 'Personal Income Tax (PIT)';
       let taxAuthority = 'State Internal Revenue Service (SIRS)';
+      let estimatedTaxLiability = 0;
+      let taxBreakdown = '';
+      let deductionsAmount = 0;
 
       if (isCompany) {
         taxCategory = 'Companies Income Tax (CIT)';
@@ -4344,18 +4375,58 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         if (totalTurnover > 100000000) {
           citRate = 0.30;
           eduTaxRate = 0.03;
+          taxBreakdown = 'Large Company (30% CIT + 3% Education Tax)';
         } else if (totalTurnover > 25000000) {
           citRate = 0.20;
           eduTaxRate = 0.03;
+          taxBreakdown = 'Medium Company (20% CIT + 3% Education Tax)';
+        } else {
+          citRate = 0;
+          eduTaxRate = 0;
+          taxBreakdown = 'Small Company (Exempt from CIT & Education Tax)';
         }
+        estimatedTaxLiability = Math.max(0, netProfit * citRate) + Math.max(0, netProfit * eduTaxRate);
       } else if (isNGO) {
         taxCategory = 'Non-Profit / Exempt';
         taxAuthority = 'FIRS (for filing)';
+        taxBreakdown = 'NGOs are generally tax-exempt but must file annual returns.';
+      } else {
+        // Sole Proprietorship / Business Name (PIT)
+        // Simplified PIT calculation (progressive rates)
+        // Consolidated Relief Allowance (CRA): Higher of 200k or 1% of Gross Income, plus 20% of Gross Income
+        const grossIncome = totalTurnover;
+        const cra = Math.max(200000, 0.01 * grossIncome) + (0.2 * grossIncome);
+        const taxableIncome = Math.max(0, netProfit - cra);
+        
+        // Progressive rates: 7%, 11%, 15%, 19%, 21%, 24%
+        let pit = 0;
+        let remaining = taxableIncome;
+        
+        const brackets = [
+          { amount: 300000, rate: 0.07 },
+          { amount: 300000, rate: 0.11 },
+          { amount: 500000, rate: 0.15 },
+          { amount: 500000, rate: 0.19 },
+          { amount: 1600000, rate: 0.21 },
+          { amount: Infinity, rate: 0.24 }
+        ];
+
+        for (const bracket of brackets) {
+          if (remaining <= 0) break;
+          const taxableInBracket = Math.min(remaining, bracket.amount);
+          pit += taxableInBracket * bracket.rate;
+          remaining -= taxableInBracket;
+        }
+
+        estimatedTaxLiability = pit;
+        taxBreakdown = taxableIncome > 0 ? 'Personal Income Tax (Progressive Rates after Reliefs)' : 'Below Taxable Threshold after Reliefs';
+        deductionsAmount = cra;
       }
 
-      const estimatedCIT = Math.max(0, netProfit * citRate);
-      const educationTax = Math.max(0, netProfit * eduTaxRate);
       const vatExempt = totalTurnover < 25000000;
+      if (isCompany && vatExempt) {
+        deductionsAmount = Math.max(0, netProfit);
+      }
 
       res.json({
         period,
@@ -4367,24 +4438,30 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         net_cash_flow: totalTurnover + totalInflows - totalExpenses,
         vat_collected: totalVatCollected,
         vat_exempt: vatExempt,
-        estimated_cit: estimatedCIT,
-        education_tax: educationTax,
-        total_tax_liability: estimatedCIT + educationTax,
+        estimated_cit: isCompany ? Math.max(0, netProfit * citRate) : 0,
+        education_tax: isCompany ? Math.max(0, netProfit * eduTaxRate) : 0,
+        total_tax_liability: estimatedTaxLiability,
         cit_rate: citRate * 100,
         edu_tax_rate: eduTaxRate * 100,
         currency: 'NGN',
         legal_structure: legalStructure,
         tax_category: taxCategory,
         tax_authority: taxAuthority,
+        tax_breakdown: taxBreakdown,
+        deductions_amount: deductionsAmount,
+        deductions_info: isCompany 
+          ? "Your business expenses (Operational Costs) have been deducted from your turnover to arrive at the taxable profit. You may also be eligible for Capital Allowance on your business assets."
+          : "A Consolidated Relief Allowance (CRA) has been applied to your profit. This includes a flat 200,000 Naira (or 1% of income) plus 20% of your gross income, which is tax-free.",
         filing_deadlines: {
           cit: isCompany ? "June 30th (or 6 months after your financial year-end)" : "March 31st (Annual Returns for PIT)",
           vat: "21st of every month",
-          annual_returns: "Within 42 days after Annual General Meeting"
+          annual_returns: "Within 42 days after Annual General Meeting (for Companies) or March 31st (for Business Names)"
         },
         compliance_status: {
           is_small_company: totalTurnover < 25000000,
           requires_vat_registration: totalTurnover >= 25000000,
-          must_file_even_if_zero: true
+          must_file_even_if_zero: true,
+          tcc_info: "You must file your returns annually to obtain a Tax Clearance Certificate (TCC), which is required for government contracts, bank loans, and visa applications."
         }
       });
     } catch (err: any) {
@@ -8026,40 +8103,30 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           );
         }
 
-        if (targetUserId) {
-          io.to(targetUserId).emit('chat_message', {
-            message,
-            fromUserId: clientId,
-            isFromAdmin
-          });
+        const messagePayload = {
+          message,
+          fromUserId: clientId,
+          targetUserId,
+          isFromAdmin,
+          guestId: insertGuestId,
+          guestEmail: insertGuestEmail,
+          accountId: insertAccountId,
+          created_at: new Date().toISOString()
+        };
+
+        // 1. Emit to the target user/guest (if admin is sending)
+        if (isFromAdmin && targetUserId) {
+          console.log(`[WS] Admin sending message to ${targetUserId}`);
+          io.to(String(targetUserId)).emit('chat_message', messagePayload);
         }
         
-        if (isFromAdmin) {
-          // Broadcast to other admins so they see the reply
-          socket.to('admins').emit('chat_message', {
-            message,
-            fromUserId: clientId,
-            targetUserId,
-            isFromAdmin: true
-          });
-        } else {
-          // Broadcast to other tabs of the same user
-          socket.to(clientId).emit('chat_message', {
-            message,
-            fromUserId: clientId,
-            isFromAdmin: false
-          });
-          
-          // Broadcast to all connected superadmins
-          socket.to('admins').emit('chat_message', {
-            message,
-            fromUserId: clientId,
-            accountId,
-            guestId,
-            guestEmail: insertGuestEmail,
-            isFromAdmin: false
-          });
+        // 2. Emit to the sender's other tabs
+        socket.to(String(clientId)).emit('chat_message', messagePayload);
 
+        // 3. Emit to all admins
+        io.to('admins').emit('chat_message', messagePayload);
+
+        if (!isFromAdmin) {
           // Send email notification to superadmin
           const now = Date.now();
           const lastSent = lastEmailSent.get(clientId || 'unknown') || 0;
@@ -8084,19 +8151,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
     socket.on('typing', (payload) => {
       const { targetUserId, isTyping } = payload;
-      if (targetUserId) {
-        io.to(targetUserId).emit('typing', {
-          fromUserId: clientId,
-          isTyping,
-          isFromAdmin: isAdmin
-        });
-      }
-      if (!isAdmin) {
-        socket.to('admins').emit('typing', {
-          fromUserId: clientId,
-          isTyping,
-          isFromAdmin: false
-        });
+      console.log(`[WS] Typing event from ${clientId} (isAdmin: ${isAdmin}): ${isTyping}, target: ${targetUserId}`);
+      
+      const typingPayload = {
+        fromUserId: clientId,
+        isTyping,
+        isFromAdmin: isAdmin
+      };
+
+      if (isAdmin && targetUserId) {
+        // Admin is typing to a specific user
+        console.log(`[WS] Emitting typing to user room: ${targetUserId}`);
+        io.to(String(targetUserId)).emit('typing', typingPayload);
+      } else if (!isAdmin) {
+        // User is typing, notify admins
+        console.log(`[WS] Emitting typing to admins room`);
+        io.to('admins').emit('typing', typingPayload);
       }
     });
 

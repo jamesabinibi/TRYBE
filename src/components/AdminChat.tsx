@@ -127,27 +127,67 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
     });
 
     socket.on('chat_message', (data) => {
-      // Refresh sessions to show latest message
-      fetchSessions();
+      console.log('[WS] Admin received chat message:', data);
+      
+      // Update sessions list locally instead of fetching all sessions
+      setSessions(prev => {
+        const targetId = String(data.fromUserId || data.targetUserId);
+        const existingSessionIndex = prev.findIndex(s => 
+          String(s.user_id || s.guest_id) === targetId
+        );
+        
+        if (existingSessionIndex !== -1) {
+          const updatedSessions = [...prev];
+          updatedSessions[existingSessionIndex] = {
+            ...updatedSessions[existingSessionIndex],
+            message: data.message,
+            created_at: data.created_at || new Date().toISOString()
+          };
+          // Move to top
+          const session = updatedSessions.splice(existingSessionIndex, 1)[0];
+          return [session, ...updatedSessions];
+        } else {
+          // New session, but we don't have all info, so maybe fetch sessions once
+          fetchSessions();
+          return prev;
+        }
+      });
       
       // If we are currently viewing this chat, append the message
       if (selectedSession) {
         const targetId = selectedSession.user_id || selectedSession.guest_id;
+        
         // If message is from the user we are viewing, OR if it's from another admin TO the user we are viewing
-        if (data.fromUserId === targetId || (data.isFromAdmin && data.targetUserId === targetId)) {
-          setMessages(prev => [...prev, {
-            id: Math.random().toString(),
-            message: data.message,
-            is_from_admin: data.isFromAdmin,
-            created_at: new Date().toISOString()
-          }]);
-          setRemoteIsTyping(prev => ({ ...prev, [data.fromUserId]: false }));
+        // Use String() for safe comparison
+        const isFromTarget = String(data.fromUserId) === String(targetId);
+        const isFromOtherAdminToTarget = data.isFromAdmin && String(data.targetUserId) === String(targetId) && String(data.fromUserId) !== String(user?.id);
+
+        if (isFromTarget || isFromOtherAdminToTarget) {
+          setMessages(prev => {
+            // Avoid duplicates
+            const isDuplicate = prev.some(m => m.message === data.message && Math.abs(new Date(m.created_at).getTime() - new Date(data.created_at).getTime()) < 1000);
+            if (isDuplicate) return prev;
+
+            return [...prev, {
+              id: data.id || Math.random().toString(),
+              message: data.message,
+              is_from_admin: data.isFromAdmin,
+              created_at: data.created_at || new Date().toISOString()
+            }];
+          });
+          
+          if (isFromTarget) {
+            setRemoteIsTyping(prev => ({ ...prev, [String(data.fromUserId)]: false }));
+          }
         }
       }
     });
 
     socket.on('typing', (data) => {
-      setRemoteIsTyping(prev => ({ ...prev, [data.fromUserId]: data.isTyping }));
+      console.log('[WS] Admin received typing event:', data);
+      if (data.fromUserId) {
+        setRemoteIsTyping(prev => ({ ...prev, [String(data.fromUserId)]: data.isTyping }));
+      }
     });
 
     socket.on('end_chat', (data) => {
@@ -166,17 +206,25 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
     });
   };
 
+  const isTypingRef = useRef(false);
   const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
     
     if (socketRef.current && isConnected && selectedSession) {
       const targetId = selectedSession.user_id || selectedSession.guest_id;
-      socketRef.current.emit('typing', { targetUserId: targetId, isTyping: true });
+      
+      if (!isTypingRef.current) {
+        console.log(`[WS] Admin sending typing event to ${targetId}`);
+        socketRef.current.emit('typing', { targetUserId: targetId, isTyping: true });
+        isTypingRef.current = true;
+      }
       
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
+        console.log(`[WS] Admin sending typing STOP event to ${targetId}`);
         socketRef.current?.emit('typing', { targetUserId: targetId, isTyping: false });
-      }, 2000);
+        isTypingRef.current = false;
+      }, 3000);
     }
   };
 
@@ -207,8 +255,29 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
 
     socketRef.current.emit('chat_message', messageData);
     socketRef.current.emit('typing', { targetUserId: targetId, isTyping: false });
+    isTypingRef.current = false;
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
+    // Update last message in sidebar locally
+    setSessions(prev => {
+      const existingSessionIndex = prev.findIndex(s => 
+        String(s.user_id || s.guest_id) === String(targetId)
+      );
+      
+      if (existingSessionIndex !== -1) {
+        const updatedSessions = [...prev];
+        updatedSessions[existingSessionIndex] = {
+          ...updatedSessions[existingSessionIndex],
+          message: newMessage,
+          created_at: new Date().toISOString()
+        };
+        // Move to top
+        const session = updatedSessions.splice(existingSessionIndex, 1)[0];
+        return [session, ...updatedSessions];
+      }
+      return prev;
+    });
+
     // Optimistic update
     setMessages(prev => [...prev, {
       id: Math.random().toString(),
@@ -218,7 +287,6 @@ export default function AdminChat({ isOpen, onClose }: { isOpen: boolean; onClos
     }]);
     
     setNewMessage('');
-    fetchSessions(); // Update last message in sidebar
   };
 
   if (!isOpen) return null;

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
+import { toast } from 'sonner';
 import { SearchProvider, useSearch } from './contexts/SearchContext';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
@@ -427,6 +428,10 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
+    console.log('[INIT] App component mounted');
+    console.log('[INIT] Current user:', user?.id || 'Guest');
+    console.log('[INIT] Current settings:', settings?.business_name || 'Not loaded');
+    
     const root = document.documentElement;
     const color = '#ff4d00';
     
@@ -484,6 +489,7 @@ export default function App() {
       
       if (response.status === 429) {
         console.error(`[RATE LIMIT] Rate exceeded for ${url}`);
+        toast.error('Rate limit exceeded. Please wait a moment before trying again.');
       }
       
       if (response.status === 401) {
