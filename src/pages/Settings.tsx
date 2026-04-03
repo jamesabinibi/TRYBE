@@ -31,7 +31,7 @@ import {
   Download
 } from 'lucide-react';
 import { Category } from '../types';
-import { cn, retryWithBackoff } from '../lib/utils';
+import { cn, retryWithBackoff, fetchGeminiKey } from '../lib/utils';
 import { toast } from 'sonner';
 import { useAuth, useSettings } from '../App';
 import { Input } from '../components/Input';
@@ -879,7 +879,7 @@ NOTIFY pgrst, 'reload schema';
       const aistudio = (window as any).aistudio;
       
       // Use process.env.API_KEY (from selection dialog) or GEMINI_API_KEY (environment)
-      let apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+      let apiKey = await fetchGeminiKey();
       
       if (!apiKey && aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
         const hasKey = await aistudio.hasSelectedApiKey();

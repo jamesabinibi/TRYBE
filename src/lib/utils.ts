@@ -80,3 +80,21 @@ export async function retryWithBackoff<T>(
   }
   throw new Error('Max retries exceeded');
 }
+
+export async function fetchGeminiKey(): Promise<string> {
+  // Try to get from build-time env vars first
+  let key = process.env.API_KEY || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  if (key) return key;
+  
+  // Fetch from backend
+  try {
+    const res = await apiFetch('/api/gemini-key');
+    if (res.ok) {
+      const data = await res.json();
+      return data.apiKey || '';
+    }
+  } catch (e) {
+    console.error("Failed to fetch Gemini key from backend", e);
+  }
+  return '';
+}

@@ -37,7 +37,7 @@ import { Product, Variant, Sale, Customer, Service } from '../types';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { NumberDisplay } from '../components/NumberDisplay';
-import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff, fetchGeminiKey } from '../lib/utils';
 import { TotalDisplay } from '../components/TotalDisplay';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { motion, AnimatePresence } from 'motion/react';
@@ -605,7 +605,7 @@ export default function Sales() {
     reader.onloadend = async () => {
       const base64 = reader.result as string;
       try {
-        const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+        const apiKey = await fetchGeminiKey();
         
         if (!apiKey) {
           toast.error('Gemini API key not configured. Please set it in Settings.');

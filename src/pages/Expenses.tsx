@@ -17,7 +17,7 @@ import {
 import { useAuth, useSettings } from '../App';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { TotalDisplay } from '../components/TotalDisplay';
-import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff, fetchGeminiKey } from '../lib/utils';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { motion, AnimatePresence } from 'motion/react';
@@ -108,7 +108,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
       const base64 = reader.result as string;
       console.log('AI Screenshot: Image loaded, calling AI...');
       try {
-        const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+        const apiKey = await fetchGeminiKey();
         
         if (!apiKey) {
           toast.error('Gemini API key not configured. Please set it in Settings.');

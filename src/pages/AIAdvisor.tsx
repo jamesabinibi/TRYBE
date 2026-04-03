@@ -7,7 +7,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
-import { formatCurrency, retryWithBackoff } from '../lib/utils';
+import { formatCurrency, retryWithBackoff, fetchGeminiKey } from '../lib/utils';
 
 export default function AIAdvisor() {
   const { fetchWithAuth, user } = useAuth();
@@ -78,7 +78,7 @@ export default function AIAdvisor() {
 
   const generateInsight = async (businessData: any) => {
     try {
-      const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+      const apiKey = await fetchGeminiKey();
       
       if (!apiKey) {
         setInsight("Gemini API key not configured. Please set it in Settings.");
@@ -123,7 +123,7 @@ export default function AIAdvisor() {
   const generateForecast = async () => {
     setLoadingForecast(true);
     try {
-      const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+      const apiKey = await fetchGeminiKey();
       
       if (!apiKey) {
         setForecast({ error: "Gemini API key not configured. Please set it in Settings." });

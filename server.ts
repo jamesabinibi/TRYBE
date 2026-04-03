@@ -6078,6 +6078,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     });
   });
 
+  app.get("/api/gemini-key", requireAuth, async (req, res) => {
+    try {
+      const apiKey = await getGeminiKey();
+      res.json({ apiKey: apiKey || '' });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch Gemini key" });
+    }
+  });
+
   app.get("/api/admin/secrets", requireSuperAdmin, async (req, res) => {
     const secrets = {
       SUPABASE_URL: process.env.SUPABASE_URL || '',
