@@ -36,6 +36,7 @@ export default function Landing() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [config, setConfig] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchConfig();
@@ -52,11 +53,15 @@ export default function Landing() {
 
   const fetchConfig = async () => {
     try {
+      setIsLoading(true);
+      setError(null);
       const res = await apiFetch('/api/landing-config');
+      if (!res.ok) throw new Error('Failed to fetch landing configuration');
       const data = await res.json();
       setConfig(data);
     } catch (err) {
       console.error('Failed to fetch landing config:', err);
+      setError('Unable to connect to the server. Please check your internet connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -83,10 +88,31 @@ export default function Landing() {
     }
   };
 
-  if (isLoading || !config) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-zinc-500 font-medium animate-pulse">Loading your experience...</p>
+      </div>
+    );
+  }
+
+  if (error || !config) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
+          <Globe className="w-8 h-8 text-red-500" />
+        </div>
+        <h2 className="text-2xl font-display font-bold text-zinc-900 mb-2">Connection Error</h2>
+        <p className="text-zinc-600 max-w-md mb-8 leading-relaxed">
+          {error || "We couldn't load the application configuration. This usually happens when the backend server is unreachable."}
+        </p>
+        <button 
+          onClick={() => fetchConfig()}
+          className="px-8 py-3 bg-brand text-white rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-brand/10 active:scale-95"
+        >
+          Try Again
+        </button>
       </div>
     );
   }

@@ -1,21 +1,27 @@
-const https = require('https');
+const axios = require('axios');
 
-const options = {
-  hostname: 'ais-pre-maktu7vxpyn2ghysibw2hq-28880934033.europe-west1.run.app',
-  port: 443,
-  path: '/api/test',
-  method: 'GET',
-  headers: {
-    'Cookie': 'GAESA=CgQIg8SYBw; __SECURE-aistudio_auth_flow_may_set_cookies=true'
+async function testApi() {
+  const baseUrl = 'http://localhost:3000';
+  const endpoints = [
+    '/api/admin/stats',
+    '/api/settings',
+    '/api/admin/users',
+    '/api/admin/promo-codes'
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await axios.get(`${baseUrl}${endpoint}`, {
+        headers: {
+          'x-user-id': '1' // Assume some user ID
+        }
+      });
+      console.log(`[${endpoint}] Status: ${res.status}`);
+      console.log(`[${endpoint}] Data keys: ${Object.keys(res.data)}`);
+    } catch (err) {
+      console.error(`[${endpoint}] Error: ${err.response?.status || err.message}`);
+    }
   }
-};
+}
 
-const req = https.request(options, (res) => {
-  console.log(`STATUS: ${res.statusCode}`);
-});
-
-req.on('error', (e) => {
-  console.error(`Problem with request: ${e.message}`);
-});
-
-req.end();
+testApi();

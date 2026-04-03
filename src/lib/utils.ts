@@ -22,10 +22,26 @@ export function formatCurrency(amount: number | string | undefined | null, curre
 export async function apiFetch(url: string, options: RequestInit = {}) {
   const start = performance.now();
   try {
-    const res = await fetch(url, options);
+    // Support absolute URLs for mobile/Capacitor
+    const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
+    let baseUrl = isNative ? (import.meta.env.VITE_API_URL || '') : '';
+    
+    if (baseUrl && !baseUrl.startsWith('http')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+    
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.slice(0, -1);
+    }
+    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+    
+    const res = await fetch(fullUrl, {
+      ...options,
+      credentials: 'include'
+    });
     const end = performance.now();
     if (end - start > 1000) {
-      console.warn(`[API] Slow request: ${url} took ${(end - start).toFixed(2)}ms`);
+      console.warn(`[API] Slow request: ${fullUrl} took ${(end - start).toFixed(2)}ms`);
     }
     return res;
   } catch (err) {

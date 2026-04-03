@@ -477,18 +477,34 @@ export default function App() {
       'x-user-id': user?.id?.toString() || '',
     };
     
-    const fullUrl = url;
+    // Support absolute URLs for mobile/Capacitor
+    const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
+    let baseUrl = isNative ? (import.meta.env.VITE_API_URL || '') : '';
+    
+    if (baseUrl && !baseUrl.startsWith('http')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+    
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.slice(0, -1);
+    }
+    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+    
     const start = performance.now();
     try {
-      const response = await fetch(fullUrl, { ...options, headers });
+      const response = await fetch(fullUrl, { 
+        ...options, 
+        headers,
+        credentials: 'include'
+      });
       const end = performance.now();
       
       if (end - start > 1000) {
-        console.warn(`[API] Slow request: ${url} took ${(end - start).toFixed(2)}ms`);
+        console.warn(`[API] Slow request: ${fullUrl} took ${(end - start).toFixed(2)}ms`);
       }
       
       if (response.status === 429) {
-        console.error(`[RATE LIMIT] Rate exceeded for ${url}`);
+        console.error(`[RATE LIMIT] Rate exceeded for ${fullUrl}`);
         toast.error('Rate limit exceeded. Please wait a moment before trying again.');
       }
       
@@ -500,7 +516,7 @@ export default function App() {
       return response;
     } catch (err) {
       const end = performance.now();
-      console.error(`[API] Request failed: ${url} after ${(end - start).toFixed(2)}ms`, err);
+      console.error(`[API] Request failed: ${fullUrl} after ${(end - start).toFixed(2)}ms`, err);
       throw err;
     }
   };
