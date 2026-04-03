@@ -489,6 +489,7 @@ export default function App() {
       baseUrl = baseUrl.slice(0, -1);
     }
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+    console.log(`[API] Fetching: ${fullUrl} (isNative: ${isNative}, baseUrl: ${baseUrl})`);
     
     const start = performance.now();
     try {

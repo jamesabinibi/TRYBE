@@ -1081,6 +1081,16 @@ async function updateActiveReferralCount(accountId: string) {
 
 async function createServer() {
   const app = express();
+
+  // Request logging middleware
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - ${res.statusCode} - ${duration}ms - x-user-id: ${req.headers['x-user-id']}`);
+    });
+    next();
+  });
   const PORT = 3000;
 
   app.use(cors({
@@ -1113,6 +1123,7 @@ async function createServer() {
   });
 
   const requireSuperAdmin = async (req: any, res: any, next: any) => {
+    console.log(`[AUTH] SuperAdmin check for: ${req.headers['x-user-id']}`);
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo || userInfo.role !== 'super_admin') {
@@ -1496,6 +1507,7 @@ async function createServer() {
 
   const getAccountId = async (req: any) => {
     let userId = req.headers['x-user-id'];
+    console.log(`[AUTH] getAccountId: userId from header = ${userId}`);
     if (!userId) {
       console.log(`[AUTH] Missing x-user-id header for ${req.method} ${req.url}`);
       return null;
