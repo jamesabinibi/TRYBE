@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Capacitor } from '@capacitor/core';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -22,8 +23,8 @@ export function formatCurrency(amount: number | string | undefined | null, curre
 export async function apiFetch(url: string, options: RequestInit = {}) {
   const start = performance.now();
   try {
-    // Support absolute URLs for mobile/Capacitor
-    const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
+    // Support absolute URLs for mobile/Capacitor, relative for web
+    const isNative = Capacitor.isNativePlatform();
     let baseUrl = isNative ? (import.meta.env.VITE_API_URL || '') : '';
     
     if (baseUrl && !baseUrl.startsWith('http')) {

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { 
   LayoutDashboard, 
   Package, 
@@ -477,8 +478,8 @@ export default function App() {
       'x-user-id': user?.id?.toString() || '',
     };
     
-    // Support absolute URLs for mobile/Capacitor
-    const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
+    // Support absolute URLs for mobile/Capacitor, relative for web
+    const isNative = Capacitor.isNativePlatform();
     let baseUrl = isNative ? (import.meta.env.VITE_API_URL || '') : '';
     
     if (baseUrl && !baseUrl.startsWith('http')) {
@@ -489,7 +490,7 @@ export default function App() {
       baseUrl = baseUrl.slice(0, -1);
     }
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-    console.log(`[API] Fetching: ${fullUrl} (isNative: ${isNative}, baseUrl: ${baseUrl})`);
+    console.log(`[API] Fetching: ${fullUrl} (baseUrl: ${baseUrl})`);
     
     const start = performance.now();
     try {
