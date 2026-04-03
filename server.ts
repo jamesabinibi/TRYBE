@@ -5574,8 +5574,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   };
 
-  app.get("/api/notifications/:userId", async (req, res) => {
-    console.log(`[API] GET /api/notifications/${req.params.userId} called`);
+  app.get("/api/alerts/:userId", async (req, res) => {
+    console.log(`[API] GET /api/alerts/${req.params.userId} called`);
     const { userId } = req.params;
     
     if (!userId || userId === 'undefined' || userId === 'null' || userId === '[object Object]') {
@@ -5625,7 +5625,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
-  app.post("/api/notifications/:id/read", async (req, res) => {
+  app.post("/api/alerts/:id/read", async (req, res) => {
     const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
@@ -5652,7 +5652,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
-  app.delete("/api/notifications/:userId", async (req, res) => {
+  app.delete("/api/alerts/:userId", async (req, res) => {
     const { userId } = req.params;
     try {
       const userInfo = await getAccountId(req);

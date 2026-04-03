@@ -42,7 +42,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
   const fetchNotifications = async () => {
     if (!userId || typeof userId !== 'number') return;
     try {
-      const response = await fetchWithAuth(`/api/notifications/${userId}`);
+      const response = await fetchWithAuth(`/api/alerts/${userId}`);
       
       if (!response.ok) {
         console.error(`[UI] Response not ok: ${response.status}`);
@@ -78,7 +78,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
 
   const markAsRead = async (id: number) => {
     try {
-      const response = await fetchWithAuth(`/api/notifications/${id}/read`, { method: 'POST' });
+      const response = await fetchWithAuth(`/api/alerts/${id}/read`, { method: 'POST' });
       if (response.ok) {
         setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
         setUnreadCount(prev => Math.max(0, prev - 1));
@@ -90,7 +90,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetchWithAuth('/api/notifications/all/read', { method: 'POST' });
+      const response = await fetchWithAuth('/api/alerts/all/read', { method: 'POST' });
       if (response.ok) {
         setNotifications(notifications.map(n => ({ ...n, is_read: true })));
         setUnreadCount(0);
@@ -113,7 +113,7 @@ export default function NotificationCenter({ userId }: { userId: number }) {
             onClick={async () => {
               toast.dismiss(t);
               try {
-                const response = await fetchWithAuth(`/api/notifications/${userId}`, { method: 'DELETE' });
+                const response = await fetchWithAuth(`/api/alerts/${userId}`, { method: 'DELETE' });
                 if (response.ok) {
                   setNotifications([]);
                   setUnreadCount(0);
