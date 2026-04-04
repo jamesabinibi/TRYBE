@@ -17,7 +17,7 @@ import {
 import { useAuth, useSettings } from '../App';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { TotalDisplay } from '../components/TotalDisplay';
-import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff, fetchGeminiKey } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff, fetchGeminiKey, useQuery } from '../lib/utils';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { motion, AnimatePresence } from 'motion/react';
@@ -51,7 +51,16 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
   }
 
   const currency = settings?.currency || 'NGN';
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  
+  const { data: expenses, isLoading, refetch: refetchExpenses } = useQuery('expenses_data', async () => {
+    const res = await fetchWithAuth('/api/expenses');
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  }, {
+    persist: true,
+    enabled: !!user
+  });
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,26 +85,12 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
   ];
 
   useEffect(() => {
-    fetchExpenses();
+    // Initial load is handled by useQuery
   }, []);
 
   const [isProcessingAI, setIsProcessingAI] = useState(false);
 
-  const fetchExpenses = async () => {
-    try {
-      const res = await fetchWithAuth('/api/expenses');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setExpenses(data);
-      } else {
-        console.error('Expenses data is not an array:', data);
-        setExpenses([]);
-      }
-    } catch (err) {
-      toast.error('Failed to fetch expenses');
-      setExpenses([]);
-    }
-  };
+  const fetchExpenses = () => refetchExpenses();
 
   const handleAIScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

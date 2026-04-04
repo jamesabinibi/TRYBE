@@ -1011,19 +1011,19 @@ export default function SuperAdmin() {
           title="Total Accounts" 
           value={stats?.accounts} 
           icon={Building2} 
-          color="bg-blue-500/10 text-blue-600"
+          color="bg-brand/10 text-brand"
         />
         <StatCard 
           title="Active Users" 
           value={stats?.users} 
           icon={Users} 
-          color="bg-purple-500/10 text-purple-600"
+          color="bg-brand/10 text-brand"
         />
         <StatCard 
           title="Total Products" 
           value={stats?.products} 
           icon={Package} 
-          color="bg-orange-500/10 text-orange-600"
+          color="bg-brand/10 text-brand"
         />
         <StatCard 
           title="System Sales" 

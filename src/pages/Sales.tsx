@@ -37,7 +37,7 @@ import { Product, Variant, Sale, Customer, Service } from '../types';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { NumberDisplay } from '../components/NumberDisplay';
-import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff, fetchGeminiKey } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff, fetchGeminiKey, useQuery } from '../lib/utils';
 import { TotalDisplay } from '../components/TotalDisplay';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { motion, AnimatePresence } from 'motion/react';
@@ -59,16 +59,73 @@ interface CartItem {
   price_override?: number;
 }
 
+const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradient }: any) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    whileHover={{ y: -4 }}
+    className={cn(
+      "glass-card p-8 flex flex-col justify-between min-h-[160px] relative overflow-hidden group", 
+      className
+    )}
+  >
+    {gradient && (
+      <div className={cn("absolute -right-10 -top-10 w-32 h-32 blur-3xl opacity-20 group-hover:opacity-30 transition-opacity", gradient)} />
+    )}
+    <div className="relative z-10">
+      <div className="flex items-center justify-between mb-6">
+        <p className="label-text font-bold uppercase tracking-[0.15em] opacity-60">{title}</p>
+        {Icon && (
+          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", color)}>
+            <Icon className="w-6 h-6" />
+          </div>
+        )}
+      </div>
+      <div className="space-y-1">
+        <div className="text-3xl md:text-4xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
+          {value}
+        </div>
+        {subtitle && <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
+      </div>
+    </div>
+  </motion.div>
+);
+
 export default function Sales() {
   const { user, fetchWithAuth } = useAuth();
   const { settings } = useSettings();
   const currency = settings?.currency || 'NGN';
   const { searchQuery } = useSearch();
   const [activeTab, setActiveTab] = useState<'pos' | 'history'>('pos');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  
+  const { data: salesData, isLoading, refetch: refetchSales } = useQuery('sales_data', async () => {
+    const batchRes = await fetchWithAuth('/api/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/sales', '/api/customers']
+      })
+    });
+    if (!batchRes.ok) {
+      throw new Error(`Batch fetch failed with status ${batchRes.status}`);
+    }
+    const [productsData, servicesData, salesData, customersData] = await batchRes.json();
+    return {
+      products: Array.isArray(productsData) ? productsData : [],
+      services: Array.isArray(servicesData) ? servicesData : [],
+      sales: Array.isArray(salesData) ? salesData : [],
+      customers: Array.isArray(customersData) ? customersData : []
+    };
+  }, {
+    persist: true,
+    enabled: !!user
+  });
+
+  const products = salesData?.products || [];
+  const services = salesData?.services || [];
+  const sales = salesData?.sales || [];
+  const customers = salesData?.customers || [];
+
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState('Transfer');
@@ -123,95 +180,14 @@ export default function Sales() {
     ));
   };
 
+  const fetchSales = () => refetchSales();
+  const fetchProducts = () => refetchSales();
+  const fetchServices = () => refetchSales();
+  const fetchCustomers = () => refetchSales();
+
   useEffect(() => {
-    if (user) {
-      const loadInitialData = async () => {
-        try {
-          const batchRes = await fetchWithAuth('/api/batch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/sales', '/api/customers']
-            })
-          });
-          if (!batchRes.ok) {
-            throw new Error(`Batch fetch failed with status ${batchRes.status}`);
-          }
-          const [productsData, servicesData, salesData, customersData] = await batchRes.json();
-          setProducts(Array.isArray(productsData) ? productsData : []);
-          setServices(Array.isArray(servicesData) ? servicesData : []);
-          setSales(Array.isArray(salesData) ? salesData : []);
-          setCustomers(Array.isArray(customersData) ? customersData : []);
-        } catch (err) {
-          console.error("Batch fetch failed", err);
-        }
-      };
-      loadInitialData();
-    }
+    // Initial load is handled by useQuery
   }, [user]);
-
-  const fetchServices = async () => {
-    try {
-      const res = await fetchWithAuth('/api/services');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setServices(data);
-      } else {
-        setServices([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch services:', err);
-      setServices([]);
-    }
-  };
-
-  const fetchCustomers = async () => {
-    try {
-      const res = await fetchWithAuth('/api/customers');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setCustomers(data);
-      } else {
-        console.error('Customers data is not an array:', data);
-        setCustomers([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch customers:', err);
-      setCustomers([]);
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const res = await fetchWithAuth('/api/products');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setProducts(data);
-      } else {
-        console.error("Failed to fetch products:", data);
-        setProducts([]);
-      }
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      setProducts([]);
-    }
-  };
-
-  const fetchSales = async () => {
-    try {
-      const res = await fetchWithAuth('/api/sales');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setSales(data);
-      } else {
-        console.error("Failed to fetch sales:", data);
-        setSales([]);
-      }
-    } catch (err) {
-      console.error("Error fetching sales:", err);
-      setSales([]);
-    }
-  };
 
   const addToCart = (product: Product, variant: Variant) => {
     if (variant.quantity <= 0) {
@@ -368,7 +344,7 @@ export default function Sales() {
         toast.success('Invoice terms saved successfully');
         // Update the local state
         setSelectedSaleForPreview({ ...selectedSaleForPreview, invoice_terms: customInvoiceTerms });
-        setSales(sales.map(s => s.id === selectedSaleForPreview.id ? { ...s, invoice_terms: customInvoiceTerms } : s));
+        refetchSales();
       } else {
         toast.error('Failed to save terms');
       }
@@ -1340,71 +1316,35 @@ export default function Sales() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="glass-card p-6 group relative overflow-hidden">
-                      <div className="relative z-10 flex flex-col h-full justify-between">
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-brand/10 rounded-lg">
-                              <TrendingUp className="w-4 h-4 text-brand" />
-                            </div>
-                            <span className="label-text text-brand bg-brand/10 px-2 py-0.5 rounded-full">+12.5%</span>
-                          </div>
-                          <p className="label-text mb-1">Total Revenue</p>
-                          <h3 className="h2">
-                            {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0), currency)}
-                          </h3>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="glass-card p-6 group relative overflow-hidden">
-                      <div className="relative z-10 flex flex-col h-full justify-between">
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-brand/10 rounded-lg">
-                              <ArrowUpRight className="w-4 h-4 text-brand" />
-                            </div>
-                            <span className="label-text text-brand bg-brand/10 px-2 py-0.5 rounded-full">+8.2%</span>
-                          </div>
-                          <p className="label-text mb-1">Total Profit</p>
-                          <h3 className="h2 text-brand">
-                            {formatCurrency((filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0), currency)}
-                          </h3>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="glass-card p-6 group relative overflow-hidden">
-                      <div className="relative z-10 flex flex-col h-full justify-between">
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-blue-500/10 rounded-lg">
-                              <ShoppingCart className="w-4 h-4 text-blue-500" />
-                            </div>
-                            <span className="label-text text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">Active</span>
-                          </div>
-                          <p className="label-text mb-1">Transactions</p>
-                          <h3 className="h2">{filteredSales.length}</h3>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="glass-card p-6 group relative overflow-hidden">
-                      <div className="relative z-10 flex flex-col h-full justify-between">
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-purple-500/10 rounded-lg">
-                              <CreditCard className="w-4 h-4 text-purple-500" />
-                            </div>
-                            <span className="label-text text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full">Stable</span>
-                          </div>
-                          <p className="label-text mb-1">Avg. Order Value</p>
-                          <h3 className="h2">
-                            {formatCurrency(filteredSales.length > 0 ? (filteredSales.reduce((acc, s) => acc + (s.total_amount || 0), 0) / filteredSales.length) : 0, currency)}
-                          </h3>
-                        </div>
-                      </div>
-                    </div>
+                    <StatCard 
+                      title="Total Revenue" 
+                      value={<CurrencyDisplay amount={(filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0)} currencyCode={currency} />} 
+                      color="vibrant-gradient text-white"
+                      gradient="bg-brand"
+                      icon={TrendingUp}
+                    />
+                    {canViewAccountData && (
+                      <StatCard 
+                        title="Total Profit" 
+                        value={<CurrencyDisplay amount={(filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0)} currencyCode={currency} />} 
+                        color="vibrant-gradient-purple text-white"
+                        gradient="bg-purple-500"
+                        icon={ArrowUpRight}
+                      />
+                    )}
+                    <StatCard 
+                      title="Transactions" 
+                      value={filteredSales.length} 
+                      color="vibrant-gradient-pink text-white"
+                      gradient="bg-pink-500"
+                      icon={ShoppingCart}
+                    />
+                    <StatCard 
+                      title="Avg. Order Value" 
+                      value={<CurrencyDisplay amount={filteredSales.length > 0 ? (filteredSales.reduce((acc, s) => acc + (s.total_amount || 0), 0) / filteredSales.length) : 0} currencyCode={currency} />} 
+                      color="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                      icon={CreditCard}
+                    />
                   </div>
                 </>
               )}

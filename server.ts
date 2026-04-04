@@ -984,7 +984,7 @@ async function getGeminiKey(): Promise<string | null> {
   const dbKey = await getSystemSetting('GEMINI_API_KEY');
   if (dbKey) return dbKey;
   // Fallback to environment
-  return process.env.GEMINI_API_KEY || null;
+  return process.env.GEMINI_API_KEY || process.env.API_KEY || null;
 }
 
 async function setSystemSetting(key: string, value: string) {
@@ -2435,7 +2435,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       url: "",
       favicon: ""
     },
-    brandColor: "#10b981",
+    brandColor: "#9c4608",
     features: [
       {
         id: 1,

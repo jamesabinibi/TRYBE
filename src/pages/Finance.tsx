@@ -38,13 +38,13 @@ export default function Finance() {
       </div>
 
       {/* Tabs */}
-      <div className="flex overflow-x-auto custom-scrollbar gap-2 p-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 w-full md:w-fit">
+      <div className="flex overflow-x-auto no-scrollbar gap-2 p-1.5 bg-white/50 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl w-full md:w-fit">
         <button
           onClick={() => handleTabChange('cashflow')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'cashflow'
-              ? 'bg-white dark:bg-zinc-900 text-brand shadow-sm border border-zinc-200 dark:border-zinc-700'
-              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-zinc-800'
+              ? 'bg-brand text-white shadow-lg shadow-brand/20'
+              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5'
           }`}
         >
           <Wallet className="w-4 h-4" />
@@ -52,10 +52,10 @@ export default function Finance() {
         </button>
         <button
           onClick={() => handleTabChange('bookkeeping')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'bookkeeping'
-              ? 'bg-white dark:bg-zinc-900 text-brand shadow-sm border border-zinc-200 dark:border-zinc-700'
-              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-zinc-800'
+              ? 'bg-brand text-white shadow-lg shadow-brand/20'
+              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5'
           }`}
         >
           <Briefcase className="w-4 h-4" />
@@ -63,10 +63,10 @@ export default function Finance() {
         </button>
         <button
           onClick={() => handleTabChange('expenses')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'expenses'
-              ? 'bg-white dark:bg-zinc-900 text-brand shadow-sm border border-zinc-200 dark:border-zinc-700'
-              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-zinc-800'
+              ? 'bg-brand text-white shadow-lg shadow-brand/20'
+              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5'
           }`}
         >
           <TrendingDown className="w-4 h-4" />

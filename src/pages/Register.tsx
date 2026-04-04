@@ -3,13 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Lock, User, ArrowRight, ShieldCheck, Mail, UserPlus, Eye, EyeOff, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { useAuth } from '../App';
+import { useAuth, useSettings } from '../App';
 import { cn, apiFetch } from '../lib/utils';
 import { Input } from '../components/Input';
 
 export default function Register() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { businessLogo, businessName } = useSettings();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -185,11 +186,17 @@ export default function Register() {
       >
         <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors duration-500">
           <div className="p-6 pt-8 text-center">
-            <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-3 shadow-lg shadow-brand/20 rotate-3">
-              <UserPlus className="w-6 h-6" />
-            </div>
-            <h1 className="h1 mb-1">Create Account</h1>
-            <p className="body-text text-xs font-medium">Join Gryndee to manage your business</p>
+            {businessLogo ? (
+              <img src={businessLogo} alt={businessName} className="h-12 w-auto object-contain mx-auto mb-3" />
+            ) : (
+              <>
+                <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-3 shadow-lg shadow-brand/30 rotate-3">
+                  <UserPlus className="w-6 h-6" />
+                </div>
+                <h1 className="h1 mb-1">Create Account</h1>
+              </>
+            )}
+            <p className="body-text text-xs font-medium">Join {businessName} to manage your business</p>
           </div>
 
           {requiresVerification ? (

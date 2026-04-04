@@ -15,7 +15,7 @@ export default function AIAdvisor() {
   const navigate = useNavigate();
   const currency = settings?.currency || 'NGN';
   
-  const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial';
+  const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial' || user?.role === 'super_admin';
   const [showOverlay, setShowOverlay] = useState(true);
   
   // Pulse State
@@ -32,7 +32,6 @@ export default function AIAdvisor() {
   useEffect(() => {
     if (isPro) {
       fetchBusinessData();
-      generateForecast();
     }
   }, [isPro]);
 
@@ -55,12 +54,15 @@ export default function AIAdvisor() {
         throw new Error(`Batch fetch failed with status ${batchRes.status}`);
       }
 
-      const [sales, expenses, products] = await batchRes.json();
+      const results = await batchRes.json();
+      const sales = Array.isArray(results[0]) ? results[0] : [];
+      const expenses = Array.isArray(results[1]) ? results[1] : [];
+      const products = Array.isArray(results[2]) ? results[2] : [];
 
       const businessData = {
         sales: sales.slice(0, 50), // Last 50 sales
         expenses: expenses.slice(0, 50), // Last 50 expenses
-        inventory: products.map((p: any) => ({
+        inventory: products.slice(0, 50).map((p: any) => ({
           name: p.name,
           quantity: p.quantity,
           selling_price: p.selling_price,
@@ -70,6 +72,7 @@ export default function AIAdvisor() {
 
       setData(businessData);
       generateInsight(businessData);
+      generateForecast(businessData);
     } catch (error) {
       console.error('Error fetching business data:', error);
       setLoadingPulse(false);
@@ -120,7 +123,7 @@ export default function AIAdvisor() {
     }
   };
 
-  const generateForecast = async () => {
+  const generateForecast = async (businessData?: any) => {
     setLoadingForecast(true);
     try {
       const apiKey = await fetchGeminiKey();
@@ -132,15 +135,17 @@ export default function AIAdvisor() {
 
       const ai = new GoogleGenAI({ apiKey });
       
+      const forecastData = businessData || data;
+      
       const response = await retryWithBackoff(async () => {
         return await ai.models.generateContent({
           model: "gemini-3-flash-preview",
           contents: {
             parts: [
               { text: `Analyze this business data and provide a strategic forecast.
-              Sales Data: ${JSON.stringify(data?.sales || [])}
-              Inventory Data: ${JSON.stringify(data?.inventory || [])}
-              Expenses Data: ${JSON.stringify(data?.expenses || [])}
+              Sales Data: ${JSON.stringify(forecastData?.sales || [])}
+              Inventory Data: ${JSON.stringify(forecastData?.inventory || [])}
+              Expenses Data: ${JSON.stringify(forecastData?.expenses || [])}
               
               Return a JSON object with:
               - strategic_advice: A paragraph of actionable advice.

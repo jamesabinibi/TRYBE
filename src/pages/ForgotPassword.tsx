@@ -4,9 +4,11 @@ import { Lock, User, ArrowRight, ShieldCheck, Mail, Key, Eye, EyeOff } from 'luc
 import { motion } from 'motion/react';
 import { Input } from '../components/Input';
 import { apiFetch } from '../lib/utils';
+import { useSettings } from '../App';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
+  const { businessLogo, businessName } = useSettings();
   const [step, setStep] = useState(1); // 1: Email, 2: Code & New Password
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -76,10 +78,16 @@ export default function ForgotPassword() {
       >
         <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors duration-500">
           <div className="p-8 pt-12 text-center">
-            <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-brand/20 rotate-3">
-              <Key className="w-8 h-8" />
-            </div>
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-2">Reset Password</h1>
+            {businessLogo ? (
+              <img src={businessLogo} alt={businessName} className="h-16 w-auto object-contain mx-auto mb-6" />
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-brand/20 rotate-3">
+                  <Key className="w-8 h-8" />
+                </div>
+                <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-2">Reset Password</h1>
+              </>
+            )}
             <p className="text-zinc-600 dark:text-zinc-400 font-medium">
               {step === 1 ? "Enter your email to receive a code" : "Enter the code and your new password"}
             </p>

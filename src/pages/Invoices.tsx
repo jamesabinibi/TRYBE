@@ -687,7 +687,7 @@ const Invoices: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handlePreview(inv)}
-                        className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                        className="p-2.5 bg-brand/10 text-brand rounded-xl active:scale-95 transition-all"
                       >
                         <FileText className="w-4 h-4" />
                       </button>

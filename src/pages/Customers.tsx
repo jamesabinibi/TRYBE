@@ -17,8 +17,10 @@ import {
   Calendar,
   ChevronRight,
   ArrowLeft,
-  AlertCircle
+  AlertCircle,
+  ArrowUpRight
 } from 'lucide-react';
+import { cn } from '../lib/utils';
 import { useAuth, useSettings } from '../App';
 import { formatCurrency } from '../lib/utils';
 import { Input } from '../components/Input';
@@ -62,6 +64,40 @@ interface SaleHistory {
   created_at: string;
   sale_items: SaleItem[];
 }
+
+const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradient }: any) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    whileHover={{ y: -8 }}
+    className={cn(
+      "glass-card p-8 flex flex-col justify-between min-h-[200px] relative overflow-hidden group", 
+      className
+    )}
+  >
+    {gradient && (
+      <div className={cn("absolute -right-10 -top-10 w-48 h-48 blur-3xl opacity-30 group-hover:opacity-50 transition-opacity", gradient)} />
+    )}
+    <div className="relative z-10 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-auto">
+        {Icon && (
+          <div className={cn("w-14 h-14 rounded-[1.25rem] flex items-center justify-center shadow-xl", color)}>
+            <Icon className="w-7 h-7" />
+          </div>
+        )}
+        <div className="text-right">
+          <p className="label-text font-bold uppercase tracking-[0.2em] opacity-40 mb-1">{title}</p>
+          {subtitle && <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{subtitle}</p>}
+        </div>
+      </div>
+      <div className="mt-8">
+        <div className="text-4xl md:text-5xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
+          {value}
+        </div>
+      </div>
+    </div>
+  </motion.div>
+);
 
 export default function Customers() {
   const { user, fetchWithAuth } = useAuth();
@@ -285,22 +321,14 @@ export default function Customers() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div 
-          whileHover={{ y: -4 }}
-          className="glass-card p-8 group relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Users className="w-24 h-24" />
-          </div>
-          <p className="label-text mb-4">Total Customers</p>
-          <h3 className="h1">
-            {customers.length}
-          </h3>
-          <div className="mt-4 flex items-center gap-2 text-brand label-text">
-            <TrendingUp className="w-3.5 h-3.5" />
-            Active Growth
-          </div>
-        </motion.div>
+        <StatCard 
+          title="Total Customers" 
+          value={customers.length} 
+          color="vibrant-gradient text-white"
+          gradient="bg-brand"
+          icon={Users}
+          subtitle="Active Growth"
+        />
       </div>
 
       <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden">
@@ -393,7 +421,7 @@ export default function Customers() {
           {filteredCustomers.length === 0 && (
             <div className="col-span-full py-20 text-center">
               <div className="flex flex-col items-center gap-3">
-                <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl flex items-center justify-center text-zinc-300">
+                <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl flex items-center justify-center text-brand/30">
                   <Users className="w-8 h-8" />
                 </div>
                 <p className="text-zinc-400 font-medium">No customers found</p>

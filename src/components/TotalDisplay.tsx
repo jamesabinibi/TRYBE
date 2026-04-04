@@ -32,7 +32,7 @@ export const TotalDisplay: React.FC<TotalDisplayProps> = ({
     )}>
       <div className="flex items-center gap-4">
         {icon && (
-          <div className={cn("p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl", iconClassName)}>
+          <div className={cn("p-3 bg-brand/10 text-brand rounded-2xl", iconClassName)}>
             {icon}
           </div>
         )}

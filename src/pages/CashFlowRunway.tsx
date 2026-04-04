@@ -180,7 +180,7 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
           className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-red-50 dark:bg-red-900/10 rounded-2xl text-red-600 dark:text-red-400">
+            <div className="p-3 bg-brand/10 rounded-2xl text-brand">
               <TrendingDown className="w-6 h-6" />
             </div>
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Avg. Monthly Burn</span>
@@ -228,8 +228,8 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
             </div>
             <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Survival Runway</span>
           </div>
-          <h3 className="text-4xl font-bold">
-            {runwayMonths === Infinity ? '∞' : runwayMonths.toFixed(1)} <span className="text-lg">Months</span>
+          <h3 className="text-4xl font-bold text-white">
+            {runwayMonths === Infinity ? '∞' : runwayMonths.toFixed(1)} <span className="text-lg opacity-80">Months</span>
           </h3>
           <p className="text-xs font-medium mt-2 opacity-90">
             {runwayMonths === Infinity 
@@ -258,8 +258,8 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ff4d00" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#ff4d00" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="var(--brand)" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="var(--brand)" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
@@ -289,7 +289,7 @@ export default function CashFlowRunway({ hideHeader = false }: { hideHeader?: bo
                   fontWeight: '700'
                 }}
               />
-              <Area type="monotone" dataKey="revenue" stroke="#ff4d00" fillOpacity={1} fill="url(#colorRev)" strokeWidth={3} />
+              <Area type="monotone" dataKey="revenue" stroke="var(--brand)" fillOpacity={1} fill="url(#colorRev)" strokeWidth={3} />
               <Area type="monotone" dataKey="expenses" stroke="#ef4444" fillOpacity={1} fill="url(#colorExp)" strokeWidth={3} />
             </AreaChart>
           </ResponsiveContainer>

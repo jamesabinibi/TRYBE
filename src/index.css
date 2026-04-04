@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -6,15 +6,17 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-brand: var(--brand-color, #ff4d00);
-  --color-brand-light: var(--brand-color-light, #ff4d0033);
-  --color-brand-muted: var(--brand-color-muted, #ff4d001a);
-  --color-brand-hover: var(--brand-color-hover, #cc3d00);
+  --color-brand: var(--brand-color, #4facfe);
+  --color-brand-light: var(--brand-color-light, #4facfe33);
+  --color-brand-muted: var(--brand-color-muted, #4facfe1a);
+  --color-brand-hover: var(--brand-color-hover, #00f2fe);
 
-  --radius-card: 16px;
+  --radius-card: 32px;
+  --radius-xl: 40px;
+  --radius-2xl: 48px;
 }
 
 @layer base {
@@ -23,44 +25,57 @@
     touch-action: manipulation;
   }
   body {
-    @apply font-sans text-zinc-900 dark:text-zinc-100 antialiased bg-zinc-50 dark:bg-[#050505];
+    @apply font-sans text-zinc-900 dark:text-zinc-100 antialiased;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background-attachment: fixed;
   }
   
-  h1, .h1 { @apply font-display text-2xl sm:text-3xl font-medium tracking-tight text-zinc-900 dark:text-white not-italic; }
-  h2, .h2 { @apply font-display text-lg sm:text-xl font-medium tracking-tight text-zinc-900 dark:text-white not-italic; }
-  h3, .h3 { @apply font-display text-base font-medium tracking-tight text-zinc-900 dark:text-white not-italic; }
+  h1, .h1 { @apply font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-zinc-900 dark:text-white not-italic leading-[1.1]; }
+  h2, .h2 { @apply font-display text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white not-italic leading-tight; }
+  h3, .h3 { @apply font-display text-lg font-bold tracking-tight text-zinc-900 dark:text-white not-italic; }
   
-  .card-number { @apply font-display text-xl sm:text-2xl font-medium tracking-tight; }
-  .body-text { @apply text-sm leading-relaxed font-light text-zinc-600 dark:text-zinc-400; }
-  .label-text { @apply text-[10px] font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-400; }
-  .btn-destructive { @apply px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium transition-all hover:bg-red-700 active:scale-95 flex items-center justify-center gap-2 shadow-sm; }
+  .card-number { @apply font-display text-2xl sm:text-3xl font-bold tracking-tight; }
+  .body-text { @apply text-base leading-relaxed font-medium text-zinc-600 dark:text-zinc-400; }
+  .label-text { @apply text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400; }
 }
 
 /* Standard UI Components */
 .btn-primary {
-  @apply px-4 py-2 bg-brand text-white rounded-xl text-sm font-medium transition-all hover:opacity-90 active:scale-95 shadow-sm flex items-center justify-center gap-2;
+  @apply px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-sm font-bold transition-all hover:opacity-90 active:scale-95 shadow-xl shadow-black/10 flex items-center justify-center gap-2;
 }
 
 .btn-secondary {
-  @apply px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl text-sm font-medium transition-all hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 flex items-center justify-center gap-2;
-}
-
-.btn-ghost {
-  @apply px-4 py-2 text-zinc-600 dark:text-zinc-400 rounded-xl text-sm font-medium transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 flex items-center justify-center gap-2;
+  @apply px-6 py-3 bg-white/80 dark:bg-white/10 backdrop-blur-md border border-white/40 dark:border-white/5 text-zinc-900 dark:text-white rounded-2xl text-sm font-bold transition-all hover:bg-white dark:hover:bg-white/20 active:scale-95 flex items-center justify-center gap-2;
 }
 
 .glass-card {
-  @apply bg-white dark:bg-[#0A0A0B] border border-zinc-200/50 dark:border-white/[0.04] rounded-2xl shadow-sm overflow-hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  @apply bg-white/90 dark:bg-black/40 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[2.5rem] shadow-2xl shadow-black/5 overflow-hidden;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
 }
 
 .glass-card-hover {
-  @apply hover:shadow-md hover:border-zinc-300/50 dark:hover:border-white/[0.08];
+  @apply hover:shadow-brand/10 hover:border-brand/20 hover:-translate-y-1;
+}
+
+.vibrant-gradient {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.vibrant-gradient-purple {
+  background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+}
+
+.vibrant-gradient-pink {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-brand to-brand-hover;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -68,52 +83,23 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-zinc-300 dark:bg-white/20 rounded-full;
+  @apply bg-white/20 rounded-full backdrop-blur-md;
 }
 
-/* Fix for nested scrollbars and mobile layout */
-* {
-  -webkit-tap-highlight-color: transparent;
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
 }
 
-.main-content {
-  position: relative;
-  min-height: calc(100vh - 64px);
-  min-height: calc(100dvh - 64px);
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }
 
-@media (max-width: 1024px) {
-  .main-content {
-    padding: 1rem !important;
-  }
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
 }
 
-@media (max-width: 640px) {
-  .glass-card {
-    @apply p-4;
-  }
-  
-  .h-screen {
-    height: 100dvh;
-  }
-}
-
-/* Hide scrollbars but keep functionality if needed */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Increase text contrast in light mode */
-html:not(.dark) .text-zinc-500 {
-  color: #52525b !important; /* zinc-600 */
-}
-html:not(.dark) .text-zinc-600 {
-  color: #3f3f46 !important; /* zinc-700 */
-}
-html:not(.dark) .text-zinc-400 {
-  color: #71717a !important; /* zinc-500 */
+.animate-pulse-soft {
+  animation: pulse-soft 4s ease-in-out infinite;
 }

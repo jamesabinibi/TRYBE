@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../App';
+import { useAuth, useSettings } from '../App';
 import { Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Input } from '../components/Input';
@@ -8,6 +8,7 @@ import { apiFetch } from '../lib/utils';
 
 export default function Login() {
   const { login } = useAuth();
+  const { businessLogo, businessName } = useSettings();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -63,10 +64,16 @@ export default function Login() {
       >
         <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors duration-500">
           <div className="p-6 pt-8 text-center">
-            <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-3 shadow-lg shadow-brand/30 rotate-3">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <h1 className="h1 mb-1">Gryndee</h1>
+            {businessLogo ? (
+              <img src={businessLogo} alt={businessName} className="h-12 w-auto object-contain mx-auto mb-3" />
+            ) : (
+              <>
+                <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-3 shadow-lg shadow-brand/30 rotate-3">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <h1 className="h1 mb-1">{businessName}</h1>
+              </>
+            )}
             <p className="body-text text-xs font-medium">Sign in to manage your business</p>
           </div>
 

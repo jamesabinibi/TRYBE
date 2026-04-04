@@ -24,7 +24,8 @@ import {
   ShieldCheck,
   Crown,
   FileText,
-  Globe
+  Globe,
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from './types';
@@ -49,7 +50,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import PublicInvoice from './pages/PublicInvoice';
 import PublicPage from './pages/PublicPage';
-import { cn, apiFetch } from './lib/utils';
+import { cn, apiFetch, useQuery } from './lib/utils';
 import NotificationCenter from './components/NotificationCenter';
 import Walkthrough from './components/Walkthrough';
 import ChatSupport from './components/ChatSupport';
@@ -91,6 +92,10 @@ interface Settings {
 interface SettingsContextType {
   settings: Settings | null;
   refreshSettings: () => Promise<void>;
+  brandColor: string;
+  businessLogo: string | null;
+  businessName: string;
+  landingConfig: any;
 }
 
 interface ThemeContextType {
@@ -122,7 +127,7 @@ export const useTheme = () => {
 
 const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { user, logout } = useAuth();
-  const { settings } = useSettings();
+  const { settings, brandColor, businessLogo, businessName, landingConfig } = useSettings();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const location = useLocation();
   
@@ -141,8 +146,6 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     ...(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data) ? [{ icon: SettingsIcon, label: 'Settings', path: '/settings' }] : []),
   ];
 
-  const brandColor = '#ff4d00';
-
   return (
     <>
       <AnimatePresence>
@@ -157,72 +160,62 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         )}
       </AnimatePresence>
 
-      <aside className={cn(
-        "fixed inset-y-0 left-0 w-64 flex flex-col z-50 transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
-        isDarkMode ? "bg-[#0A0A0B] text-zinc-400 border-r border-white/[0.04]" : "bg-white text-zinc-500 border-r border-zinc-200",
-        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )}>
-        <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            {settings?.logo_url ? (
-              <img 
-                src={settings.logo_url} 
-                alt={settings.business_name} 
-                className="h-9 w-auto max-w-full object-contain object-left"
-                referrerPolicy="no-referrer"
-              />
+      <motion.aside
+        initial={false}
+        animate={{ 
+          x: (isOpen || (typeof window !== 'undefined' && window.innerWidth >= 1024)) ? 0 : -320,
+        }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className={cn(
+          "fixed inset-y-6 left-6 z-50 w-72 glass-card flex flex-col transition-all duration-500 ease-in-out",
+          !isOpen && "max-lg:-translate-x-full"
+        )}
+      >
+        {/* Logo Section */}
+        <div className="h-28 px-8 flex items-center gap-4">
+          <div className="w-14 h-14 vibrant-gradient rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-brand/20">
+            {businessLogo || landingConfig?.logo?.url ? (
+              <img src={businessLogo || landingConfig?.logo?.url} alt="" className="w-full h-full object-contain rounded-[1.25rem]" />
             ) : (
-              <>
-                <div 
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-medium text-sm shadow-lg shrink-0"
-                  style={{ backgroundColor: brandColor }}
-                >
-                  {settings?.business_name?.charAt(0) || 'S'}
-                </div>
-                <span className={cn(
-                  "font-display font-medium text-lg tracking-tight flex items-center gap-1.5 truncate",
-                  isDarkMode ? "text-white" : "text-zinc-900"
-                )}>
-                  {settings?.business_name || 'Gryndee'}
-                  {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial') && (
-                    <ShieldCheck className="w-4 h-4 text-brand fill-brand/10 shrink-0" />
-                  )}
-                </span>
-              </>
+              <Zap className="w-7 h-7 text-white" />
             )}
           </div>
-          <button onClick={onClose} className="lg:hidden p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0 ml-2">
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex flex-col">
+            <span className="text-xl font-display font-bold tracking-tight text-zinc-900 dark:text-white truncate max-w-[140px]">
+              {businessName}
+            </span>
+            <span className="text-[10px] font-bold text-brand uppercase tracking-[0.2em]">Business Hub</span>
+          </div>
         </div>
         
-        <nav id="sidebar-nav" className="flex-1 px-4 py-2 space-y-1">
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto no-scrollbar">
+          <div className="px-4 mb-6">
+            <p className="label-text opacity-30">Main Menu</p>
+          </div>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
-            const navId = `nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`;
             return (
               <Link
                 key={item.path}
-                id={navId}
                 to={item.path}
-                onClick={() => {
-                  if (window.innerWidth < 1024) onClose();
-                }}
+                onClick={() => window.innerWidth < 1024 && onClose()}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative",
+                  "group flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 relative overflow-hidden",
                   isActive 
-                    ? isDarkMode ? "text-white" : "text-zinc-900"
-                    : "hover:bg-zinc-100 dark:hover:bg-white/[0.03] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-2xl shadow-black/10" 
+                    : "text-zinc-500 dark:text-zinc-400 hover:bg-white dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white"
                 )}
               >
-                <item.icon className={cn("w-4.5 h-4.5 transition-colors", isActive ? "text-brand" : "text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300")} />
-                <span className="text-sm font-medium tracking-tight">{item.label}</span>
+                <item.icon className={cn(
+                  "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
+                  isActive ? "text-white dark:text-zinc-900" : "text-zinc-400 group-hover:text-brand"
+                )} />
+                <span className="text-sm font-bold tracking-tight">{item.label}</span>
                 {isActive && (
                   <motion.div 
-                    layoutId="active-nav-glow"
-                    className="absolute inset-0 bg-brand/5 dark:bg-brand/10 rounded-xl -z-10"
-                    initial={false}
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    layoutId="active-pill"
+                    className="absolute left-0 w-1.5 h-6 bg-brand rounded-r-full"
                   />
                 )}
               </Link>
@@ -230,52 +223,47 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
           })}
         </nav>
 
-        <div className="p-4 mt-auto">
-          <div className={cn(
-            "rounded-2xl p-4 border",
-            isDarkMode ? "bg-white/[0.02] border-white/[0.04]" : "bg-zinc-50 border-zinc-100"
-          )}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-medium text-sm">
+        {/* User Profile Section */}
+        <div className="p-6 border-t border-zinc-200/50 dark:border-white/5">
+          <div className="p-6 bg-zinc-50 dark:bg-white/5 rounded-[2rem] space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-brand/10 flex items-center justify-center text-brand font-bold text-lg">
                 {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={cn("text-sm font-medium truncate", isDarkMode ? "text-white" : "text-zinc-900")}>
-                  {user?.name}
-                </p>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium">{user?.role}</p>
+                <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{user?.name}</p>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest truncate">{user?.role}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <button 
                 onClick={toggleDarkMode}
-                className="flex-1 flex items-center justify-center p-2.5 rounded-xl bg-zinc-100 dark:bg-white/[0.05] text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                className="flex-1 h-12 flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-brand transition-all active:scale-95 shadow-sm"
               >
-                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
               <button 
                 onClick={logout}
-                className="flex-1 flex items-center justify-center p-2.5 rounded-xl bg-zinc-100 dark:bg-white/[0.05] text-zinc-500 hover:text-red-500 transition-colors"
+                className="flex-1 h-12 flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-2xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all active:scale-95 shadow-sm"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
           </div>
         </div>
-      </aside>
+      </motion.aside>
+
     </>
   );
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
-  const { settings } = useSettings();
+  const { settings, brandColor } = useSettings();
   const { isDarkMode } = useTheme();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { searchQuery, setSearchQuery } = useSearch();
-
-  const brandColor = '#ff4d00';
 
   return (
     <div className={cn(
@@ -284,68 +272,39 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     )} style={{ '--brand-color': brandColor } as any}>
       {user && <Walkthrough />}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <main className="flex-1 flex flex-col min-w-0 relative">
-        <header id="main-header" className={cn(
-          "h-16 border-b flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 transition-colors duration-300",
-          isDarkMode 
-            ? "bg-[#050505]/80 backdrop-blur-md border-white/[0.04]" 
-            : "bg-white/80 backdrop-blur-md border-zinc-100"
-        )}>
-          <div className="flex items-center gap-4 flex-1">
+      <main className="flex-1 flex flex-col min-w-0 relative lg:pl-80">
+        <header id="main-header" className="h-28 flex items-center justify-between px-8 sticky top-0 z-30 transition-all duration-300">
+          <div className="flex items-center gap-6 flex-1">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/[0.05] rounded-lg transition-colors"
+              className="lg:hidden w-12 h-12 flex items-center justify-center bg-white/80 dark:bg-white/5 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-2xl text-zinc-500 hover:text-brand transition-all active:scale-95 shadow-lg"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-6 h-6" />
             </button>
-            <div className="relative w-full max-w-md hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-              <Input 
+            <div className="relative w-full max-w-md hidden md:block group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-brand transition-colors" />
+              <input 
                 type="text" 
                 placeholder="Search anything..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="w-full h-14 pl-12 pr-6 bg-white/80 dark:bg-white/5 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-2xl text-sm font-bold text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-brand/20 transition-all shadow-lg"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-4">
             {user && <NotificationCenter userId={user.id} />}
             
             <Link 
               to={location.pathname.startsWith('/products') ? "/products?action=add" : "/sales"}
-              className="btn-primary"
+              className="h-14 px-8 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-sm font-bold shadow-2xl shadow-black/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               <span className="hidden sm:inline">
                 {location.pathname.startsWith('/products') ? "Add Product" : "New Transaction"}
               </span>
             </Link>
-
-            {user?.role === 'admin' || user?.role === 'super_admin' ? (
-              <Link 
-                to="/settings"
-                className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05] hover:bg-zinc-300 dark:hover:bg-white/[0.1] transition-colors cursor-pointer relative"
-                title="Settings"
-              >
-                {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
-                {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
-                  <div className="absolute -top-1 -right-1 bg-white dark:bg-[#050505] rounded-full p-0.5">
-                    <ShieldCheck className="w-3 h-3 text-brand fill-brand/10" />
-                  </div>
-                )}
-              </Link>
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/[0.05] flex items-center justify-center text-[11px] font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-white/[0.05] relative">
-                {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
-                {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
-                  <div className="absolute -top-1 -right-1 bg-white dark:bg-[#050505] rounded-full p-0.5">
-                    <ShieldCheck className="w-3 h-3 text-brand fill-brand/10" />
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </header>
 
@@ -360,7 +319,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function App() {
-  const [settings, setSettings] = useState<Settings | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
@@ -393,54 +351,50 @@ export default function App() {
     }
   });
 
-  const fetchSettings = async () => {
-    if (!user) return;
-    try {
-      const res = await fetchWithAuth('/api/settings');
-      if (res.ok) {
-        let data = await res.json();
-        
-        // 1. Decode branding from business_name if it's encoded (Server-side fallback)
-        if (data.business_name && data.business_name.startsWith('[')) {
-          const match = data.business_name.match(/^\[(#?[a-fA-F0-9]{3,6})\]\s*(.*)/);
-          if (match) {
-            data.brand_color = match[1];
-            data.business_name = match[2];
-          }
-        } else if (data.business_name && data.business_name.startsWith('{"')) {
-          try {
-            const branding = JSON.parse(data.business_name);
-            data.business_name = branding.name;
-            data.brand_color = data.brand_color || branding.color;
-            data.logo_url = data.logo_url || branding.logo;
-          } catch (e) {}
-        }
-
-        // 2. Update settings state
-        setSettings(data);
+  const { data: settings, refetch: refreshSettings } = useQuery('app_settings', async () => {
+    const res = await fetchWithAuth('/api/settings');
+    if (!res.ok) throw new Error('Failed to fetch settings');
+    let data = await res.json();
+    
+    // 1. Decode branding from business_name if it's encoded (Server-side fallback)
+    if (data.business_name && data.business_name.startsWith('[')) {
+      const match = data.business_name.match(/^\[(#?[a-fA-F0-9]{3,6})\]\s*(.*)/);
+      if (match) {
+        data.brand_color = match[1];
+        data.business_name = match[2];
       }
-    } catch (err) {
-      console.error('Failed to fetch settings:', err);
+    } else if (data.business_name && data.business_name.startsWith('{"')) {
+      try {
+        const branding = JSON.parse(data.business_name);
+        data.business_name = branding.name;
+        data.brand_color = data.brand_color || branding.color;
+        data.logo_url = data.logo_url || branding.logo;
+      } catch (e) {}
     }
-  };
+    return data;
+  }, {
+    persist: true,
+    enabled: !!user
+  });
+
+  const { data: landingConfig } = useQuery('landing-config', async () => {
+    const res = await apiFetch('/api/landing-config');
+    if (!res.ok) return null;
+    return res.json();
+  }, { persist: true });
+
+  const brandColor = settings?.brand_color || landingConfig?.brandColor || '#9c4608';
+  const businessLogo = settings?.logo_url || landingConfig?.logo?.url || landingConfig?.logo?.favicon;
+  const businessName = settings?.business_name || landingConfig?.logo?.text || 'Gryndee';
 
   useEffect(() => {
-    fetchSettings();
-  }, [user]);
-
-  useEffect(() => {
-    console.log('[INIT] App component mounted');
-    console.log('[INIT] Current user:', user?.id || 'Guest');
-    console.log('[INIT] Current settings:', settings?.business_name || 'Not loaded');
-    
     const root = document.documentElement;
-    const color = '#ff4d00';
-    
-    root.style.setProperty('--brand-color', color);
-    root.style.setProperty('--brand-color-hover', `${color}dd`);
-    root.style.setProperty('--brand-color-muted', `${color}1a`);
-    root.style.setProperty('--brand-color-light', `${color}33`);
-  }, []);
+    root.style.setProperty('--brand', brandColor);
+    root.style.setProperty('--brand-color', brandColor);
+    root.style.setProperty('--brand-color-hover', `${brandColor}dd`);
+    root.style.setProperty('--brand-color-muted', `${brandColor}1a`);
+    root.style.setProperty('--brand-color-light', `${brandColor}33`);
+  }, [brandColor]);
 
   useEffect(() => {
     if (settings?.business_name) {
@@ -525,7 +479,14 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, refreshUser, fetchWithAuth }}>
-      <SettingsContext.Provider value={{ settings, refreshSettings: fetchSettings }}>
+      <SettingsContext.Provider value={{ 
+        settings: settings || null, 
+        refreshSettings: async () => { await refreshSettings(); },
+        brandColor,
+        businessLogo,
+        businessName,
+        landingConfig
+      }}>
         <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
           <SearchProvider>
             <Toaster position="top-right" richColors />

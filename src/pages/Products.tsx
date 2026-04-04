@@ -20,7 +20,7 @@ import {
   Share2
 } from 'lucide-react';
 import { Product, Category, Service } from '../types';
-import { formatCurrency, cn, NUMBER_STYLE } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE, useQuery } from '../lib/utils';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { NumberDisplay } from '../components/NumberDisplay';
@@ -77,6 +77,40 @@ const getInitialProductState = () => ({
   images: []
 });
 
+const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradient }: any) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    whileHover={{ y: -8 }}
+    className={cn(
+      "glass-card p-8 flex flex-col justify-between min-h-[200px] relative overflow-hidden group", 
+      className
+    )}
+  >
+    {gradient && (
+      <div className={cn("absolute -right-10 -top-10 w-48 h-48 blur-3xl opacity-30 group-hover:opacity-50 transition-opacity", gradient)} />
+    )}
+    <div className="relative z-10 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-auto">
+        {Icon && (
+          <div className={cn("w-14 h-14 rounded-[1.25rem] flex items-center justify-center shadow-xl", color)}>
+            <Icon className="w-7 h-7" />
+          </div>
+        )}
+        <div className="text-right">
+          <p className="label-text font-bold uppercase tracking-[0.2em] opacity-40 mb-1">{title}</p>
+          {subtitle && <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{subtitle}</p>}
+        </div>
+      </div>
+      <div className="mt-8">
+        <div className="text-4xl md:text-5xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
+          {value}
+        </div>
+      </div>
+    </div>
+  </motion.div>
+);
+
 export default function Products() {
   const { user, fetchWithAuth } = useAuth();
   const { settings } = useSettings();
@@ -84,10 +118,33 @@ export default function Products() {
   const canManageProducts = user?.role === 'admin' || user?.role === 'manager' || (user?.role === 'staff' && user?.permissions?.can_manage_products);
   const currency = settings?.currency || 'NGN';
   const [searchParams, setSearchParams] = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [services, setServices] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [categories, setCategories] = useState<Category[]>([]);
+  
+  const { data: inventoryData, isLoading, refetch: refetchInventory } = useQuery('inventory_data', async () => {
+    const batchRes = await fetchWithAuth('/api/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoints: ['/api/products', '/api/services', '/api/categories']
+      })
+    });
+    if (!batchRes.ok) {
+      throw new Error(`Batch fetch failed with status ${batchRes.status}`);
+    }
+    const [productsData, servicesData, categoriesData] = await batchRes.json();
+    return {
+      products: Array.isArray(productsData) ? productsData : [],
+      services: Array.isArray(servicesData) ? servicesData : [],
+      categories: Array.isArray(categoriesData) ? categoriesData : []
+    };
+  }, {
+    persist: true,
+    enabled: !!user
+  });
+
+  const products = inventoryData?.products || [];
+  const services = inventoryData?.services || [];
+  const categories = inventoryData?.categories || [];
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
@@ -148,83 +205,9 @@ export default function Products() {
 
   const totalQuantity = newProduct.variants.reduce((acc, v) => acc + (Number(v.quantity) || 0), 0);
 
-  useEffect(() => {
-    if (user) {
-      const loadInitialData = async () => {
-        try {
-          const batchRes = await fetchWithAuth('/api/batch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/categories']
-            })
-          });
-          if (!batchRes.ok) {
-            throw new Error(`Batch fetch failed with status ${batchRes.status}`);
-          }
-          const [productsData, servicesData, categoriesData] = await batchRes.json();
-          setProducts(Array.isArray(productsData) ? productsData : []);
-          setServices(Array.isArray(servicesData) ? servicesData : []);
-          setCategories(Array.isArray(categoriesData) ? categoriesData : []);
-          
-          // Load images in the background
-          fetchProducts();
-        } catch (err) {
-          console.error("Batch fetch failed", err);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      loadInitialData();
-    }
-  }, [user]);
-
-  const fetchServices = async () => {
-    try {
-      const res = await fetchWithAuth('/api/services');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setServices(data);
-      } else {
-        setServices([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch services:', err);
-      setServices([]);
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const res = await fetchWithAuth('/api/products');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setProducts(data);
-      } else {
-        console.error("Failed to fetch products:", data);
-        setProducts([]);
-      }
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      setProducts([]);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await fetchWithAuth('/api/categories');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setCategories(data);
-      } else {
-        console.error("Failed to fetch categories:", data);
-        setCategories([]);
-      }
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-      setCategories([]);
-    }
-  };
+  const fetchServices = () => refetchInventory();
+  const fetchProducts = () => refetchInventory();
+  const fetchCategories = () => refetchInventory();
 
   const handleShareWhatsApp = (product: Product) => {
     const message = `*${product.name}*\n${product.description || ''}\n\nPrice: ${formatCurrency(product.selling_price, currency)}\n\nCheck it out on our store!`;
@@ -541,33 +524,21 @@ export default function Products() {
         user?.role === 'staff' ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
       )}>
         {user?.role !== 'staff' && (
-          <motion.div 
-            whileHover={{ y: -4 }}
-            className="glass-card p-8 group relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Package className="w-24 h-24" />
-            </div>
-            <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Stock value @ cost price</p>
-          <h3 className="h1">
-              <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
-              {totalCostValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </h3>
-          </motion.div>
+          <StatCard 
+            title="Stock value @ cost price" 
+            value={<><span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>{totalCostValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>} 
+            color="vibrant-gradient text-white"
+            gradient="bg-brand"
+            icon={Package}
+          />
         )}
-        <motion.div 
-          whileHover={{ y: -4 }}
-          className="glass-card p-8 group relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-            <TrendingUp className="w-24 h-24" />
-          </div>
-          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] mb-4">Stock value @ selling price</p>
-          <h3 className="h1">
-            <span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>
-            {totalSellingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </h3>
-        </motion.div>
+        <StatCard 
+          title="Stock value @ selling price" 
+          value={<><span className="text-zinc-400 dark:text-zinc-600 mr-1 font-mono text-2xl">{currency === 'NGN' ? '₦' : currency}</span>{totalSellingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>} 
+          color="vibrant-gradient-purple text-white"
+          gradient="bg-purple-500"
+          icon={TrendingUp}
+        />
       </div>
 
       <div className="glass-card p-0 overflow-hidden">
@@ -678,13 +649,13 @@ export default function Products() {
                               item.images && item.images.length > 0 ? (
                                 <img src={getOptimizedImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
-                                <Package className="w-6 h-6" />
+                                <Package className="w-6 h-6 text-brand" />
                               )
                             ) : (
                               item.image_url ? (
                                 <img src={getOptimizedImageUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
-                                <Briefcase className="w-6 h-6" />
+                                <Briefcase className="w-6 h-6 text-brand" />
                               )
                             )}
                           </div>
@@ -834,7 +805,7 @@ export default function Products() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Package className="w-16 h-16 text-zinc-300 dark:text-zinc-700 mb-4" />
+            <Package className="w-16 h-16 text-brand/30 mb-4" />
             <h3 className="text-lg font-bold text-zinc-900 dark:text-white">No {activeSubTab} found</h3>
             <p className="text-zinc-500 dark:text-zinc-400 mt-1">Try adjusting your search or filters.</p>
           </div>

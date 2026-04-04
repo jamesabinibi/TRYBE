@@ -885,7 +885,7 @@ NOTIFY pgrst, 'reload schema';
         const hasKey = await aistudio.hasSelectedApiKey();
         if (hasKey) {
           // Key is selected but might not be in process.env yet
-          apiKey = process.env.API_KEY;
+          apiKey = (window as any).process?.env?.API_KEY || process.env.API_KEY;
         }
       }
 

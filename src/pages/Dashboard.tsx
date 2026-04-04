@@ -35,7 +35,7 @@ import {
   Bar,
   Cell
 } from 'recharts';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, cn, useQuery } from '../lib/utils';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { NumberDisplay } from '../components/NumberDisplay';
 import { TotalDisplay } from '../components/TotalDisplay';
@@ -57,38 +57,54 @@ const QuickAction = ({ to, icon: Icon, label, color, className, onClick }: any) 
       to={to}
       onClick={onClick ? handleClick : undefined}
       className={cn(
-        "flex items-center p-2 rounded-2xl border transition-all duration-300 active:scale-95 group flex-none overflow-hidden h-11 cursor-pointer",
-        color,
+        "flex flex-col items-start p-6 rounded-[2rem] bg-white dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 transition-all duration-300 active:scale-95 group hover:shadow-2xl hover:shadow-brand/20 hover:-translate-y-1",
         className
       )}
     >
-      <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:rotate-12" title={label}>
-        <Icon className="w-4 h-4" />
+      <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:rotate-12 shadow-lg mb-4", color)}>
+        <Icon className="w-6 h-6" />
       </div>
-      <div className="ml-3">
-        <span className="label-text whitespace-nowrap pr-2">
+      <div className="space-y-1">
+        <span className="text-sm font-bold tracking-tight text-zinc-900 dark:text-white block">
           {label}
         </span>
+        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Quick Action</span>
       </div>
     </Link>
   );
 };
 
-const StatCard = ({ title, value, icon: Icon, color, subtitle, className }: any) => (
+const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradient }: any) => (
   <motion.div 
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    whileHover={{ y: -4 }}
-    className={cn("glass-card p-6 flex flex-col justify-between min-h-[140px]", className)}
+    whileHover={{ y: -8 }}
+    className={cn(
+      "glass-card p-8 flex flex-col justify-between min-h-[200px] relative overflow-hidden group", 
+      className
+    )}
   >
-    <TotalDisplay 
-      label={title} 
-      value={value} 
-      icon={Icon ? <Icon className="w-5 h-5" /> : undefined}
-      valueClassName={cn("h2", color)}
-      labelClassName="label-text"
-    />
-    {subtitle && <p className="body-text opacity-70 mt-2">{subtitle}</p>}
+    {gradient && (
+      <div className={cn("absolute -right-10 -top-10 w-48 h-48 blur-3xl opacity-30 group-hover:opacity-50 transition-opacity", gradient)} />
+    )}
+    <div className="relative z-10 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-auto">
+        {Icon && (
+          <div className={cn("w-14 h-14 rounded-[1.25rem] flex items-center justify-center shadow-xl", color)}>
+            <Icon className="w-7 h-7" />
+          </div>
+        )}
+        <div className="text-right">
+          <p className="label-text font-bold uppercase tracking-[0.2em] opacity-40 mb-1">{title}</p>
+          {subtitle && <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{subtitle}</p>}
+        </div>
+      </div>
+      <div className="mt-8">
+        <div className="text-4xl md:text-5xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
+          {value}
+        </div>
+      </div>
+    </div>
   </motion.div>
 );
 
@@ -117,70 +133,68 @@ export default function Dashboard() {
       </div>
     );
   }
-  const brandColor = '#ff4d00';
+  const brandColor = '#4facfe';
   const currency = globalSettings?.currency || 'NGN';
-  const [summary, setSummary] = useState<any>(null);
-  const [trends, setTrends] = useState<any[]>([]);
-  const [recentSales, setRecentSales] = useState<any[]>([]);
-  const [staffPerformance, setStaffPerformance] = useState<any[]>([]);
-  const [topSales, setTopSales] = useState<any[]>([]);
-  const [topExpenses, setTopExpenses] = useState<any[]>([]);
-  const [lowStockProducts, setLowStockProducts] = useState<any[]>([]);
   const [isForecasting, setIsForecasting] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const batchRes = await fetchWithAuth('/api/batch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            endpoints: [
-              '/api/analytics/summary',
-              '/api/analytics/trends',
-              '/api/sales',
-              '/api/analytics/staff-performance',
-              '/api/analytics/top-sales',
-              '/api/analytics/top-expenses',
-              '/api/products?exclude_images=true'
-            ]
-          })
-        });
+  const { data: dashboardData, isLoading } = useQuery('dashboard_data', async () => {
+    const batchRes = await fetchWithAuth('/api/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoints: [
+          '/api/analytics/summary',
+          '/api/analytics/trends',
+          '/api/sales',
+          '/api/analytics/staff-performance',
+          '/api/analytics/top-sales',
+          '/api/analytics/top-expenses',
+          '/api/products?exclude_images=true'
+        ]
+      })
+    });
 
-        if (!batchRes.ok) {
-          throw new Error(`Batch fetch failed with status ${batchRes.status}`);
-        }
+    if (!batchRes.ok) {
+      throw new Error(`Batch fetch failed with status ${batchRes.status}`);
+    }
 
-        const [sumData, trendData, salesData, staffData, topSalesData, topExpData, productsData] = await batchRes.json();
+    const [sumData, trendData, salesData, staffData, topSalesData, topExpData, productsData] = await batchRes.json();
+    
+    // Filter for low stock products
+    const globalThreshold = Number(globalSettings?.low_stock_threshold) || 5;
+    const lowStock = (productsData || []).filter((p: any) => {
+      return p.variants?.some((v: any) => {
+        const qty = Number(v.quantity) || 0;
+        const threshold = v.low_stock_threshold !== null && v.low_stock_threshold !== undefined 
+          ? Number(v.low_stock_threshold) 
+          : globalThreshold;
+        return qty <= threshold;
+      });
+    });
 
-        setSummary(sumData || {});
-        setTrends(Array.isArray(trendData) ? trendData : []);
-        setRecentSales(Array.isArray(salesData) ? salesData.slice(0, 5) : []);
-        setStaffPerformance(Array.isArray(staffData) ? staffData : []);
-        setTopSales(Array.isArray(topSalesData) ? topSalesData : []);
-        setTopExpenses(Array.isArray(topExpData) ? topExpData : []);
-
-        // Filter for low stock products
-        const lowStock = productsData.filter((p: any) => {
-          const globalThreshold = Number(globalSettings?.low_stock_threshold) || 5;
-          return p.variants?.some((v: any) => {
-            const qty = Number(v.quantity) || 0;
-            const threshold = v.low_stock_threshold !== null && v.low_stock_threshold !== undefined 
-              ? Number(v.low_stock_threshold) 
-              : globalThreshold;
-            return qty <= threshold;
-          });
-        });
-        setLowStockProducts(lowStock);
-      } catch (err) {
-        console.error('Failed to fetch dashboard data', err);
-        setSummary({});
-      }
+    return {
+      summary: sumData || {},
+      trends: Array.isArray(trendData) ? trendData : [],
+      recentSales: Array.isArray(salesData) ? salesData.slice(0, 5) : [],
+      staffPerformance: Array.isArray(staffData) ? staffData : [],
+      topSales: Array.isArray(topSalesData) ? topSalesData : [],
+      topExpenses: Array.isArray(topExpData) ? topExpData : [],
+      lowStockProducts: lowStock
     };
-    fetchData();
-  }, [globalSettings?.low_stock_threshold]);
+  }, {
+    persist: true,
+    enabled: !!user
+  });
 
-  if (!summary) return (
+  const summary = dashboardData?.summary || {};
+  const trends = dashboardData?.trends || [];
+  const recentSales = dashboardData?.recentSales || [];
+  const staffPerformance = dashboardData?.staffPerformance || [];
+  const topSales = dashboardData?.topSales || [];
+  const topExpenses = dashboardData?.topExpenses || [];
+  const lowStockProducts = dashboardData?.lowStockProducts || [];
+
+  if (isLoading && !dashboardData) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-6 h-6 animate-spin text-brand" />
     </div>
@@ -293,27 +307,36 @@ export default function Dashboard() {
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card p-6 border-brand/20 bg-brand/[0.02] relative overflow-hidden group"
+        className="glass-card p-10 border-white/40 bg-white/40 relative overflow-hidden group"
       >
         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <Trophy className="w-24 h-24 text-brand -rotate-12" />
+          <Trophy className="w-48 h-48 text-brand -rotate-12" />
         </div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center shrink-0">
-              <Trophy className="w-6 h-6 text-brand" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-10">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 bg-brand/10 rounded-3xl flex items-center justify-center shrink-0">
+              <Trophy className="w-8 h-8 text-brand" />
             </div>
             <div>
-              <h3 className="h3">Referral Program</h3>
-              <p className="body-text opacity-70">Invite friends and get rewarded. They get 1 month of Pro features free!</p>
-              <p className="label-text mt-1 text-brand">Referrals: 0 / 3</p>
+              <h3 className="h2 mb-1">Referral Program</h3>
+              <p className="body-text opacity-70 max-w-md">Invite friends and get rewarded. They get 1 month of Pro features free!</p>
+              <div className="flex items-center gap-2 mt-4">
+                <div className="flex -space-x-2">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-zinc-100 flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                      {i}
+                    </div>
+                  ))}
+                </div>
+                <p className="label-text text-brand">Referrals: 0 / 3</p>
+              </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-3 p-1.5 bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
-            <div className="px-4 py-2">
-              <span className="label-text block leading-none mb-1">Your Code</span>
-              <span className="h2 text-brand tracking-tighter leading-none">{user?.referral_code || 'GRYNDEE'}</span>
+          <div className="flex items-center gap-4 p-2 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-xl rounded-[2rem] border border-white/40 dark:border-white/10 shadow-xl">
+            <div className="px-6 py-3">
+              <span className="label-text block leading-none mb-2 opacity-50">Your Code</span>
+              <span className="text-3xl font-display font-bold text-zinc-900 dark:text-white tracking-tighter leading-none">{user?.referral_code || 'GRYNDEE'}</span>
             </div>
             <button 
               onClick={() => {
@@ -322,46 +345,46 @@ export default function Dashboard() {
                   toast.success('Referral code copied!');
                 }
               }}
-              className="p-3 bg-brand text-white rounded-xl hover:bg-brand-hover transition-all active:scale-95 shadow-lg shadow-brand/20"
+              className="w-14 h-14 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl hover:scale-105 transition-all active:scale-95 shadow-xl shadow-black/20 flex items-center justify-center"
               title="Copy Code"
             >
-              <Copy className="w-5 h-5" />
+              <Copy className="w-6 h-6" />
             </button>
           </div>
         </div>
       </motion.div>
 
       {/* Quick Actions */}
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <QuickAction 
           to="/sales" 
           icon={Plus} 
           label="New Sale" 
-          color="bg-brand/5 text-brand border-brand/10" 
+          color="vibrant-gradient text-white" 
         />
         <QuickAction 
           to="/products" 
           icon={Package} 
           label="Add Product" 
-          color="bg-brand/5 text-brand border-brand/10" 
+          color="vibrant-gradient-purple text-white" 
         />
         <QuickAction 
           to="/finance?tab=expenses" 
           icon={DollarSign} 
           label="Add Expense" 
-          color="bg-brand/5 text-brand border-brand/10" 
+          color="vibrant-gradient-pink text-white" 
         />
         <QuickAction 
           to="/customers" 
           icon={Users} 
           label="Customers" 
-          color="bg-brand/5 text-brand border-brand/10" 
+          color="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" 
         />
         <QuickAction 
           to="/invoices" 
           icon={ArrowUpRight} 
           label="Invoices" 
-          color="bg-brand/5 text-brand border-brand/10" 
+          color="bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white" 
         />
       </div>
 
@@ -418,31 +441,38 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Revenue Today" 
           value={<CurrencyDisplay amount={summary.today_sales || 0} currencyCode={currency} />} 
-          color="text-brand"
+          color="vibrant-gradient text-white"
+          gradient="bg-brand"
+          icon={TrendingUp}
         />
         {user?.role !== 'staff' && (
           <>
             <StatCard 
               title="Expenses Today" 
               value={<CurrencyDisplay amount={summary.today_expenses || 0} currencyCode={currency} />} 
-              color="text-red-500"
+              color="vibrant-gradient-pink text-white"
+              gradient="bg-pink-500"
+              icon={TrendingDown}
             />
             <StatCard 
               title="Net Profit" 
               value={<CurrencyDisplay amount={(summary.today_sales || 0) - (summary.today_expenses || 0)} currencyCode={currency} />} 
-              color="text-zinc-900 dark:text-white"
+              color="vibrant-gradient-purple text-white"
+              gradient="bg-purple-500"
+              icon={DollarSign}
             />
           </>
         )}
         <StatCard 
           title="Total Sales" 
           value={summary.total_sales_count || 0} 
-          color="text-zinc-900 dark:text-white"
+          color="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
           subtitle={user?.role === 'staff' ? "Your lifetime transactions" : "Lifetime transactions"}
+          icon={ShoppingCart}
         />
       </div>
 

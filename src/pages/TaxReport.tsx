@@ -220,7 +220,6 @@ const TaxReport = () => {
                 label="Total Turnover" 
                 value={formatCurrency(taxData.turnover, settings?.currency)} 
                 icon={<TrendingUp className="w-6 h-6" />}
-                iconClassName="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
               />
               <div className="mt-4">
                 {taxData.vat_exempt ? (
@@ -245,7 +244,6 @@ const TaxReport = () => {
                 label="Net Profit / Loss" 
                 value={formatCurrency(taxData.net_profit, settings?.currency)} 
                 icon={<FileText className="w-6 h-6" />}
-                iconClassName="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                 valueClassName={taxData.net_profit >= 0 ? "text-zinc-950 dark:text-white" : "text-red-600 dark:text-red-400"}
               />
               <div className="mt-4">
@@ -265,12 +263,7 @@ const TaxReport = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className={cn(
-                "rounded-[2.5rem] p-8 shadow-xl transition-all",
-                taxData.total_tax_liability > 0 
-                  ? "bg-brand text-white shadow-brand/20" 
-                  : "bg-emerald-600 text-white shadow-emerald-600/20"
-              )}
+              className="bg-brand text-white shadow-xl shadow-brand/20 rounded-[2.5rem] p-8 transition-all"
             >
               <TotalDisplay 
                 label="Est. Tax Liability" 
@@ -369,7 +362,7 @@ const TaxReport = () => {
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-5 h-5 rounded-full flex items-center justify-center",
-                    taxData.compliance_status.is_small_company ? "bg-emerald-100 text-emerald-600" : "bg-zinc-100 text-zinc-400"
+                    taxData.compliance_status.is_small_company ? "bg-brand/10 text-brand" : "bg-zinc-100 text-zinc-400"
                   )}>
                     <CheckCircle2 className="w-3 h-3" />
                   </div>
@@ -378,7 +371,7 @@ const TaxReport = () => {
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-5 h-5 rounded-full flex items-center justify-center",
-                    !taxData.compliance_status.requires_vat_registration ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+                    !taxData.compliance_status.requires_vat_registration ? "bg-brand/10 text-brand" : "bg-amber-100 text-amber-600"
                   )}>
                     {taxData.compliance_status.requires_vat_registration ? <AlertCircle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
                   </div>
