@@ -544,6 +544,7 @@ async function initAwsDb() {
           supplier_name TEXT,
           unit TEXT DEFAULT 'Pieces',
           pieces_per_unit INTEGER DEFAULT 1,
+          image TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
       `);
@@ -563,6 +564,9 @@ async function initAwsDb() {
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='product_type') THEN
             ALTER TABLE products ADD COLUMN product_type TEXT DEFAULT 'one';
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='image') THEN
+            ALTER TABLE products ADD COLUMN image TEXT;
           END IF;
         END $$;
       `);
@@ -1339,6 +1343,13 @@ async function updateActiveReferralCount(accountId: string) {
 }
 
 async function createServer() {
+  process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION:', err);
+  });
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('UNHANDLED REJECTION:', reason);
+  });
+
   const app = express();
 
   // Request logging middleware
@@ -2166,6 +2177,7 @@ CREATE TABLE IF NOT EXISTS products (
   unit TEXT DEFAULT 'Pieces',
   pieces_per_unit INTEGER DEFAULT 1,
   product_type TEXT DEFAULT 'one',
+  image TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -2799,6 +2811,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         if (rows.length > 0 && rows[0].value) {
           return res.json(JSON.parse(rows[0].value));
         }
+      } else if (supabase) {
+        const { data, error } = await supabase.from('system_settings').select('value').eq('key', 'LANDING_CONFIG').maybeSingle();
+        if (data?.value) {
+          return res.json(JSON.parse(data.value));
+        }
       }
       return res.json(DEFAULT_LANDING_CONFIG);
     } catch (error: any) {
@@ -2810,16 +2827,26 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post("/api/landing-config", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || userInfo.role !== 'super_admin') {
+      const isSuperAdmin = userInfo?.role === 'super_admin' || 
+                           userInfo?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com' ||
+                           userInfo?.email?.toLowerCase() === 'connectabinibi@gmail.com';
+
+      if (!userInfo || !isSuperAdmin) {
         return res.status(403).json({ error: "Forbidden: Only Super Admin can edit landing page" });
       }
 
       const config = req.body;
+      const configJson = JSON.stringify(config);
+
       if (process.env.AWS_DB_PASSWORD) {
         await pool.query(
           "INSERT INTO system_settings (key, value) VALUES ('LANDING_CONFIG', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()",
-          [JSON.stringify(config)]
+          [configJson]
         );
+        return res.json({ success: true });
+      } else if (supabase) {
+        const { error } = await supabase.from('system_settings').upsert({ key: 'LANDING_CONFIG', value: configJson }, { onConflict: 'key' });
+        if (error) throw error;
         return res.json({ success: true });
       }
       res.status(503).json({ error: "Database not available" });
@@ -2833,7 +2860,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       const userInfo = await getAccountId(req);
       const isSuperAdmin = userInfo?.role === 'super_admin' || 
-                           userInfo?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com';
+                           userInfo?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com' ||
+                           userInfo?.email?.toLowerCase() === 'connectabinibi@gmail.com';
       
       if (!userInfo || !isSuperAdmin) {
         return res.status(403).json({ error: "Forbidden" });
@@ -2841,6 +2869,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       const { image, folder } = req.body;
       if (!image) return res.status(400).json({ error: "Image is required" });
+      console.log(`[UPLOAD] Received upload request. Folder: ${folder}, Size: ${image.length} chars`);
 
       const uploadedUrl = await uploadToCloudinary(image, folder || 'landing');
       if (uploadedUrl) {
@@ -4126,9 +4155,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const client = await pool.connect();
         try {
           await client.query('BEGIN');
+          
+          let imageUrl = null;
+          if (images && Array.isArray(images) && images.length > 0) {
+            imageUrl = await uploadToCloudinary(images[0]);
+          }
+
           const { rows: productRows } = await client.query(
-            'INSERT INTO products (account_id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
-            [userInfo.account_id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type]
+            'INSERT INTO products (account_id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
+            [userInfo.account_id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, imageUrl]
           );
           const product = productRows[0];
           const productId = product.id;
@@ -4143,8 +4178,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           }
 
           if (images && Array.isArray(images) && images.length > 0) {
-            for (const img of images) {
-              const finalUrl = await uploadToCloudinary(img);
+            // First image is already uploaded, upload the rest
+            if (imageUrl) {
+              await client.query(
+                'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
+                [userInfo.account_id, productId, imageUrl]
+              );
+            }
+            for (let i = 1; i < images.length; i++) {
+              const finalUrl = await uploadToCloudinary(images[i]);
               await client.query(
                 'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
                 [userInfo.account_id, productId, finalUrl]
@@ -4163,11 +4205,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       if (!supabase) return res.status(503).json({ error: "Database not available" });
+      
+      let imageUrl = null;
+      if (images && Array.isArray(images) && images.length > 0) {
+        imageUrl = await uploadToCloudinary(images[0]);
+      }
+
       const { data: product, error: productError } = await supabase
         .from('products')
         .insert([{ 
           account_id: userInfo.account_id,
-          name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type 
+          name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, image: imageUrl 
         }])
         .select()
         .single();
@@ -4189,11 +4237,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       if (images && Array.isArray(images) && images.length > 0) {
-        const imagesToInsert = await Promise.all(images.map(async (img) => {
-          const finalUrl = await uploadToCloudinary(img);
-          return { account_id: userInfo.account_id, product_id: productId, image_data: finalUrl };
-        }));
-        await supabase.from('product_images').insert(imagesToInsert);
+        const imagesToInsert = [];
+        if (imageUrl) {
+          imagesToInsert.push({ account_id: userInfo.account_id, product_id: productId, image_data: imageUrl });
+        }
+        for (let i = 1; i < images.length; i++) {
+          const finalUrl = await uploadToCloudinary(images[i]);
+          imagesToInsert.push({ account_id: userInfo.account_id, product_id: productId, image_data: finalUrl });
+        }
+        if (imagesToInsert.length > 0) {
+          await supabase.from('product_images').insert(imagesToInsert);
+        }
       }
 
       res.json({ id: productId });
@@ -4214,10 +4268,28 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const client = await pool.connect();
         try {
           await client.query('BEGIN');
-          await client.query(
-            'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8 WHERE id = $9 AND account_id = $10',
-            [name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, id, userInfo.account_id]
-          );
+          
+          let imageUrl = null;
+          if (images && Array.isArray(images) && images.length > 0) {
+            // Check if it's already a URL or needs uploading
+            if (images[0].startsWith('http')) {
+              imageUrl = images[0];
+            } else {
+              imageUrl = await uploadToCloudinary(images[0]);
+            }
+          }
+
+          if (imageUrl) {
+            await client.query(
+              'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8, image = $9 WHERE id = $10 AND account_id = $11',
+              [name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, imageUrl, id, userInfo.account_id]
+            );
+          } else {
+            await client.query(
+              'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8 WHERE id = $9 AND account_id = $10',
+              [name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, id, userInfo.account_id]
+            );
+          }
 
           if (variants && Array.isArray(variants)) {
             // Simple approach: delete and re-insert variants
@@ -4229,6 +4301,27 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               );
             }
           }
+          
+          if (images && Array.isArray(images)) {
+            await client.query('DELETE FROM product_images WHERE product_id = $1', [id]);
+            if (imageUrl) {
+              await client.query(
+                'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
+                [userInfo.account_id, id, imageUrl]
+              );
+            }
+            for (let i = 1; i < images.length; i++) {
+              let finalUrl = images[i];
+              if (!images[i].startsWith('http')) {
+                finalUrl = await uploadToCloudinary(images[i]);
+              }
+              await client.query(
+                'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
+                [userInfo.account_id, id, finalUrl]
+              );
+            }
+          }
+
           await client.query('COMMIT');
           return res.json({ success: true });
         } catch (e) {
@@ -4240,19 +4333,35 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       if (!supabase) return res.status(503).json({ error: "Database not available" });
+      
+      let imageUrl = null;
+      if (images && Array.isArray(images) && images.length > 0) {
+        if (images[0].startsWith('http')) {
+          imageUrl = images[0];
+        } else {
+          imageUrl = await uploadToCloudinary(images[0]);
+        }
+      }
+
       let productError;
       try {
+        const updateData: any = { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type };
+        if (imageUrl) updateData.image = imageUrl;
+        
         const result = await supabase
           .from('products')
-          .update({ name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type })
+          .update(updateData)
           .eq('id', id);
         productError = result.error;
       } catch (err: any) {
         if (err.message?.includes('column') || err.message?.includes('pieces_per_unit') || err.message?.includes('unit')) {
           console.log("[SERVER] Products schema missing new columns on update, falling back");
+          const updateData: any = { name, category_id, description, cost_price, selling_price, supplier_name };
+          if (imageUrl) updateData.image = imageUrl;
+          
           const result = await supabase
             .from('products')
-            .update({ name, category_id, description, cost_price, selling_price, supplier_name })
+            .update(updateData)
             .eq('id', id);
           productError = result.error;
         } else {
@@ -8113,6 +8222,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           unit TEXT DEFAULT 'Pieces',
           pieces_per_unit INTEGER DEFAULT 1,
           product_type TEXT DEFAULT 'one',
+          image TEXT,
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
       `);
@@ -8147,6 +8257,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           END IF;
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='product_type') THEN
             ALTER TABLE products ADD COLUMN product_type TEXT DEFAULT 'one';
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='image') THEN
+            ALTER TABLE products ADD COLUMN image TEXT;
           END IF;
         END $$;
       `);

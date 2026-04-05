@@ -426,7 +426,7 @@ export default function App() {
     }
   };
 
-  const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+  const fetchWithAuth = async (url: string, options: RequestInit = {}, retries = 3, delay = 1000): Promise<Response> => {
     const headers = {
       ...options.headers,
       'x-user-id': user?.id?.toString() || '',
@@ -444,7 +444,6 @@ export default function App() {
       baseUrl = baseUrl.slice(0, -1);
     }
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-    console.log(`[API] Fetching: ${fullUrl} (baseUrl: ${baseUrl})`);
     
     const start = performance.now();
     try {
@@ -460,8 +459,14 @@ export default function App() {
       }
       
       if (response.status === 429) {
-        console.error(`[RATE LIMIT] Rate exceeded for ${fullUrl}`);
-        toast.error('Rate limit exceeded. Please wait a moment before trying again.');
+        if (retries > 0) {
+          console.warn(`[RATE LIMIT] Rate exceeded for ${fullUrl}. Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return fetchWithAuth(url, options, retries - 1, delay * 2);
+        } else {
+          console.error(`[RATE LIMIT] Rate exceeded for ${fullUrl} after max retries.`);
+          toast.error('Rate limit exceeded. Please wait a moment before trying again.');
+        }
       }
       
       if (response.status === 401) {

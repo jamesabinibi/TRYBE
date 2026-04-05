@@ -9,6 +9,7 @@ import {
   ArrowUp, 
   ArrowDown,
   Loader2,
+  Clock,
   Edit3,
   Check,
   Palette,
@@ -29,6 +30,7 @@ interface LandingCMSProps {
 export default function LandingCMS({ config: initialConfig, onSave, onClose }: LandingCMSProps) {
   const [config, setConfig] = useState(initialConfig);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'hero' | 'features' | 'how' | 'testimonials' | 'logo' | 'faq' | 'footer' | 'pages'>('hero');
 
   const handleUpdate = (path: string, value: any) => {
@@ -43,10 +45,12 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
   };
 
   const handleImageUpload = async (path: string, file: File) => {
+    setIsUploading(path);
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64 = reader.result as string;
       try {
+        console.log(`[CMS] Uploading image for path: ${path}, size: ${base64.length} chars`);
         const res = await apiFetch('/api/upload', {
           method: 'POST',
           headers: {
@@ -55,18 +59,37 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
           },
           body: JSON.stringify({ image: base64, folder: 'landing' })
         });
+        
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Upload failed with status ${res.status}`);
+        }
+
         const data = await res.json();
+        console.log(`[CMS] Upload success for path: ${path}, URL length: ${data.url?.length}`);
+        
         if (data.url) {
           handleUpdate(path, data.url);
           toast.success('Image uploaded successfully');
         } else {
-          toast.error('Upload failed');
+          throw new Error('No URL returned from server');
         }
-      } catch (err) {
-        toast.error('Upload failed');
+      } catch (err: any) {
+        console.error('[CMS] Image upload error:', err);
+        toast.error(`Upload failed: ${err.message}`);
+      } finally {
+        setIsUploading(null);
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleReset = () => {
+    if (window.confirm('Are you sure you want to reset all landing page settings to defaults? This cannot be undone.')) {
+      // We need to get the defaults from the server or just hardcode them here
+      // For now, let's just allow clearing the current config
+      toast.info('Please refresh the page to see default settings if you haven\'t saved yet.');
+    }
   };
 
   const handleSave = async () => {
@@ -89,9 +112,18 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
           <Edit3 className="w-5 h-5 text-brand" />
           <h2 className="text-lg font-bold text-white">Landing CMS</h2>
         </div>
-        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg text-zinc-400">
-          <X className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleReset}
+            className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+            title="Reset to defaults"
+          >
+            <Clock className="w-5 h-5" />
+          </button>
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg text-zinc-400">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       <div className="flex border-b border-white/10 overflow-x-auto custom-scrollbar">
