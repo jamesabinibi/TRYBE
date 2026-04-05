@@ -5837,26 +5837,56 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   // Super Admin Routes
 
   const checkLowStock = async (userId: string) => {
-    if (!supabase) return;
+    if (!supabase && !process.env.AWS_DB_PASSWORD) return;
     
     try {
-      // 1. Get all variants and their product names
-      const { data: variants, error: variantsError } = await supabase
-        .from('product_variants')
-        .select('*, products(name), account_id');
-
-      if (variantsError || !variants || variants.length === 0) return;
-
-      const accountId = variants[0].account_id;
+      let accountId: number | null = null;
       
-      // Get global threshold from settings
-      const { data: settings } = await supabase
-        .from('settings')
-        .select('low_stock_threshold')
-        .eq('account_id', accountId)
-        .maybeSingle();
-      
-      const globalThreshold = settings?.low_stock_threshold || 5;
+      // Get accountId for this user first
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows } = await pool.query('SELECT account_id FROM users WHERE id = $1', [userId]);
+        if (rows.length > 0) accountId = rows[0].account_id;
+      } else if (supabase) {
+        const { data } = await supabase.from('users').select('account_id').eq('id', userId).maybeSingle();
+        if (data) accountId = data.account_id;
+      }
+
+      if (!accountId) return;
+
+      // 1. Get variants ONLY for this account
+      let variants: any[] = [];
+      let globalThreshold = 5;
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: vRows } = await pool.query(`
+          SELECT v.*, p.name as product_name 
+          FROM product_variants v 
+          JOIN products p ON v.product_id = p.id 
+          WHERE v.account_id = $1
+        `, [accountId]);
+        variants = vRows;
+
+        const { rows: sRows } = await pool.query('SELECT low_stock_threshold FROM settings WHERE account_id = $1 LIMIT 1', [accountId]);
+        if (sRows.length > 0) globalThreshold = sRows[0].low_stock_threshold || 5;
+      } else if (supabase) {
+        const { data: vData, error: vError } = await supabase
+          .from('product_variants')
+          .select('*, products(name), account_id')
+          .eq('account_id', accountId);
+        
+        if (vError) throw vError;
+        variants = vData || [];
+
+        const { data: sData } = await supabase
+          .from('settings')
+          .select('low_stock_threshold')
+          .eq('account_id', accountId)
+          .maybeSingle();
+        
+        globalThreshold = sData?.low_stock_threshold || 5;
+      }
+
+      if (variants.length === 0) return;
 
       // 2. Filter for low stock
       const lowStockVariants = variants.filter(v => {
@@ -5870,23 +5900,32 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       
       if (lowStockVariants.length === 0) return;
 
-      // 3. Get existing unread low stock notifications for this user to avoid duplicates
-      const { data: existingNotifications } = await supabase
-        .from('notifications')
-        .select('message')
-        .eq('user_id', userId)
-        .eq('title', 'Low Stock Alert')
-        .eq('is_read', false);
-
-      const existingMessages = new Set(existingNotifications?.map(n => n.message) || []);
+      // 3. Get existing unread low stock notifications for this user
+      let existingMessages = new Set<string>();
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: nRows } = await pool.query(
+          "SELECT message FROM notifications WHERE user_id = $1 AND title = 'Low Stock Alert' AND is_read = false",
+          [userId]
+        );
+        existingMessages = new Set(nRows.map(n => n.message));
+      } else if (supabase) {
+        const { data: nData } = await supabase
+          .from('notifications')
+          .select('message')
+          .eq('user_id', userId)
+          .eq('title', 'Low Stock Alert')
+          .eq('is_read', false);
+        existingMessages = new Set(nData?.map(n => n.message) || []);
+      }
 
       // 4. Prepare new notifications
       const newNotifications = lowStockVariants
         .map(variant => {
-          const message = `Product "${variant.products?.name || 'Unknown'}" (Size: ${variant.size}) is low on stock. Current quantity: ${variant.quantity}.`;
+          const productName = variant.product_name || variant.products?.name || 'Unknown';
+          const message = `Product "${productName}" (Size: ${variant.size}) is low on stock. Current quantity: ${variant.quantity}.`;
           return {
             user_id: userId,
-            account_id: variant.account_id,
+            account_id: accountId,
             title: 'Low Stock Alert',
             message,
             type: 'warning',
@@ -5897,61 +5936,55 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       // 5. Batch insert new notifications
       if (newNotifications.length > 0) {
-        await supabase.from('notifications').insert(newNotifications);
+        if (process.env.AWS_DB_PASSWORD) {
+          for (const n of newNotifications) {
+            await pool.query(
+              'INSERT INTO notifications (user_id, account_id, title, message, type, is_read) VALUES ($1, $2, $3, $4, $5, $6)',
+              [n.user_id, n.account_id, n.title, n.message, n.type, n.is_read]
+            );
+          }
+        } else if (supabase) {
+          await supabase.from('notifications').insert(newNotifications);
+        }
       }
     } catch (error: any) {
-      // Ignore errors if the notifications table doesn't exist
-      if (error?.message?.includes('relation "notifications" does not exist')) {
-        return;
-      }
+      if (error?.message?.includes('relation "notifications" does not exist')) return;
       console.error('[NOTIFICATIONS] Error checking low stock:', error);
     }
   };
 
   app.get("/api/alerts/:userId", async (req, res) => {
-    console.log(`[API] GET /api/alerts/${req.params.userId} called`);
     const { userId } = req.params;
     
     if (!userId || userId === 'undefined' || userId === 'null' || userId === '[object Object]') {
-      console.log('[API] Invalid userId');
       return res.json([]);
     }
 
     try {
+      // Run low stock check in background - don't await to keep response fast
+      checkLowStock(userId).catch(err => console.error('[NOTIFICATIONS] Background check failed:', err));
+
       if (process.env.AWS_DB_PASSWORD) {
-        console.log('[API] Using PostgreSQL');
         const { rows } = await pool.query(
           'SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
           [userId]
         );
-        console.log(`[API] Found ${rows.length} notifications`);
         return res.json(rows || []);
       }
 
-      if (!supabase) {
-        console.log('[API] Supabase not initialized');
-        return res.json([]);
-      }
-      // Run low stock check in background - don't await to keep response fast
-      checkLowStock(userId).catch(err => console.error('[NOTIFICATIONS] Background check failed:', err));
+      if (!supabase) return res.json([]);
 
-      console.log('[API] Using Supabase');
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(50); // Limit to avoid huge responses
+        .limit(50);
         
-      if (error) {
-        console.error('[API] Supabase error:', error);
-        throw error;
-      }
-      console.log(`[API] Found ${data?.length || 0} notifications`);
+      if (error) throw error;
       res.json(data || []);
     } catch (error: any) {
       console.error('[NOTIFICATIONS] Fetch error:', error);
-      // If the table doesn't exist yet, just return an empty array instead of 500
       if (error?.code === 'PGRST116' || error?.message?.includes('relation "notifications" does not exist')) {
         return res.json([]);
       }
