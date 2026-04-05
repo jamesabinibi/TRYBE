@@ -879,53 +879,39 @@ function generateWeeklyReportHtml(data: {
 
   const content = `
     <div style="text-align: center; margin-bottom: 32px;">
-      <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em;">Weekly Performance</h2>
-      <p style="color: #6b7280; font-size: 15px; margin: 0;">${data.startDate} &mdash; ${data.endDate}</p>
+      <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">Weekly Performance</h2>
+      <p style="color: #6b7280; font-size: 14px; margin: 0;">${data.startDate} &mdash; ${data.endDate}</p>
     </div>
     
-    <p style="font-size: 16px; color: #4b5563;">Hi <strong>${data.name}</strong>,</p>
-    <p style="font-size: 16px; color: #4b5563; margin-bottom: 32px;">${intro}</p>
+    <p style="font-size: 16px; color: #374151;">Hi <strong>${data.name}</strong>,</p>
+    <p style="font-size: 16px; color: #374151; margin-bottom: 32px;">${intro}</p>
     
-    <div style="background-color: #f0fdf4; border: 1px solid #dcfce7; padding: 32px; border-radius: 16px; margin-bottom: 24px; text-align: center;">
-      <h3 style="color: #166534; margin: 0 0 8px 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">Estimated Net Profit</h3>
-      <div style="font-size: 42px; font-weight: 800; color: #15803d; letter-spacing: -0.05em;">${data.profit}</div>
-      <div style="height: 1px; background-color: #dcfce7; margin: 20px auto; width: 60px;"></div>
-      <p style="font-size: 13px; color: #166534; margin: 0; opacity: 0.8;">Calculated from ${data.sales} in sales minus ${data.expenses} in expenses.</p>
+    <div style="border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; padding: 24px 0; margin-bottom: 32px;">
+      <table width="100%" cellspacing="0" cellpadding="0">
+        <tr>
+          <td width="33%" style="text-align: center;">
+            <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Total Revenue</div>
+            <div style="font-size: 20px; font-weight: 600; color: #111827;">${data.sales}</div>
+          </td>
+          <td width="33%" style="text-align: center; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+            <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Total Expenses</div>
+            <div style="font-size: 20px; font-weight: 600; color: #111827;">${data.expenses}</div>
+          </td>
+          <td width="33%" style="text-align: center;">
+            <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Net Profit</div>
+            <div style="font-size: 20px; font-weight: 600; color: #111827;">${data.profit}</div>
+          </td>
+        </tr>
+      </table>
     </div>
     
-    <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 32px;">
-      <tr>
-        <td width="50%" style="padding-right: 8px;">
-          <div style="padding: 24px; background: #ffffff; border-radius: 16px; border: 1px solid #f3f4f6; text-align: center; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
-            <div style="font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Total Revenue</div>
-            <div style="font-size: 24px; font-weight: 700; color: #111827;">${data.sales}</div>
-          </div>
-        </td>
-        <td width="50%" style="padding-left: 8px;">
-          <div style="padding: 24px; background: #ffffff; border-radius: 16px; border: 1px solid #f3f4f6; text-align: center; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
-            <div style="font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Total Expenses</div>
-            <div style="font-size: 24px; font-weight: 700; color: #ef4444;">${data.expenses}</div>
-          </div>
-        </td>
-      </tr>
-    </table>
-    
-    <div style="background-color: #fffbeb; border: 1px solid #fef3c7; padding: 28px; border-radius: 16px; margin-bottom: 32px;">
-      <h4 style="color: #92400e; margin: 0 0 16px 0; font-size: 16px; font-weight: 700;">💡 Business Insights</h4>
-      <div style="color: #b45309; font-size: 14px; line-height: 1.6;">
-        <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
-          <span style="margin-right: 12px;">&bull;</span>
-          <span><strong>Inventory Check:</strong> Keep an eye on your low stock alerts in the dashboard to ensure you never miss a sale.</span>
-        </div>
-        <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
-          <span style="margin-right: 12px;">&bull;</span>
-          <span><strong>Expense Tracking:</strong> Remember to record every small expense. Those little costs add up and affect your true profit.</span>
-        </div>
-        <div style="display: flex; align-items: flex-start;">
-          <span style="margin-right: 12px;">&bull;</span>
-          <span><strong>Customer Growth:</strong> Engaging with your top customers can lead to repeat business. Check your top customers list!</span>
-        </div>
-      </div>
+    <div style="margin-bottom: 32px;">
+      <h4 style="color: #111827; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">Business Insights</h4>
+      <ul style="color: #374151; font-size: 15px; line-height: 1.6; padding-left: 20px; margin: 0;">
+        <li style="margin-bottom: 8px;"><strong>Inventory Check:</strong> Keep an eye on your low stock alerts in the dashboard to ensure you never miss a sale.</li>
+        <li style="margin-bottom: 8px;"><strong>Expense Tracking:</strong> Remember to record every small expense. Those little costs add up and affect your true profit.</li>
+        <li><strong>Customer Growth:</strong> Engaging with your top customers can lead to repeat business. Check your top customers list!</li>
+      </ul>
     </div>
     
     <div style="text-align: center;">
@@ -960,8 +946,17 @@ setInterval(async () => {
           `, [template.delay_hours]);
           
           for (const user of users) {
+            let bName = user.business_name || 'Gryndee';
+            let bLogo = user.logo_url;
+            if (bName.startsWith('{"')) {
+              try {
+                const parsed = JSON.parse(bName);
+                if (parsed.name) bName = parsed.name;
+                if (!bLogo && parsed.logo) bLogo = parsed.logo;
+              } catch (e) {}
+            }
             const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
-            await sendEmail(user.email, template.subject, body, undefined, user.logo_url, user.business_name);
+            await sendEmail(user.email, template.subject, body, undefined, bLogo, bName);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'no_product_24h']);
             console.log(`[AUTOMATED EMAILS] Sent no_product_24h to ${user.email}`);
           }
@@ -980,8 +975,17 @@ setInterval(async () => {
           `, [template.delay_hours]);
           
           for (const user of users) {
+            let bName = user.business_name || 'Gryndee';
+            let bLogo = user.logo_url;
+            if (bName.startsWith('{"')) {
+              try {
+                const parsed = JSON.parse(bName);
+                if (parsed.name) bName = parsed.name;
+                if (!bLogo && parsed.logo) bLogo = parsed.logo;
+              } catch (e) {}
+            }
             const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
-            await sendEmail(user.email, template.subject, body, undefined, user.logo_url, user.business_name);
+            await sendEmail(user.email, template.subject, body, undefined, bLogo, bName);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'no_sales_48h']);
             console.log(`[AUTOMATED EMAILS] Sent no_sales_48h to ${user.email}`);
           }
@@ -998,8 +1002,17 @@ setInterval(async () => {
           `, [template.delay_hours]);
           
           for (const user of users) {
+            let bName = user.business_name || 'Gryndee';
+            let bLogo = user.logo_url;
+            if (bName.startsWith('{"')) {
+              try {
+                const parsed = JSON.parse(bName);
+                if (parsed.name) bName = parsed.name;
+                if (!bLogo && parsed.logo) bLogo = parsed.logo;
+              } catch (e) {}
+            }
             const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
-            await sendEmail(user.email, template.subject, body, undefined, user.logo_url, user.business_name);
+            await sendEmail(user.email, template.subject, body, undefined, bLogo, bName);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'premium_feature_promo']);
             console.log(`[AUTOMATED EMAILS] Sent premium_feature_promo to ${user.email}`);
           }
@@ -1016,11 +1029,20 @@ setInterval(async () => {
           `, [template.delay_hours]);
           
           for (const user of users) {
+            let bName = user.business_name || 'Gryndee';
+            let bLogo = user.logo_url;
+            if (bName.startsWith('{"')) {
+              try {
+                const parsed = JSON.parse(bName);
+                if (parsed.name) bName = parsed.name;
+                if (!bLogo && parsed.logo) bLogo = parsed.logo;
+              } catch (e) {}
+            }
             const body = template.body
               .replace('{name}', user.name || user.username || 'there')
               .replace('{username}', user.username || '')
               .replace('{referral_code}', user.referral_code || 'N/A');
-            await sendEmail(user.email, template.subject, body, undefined, user.logo_url, user.business_name);
+            await sendEmail(user.email, template.subject, body, undefined, bLogo, bName);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'referral_followup']);
             console.log(`[AUTOMATED EMAILS] Sent referral_followup to ${user.email}`);
           }
@@ -1038,8 +1060,17 @@ setInterval(async () => {
           `, [template.delay_hours]);
           
           for (const user of users) {
+            let bName = user.business_name || 'Gryndee';
+            let bLogo = user.logo_url;
+            if (bName.startsWith('{"')) {
+              try {
+                const parsed = JSON.parse(bName);
+                if (parsed.name) bName = parsed.name;
+                if (!bLogo && parsed.logo) bLogo = parsed.logo;
+              } catch (e) {}
+            }
             const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
-            await sendEmail(user.email, template.subject, body, undefined, user.logo_url, user.business_name);
+            await sendEmail(user.email, template.subject, body, undefined, bLogo, bName);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'tax_setup_reminder']);
             console.log(`[AUTOMATED EMAILS] Sent tax_setup_reminder to ${user.email}`);
           }
@@ -1086,19 +1117,29 @@ setInterval(async () => {
                 return new Intl.NumberFormat('en-NG', { style: 'currency', currency: currency }).format(val);
               };
 
+              let bName = user.business_name || 'Gryndee';
+              let bLogo = user.logo_url;
+              if (bName.startsWith('{"')) {
+                try {
+                  const parsed = JSON.parse(bName);
+                  if (parsed.name) bName = parsed.name;
+                  if (!bLogo && parsed.logo) bLogo = parsed.logo;
+                } catch (e) {}
+              }
+
               const html = generateWeeklyReportHtml({
                 name: user.name || user.username || 'there',
-                businessName: user.business_name || 'Gryndee',
-                logoUrl: user.logo_url,
+                businessName: bName,
+                logoUrl: bLogo,
                 sales: formatCurrency(weeklySales),
                 profit: formatCurrency(weeklyProfit),
                 expenses: formatCurrency(weeklyExpenses),
                 startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
                 endDate: new Date().toLocaleDateString(),
-                introText: template.body.replace('{name}', user.name || user.username || 'there').replace('{business_name}', user.business_name || 'Gryndee')
+                introText: template.body.replace('{name}', user.name || user.username || 'there').replace('{business_name}', bName)
               });
 
-              await sendEmail(user.email, template.subject, template.body, html, user.logo_url, user.business_name);
+              await sendEmail(user.email, template.subject, template.body, html, bLogo, bName);
               await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'weekly_report']);
               console.log(`[AUTOMATED EMAILS] Sent weekly_report to ${user.email}`);
             }
@@ -1248,6 +1289,15 @@ function getEmailLayout(content: string, logoUrl?: string, businessName: string 
 }
 
 async function sendEmail(to: string, subject: string, text: string, html?: string, logoUrl?: string, businessName: string = 'Gryndee') {
+  let finalBusinessName = businessName;
+  if (finalBusinessName && finalBusinessName.startsWith('{"')) {
+    try {
+      const parsed = JSON.parse(finalBusinessName);
+      if (parsed.name) finalBusinessName = parsed.name;
+      if (!logoUrl && parsed.logo) logoUrl = parsed.logo;
+    } catch (e) {}
+  }
+
   console.log(`[EMAIL] Attempting to send email to: ${to}`);
   console.log(`[EMAIL] Subject: ${subject}`);
   try {
@@ -1276,7 +1326,7 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     }
     // If it's just a raw email, wrap it nicely
     if (!fromAddress.includes('<') && fromAddress.includes('@')) {
-      fromAddress = `"${businessName}" <${fromAddress}>`;
+      fromAddress = `"${finalBusinessName}" <${fromAddress}>`;
     }
 
     console.log(`[EMAIL] Using From Address: ${fromAddress}`);
@@ -1293,7 +1343,7 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     });
 
     // Wrap content in layout if it's not already a full HTML document
-    const finalHtml = html?.includes('<!DOCTYPE html>') ? html : getEmailLayout(html || text.replace(/\n/g, '<br>'), logoUrl, businessName);
+    const finalHtml = html?.includes('<!DOCTYPE html>') ? html : getEmailLayout(html || text.replace(/\n/g, '<br>'), logoUrl, finalBusinessName);
 
     const info = await transporter.sendMail({
       from: fromAddress,

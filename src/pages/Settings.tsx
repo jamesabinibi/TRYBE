@@ -138,7 +138,7 @@ export default function Settings() {
     }
   }, []);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -148,11 +148,36 @@ export default function Settings() {
       return;
     }
 
+    const loadingToast = toast.loading('Uploading logo...');
+
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       const base64 = reader.result as string;
       setLogoPreview(base64);
-      setSettings(prev => ({ ...prev, logo_url: base64 }));
+      
+      try {
+        const res = await fetchWithAuth('/api/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ image: base64, folder: 'settings' })
+        });
+        
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Upload failed with status ${res.status}`);
+        }
+
+        const data = await res.json();
+        setSettings(prev => ({ ...prev, logo_url: data.url }));
+        toast.success('Logo uploaded successfully', { id: loadingToast });
+      } catch (err: any) {
+        console.error('Logo upload error:', err);
+        toast.error(`Failed to upload logo: ${err.message}`, { id: loadingToast });
+        // Fallback to base64 if upload fails so they can still save it
+        setSettings(prev => ({ ...prev, logo_url: base64 }));
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -865,7 +890,7 @@ NOTIFY pgrst, 'reload schema';
   };
 
   const handleGenerateLogo = async () => {
-    const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial' || user?.role === 'super_admin' || user?.email?.toLowerCase() === 'connectabinibi@gmail.com';
+    const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial' || user?.role === 'super_admin';
     
     if (!isPro) {
       toast.error('AI Logo Generator is a Pro feature. Please upgrade to use it.');
@@ -995,23 +1020,33 @@ NOTIFY pgrst, 'reload schema';
   const saveSettings = async (updatedSettings = settings) => {
     setIsSaving(true);
     try {
-      // Encode branding into business_name for robust persistence
-      const encodedBusinessName = JSON.stringify({
-        name: updatedSettings.business_name,
-        color: updatedSettings.brand_color,
-        logo: updatedSettings.logo_url,
-        slogan: updatedSettings.slogan,
-        address: updatedSettings.address,
-        email: updatedSettings.email,
-        website: updatedSettings.website,
-        phone: updatedSettings.phone_number,
-        welcome_email_subject: updatedSettings.welcome_email_subject,
-        welcome_email_body: updatedSettings.welcome_email_body
-      });
+      let finalLogoUrl = updatedSettings.logo_url;
+      
+      // If logo_url is a base64 string, upload it first to prevent saving huge strings to DB
+      if (finalLogoUrl && finalLogoUrl.startsWith('data:image')) {
+        const loadingToast = toast.loading('Uploading logo to cloud storage...');
+        try {
+          const res = await fetchWithAuth('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: finalLogoUrl, folder: 'settings' })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            finalLogoUrl = data.url;
+            setSettings(prev => ({ ...prev, logo_url: finalLogoUrl }));
+            updatedSettings = { ...updatedSettings, logo_url: finalLogoUrl };
+            toast.success('Logo uploaded successfully', { id: loadingToast });
+          } else {
+            toast.error('Failed to upload logo, saving as is...', { id: loadingToast });
+          }
+        } catch (e) {
+          toast.error('Failed to upload logo, saving as is...', { id: loadingToast });
+        }
+      }
 
       const payload = {
         ...updatedSettings,
-        business_name: encodedBusinessName,
         low_stock_threshold: parseInt(updatedSettings.low_stock_threshold as any) || 0
       };
       const response = await fetchWithAuth('/api/settings', {

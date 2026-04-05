@@ -34,14 +34,16 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
   const [activeTab, setActiveTab] = useState<'hero' | 'features' | 'how' | 'testimonials' | 'logo' | 'faq' | 'footer' | 'pages'>('hero');
 
   const handleUpdate = (path: string, value: any) => {
-    const newConfig = { ...config };
-    const parts = path.split('.');
-    let current = newConfig;
-    for (let i = 0; i < parts.length - 1; i++) {
-      current = current[parts[i]];
-    }
-    current[parts[parts.length - 1]] = value;
-    setConfig(newConfig);
+    setConfig(prevConfig => {
+      const newConfig = JSON.parse(JSON.stringify(prevConfig));
+      const parts = path.split('.');
+      let current = newConfig;
+      for (let i = 0; i < parts.length - 1; i++) {
+        current = current[parts[i]];
+      }
+      current[parts[parts.length - 1]] = value;
+      return newConfig;
+    });
   };
 
   const handleImageUpload = async (path: string, file: File) => {
@@ -198,7 +200,7 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Hero Image</label>
               <div className="relative group aspect-video rounded-xl overflow-hidden border border-white/10">
-                <img src={config.hero.image} alt="Hero" className="w-full h-full object-cover" />
+                <img src={config.hero.image} alt="Hero" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
                   <input
                     type="file"
@@ -232,7 +234,7 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Logo Image (Optional)</label>
               <div className="relative group aspect-square w-24 rounded-xl overflow-hidden border border-white/10 bg-black/30">
                 {config.logo.url ? (
-                  <img src={config.logo.url} alt="Logo" className="w-full h-full object-contain p-2" />
+                  <img src={config.logo.url} alt="Logo" className="w-full h-full object-contain p-2" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-zinc-600">
                     <ImageIcon className="w-8 h-8" />
@@ -263,7 +265,7 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Favicon (Optional)</label>
               <div className="relative group aspect-square w-12 rounded-xl overflow-hidden border border-white/10 bg-black/30">
                 {config.logo.favicon ? (
-                  <img src={config.logo.favicon} alt="Favicon" className="w-full h-full object-contain p-1" />
+                  <img src={config.logo.favicon} alt="Favicon" className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-zinc-600">
                     <ImageIcon className="w-4 h-4" />
@@ -507,7 +509,7 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
                   className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-brand outline-none transition-colors min-h-[80px]"
                 />
                 <div className="relative group aspect-video rounded-xl overflow-hidden border border-white/10">
-                  <img src={feature.image} alt="Feature" className="w-full h-full object-cover" />
+                  <img src={feature.image} alt="Feature" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
                     <input
                       type="file"

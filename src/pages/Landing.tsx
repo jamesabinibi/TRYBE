@@ -140,7 +140,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {config.logo.url ? (
-              <img src={config.logo.url} alt={config.logo.text} className="h-10 w-auto object-contain" />
+              <img src={config.logo.url} alt={config.logo.text} className="h-10 w-auto object-contain" referrerPolicy="no-referrer" />
             ) : (
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 flex items-center justify-center vibrant-gradient rounded-2xl shadow-lg shadow-brand/20">
