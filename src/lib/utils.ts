@@ -135,15 +135,19 @@ export async function retryWithBackoff<T>(
     try {
       return await fn();
     } catch (error: any) {
-      const isRateLimit = 
+      const isRetryable = 
         error.message?.includes('429') || 
+        error.message?.includes('503') ||
         error.message?.toLowerCase().includes('rate limit') ||
         error.message?.toLowerCase().includes('quota exceeded') ||
-        error.status === 429;
+        error.message?.toLowerCase().includes('high demand') ||
+        error.message?.toLowerCase().includes('unavailable') ||
+        error.status === 429 ||
+        error.status === 503;
 
-      if (isRateLimit && retries < maxRetries - 1) {
+      if (isRetryable && retries < maxRetries - 1) {
         const delay = initialDelay * Math.pow(2, retries);
-        console.warn(`[AI] Rate limit hit. Retrying in ${delay}ms... (Attempt ${retries + 1}/${maxRetries})`);
+        console.warn(`[AI] Retryable error hit (${error.status || 'unknown'}). Retrying in ${delay}ms... (Attempt ${retries + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
         retries++;
       } else {

@@ -173,11 +173,11 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       >
         {/* Logo Section */}
         <div className="h-28 px-8 flex items-center gap-4">
-          <div className="w-14 h-14 vibrant-gradient rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-brand/20">
-            {businessLogo || landingConfig?.logo?.url ? (
-              <img src={businessLogo || landingConfig?.logo?.url} alt="" className="w-full h-full object-contain rounded-[1.25rem]" />
+          <div className="w-14 h-14 bg-white dark:bg-zinc-800 rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-black/5 border border-zinc-100 dark:border-white/10">
+            {landingConfig?.logo?.favicon || businessLogo || landingConfig?.logo?.url ? (
+              <img src={landingConfig?.logo?.favicon || businessLogo || landingConfig?.logo?.url} alt="" className="w-full h-full object-contain rounded-[1.25rem] p-2" />
             ) : (
-              <Zap className="w-7 h-7 text-white" />
+              <Zap className="w-7 h-7 text-brand" />
             )}
           </div>
           <div className="flex flex-col">

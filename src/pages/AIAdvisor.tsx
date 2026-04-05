@@ -117,7 +117,12 @@ export default function AIAdvisor() {
       }
     } catch (error: any) {
       console.error('Error generating AI insight:', error);
-      setInsight(`Error connecting to AI Advisor: ${error.message || 'Unknown error'}. Please ensure your API key is configured.`);
+      const isHighDemand = error.message?.includes('503') || error.message?.toLowerCase().includes('high demand') || error.message?.toLowerCase().includes('unavailable');
+      if (isHighDemand) {
+        setInsight(`The AI Advisor is currently experiencing high demand. Please wait a moment and try again.`);
+      } else {
+        setInsight(`Error connecting to AI Advisor: ${error.message || 'Unknown error'}. Please ensure your API key is configured in Settings.`);
+      }
     } finally {
       setLoadingPulse(false);
     }
@@ -181,7 +186,12 @@ export default function AIAdvisor() {
       setForecast(result);
     } catch (error: any) {
       console.error('Error fetching forecast:', error);
-      setForecast({ error: `Error connecting to AI Advisor: ${error.message || 'Unknown error'}. Please ensure your API key is configured.` });
+      const isHighDemand = error.message?.includes('503') || error.message?.toLowerCase().includes('high demand') || error.message?.toLowerCase().includes('unavailable');
+      if (isHighDemand) {
+        setForecast({ error: `The AI Advisor is currently experiencing high demand. Please wait a moment and try again.` });
+      } else {
+        setForecast({ error: `Error connecting to AI Advisor: ${error.message || 'Unknown error'}. Please ensure your API key is configured in Settings.` });
+      }
     } finally {
       setLoadingForecast(false);
     }

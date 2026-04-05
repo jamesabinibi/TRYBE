@@ -276,7 +276,8 @@ async function initAwsDb() {
           ('no_sales_48h', 'Boost your sales with Gryndee!', 'Hi {name},\n\nIt''s been a couple of days and you haven''t recorded any sales yet. Need help getting started? Check out our guides or reach out to support!\n\nBest regards,\nThe Gryndee Team', 48),
           ('premium_feature_promo', 'Unlock Premium Features with Gryndee!', 'Hi {name},\n\nDid you know Gryndee offers powerful premium features like AI-powered receipt scanning, automated bookkeeping, and advanced analytics?\n\nUpgrade today to take your business to the next level!\n\nBest regards,\nThe Gryndee Team', 72),
           ('referral_followup', 'Share the Love and Earn Rewards!', 'Hi {name},\n\nWe hope you''re enjoying Gryndee! Did you know you can earn rewards by referring your friends?\n\nYour unique referral code is: {referral_code}\n\nShare this code with others, and when they sign up, you both get benefits!\n\nBest regards,\nThe Gryndee Team', 168),
-          ('tax_setup_reminder', 'Simplify Your Taxes with Gryndee!', 'Hi {name},\n\nDid you know Gryndee can help you manage your Nigerian tax obligations automatically? Setting up your tax profile takes less than a minute!\n\nHead over to the Tax Report page to specify your legal structure and see your estimated tax liability and filing deadlines.\n\nBest regards,\nThe Gryndee Team', 72)
+          ('tax_setup_reminder', 'Simplify Your Taxes with Gryndee!', 'Hi {name},\n\nDid you know Gryndee can help you manage your Nigerian tax obligations automatically? Setting up your tax profile takes less than a minute!\n\nHead over to the Tax Report page to specify your legal structure and see your estimated tax liability and filing deadlines.\n\nBest regards,\nThe Gryndee Team', 72),
+          ('weekly_report', 'Your Weekly Business Report', 'Here is a summary of your business activity for the past week. Log in to your dashboard for more details.', 0)
         ON CONFLICT (type) DO NOTHING;
       `);
 
@@ -857,6 +858,80 @@ async function initAwsDb() {
 
 initAwsDb();
 
+function generateWeeklyReportHtml(data: {
+  name: string;
+  businessName: string;
+  logoUrl?: string;
+  sales: string;
+  profit: string;
+  expenses: string;
+  startDate: string;
+  endDate: string;
+  introText?: string;
+}) {
+  const intro = data.introText 
+    ? data.introText.replace(/\n/g, '<br>') 
+    : `Here's your weekly performance summary for <strong>${data.businessName}</strong>. Take a look at how your business moved this week.`;
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 32px;">
+      <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em;">Weekly Performance</h2>
+      <p style="color: #6b7280; font-size: 15px; margin: 0;">${data.startDate} &mdash; ${data.endDate}</p>
+    </div>
+    
+    <p style="font-size: 16px; color: #4b5563;">Hi <strong>${data.name}</strong>,</p>
+    <p style="font-size: 16px; color: #4b5563; margin-bottom: 32px;">${intro}</p>
+    
+    <div style="background-color: #f0fdf4; border: 1px solid #dcfce7; padding: 32px; border-radius: 16px; margin-bottom: 24px; text-align: center;">
+      <h3 style="color: #166534; margin: 0 0 8px 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">Estimated Net Profit</h3>
+      <div style="font-size: 42px; font-weight: 800; color: #15803d; letter-spacing: -0.05em;">${data.profit}</div>
+      <div style="height: 1px; background-color: #dcfce7; margin: 20px auto; width: 60px;"></div>
+      <p style="font-size: 13px; color: #166534; margin: 0; opacity: 0.8;">Calculated from ${data.sales} in sales minus ${data.expenses} in expenses.</p>
+    </div>
+    
+    <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 32px;">
+      <tr>
+        <td width="50%" style="padding-right: 8px;">
+          <div style="padding: 24px; background: #ffffff; border-radius: 16px; border: 1px solid #f3f4f6; text-align: center; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+            <div style="font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Total Revenue</div>
+            <div style="font-size: 24px; font-weight: 700; color: #111827;">${data.sales}</div>
+          </div>
+        </td>
+        <td width="50%" style="padding-left: 8px;">
+          <div style="padding: 24px; background: #ffffff; border-radius: 16px; border: 1px solid #f3f4f6; text-align: center; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+            <div style="font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Total Expenses</div>
+            <div style="font-size: 24px; font-weight: 700; color: #ef4444;">${data.expenses}</div>
+          </div>
+        </td>
+      </tr>
+    </table>
+    
+    <div style="background-color: #fffbeb; border: 1px solid #fef3c7; padding: 28px; border-radius: 16px; margin-bottom: 32px;">
+      <h4 style="color: #92400e; margin: 0 0 16px 0; font-size: 16px; font-weight: 700;">💡 Business Insights</h4>
+      <div style="color: #b45309; font-size: 14px; line-height: 1.6;">
+        <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
+          <span style="margin-right: 12px;">&bull;</span>
+          <span><strong>Inventory Check:</strong> Keep an eye on your low stock alerts in the dashboard to ensure you never miss a sale.</span>
+        </div>
+        <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
+          <span style="margin-right: 12px;">&bull;</span>
+          <span><strong>Expense Tracking:</strong> Remember to record every small expense. Those little costs add up and affect your true profit.</span>
+        </div>
+        <div style="display: flex; align-items: flex-start;">
+          <span style="margin-right: 12px;">&bull;</span>
+          <span><strong>Customer Growth:</strong> Engaging with your top customers can lead to repeat business. Check your top customers list!</span>
+        </div>
+      </div>
+    </div>
+    
+    <div style="text-align: center;">
+      <a href="https://gryndee.com/dashboard" class="button">View Full Analytics</a>
+    </div>
+  `;
+  
+  return getEmailLayout(content, data.logoUrl, data.businessName);
+}
+
 // Background job for automated emails
 setInterval(async () => {
   try {
@@ -869,46 +944,49 @@ setInterval(async () => {
         if (template.type === 'no_product_24h') {
           // Find users who signed up > delay_hours ago, have 0 products, and haven't received this email
           const { rows: users } = await client.query(`
-            SELECT u.id, u.email, u.name, u.username
+            SELECT u.id, u.email, u.name, u.username, s.logo_url, s.business_name
             FROM users u
+            JOIN settings s ON u.account_id = s.account_id
             LEFT JOIN products p ON u.account_id = p.account_id
             LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id AND sae.template_type = 'no_product_24h'
             WHERE u.created_at < NOW() - ($1 || ' hours')::INTERVAL
             AND sae.id IS NULL
-            GROUP BY u.id
+            GROUP BY u.id, s.logo_url, s.business_name
             HAVING COUNT(p.id) = 0
           `, [template.delay_hours]);
           
           for (const user of users) {
             const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
-            await sendEmail(user.email, template.subject, body);
+            await sendEmail(user.email, template.subject, body, undefined, user.logo_url, user.business_name);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'no_product_24h']);
             console.log(`[AUTOMATED EMAILS] Sent no_product_24h to ${user.email}`);
           }
         } else if (template.type === 'no_sales_48h') {
           // Find users who signed up > delay_hours ago, have 0 sales, and haven't received this email
           const { rows: users } = await client.query(`
-            SELECT u.id, u.email, u.name, u.username
+            SELECT u.id, u.email, u.name, u.username, s.logo_url, s.business_name
             FROM users u
-            LEFT JOIN sales s ON u.account_id = s.account_id
+            JOIN settings s ON u.account_id = s.account_id
+            LEFT JOIN sales s2 ON u.account_id = s2.account_id
             LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id AND sae.template_type = 'no_sales_48h'
             WHERE u.created_at < NOW() - ($1 || ' hours')::INTERVAL
             AND sae.id IS NULL
-            GROUP BY u.id
-            HAVING COUNT(s.id) = 0
+            GROUP BY u.id, s.logo_url, s.business_name
+            HAVING COUNT(s2.id) = 0
           `, [template.delay_hours]);
           
           for (const user of users) {
             const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
-            await sendEmail(user.email, template.subject, body);
+            await sendEmail(user.email, template.subject, body, undefined, user.logo_url, user.business_name);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'no_sales_48h']);
             console.log(`[AUTOMATED EMAILS] Sent no_sales_48h to ${user.email}`);
           }
         } else if (template.type === 'premium_feature_promo') {
           // Find regular users who signed up > delay_hours ago and haven't received this email
           const { rows: users } = await client.query(`
-            SELECT u.id, u.email, u.name, u.username
+            SELECT u.id, u.email, u.name, u.username, s.logo_url, s.business_name
             FROM users u
+            JOIN settings s ON u.account_id = s.account_id
             LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id AND sae.template_type = 'premium_feature_promo'
             WHERE u.role = 'user'
             AND u.created_at < NOW() - ($1 || ' hours')::INTERVAL
@@ -917,16 +995,17 @@ setInterval(async () => {
           
           for (const user of users) {
             const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
-            await sendEmail(user.email, template.subject, body);
+            await sendEmail(user.email, template.subject, body, undefined, user.logo_url, user.business_name);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'premium_feature_promo']);
             console.log(`[AUTOMATED EMAILS] Sent premium_feature_promo to ${user.email}`);
           }
         } else if (template.type === 'referral_followup') {
           // Find users who signed up > delay_hours ago and haven't received this email
           const { rows: users } = await client.query(`
-            SELECT u.id, u.email, u.name, u.username, a.referral_code
+            SELECT u.id, u.email, u.name, u.username, a.referral_code, s.logo_url, s.business_name
             FROM users u
             JOIN accounts a ON u.account_id = a.id
+            JOIN settings s ON u.account_id = s.account_id
             LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id AND sae.template_type = 'referral_followup'
             WHERE u.created_at < NOW() - ($1 || ' hours')::INTERVAL
             AND sae.id IS NULL
@@ -937,16 +1016,17 @@ setInterval(async () => {
               .replace('{name}', user.name || user.username || 'there')
               .replace('{username}', user.username || '')
               .replace('{referral_code}', user.referral_code || 'N/A');
-            await sendEmail(user.email, template.subject, body);
+            await sendEmail(user.email, template.subject, body, undefined, user.logo_url, user.business_name);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'referral_followup']);
             console.log(`[AUTOMATED EMAILS] Sent referral_followup to ${user.email}`);
           }
         } else if (template.type === 'tax_setup_reminder') {
           // Find users who signed up > delay_hours ago, have no legal_structure set, and haven't received this email
           const { rows: users } = await client.query(`
-            SELECT u.id, u.email, u.name, u.username
+            SELECT u.id, u.email, u.name, u.username, s.logo_url, s.business_name
             FROM users u
             JOIN accounts a ON u.account_id = a.id
+            JOIN settings s ON u.account_id = s.account_id
             LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id AND sae.template_type = 'tax_setup_reminder'
             WHERE u.created_at < NOW() - ($1 || ' hours')::INTERVAL
             AND (a.legal_structure IS NULL OR a.legal_structure = '')
@@ -955,9 +1035,69 @@ setInterval(async () => {
           
           for (const user of users) {
             const body = template.body.replace('{name}', user.name || user.username || 'there').replace('{username}', user.username || '');
-            await sendEmail(user.email, template.subject, body);
+            await sendEmail(user.email, template.subject, body, undefined, user.logo_url, user.business_name);
             await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'tax_setup_reminder']);
             console.log(`[AUTOMATED EMAILS] Sent tax_setup_reminder to ${user.email}`);
+          }
+        } else if (template.type === 'weekly_report') {
+          // Check if it's Sunday
+          const now = new Date();
+          if (now.getDay() === 0) { // 0 is Sunday
+            // Find users who haven't received a weekly report in the last 6 days
+            const { rows: users } = await client.query(`
+              SELECT u.id, u.email, u.name, u.username, u.account_id, s.logo_url, s.business_name, s.currency
+              FROM users u
+              JOIN settings s ON u.account_id = s.account_id
+              LEFT JOIN sent_automated_emails sae ON u.id = sae.user_id 
+                AND sae.template_type = 'weekly_report' 
+                AND sae.sent_at > NOW() - INTERVAL '6 days'
+              WHERE sae.id IS NULL
+            `);
+
+            for (const user of users) {
+              // Calculate weekly stats
+              const { rows: stats } = await client.query(`
+                SELECT 
+                  COALESCE(SUM(total_amount), 0) as total_sales,
+                  COALESCE(SUM(total_profit), 0) as total_profit
+                FROM sales
+                WHERE account_id = $1
+                AND created_at > NOW() - INTERVAL '7 days'
+              `, [user.account_id]);
+
+              const { rows: expenses } = await client.query(`
+                SELECT COALESCE(SUM(amount), 0) as total_expenses
+                FROM expenses
+                WHERE account_id = $1
+                AND date > CURRENT_DATE - INTERVAL '7 days'
+              `, [user.account_id]);
+
+              const weeklySales = parseFloat(stats[0].total_sales);
+              const weeklyProfit = parseFloat(stats[0].total_profit);
+              const weeklyExpenses = parseFloat(expenses[0].total_expenses);
+              const currency = user.currency || 'NGN';
+
+              // Format currency
+              const formatCurrency = (val: number) => {
+                return new Intl.NumberFormat('en-NG', { style: 'currency', currency: currency }).format(val);
+              };
+
+              const html = generateWeeklyReportHtml({
+                name: user.name || user.username || 'there',
+                businessName: user.business_name || 'Gryndee',
+                logoUrl: user.logo_url,
+                sales: formatCurrency(weeklySales),
+                profit: formatCurrency(weeklyProfit),
+                expenses: formatCurrency(weeklyExpenses),
+                startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+                endDate: new Date().toLocaleDateString(),
+                introText: template.body.replace('{name}', user.name || user.username || 'there').replace('{business_name}', user.business_name || 'Gryndee')
+              });
+
+              await sendEmail(user.email, template.subject, template.body, html, user.logo_url, user.business_name);
+              await client.query('INSERT INTO sent_automated_emails (user_id, template_type) VALUES ($1, $2)', [user.id, 'weekly_report']);
+              console.log(`[AUTOMATED EMAILS] Sent weekly_report to ${user.email}`);
+            }
           }
         }
       }
@@ -998,7 +1138,112 @@ async function setSystemSetting(key: string, value: string) {
   }
 }
 
-async function sendEmail(to: string, subject: string, text: string, html?: string) {
+function getEmailLayout(content: string, logoUrl?: string, businessName: string = 'Gryndee') {
+  const logoHtml = logoUrl 
+    ? `<img src="${logoUrl}" alt="${businessName}" style="max-height: 40px; width: auto; display: block; margin: 0 auto;">` 
+    : `<h1 style="color: #111827; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em;">${businessName}</h1>`;
+  
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${businessName} Notification</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+          
+          body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #374151; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f3f4f6; 
+            -webkit-font-smoothing: antialiased;
+          }
+          .wrapper {
+            width: 100%;
+            table-layout: fixed;
+            background-color: #f3f4f6;
+            padding-bottom: 40px;
+          }
+          .container { 
+            max-width: 600px; 
+            margin: 40px auto; 
+            background: #ffffff; 
+            border-radius: 16px; 
+            overflow: hidden; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); 
+          }
+          .header { 
+            padding: 40px 32px; 
+            text-align: center; 
+            background-color: #ffffff;
+          }
+          .content { 
+            padding: 0 40px 40px 40px; 
+            font-size: 16px;
+            color: #4b5563;
+          }
+          .footer { 
+            padding: 32px; 
+            text-align: center; 
+            font-size: 13px; 
+            color: #9ca3af; 
+            background-color: #f9fafb;
+            border-top: 1px solid #f3f4f6;
+          }
+          .footer a {
+            color: #6b7280;
+            text-decoration: underline;
+          }
+          .button { 
+            display: inline-block; 
+            padding: 14px 28px; 
+            background-color: #111827; 
+            color: #ffffff !important; 
+            text-decoration: none; 
+            border-radius: 10px; 
+            font-weight: 600; 
+            font-size: 15px;
+            margin-top: 24px;
+            text-align: center;
+          }
+          .divider {
+            height: 1px;
+            background-color: #f3f4f6;
+            margin: 32px 0;
+          }
+          @media only screen and (max-width: 600px) {
+            .container { margin: 0; border-radius: 0; }
+            .content { padding: 0 24px 32px 24px; }
+            .header { padding: 32px 24px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="wrapper">
+          <div class="container">
+            <div class="header">
+              ${logoHtml}
+            </div>
+            <div class="content">
+              ${content}
+            </div>
+            <div class="footer">
+              <p style="margin: 0 0 12px 0;">&copy; ${new Date().getFullYear()} <strong>${businessName}</strong>. All rights reserved.</p>
+              <p style="margin: 0;">You are receiving this because you're a valued member of the ${businessName} community.</p>
+              <p style="margin: 12px 0 0 0;"><a href="#">Unsubscribe</a> &bull; <a href="#">Privacy Policy</a></p>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+async function sendEmail(to: string, subject: string, text: string, html?: string, logoUrl?: string, businessName: string = 'Gryndee') {
   console.log(`[EMAIL] Attempting to send email to: ${to}`);
   console.log(`[EMAIL] Subject: ${subject}`);
   try {
@@ -1027,7 +1272,7 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     }
     // If it's just a raw email, wrap it nicely
     if (!fromAddress.includes('<') && fromAddress.includes('@')) {
-      fromAddress = `"Gryndee" <${fromAddress}>`;
+      fromAddress = `"${businessName}" <${fromAddress}>`;
     }
 
     console.log(`[EMAIL] Using From Address: ${fromAddress}`);
@@ -1043,12 +1288,15 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
       },
     });
 
+    // Wrap content in layout if it's not already a full HTML document
+    const finalHtml = html?.includes('<!DOCTYPE html>') ? html : getEmailLayout(html || text.replace(/\n/g, '<br>'), logoUrl, businessName);
+
     const info = await transporter.sendMail({
       from: fromAddress,
       to,
       subject,
       text,
-      html: html || text,
+      html: finalHtml,
     });
     console.log(`[EMAIL] Successfully sent! MessageId: ${info.messageId}`);
     return info;
@@ -1058,6 +1306,17 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     if (error.command) console.error(`[EMAIL] SMTP Command: ${error.command}`);
     if (error.response) console.error(`[EMAIL] SMTP Response: ${error.response}`);
     throw error;
+  }
+}
+
+async function sendTemplatedEmail(to: string, subject: string, content: string, accountId: number, html?: string) {
+  try {
+    const { rows } = await pool.query('SELECT logo_url, business_name FROM settings WHERE account_id = $1', [accountId]);
+    const settings = rows[0] || { business_name: 'Gryndee' };
+    return await sendEmail(to, subject, content, html, settings.logo_url, settings.business_name);
+  } catch (err) {
+    console.error('[EMAIL] Failed to send templated email:', err);
+    return await sendEmail(to, subject, content, html);
   }
 }
 
@@ -3029,15 +3288,41 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }
 
         // Send email BEFORE committing
-        await sendEmail(
+        const verificationLink = `${req.protocol}://${req.get('host')}/verify-email?token=mock-token-${newUser.id}`;
+        const emailHtml = `
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 24px; font-weight: 800;">Welcome to Gryndee!</h2>
+            <p style="color: #6b7280; font-size: 15px; margin: 0;">We're excited to have you on board.</p>
+          </div>
+          
+          <p>Hi ${name || normalizedUsername},</p>
+          <p>Your account has been successfully created. You can now start managing your business with ease. Your username is: <strong>${normalizedUsername}</strong></p>
+          
+          <p>To get started, please verify your email address by clicking the button below:</p>
+          
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${verificationLink}" class="button">Verify My Email</a>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+          <p style="color: #6b7280; font-size: 12px; word-break: break-all;">${verificationLink}</p>
+          
+          <div class="divider"></div>
+          
+          <p style="font-size: 14px;"><strong>Next steps:</strong></p>
+          <ul style="font-size: 14px; color: #4b5563; padding-left: 20px;">
+            <li>Set up your business profile</li>
+            <li>Add your first product or service</li>
+            <li>Record your first sale</li>
+          </ul>
+        `;
+
+        await sendTemplatedEmail(
           trimmedEmail,
           welcomeSubject,
           welcomeBody,
-          `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            ${welcomeBody.replace(/\n/g, '<br/>')}
-          </div>
-          `
+          account.id,
+          emailHtml
         );
 
         await client.query('COMMIT');
@@ -3138,19 +3423,40 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       .replace('{username}', normalizedUsername)
       .replace('{verification_link}', verificationLink);
 
-    sendEmail(
+    const emailHtml = `
+      <div style="text-align: center; margin-bottom: 32px;">
+        <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 24px; font-weight: 800;">Welcome to Gryndee!</h2>
+        <p style="color: #6b7280; font-size: 15px; margin: 0;">We're excited to have you on board.</p>
+      </div>
+      
+      <p>Hi ${name || normalizedUsername},</p>
+      <p>Your account has been successfully created. You can now start managing your business with ease. Your username is: <strong>${normalizedUsername}</strong></p>
+      
+      <p>To get started, please verify your email address by clicking the button below:</p>
+      
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${verificationLink}" class="button">Verify My Email</a>
+      </div>
+      
+      <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="color: #6b7280; font-size: 12px; word-break: break-all;">${verificationLink}</p>
+      
+      <div class="divider"></div>
+      
+      <p style="font-size: 14px;"><strong>Next steps:</strong></p>
+      <ul style="font-size: 14px; color: #4b5563; padding-left: 20px;">
+        <li>Set up your business profile</li>
+        <li>Add your first product or service</li>
+        <li>Record your first sale</li>
+      </ul>
+    `;
+
+    sendTemplatedEmail(
       trimmedEmail,
       welcomeSubject,
       emailBody,
-      `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-        <h1 style="color: #10b981;">${welcomeSubject}</h1>
-        <p>${emailBody.replace(/\n/g, '<br>')}</p>
-        <div style="margin-top: 20px; text-align: center;">
-          <a href="${verificationLink}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email Address</a>
-        </div>
-      </div>
-      `
+      account.id,
+      emailHtml
     ).catch(err => console.error('Failed to send registration email:', err));
 
     // Create notification
@@ -3321,15 +3627,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           .replace(/{username}/g, user.username)
           .replace(/{verification_code}/g, verificationCode);
 
-        await sendEmail(
+        await sendTemplatedEmail(
           trimmedEmail,
           welcomeSubject,
           welcomeBody,
-          `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            ${welcomeBody.replace(/\n/g, '<br/>')}
-          </div>
-          `
+          user.account_id
         );
 
         return res.json({ success: true });
@@ -3371,14 +3673,14 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       let user;
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('UPDATE users SET reset_code = $1, reset_expires = $2 WHERE email = $3 RETURNING username', [code, expires, email]);
+        const { rows } = await pool.query('UPDATE users SET reset_code = $1, reset_expires = $2 WHERE email = $3 RETURNING username, account_id', [code, expires, email]);
         user = rows[0];
       } else {
         const { data, error } = await supabase
           .from('users')
           .update({ reset_code: code, reset_expires: expires.toISOString() })
           .eq('email', email)
-          .select('username')
+          .select('username, account_id')
           .maybeSingle();
         if (error) throw error;
         user = data;
@@ -3389,22 +3691,26 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         return res.json({ message: "If an account exists with this email, a code has been sent." });
       }
 
-      await sendEmail(
+      await sendTemplatedEmail(
         email,
         'Password Reset Code - Gryndee',
         `Your password reset code is: ${code}. It expires in 30 minutes.`,
+        user.account_id,
         `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h2 style="color: #10b981;">Password Reset</h2>
-          <p>You requested a password reset for your Gryndee account.</p>
-          <p>Your confirmation code is:</p>
-          <div style="background: #f4f4f4; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px; border-radius: 5px; margin: 20px 0;">
-            ${code}
-          </div>
-          <p>This code will expire in 30 minutes.</p>
-          <p>If you didn't request this, you can safely ignore this email.</p>
-          <p>Best regards,<br>The Gryndee Team</p>
+        <div style="text-align: center; margin-bottom: 32px;">
+          <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 24px; font-weight: 800;">Reset Your Password</h2>
+          <p style="color: #6b7280; font-size: 15px; margin: 0;">Security Verification</p>
         </div>
+        
+        <p>Hi ${user.username},</p>
+        <p>We received a request to reset your password. Use the verification code below to continue. This code will expire in 30 minutes.</p>
+        
+        <div style="background-color: #f9fafb; border: 2px dashed #e5e7eb; padding: 32px; border-radius: 16px; margin: 32px 0; text-align: center;">
+          <div style="font-size: 12px; color: #6b7280; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Your Reset Code</div>
+          <div style="font-size: 48px; font-weight: 800; color: #111827; letter-spacing: 0.2em;">${code}</div>
+        </div>
+        
+        <p style="color: #6b7280; font-size: 14px;">If you didn't request a password reset, you can safely ignore this email. Your account remains secure.</p>
         `
       );
 
@@ -4965,21 +5271,30 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               .maybeSingle();
 
             if (owner && owner.email) {
-              sendEmail(
+              sendTemplatedEmail(
                 owner.email,
                 `Low Stock Alert: ${itemName}`,
                 `The stock for ${itemName} is low (${newQuantity} remaining). Please restock soon.`,
+                userInfo.account_id,
                 `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                  <h2 style="color: #f59e0b;">Low Stock Alert</h2>
-                  <p>Hi ${owner.name},</p>
-                  <p>The stock for <strong>${itemName}</strong> has reached the low threshold.</p>
-                  <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-                    <p style="margin: 0;">Current Quantity: <strong>${newQuantity}</strong></p>
-                    <p style="margin: 0;">Threshold: ${threshold}</p>
-                  </div>
-                  <p>Please restock this item soon to avoid running out.</p>
-                  <p>Best regards,<br>Gryndee System</p>
+                <div style="text-align: center; margin-bottom: 24px;">
+                  <h2 style="color: #f59e0b; margin: 0 0 8px 0; font-size: 24px; font-weight: 800;">Low Stock Alert</h2>
+                  <p style="color: #6b7280; font-size: 15px; margin: 0;">Inventory Warning</p>
+                </div>
+                
+                <p>Hi ${owner.name},</p>
+                <p>The stock for <strong>${itemName}</strong> has reached the low threshold.</p>
+                
+                <div style="background-color: #fffbeb; border: 1px solid #fef3c7; padding: 24px; border-radius: 12px; margin: 24px 0; text-align: center;">
+                  <div style="font-size: 12px; color: #92400e; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Current Quantity</div>
+                  <div style="font-size: 36px; font-weight: 800; color: #b45309;">${newQuantity}</div>
+                  <div style="font-size: 13px; color: #92400e; margin-top: 8px;">Threshold: ${threshold}</div>
+                </div>
+                
+                <p>Please restock this item soon to avoid running out and missing potential sales.</p>
+                
+                <div style="text-align: center; margin-top: 32px;">
+                  <a href="https://gryndee.com/inventory" class="button">Manage Inventory</a>
                 </div>
                 `
               ).catch(err => console.error('Failed to send low stock email:', err));
@@ -5101,22 +5416,41 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .maybeSingle();
 
       if (adminUser && adminUser.email) {
-        sendEmail(
+        sendTemplatedEmail(
           adminUser.email,
           `New Sale Recorded: ${invoice_number}`,
           `A new sale of ${final_total_amount} NGN has been recorded. Invoice: ${invoice_number}`,
+          userInfo.account_id,
           `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #10b981;">New Sale Recorded</h2>
-            <p>Hi ${adminUser.name},</p>
-            <p>A new transaction has been completed in your store.</p>
-            <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
-              <p style="margin: 0;">Invoice: <strong>${invoice_number}</strong></p>
-              <p style="margin: 0;">Total Amount: <strong>${final_total_amount} NGN</strong></p>
-              <p style="margin: 0;">Payment Method: ${payment_method}</p>
-            </div>
-            <p>You can view the full details in your Gryndee dashboard.</p>
-            <p>Best regards,<br>Gryndee System</p>
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h2 style="color: #10b981; margin: 0 0 8px 0; font-size: 24px; font-weight: 800;">New Sale Recorded</h2>
+            <p style="color: #6b7280; font-size: 15px; margin: 0;">Transaction Successful</p>
+          </div>
+          
+          <p>Hi ${adminUser.name},</p>
+          <p>A new transaction has been completed in your store.</p>
+          
+          <div style="background-color: #f0fdf4; border: 1px solid #dcfce7; padding: 24px; border-radius: 12px; margin: 24px 0;">
+            <table width="100%" cellspacing="0" cellpadding="0">
+              <tr>
+                <td style="padding-bottom: 12px; color: #166534; font-size: 14px;">Invoice Number</td>
+                <td style="padding-bottom: 12px; color: #111827; font-size: 14px; font-weight: 700; text-align: right;">${invoice_number}</td>
+              </tr>
+              <tr>
+                <td style="padding-bottom: 12px; color: #166534; font-size: 14px;">Total Amount</td>
+                <td style="padding-bottom: 12px; color: #111827; font-size: 18px; font-weight: 800; text-align: right;">${final_total_amount} NGN</td>
+              </tr>
+              <tr>
+                <td style="color: #166534; font-size: 14px;">Payment Method</td>
+                <td style="color: #111827; font-size: 14px; font-weight: 700; text-align: right;">${payment_method}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <p>You can view the full details and manage this sale in your dashboard.</p>
+          
+          <div style="text-align: center; margin-top: 32px;">
+            <a href="https://gryndee.com/sales" class="button">View Sales History</a>
           </div>
           `
         ).catch(err => console.error('Failed to send sale notification email:', err));
@@ -6577,18 +6911,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             
             // Send email broadcast if user has an email
             if (user.email) {
-              sendEmail(
+              sendTemplatedEmail(
                 user.email, 
                 title, 
                 message,
-                `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                  <h2 style="color: #10b981; margin-top: 0;">${title}</h2>
-                  <p style="color: #374151; font-size: 16px; line-height: 1.5; white-space: pre-wrap;">${message}</p>
-                  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                  <p style="color: #9ca3af; font-size: 12px; text-align: center;">This is an automated broadcast message from Gryndee.</p>
-                </div>
-                `
+                user.account_id
               ).catch(e => console.error(`[ADMIN] Broadcast email failed for ${user.email}:`, e));
             }
           }
@@ -6624,18 +6951,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         // Send email broadcasts
         for (const user of users) {
           if (user.email) {
-            sendEmail(
+            sendTemplatedEmail(
               user.email, 
               title, 
               message,
-              `
-              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #10b981; margin-top: 0;">${title}</h2>
-                <p style="color: #374151; font-size: 16px; line-height: 1.5; white-space: pre-wrap;">${message}</p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                <p style="color: #9ca3af; font-size: 12px; text-align: center;">This is an automated broadcast message from Gryndee.</p>
-              </div>
-              `
+              user.account_id
             ).catch(e => console.error(`[ADMIN] Broadcast email failed for ${user.email}:`, e));
           }
         }
@@ -6659,14 +6979,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         return await fn();
       } catch (error: any) {
         const errorMsg = error.message || String(error);
-        const isRateLimit = 
+        const isRetryable = 
           errorMsg.includes('429') || 
+          errorMsg.includes('503') ||
           errorMsg.toLowerCase().includes('rate limit') ||
-          errorMsg.toLowerCase().includes('quota exceeded');
+          errorMsg.toLowerCase().includes('quota exceeded') ||
+          errorMsg.toLowerCase().includes('high demand') ||
+          errorMsg.toLowerCase().includes('unavailable');
 
-        if (isRateLimit && retries < maxRetries - 1) {
+        if (isRetryable && retries < maxRetries - 1) {
           const delay = initialDelay * Math.pow(2, retries);
-          console.warn(`[AI] Rate limit hit on server. Retrying in ${delay}ms... (Attempt ${retries + 1}/${maxRetries})`);
+          console.warn(`[AI] Retryable error hit on server. Retrying in ${delay}ms... (Attempt ${retries + 1}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, delay));
           retries++;
         } else {
