@@ -2089,8 +2089,8 @@ export default function SuperAdmin() {
                         {diagnosticData.samples.productImages.map((s: string, i: number) => (
                           <div key={i} className="text-zinc-500 truncate mb-1">
                             {s.startsWith('http') ? (
-                              <span className={cn(s.includes('amazonaws.com') ? "text-brand" : "text-amber-500")}>
-                                {s.includes('amazonaws.com') ? '[S3] ' : '[EXTERNAL URL] '}
+                              <span className={cn(s.includes('amazonaws.com') || s.includes('/api/images/') ? "text-brand" : "text-amber-500")}>
+                                {s.includes('amazonaws.com') || s.includes('/api/images/') ? '[S3] ' : '[EXTERNAL URL] '}
                                 {s}
                               </span>
                             ) : (
@@ -2106,8 +2106,8 @@ export default function SuperAdmin() {
                         {diagnosticData.samples.services.map((s: string, i: number) => (
                           <div key={i} className="text-zinc-500 truncate mb-1">
                             {s.startsWith('http') ? (
-                              <span className={cn(s.includes('amazonaws.com') ? "text-brand" : "text-amber-500")}>
-                                {s.includes('amazonaws.com') ? '[S3] ' : '[EXTERNAL URL] '}
+                              <span className={cn(s.includes('amazonaws.com') || s.includes('/api/images/') ? "text-brand" : "text-amber-500")}>
+                                {s.includes('amazonaws.com') || s.includes('/api/images/') ? '[S3] ' : '[EXTERNAL URL] '}
                                 {s}
                               </span>
                             ) : (

@@ -9,7 +9,9 @@ const getOptimizedImageUrl = (url: string, width: number = 100) => {
   if (url.startsWith('blob:') || url.startsWith('data:')) return url;
   
   let key = url;
-  if (url.startsWith('http')) {
+  if (url.startsWith('/api/images/')) {
+    key = url.replace('/api/images/', '');
+  } else if (url.startsWith('http')) {
     try {
       const urlObj = new URL(url);
       key = urlObj.pathname.substring(1);

@@ -174,8 +174,8 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         {/* Logo Section */}
         <div className="h-28 px-8 flex items-center gap-4">
           <div className="w-14 h-14 bg-white dark:bg-zinc-800 rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-black/5 border border-zinc-100 dark:border-white/10">
-            {landingConfig?.logo?.favicon || businessLogo || landingConfig?.logo?.url ? (
-              <img src={landingConfig?.logo?.favicon || businessLogo || landingConfig?.logo?.url} alt="" className="w-full h-full object-contain rounded-[1.25rem] p-2" />
+            {landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo ? (
+              <img src={landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo} alt="" className="w-full h-full object-contain rounded-[1.25rem] p-2" />
             ) : (
               <Zap className="w-7 h-7 text-brand" />
             )}
@@ -384,7 +384,7 @@ export default function App() {
   }, { persist: true });
 
   const brandColor = settings?.brand_color || landingConfig?.brandColor || '#9c4608';
-  const businessLogo = settings?.logo_url || landingConfig?.logo?.url || landingConfig?.logo?.favicon;
+  const businessLogo = landingConfig?.logo?.favicon || landingConfig?.logo?.url || settings?.logo_url;
   const businessName = settings?.business_name || landingConfig?.logo?.text || 'Gryndee';
 
   useEffect(() => {

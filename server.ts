@@ -75,7 +75,7 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
 }
 
 // Cloudinary Helper
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 
 // Helper to sanitize AWS region ID (e.g., "US East (N. Virginia) us-east-1" -> "us-east-1")
@@ -137,10 +137,10 @@ async function uploadToS3(base64Data: string, folder: string = 'products') {
 
     await s3Client.send(command);
     
-    // Construct the S3 URL
-    const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${s3Region}.amazonaws.com/${filename}`;
-    console.log(`[AWS S3] Upload successful: ${s3Url}`);
-    return s3Url;
+    // Construct the proxy URL instead of direct S3 URL
+    const proxyUrl = `/api/images/${filename}`;
+    console.log(`[AWS S3] Upload successful: ${proxyUrl} (proxied)`);
+    return proxyUrl;
   } catch (error: any) {
     console.error('[AWS S3] Upload failed:', error.message || error);
     return base64Data;
@@ -878,26 +878,26 @@ function generateWeeklyReportHtml(data: {
     : `Here's your weekly performance summary for <strong>${data.businessName}</strong>. Take a look at how your business moved this week.`;
 
   const content = `
-    <div style="text-align: center; margin-bottom: 32px;">
-      <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">Weekly Performance</h2>
+    <div style="text-align: left; margin-bottom: 24px;">
+      <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 20px; font-weight: 700;">Weekly Performance</h2>
       <p style="color: #6b7280; font-size: 14px; margin: 0;">${data.startDate} &mdash; ${data.endDate}</p>
     </div>
     
-    <p style="font-size: 16px; color: #374151;">Hi <strong>${data.name}</strong>,</p>
+    <p style="font-size: 16px; color: #374151; margin-bottom: 24px;">Hi <strong>${data.name}</strong>,</p>
     <p style="font-size: 16px; color: #374151; margin-bottom: 32px;">${intro}</p>
     
-    <div style="border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; padding: 24px 0; margin-bottom: 32px;">
+    <div style="margin-bottom: 32px;">
       <table width="100%" cellspacing="0" cellpadding="0">
         <tr>
-          <td width="33%" style="text-align: center;">
+          <td style="padding-right: 16px;">
             <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Total Revenue</div>
             <div style="font-size: 20px; font-weight: 600; color: #111827;">${data.sales}</div>
           </td>
-          <td width="33%" style="text-align: center; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+          <td style="padding-right: 16px;">
             <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Total Expenses</div>
             <div style="font-size: 20px; font-weight: 600; color: #111827;">${data.expenses}</div>
           </td>
-          <td width="33%" style="text-align: center;">
+          <td>
             <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Net Profit</div>
             <div style="font-size: 20px; font-weight: 600; color: #111827;">${data.profit}</div>
           </td>
@@ -906,15 +906,13 @@ function generateWeeklyReportHtml(data: {
     </div>
     
     <div style="margin-bottom: 32px;">
-      <h4 style="color: #111827; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">Business Insights</h4>
-      <ul style="color: #374151; font-size: 15px; line-height: 1.6; padding-left: 20px; margin: 0;">
-        <li style="margin-bottom: 8px;"><strong>Inventory Check:</strong> Keep an eye on your low stock alerts in the dashboard to ensure you never miss a sale.</li>
-        <li style="margin-bottom: 8px;"><strong>Expense Tracking:</strong> Remember to record every small expense. Those little costs add up and affect your true profit.</li>
-        <li><strong>Customer Growth:</strong> Engaging with your top customers can lead to repeat business. Check your top customers list!</li>
-      </ul>
+      <h4 style="color: #111827; margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">Business Insights</h4>
+      <p style="color: #374151; font-size: 15px; margin-bottom: 8px;"><strong>Inventory Check:</strong> Keep an eye on your low stock alerts in the dashboard to ensure you never miss a sale.</p>
+      <p style="color: #374151; font-size: 15px; margin-bottom: 8px;"><strong>Expense Tracking:</strong> Remember to record every small expense. Those little costs add up and affect your true profit.</p>
+      <p style="color: #374151; font-size: 15px;"><strong>Customer Growth:</strong> Engaging with your top customers can lead to repeat business. Check your top customers list!</p>
     </div>
     
-    <div style="text-align: center;">
+    <div style="text-align: left;">
       <a href="https://gryndee.com/dashboard" class="button">View Full Analytics</a>
     </div>
   `;
@@ -1184,8 +1182,14 @@ async function setSystemSetting(key: string, value: string) {
 }
 
 function getEmailLayout(content: string, logoUrl?: string, businessName: string = 'Gryndee') {
-  const logoHtml = logoUrl 
-    ? `<img src="${logoUrl}" alt="${businessName}" style="max-height: 40px; width: auto; display: block; margin: 0 auto;">` 
+  let finalLogoUrl = logoUrl;
+  if (finalLogoUrl && finalLogoUrl.startsWith('/api/images')) {
+    const baseUrl = process.env.APP_URL || 'https://gryndee.com';
+    finalLogoUrl = `${baseUrl}${finalLogoUrl}`;
+  }
+
+  const logoHtml = finalLogoUrl 
+    ? `<img src="${finalLogoUrl}" alt="${businessName}" style="max-height: 40px; width: auto; display: block; margin: 0 auto;">` 
     : `<h1 style="color: #111827; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em;">${businessName}</h1>`;
   
   return `
@@ -1204,39 +1208,32 @@ function getEmailLayout(content: string, logoUrl?: string, businessName: string 
             color: #374151; 
             margin: 0; 
             padding: 0; 
-            background-color: #f3f4f6; 
+            background-color: #ffffff;
             -webkit-font-smoothing: antialiased;
           }
           .wrapper {
             width: 100%;
-            table-layout: fixed;
-            background-color: #f3f4f6;
-            padding-bottom: 40px;
+            padding: 40px 0;
           }
           .container { 
             max-width: 600px; 
-            margin: 40px auto; 
+            margin: 0 auto; 
             background: #ffffff; 
-            border-radius: 16px; 
-            overflow: hidden; 
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); 
           }
           .header { 
-            padding: 40px 32px; 
+            padding: 0 32px 40px 32px; 
             text-align: center; 
-            background-color: #ffffff;
           }
           .content { 
-            padding: 0 40px 40px 40px; 
+            padding: 0 32px 40px 32px; 
             font-size: 16px;
-            color: #4b5563;
+            color: #374151;
           }
           .footer { 
             padding: 32px; 
             text-align: center; 
             font-size: 13px; 
             color: #9ca3af; 
-            background-color: #f9fafb;
             border-top: 1px solid #f3f4f6;
           }
           .footer a {
@@ -1245,25 +1242,19 @@ function getEmailLayout(content: string, logoUrl?: string, businessName: string 
           }
           .button { 
             display: inline-block; 
-            padding: 14px 28px; 
+            padding: 12px 24px; 
             background-color: #111827; 
             color: #ffffff !important; 
             text-decoration: none; 
-            border-radius: 10px; 
+            border-radius: 8px; 
             font-weight: 600; 
             font-size: 15px;
             margin-top: 24px;
             text-align: center;
           }
-          .divider {
-            height: 1px;
-            background-color: #f3f4f6;
-            margin: 32px 0;
-          }
           @media only screen and (max-width: 600px) {
-            .container { margin: 0; border-radius: 0; }
             .content { padding: 0 24px 32px 24px; }
-            .header { padding: 32px 24px; }
+            .header { padding: 0 24px 32px 24px; }
           }
         </style>
       </head>
@@ -1279,7 +1270,6 @@ function getEmailLayout(content: string, logoUrl?: string, businessName: string 
             <div class="footer">
               <p style="margin: 0 0 12px 0;">&copy; ${new Date().getFullYear()} <strong>${businessName}</strong>. All rights reserved.</p>
               <p style="margin: 0;">You are receiving this because you're a valued member of the ${businessName} community.</p>
-              <p style="margin: 12px 0 0 0;"><a href="#">Unsubscribe</a> &bull; <a href="#">Privacy Policy</a></p>
             </div>
           </div>
         </div>
@@ -2903,6 +2893,38 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     } catch (error: any) {
       console.error('[CMS] Error updating landing config:', error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/images/*", async (req, res) => {
+    try {
+      const key = req.params[0];
+      if (!key) return res.status(400).send("Missing key");
+
+      if (!process.env.AWS_S3_BUCKET_NAME) {
+        return res.status(404).send("S3 not configured");
+      }
+
+      const command = new GetObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: key,
+      });
+
+      const response = await s3Client.send(command);
+      
+      if (response.ContentType) {
+        res.setHeader("Content-Type", response.ContentType);
+      }
+      if (response.CacheControl) {
+        res.setHeader("Cache-Control", response.CacheControl);
+      } else {
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+      }
+
+      (response.Body as any).pipe(res);
+    } catch (error: any) {
+      console.error("[S3 Proxy Error]", error.message);
+      res.status(404).send("Image not found");
     }
   });
 

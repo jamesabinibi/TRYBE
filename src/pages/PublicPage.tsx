@@ -45,8 +45,8 @@ export default function PublicPage() {
       <header className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-100">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
-            {config?.logo?.url ? (
-              <img src={config.logo.url} alt={config.logo.text} className="h-10 w-auto object-contain" />
+            {config?.logo?.favicon || config?.logo?.url ? (
+              <img src={config.logo.favicon || config.logo.url} alt={config.logo.text} className="h-10 w-auto object-contain" />
             ) : (
               <>
                 <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-brand/20 group-hover:scale-105 transition-transform">
