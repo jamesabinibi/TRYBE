@@ -1189,8 +1189,8 @@ function getEmailLayout(content: string, logoUrl?: string, businessName: string 
   }
 
   const logoHtml = finalLogoUrl 
-    ? `<img src="${finalLogoUrl}" alt="${businessName}" style="max-height: 40px; width: auto; display: block; margin: 0 auto;">` 
-    : `<h1 style="color: #111827; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em;">${businessName}</h1>`;
+    ? `<img src="${finalLogoUrl}" alt="${businessName}" style="max-height: 32px; width: auto; display: block;">` 
+    : `<h1 style="color: #111827; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">${businessName}</h1>`;
   
   return `
     <!DOCTYPE html>
@@ -1200,12 +1200,12 @@ function getEmailLayout(content: string, logoUrl?: string, businessName: string 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${businessName} Notification</title>
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
           
           body { 
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
             line-height: 1.6; 
-            color: #374151; 
+            color: #3f3f46; 
             margin: 0; 
             padding: 0; 
             background-color: #ffffff;
@@ -1216,45 +1216,52 @@ function getEmailLayout(content: string, logoUrl?: string, businessName: string 
             padding: 40px 0;
           }
           .container { 
-            max-width: 600px; 
+            max-width: 560px; 
             margin: 0 auto; 
             background: #ffffff; 
           }
           .header { 
-            padding: 0 32px 40px 32px; 
-            text-align: center; 
+            padding: 0 0 32px 0; 
+            text-align: left; 
+            border-bottom: 1px solid #f4f4f5;
+            margin-bottom: 32px;
           }
           .content { 
-            padding: 0 32px 40px 32px; 
-            font-size: 16px;
-            color: #374151;
+            font-size: 15px;
+            color: #3f3f46;
+          }
+          .content h1, .content h2, .content h3 {
+            color: #18181b;
+            font-weight: 600;
+            margin-top: 0;
           }
           .footer { 
-            padding: 32px; 
-            text-align: center; 
-            font-size: 13px; 
-            color: #9ca3af; 
-            border-top: 1px solid #f3f4f6;
+            margin-top: 48px;
+            padding-top: 32px; 
+            text-align: left; 
+            font-size: 12px; 
+            color: #a1a1aa; 
+            border-top: 1px solid #f4f4f5;
           }
           .footer a {
-            color: #6b7280;
+            color: #71717a;
             text-decoration: underline;
           }
           .button { 
             display: inline-block; 
-            padding: 12px 24px; 
-            background-color: #111827; 
+            padding: 10px 20px; 
+            background-color: #18181b; 
             color: #ffffff !important; 
             text-decoration: none; 
-            border-radius: 8px; 
-            font-weight: 600; 
-            font-size: 15px;
-            margin-top: 24px;
+            border-radius: 6px; 
+            font-weight: 500; 
+            font-size: 14px;
+            margin-top: 16px;
+            margin-bottom: 16px;
             text-align: center;
           }
           @media only screen and (max-width: 600px) {
-            .content { padding: 0 24px 32px 24px; }
-            .header { padding: 0 24px 32px 24px; }
+            .wrapper { padding: 24px 20px; }
           }
         </style>
       </head>
@@ -1268,7 +1275,7 @@ function getEmailLayout(content: string, logoUrl?: string, businessName: string 
               ${content}
             </div>
             <div class="footer">
-              <p style="margin: 0 0 12px 0;">&copy; ${new Date().getFullYear()} <strong>${businessName}</strong>. All rights reserved.</p>
+              <p style="margin: 0 0 8px 0;">&copy; ${new Date().getFullYear()} <strong>${businessName}</strong>. All rights reserved.</p>
               <p style="margin: 0;">You are receiving this because you're a valued member of the ${businessName} community.</p>
             </div>
           </div>
@@ -1280,11 +1287,39 @@ function getEmailLayout(content: string, logoUrl?: string, businessName: string 
 
 async function sendEmail(to: string, subject: string, text: string, html?: string, logoUrl?: string, businessName: string = 'Gryndee') {
   let finalBusinessName = businessName;
+  let finalLogoUrl = logoUrl;
+
+  // Try to fetch landing config for logo
+  try {
+    let landingConfigStr = null;
+    if (process.env.AWS_DB_PASSWORD) {
+      const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'LANDING_CONFIG' LIMIT 1");
+      if (rows.length > 0) landingConfigStr = rows[0].value;
+    } else if (supabase) {
+      const { data } = await supabase.from('system_settings').select('value').eq('key', 'LANDING_CONFIG').maybeSingle();
+      if (data) landingConfigStr = data.value;
+    }
+
+    if (landingConfigStr) {
+      const landingConfig = JSON.parse(landingConfigStr);
+      if (landingConfig?.logo?.url) {
+        finalLogoUrl = landingConfig.logo.url;
+      } else if (landingConfig?.logo?.favicon) {
+        finalLogoUrl = landingConfig.logo.favicon;
+      }
+      if (landingConfig?.logo?.text) {
+        finalBusinessName = landingConfig.logo.text;
+      }
+    }
+  } catch (e) {
+    console.error('[EMAIL] Error fetching landing config for logo:', e);
+  }
+
   if (finalBusinessName && finalBusinessName.startsWith('{"')) {
     try {
       const parsed = JSON.parse(finalBusinessName);
       if (parsed.name) finalBusinessName = parsed.name;
-      if (!logoUrl && parsed.logo) logoUrl = parsed.logo;
+      if (!finalLogoUrl && parsed.logo) finalLogoUrl = parsed.logo;
     } catch (e) {}
   }
 
@@ -1333,7 +1368,7 @@ async function sendEmail(to: string, subject: string, text: string, html?: strin
     });
 
     // Wrap content in layout if it's not already a full HTML document
-    const finalHtml = html?.includes('<!DOCTYPE html>') ? html : getEmailLayout(html || text.replace(/\n/g, '<br>'), logoUrl, finalBusinessName);
+    const finalHtml = html?.includes('<!DOCTYPE html>') ? html : getEmailLayout(html || text.replace(/\n/g, '<br>'), finalLogoUrl, finalBusinessName);
 
     const info = await transporter.sendMail({
       from: fromAddress,

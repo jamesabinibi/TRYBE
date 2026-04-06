@@ -9,10 +9,10 @@
   --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-brand: var(--brand-color, #4facfe);
-  --color-brand-light: var(--brand-color-light, #4facfe33);
-  --color-brand-muted: var(--brand-color-muted, #4facfe1a);
-  --color-brand-hover: var(--brand-color-hover, #00f2fe);
+  --color-brand: var(--brand-color, #11abdf);
+  --color-brand-light: var(--brand-color-light, #11abdf33);
+  --color-brand-muted: var(--brand-color-muted, #11abdf1a);
+  --color-brand-hover: var(--brand-color-hover, #0e8eb8);
 
   --radius-card: 32px;
   --radius-xl: 40px;
@@ -26,13 +26,13 @@
   }
   body {
     @apply font-sans text-zinc-900 dark:text-zinc-100 antialiased;
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     background-attachment: fixed;
   }
   
-  h1, .h1 { @apply font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-zinc-900 dark:text-white not-italic leading-[1.1]; }
-  h2, .h2 { @apply font-display text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white not-italic leading-tight; }
-  h3, .h3 { @apply font-display text-lg font-bold tracking-tight text-zinc-900 dark:text-white not-italic; }
+  h1, .h1 { @apply font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-zinc-900 dark:text-white not-italic leading-[1.15]; }
+  h2, .h2 { @apply font-display text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white not-italic leading-tight; }
+  h3, .h3 { @apply font-display text-lg font-semibold tracking-tight text-zinc-900 dark:text-white not-italic; }
   
   .card-number { @apply font-display text-2xl sm:text-3xl font-bold tracking-tight; }
   .body-text { @apply text-base leading-relaxed font-medium text-zinc-600 dark:text-zinc-400; }

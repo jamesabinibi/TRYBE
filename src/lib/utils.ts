@@ -13,6 +13,26 @@ export const NUMBER_STYLE = "font-sans font-bold tracking-tight";
 const memoryCache: Record<string, { data: any; timestamp: number }> = {};
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
+export function useQueryClient() {
+  return {
+    getQueryData: (key: string) => {
+      if (memoryCache[key] && (Date.now() - memoryCache[key].timestamp < CACHE_EXPIRY)) {
+        return memoryCache[key].data;
+      }
+      try {
+        const saved = localStorage.getItem(`cache_${key}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Date.now() - parsed.timestamp < CACHE_EXPIRY * 2) {
+            return parsed.data;
+          }
+        }
+      } catch (e) {}
+      return null;
+    }
+  };
+}
+
 export function formatCurrency(amount: number | string | undefined | null, currencyCode?: string) {
   let value = 0;
   if (typeof amount === 'number') {

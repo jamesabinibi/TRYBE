@@ -50,7 +50,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import PublicInvoice from './pages/PublicInvoice';
 import PublicPage from './pages/PublicPage';
-import { cn, apiFetch, useQuery } from './lib/utils';
+import { cn, apiFetch, useQuery, useQueryClient } from './lib/utils';
 import NotificationCenter from './components/NotificationCenter';
 import Walkthrough from './components/Walkthrough';
 import ChatSupport from './components/ChatSupport';
@@ -177,7 +177,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
             {landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo ? (
               <img src={landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo} alt="" className="w-full h-full object-contain rounded-[1.25rem] p-2" />
             ) : (
-              <Zap className="w-7 h-7 text-brand" />
+              <div className="w-full h-full bg-zinc-200/50 dark:bg-zinc-700/50 animate-pulse rounded-[1.25rem]" />
             )}
           </div>
           <div className="flex flex-col">
@@ -381,11 +381,22 @@ export default function App() {
     const res = await apiFetch('/api/landing-config');
     if (!res.ok) return null;
     return res.json();
-  }, { persist: true });
+  }, { 
+    persist: true,
+    staleTime: 1000 * 60 * 5 // 5 minutes
+  });
 
-  const brandColor = settings?.brand_color || landingConfig?.brandColor || '#9c4608';
-  const businessLogo = landingConfig?.logo?.favicon || landingConfig?.logo?.url || settings?.logo_url;
-  const businessName = settings?.business_name || landingConfig?.logo?.text || 'Gryndee';
+  // Try to get cached data immediately to prevent flash
+  const queryClient = useQueryClient();
+  const cachedLandingConfig = queryClient.getQueryData('landing-config') as any;
+  const cachedSettings = queryClient.getQueryData('app_settings') as any;
+
+  const currentLandingConfig = landingConfig || cachedLandingConfig;
+  const currentSettings = settings || cachedSettings;
+
+  const brandColor = currentSettings?.brand_color || currentLandingConfig?.brandColor || '#11abdf';
+  const businessLogo = currentLandingConfig?.logo?.favicon || currentLandingConfig?.logo?.url || currentSettings?.logo_url;
+  const businessName = currentSettings?.business_name || currentLandingConfig?.logo?.text || 'Gryndee';
 
   useEffect(() => {
     const root = document.documentElement;

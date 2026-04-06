@@ -52,7 +52,7 @@ export default function Settings() {
     vat_enabled: globalSettings?.vat_enabled || false,
     low_stock_threshold: (globalSettings?.low_stock_threshold || 5).toString(),
     logo_url: globalSettings?.logo_url || '',
-    brand_color: globalSettings?.brand_color || '#ff4d00',
+    brand_color: globalSettings?.brand_color || '#11abdf',
     slogan: globalSettings?.slogan || '',
     address: globalSettings?.address || '',
     email: globalSettings?.email || '',
@@ -103,7 +103,7 @@ export default function Settings() {
         vat_enabled: globalSettings.vat_enabled || false,
         low_stock_threshold: (globalSettings.low_stock_threshold || 5).toString(),
         logo_url: globalSettings.logo_url || '',
-        brand_color: globalSettings.brand_color || '#ff4d00',
+        brand_color: globalSettings.brand_color || '#11abdf',
         slogan: globalSettings.slogan || '',
         address: globalSettings.address || '',
         email: globalSettings.email || '',
@@ -589,7 +589,7 @@ CREATE TABLE IF NOT EXISTS settings (
   vat_enabled BOOLEAN DEFAULT false,
   low_stock_threshold INTEGER DEFAULT 5,
   logo_url TEXT,
-  brand_color TEXT DEFAULT '#ff4d00',
+  brand_color TEXT DEFAULT '#11abdf',
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(account_id)
 );
@@ -1321,7 +1321,7 @@ NOTIFY pgrst, 'reload schema';
           <p className="body-text">Update your business information and tax settings.</p>
         </div>
         <div id="logo" className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
+          <div className="glass-card p-6 sm:p-8">
             <div className="flex flex-col items-center text-center space-y-6">
               <label className="label-text">Business Logo</label>
               <div className="flex flex-col items-center gap-6 w-full">
@@ -1482,7 +1482,7 @@ NOTIFY pgrst, 'reload schema';
                       className="w-full h-10 bg-white dark:bg-black/50 border border-zinc-200 dark:border-zinc-700 rounded-xl px-1 py-1 focus:outline-none focus:border-brand"
                     />
                   </div>
-                  <p className="body-text mt-2">Enter a valid HEX code (e.g. #ff4d00)</p>
+                  <p className="body-text mt-2">Enter a valid HEX code (e.g. #11abdf)</p>
                 </div>
               </div>
               
@@ -1734,7 +1734,7 @@ NOTIFY pgrst, 'reload schema';
               </div>
               <p className="body-text">Manage the categories used to organize your inventory.</p>
             </div>
-            <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
+            <div className="lg:col-span-2 glass-card p-6 sm:p-8 space-y-6 sm:space-y-8">
               <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
                 <Input 
                   type="text" 
@@ -1810,7 +1810,7 @@ NOTIFY pgrst, 'reload schema';
             </div>
             <p className="body-text">Customize the automated emails sent to your users.</p>
           </div>
-          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6 sm:space-y-8">
+          <div className="lg:col-span-2 glass-card p-6 sm:p-8 space-y-6 sm:space-y-8">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="h3">Welcome Email</h4>
@@ -1868,7 +1868,7 @@ NOTIFY pgrst, 'reload schema';
             </div>
             <p className="body-text">Diagnostic tools and system status information.</p>
           </div>
-          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+          <div className="lg:col-span-2 glass-card p-6 sm:p-8 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
                 <p className="label-text mb-1">Server Status</p>
@@ -1903,7 +1903,7 @@ NOTIFY pgrst, 'reload schema';
             </div>
             <p className="body-text">Critical operations for managing your business data.</p>
           </div>
-          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+          <div className="lg:col-span-2 glass-card p-6 sm:p-8 space-y-6">
             <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 space-y-4">
               <div className="flex items-center gap-3 text-zinc-900 dark:text-white">
                 <Database className="w-5 h-5 text-brand" />
@@ -1983,7 +1983,7 @@ NOTIFY pgrst, 'reload schema';
           </div>
           <p className="body-text">Manage your personal profile and security settings.</p>
         </div>
-        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+        <div className="lg:col-span-2 glass-card p-6 sm:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-700/50">
             <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-brand/20 shrink-0 relative">
               {user?.name?.charAt(0) || 'U'}
@@ -2120,7 +2120,7 @@ NOTIFY pgrst, 'reload schema';
             </div>
             <p className="body-text">Manage your staff accounts and their access levels.</p>
           </div>
-          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+          <div className="lg:col-span-2 glass-card p-6 sm:p-8 space-y-6">
             <div className="flex justify-end">
               <button 
                 onClick={() => handleOpenUserModal()}
