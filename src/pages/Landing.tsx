@@ -60,11 +60,20 @@ export default function Landing() {
 
   const handleSaveConfig = async (newConfig: any) => {
     try {
+      let userId = '0';
+      try {
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          const u = JSON.parse(savedUser);
+          userId = u?.id?.toString() || '0';
+        }
+      } catch (e) {}
+
       const res = await apiFetch('/api/landing-config', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': localStorage.getItem('userId') || '0'
+          'x-user-id': userId
         },
         body: JSON.stringify(newConfig)
       });

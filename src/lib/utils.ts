@@ -181,18 +181,35 @@ export async function retryWithBackoff<T>(
 export async function fetchGeminiKey(): Promise<string> {
   // Try to get from build-time env vars first
   // We also check window.process.env for dynamic injection in AI Studio
-  const win = window as any;
-  let key = win.process?.env?.API_KEY || 
-            win.process?.env?.GEMINI_API_KEY ||
-            process.env.API_KEY || 
-            process.env.GEMINI_API_KEY || 
-            (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  let key = '';
+  try {
+    const win = window as any;
+    key = win.process?.env?.API_KEY || 
+          win.process?.env?.GEMINI_API_KEY ||
+          (typeof process !== 'undefined' ? (process.env.API_KEY || process.env.GEMINI_API_KEY) : undefined) || 
+          (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  } catch (e) {
+    console.warn('Error accessing process.env in browser:', e);
+  }
             
   if (key && key !== '""' && key !== "''") return key;
   
   // Fetch from backend
   try {
-    const res = await apiFetch('/api/gemini-key');
+    let userId = '';
+    try {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        userId = user?.id?.toString() || '';
+      }
+    } catch (e) {}
+
+    const res = await apiFetch('/api/gemini-key', {
+      headers: {
+        'x-user-id': userId
+      }
+    });
     if (res.ok) {
       const data = await res.json();
       if (data.apiKey) return data.apiKey;

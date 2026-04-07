@@ -52,12 +52,21 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
     reader.onloadend = async () => {
       const base64 = reader.result as string;
       try {
+        let userId = '0';
+        try {
+          const savedUser = localStorage.getItem('user');
+          if (savedUser) {
+            const u = JSON.parse(savedUser);
+            userId = u?.id?.toString() || '0';
+          }
+        } catch (e) {}
+
         console.log(`[CMS] Uploading image for path: ${path}, size: ${base64.length} chars`);
         const res = await apiFetch('/api/upload', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': localStorage.getItem('userId') || '0'
+            'x-user-id': userId
           },
           body: JSON.stringify({ image: base64, folder: 'landing' })
         });
