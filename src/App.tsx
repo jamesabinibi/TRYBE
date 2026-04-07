@@ -172,26 +172,26 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         )}
       >
         {/* Logo Section */}
-        <div className="h-28 px-8 flex items-center gap-4">
-          <div className="w-14 h-14 bg-white dark:bg-zinc-800 rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-black/5 border border-zinc-100 dark:border-white/10">
+        <div className="h-24 px-6 flex items-center gap-4 shrink-0">
+          <div className="w-12 h-12 bg-white dark:bg-zinc-800 rounded-2xl flex items-center justify-center shadow-xl shadow-black/5 border border-zinc-100 dark:border-white/10">
             {landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo ? (
-              <img src={landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo} alt="" className="w-full h-full object-contain rounded-[1.25rem] p-2" />
+              <img src={landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo} alt="" className="w-full h-full object-contain rounded-2xl p-2" />
             ) : (
-              <div className="w-full h-full bg-zinc-200/50 dark:bg-zinc-700/50 animate-pulse rounded-[1.25rem]" />
+              <div className="w-full h-full bg-zinc-200/50 dark:bg-zinc-700/50 animate-pulse rounded-2xl" />
             )}
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-display font-bold tracking-tight text-zinc-900 dark:text-white truncate max-w-[140px]">
+            <span className="text-lg font-display font-bold tracking-tight text-zinc-900 dark:text-white truncate max-w-[140px]">
               {businessName}
             </span>
-            <span className="text-[10px] font-bold text-brand uppercase tracking-[0.2em]">Business Hub</span>
+            <span className="text-[9px] font-bold text-brand uppercase tracking-[0.2em]">Business Hub</span>
           </div>
         </div>
         
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto no-scrollbar">
-          <div className="px-4 mb-6">
-            <p className="label-text opacity-30">Main Menu</p>
+        <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto no-scrollbar">
+          <div className="px-3 mb-2 mt-1">
+            <p className="label-text opacity-30 text-[10px]">Main Menu</p>
           </div>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -201,21 +201,21 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                 to={item.path}
                 onClick={() => window.innerWidth < 1024 && onClose()}
                 className={cn(
-                  "group flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 relative overflow-hidden",
+                  "group flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 relative overflow-hidden",
                   isActive 
-                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-2xl shadow-black/10" 
+                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xl shadow-black/10" 
                     : "text-zinc-500 dark:text-zinc-400 hover:bg-white dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white"
                 )}
               >
                 <item.icon className={cn(
-                  "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
+                  "w-4 h-4 transition-transform duration-300 group-hover:scale-110",
                   isActive ? "text-white dark:text-zinc-900" : "text-zinc-400 group-hover:text-brand"
                 )} />
-                <span className="text-sm font-bold tracking-tight">{item.label}</span>
+                <span className="text-[13px] font-bold tracking-tight">{item.label}</span>
                 {isActive && (
                   <motion.div 
                     layoutId="active-pill"
-                    className="absolute left-0 w-1.5 h-6 bg-brand rounded-r-full"
+                    className="absolute left-0 w-1 h-5 bg-brand rounded-r-full"
                   />
                 )}
               </Link>
@@ -224,10 +224,10 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         </nav>
 
         {/* User Profile Section */}
-        <div className="p-6 border-t border-zinc-200/50 dark:border-white/5">
-          <div className="p-6 bg-zinc-50 dark:bg-white/5 rounded-[2rem] space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-brand/10 flex items-center justify-center text-brand font-bold text-lg">
+        <div className="p-4 border-t border-zinc-200/50 dark:border-white/5">
+          <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-[1.5rem] space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-bold text-base">
                 {user?.name?.charAt(0) || user?.username?.charAt(0) || '?'}
               </div>
               <div className="flex-1 min-w-0">
@@ -235,18 +235,18 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest truncate">{user?.role}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button 
                 onClick={toggleDarkMode}
-                className="flex-1 h-12 flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-2xl text-zinc-600 dark:text-zinc-400 hover:text-brand transition-all active:scale-95 shadow-sm"
+                className="flex-1 h-10 flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-brand transition-all active:scale-95 shadow-sm"
               >
-                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
               <button 
                 onClick={logout}
-                className="flex-1 h-12 flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-2xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all active:scale-95 shadow-sm"
+                className="flex-1 h-10 flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all active:scale-95 shadow-sm"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           </div>
