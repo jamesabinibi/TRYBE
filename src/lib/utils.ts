@@ -50,10 +50,15 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   try {
     // Support absolute URLs for mobile/Capacitor, relative for web
     const isNative = Capacitor.isNativePlatform();
-    let baseUrl = isNative ? (import.meta.env.VITE_API_URL || '') : '';
+    let baseUrl = isNative ? (import.meta.env.VITE_API_URL || 'https://pa6brvdnhc.us-east-1.awsapprunner.com') : '';
     
     if (baseUrl && !baseUrl.startsWith('http')) {
-      baseUrl = `https://${baseUrl}`;
+      // If it's a localhost or 10.0.2.2 IP, use http, otherwise https
+      if (baseUrl.includes('localhost') || baseUrl.includes('10.0.2.2') || baseUrl.includes('127.0.0.1')) {
+        baseUrl = `http://${baseUrl}`;
+      } else {
+        baseUrl = `https://${baseUrl}`;
+      }
     }
     
     if (baseUrl.endsWith('/')) {

@@ -201,7 +201,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                 to={item.path}
                 onClick={() => window.innerWidth < 1024 && onClose()}
                 className={cn(
-                  "group flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 relative overflow-hidden",
+                  "group flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all duration-300 relative overflow-hidden",
                   isActive 
                     ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xl shadow-black/10" 
                     : "text-zinc-500 dark:text-zinc-400 hover:bg-white dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white"
@@ -382,8 +382,7 @@ export default function App() {
     if (!res.ok) return null;
     return res.json();
   }, { 
-    persist: true,
-    staleTime: 1000 * 60 * 5 // 5 minutes
+    persist: true
   });
 
   // Try to get cached data immediately to prevent flash

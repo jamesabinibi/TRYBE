@@ -4177,14 +4177,20 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       }
 
       if (!supabase) return res.json([]);
+      
+      let selectQuery = `
+        *,
+        categories(name),
+        product_variants(*)
+      `;
+      
+      if (!excludeImages) {
+        selectQuery += `, product_images(image_data)`;
+      }
+
       let { data: products, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          categories(name),
-          product_variants(*),
-          product_images(image_data)
-        `)
+        .select(selectQuery)
         .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });
 
@@ -4220,6 +4226,76 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       });
 
       res.json(processedProducts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/products/:id", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      const { id } = req.params;
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: products } = await pool.query(
+          'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.account_id = $1 AND p.id = $2',
+          [userInfo.account_id, id]
+        );
+        
+        if (products.length === 0) return res.status(404).json({ error: "Product not found" });
+        
+        const product = products[0];
+        
+        const { rows: variants } = await pool.query(
+          'SELECT * FROM product_variants WHERE product_id = $1',
+          [id]
+        );
+        
+        const { rows: images } = await pool.query(
+          'SELECT image_data FROM product_images WHERE product_id = $1',
+          [id]
+        );
+
+        product.product_variants = variants;
+        product.categories = { name: product.category_name };
+        product.variants = variants;
+        product.total_stock = variants.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0);
+        product.images = images.map((img: any) => img.image_data);
+
+        return res.json(product);
+      }
+
+      if (!supabase) return res.status(500).json({ error: "Database not configured" });
+
+      let { data: product, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name),
+          product_variants(*),
+          product_images(image_data)
+        `)
+        .eq('account_id', userInfo.account_id)
+        .eq('id', id)
+        .single();
+
+      if (error) return res.status(500).json({ error: error.message });
+      if (!product) return res.status(404).json({ error: "Product not found" });
+
+      const variants = product.product_variants || product.variants || [];
+      const totalStock = variants.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0);
+      
+      const processedProduct = {
+        ...product,
+        category_name: product.categories?.name || (Array.isArray(product.categories) ? product.categories[0]?.name : null),
+        variants: variants,
+        total_stock: totalStock,
+        images: (product.product_images || product.images || []).map((img: any) => img.image_data || img)
+      };
+
+      res.json(processedProduct);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

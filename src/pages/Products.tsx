@@ -126,7 +126,7 @@ export default function Products() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoints: ['/api/products', '/api/services', '/api/categories']
+        endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/categories']
       })
     });
     if (!batchRes.ok) {
@@ -264,7 +264,8 @@ export default function Products() {
     }
   };
 
-  const handleEditClick = (product: Product) => {
+  const handleEditClick = async (product: Product) => {
+    // Set initial data without images to open modal quickly
     setEditingProduct(product);
     setNewProduct({
       name: product.name,
@@ -283,10 +284,25 @@ export default function Products() {
         low_stock_threshold: v.low_stock_threshold !== null && v.low_stock_threshold !== undefined ? v.low_stock_threshold.toString() : '',
         price_override: v.price_override
       })),
-      images: product.images || []
+      images: []
     });
-    setImagePreviews(product.images || []);
+    setImagePreviews([]);
     setIsAddModalOpen(true);
+
+    // Fetch full product details including images
+    try {
+      const res = await fetchWithAuth(`/api/products/${product.id}`);
+      if (res.ok) {
+        const fullProduct = await res.json();
+        setNewProduct(prev => ({
+          ...prev,
+          images: fullProduct.images || []
+        }));
+        setImagePreviews(fullProduct.images || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch product images:', err);
+    }
   };
 
   const handleDeleteService = async (id: number) => {
