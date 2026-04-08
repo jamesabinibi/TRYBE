@@ -45,6 +45,7 @@ import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generatePDF as generatePDFUtil } from '../utils/pdfGenerator';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -93,7 +94,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradie
 
 export default function Sales() {
   const { user, fetchWithAuth } = useAuth();
-  const { settings } = useSettings();
+  const { settings, businessLogo, businessName } = useSettings();
   const currency = settings?.currency || 'NGN';
   const { searchQuery } = useSearch();
   const [activeTab, setActiveTab] = useState<'pos' | 'history'>('pos');
@@ -356,200 +357,33 @@ export default function Sales() {
     }
   };
 
-  const handleDownloadInvoice = (sale: any) => {
-    const doc = new jsPDF();
-    const brandColor = settings?.brand_color || '#ff4d00';
-    
-    // Header
-    doc.setFillColor(brandColor);
-    doc.rect(0, 0, 210, 45, 'F');
-    
-    // Business Logo or Name
-    if (settings?.logo_url) {
-      try {
-        // Note: Adding images to PDF can be tricky with remote URLs, 
-        // for now we stick to text or a placeholder if it fails
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(24);
-        doc.text(settings?.business_name || 'Gryndee', 15, 25);
-      } catch (e) {
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(24);
-        doc.text(settings?.business_name || 'Gryndee', 15, 25);
-      }
-    } else {
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(24);
-      doc.text(settings?.business_name || 'Gryndee', 15, 25);
+  const handleDownloadInvoice = async (sale: any) => {
+    try {
+      await generatePDFUtil({
+        items: (sale.sale_items || []).map((item: any) => ({
+          name: item.product_name || item.service_name || 'Item',
+          quantity: item.quantity,
+          price: item.unit_price,
+          total: item.total_price
+        })),
+        recipient: {
+          name: sale.customer_name || 'Walk-in Customer',
+          email: sale.customer_email || '',
+          phone: sale.customer_phone || '',
+          address: sale.customer_address || ''
+        },
+        invoiceNumber: sale.invoice_number,
+        invoiceDate: new Date(sale.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+        discount: sale.discount_percentage || 0,
+        invoiceTerms: customInvoiceTerms || settings?.invoice_terms,
+        vatEnabled: sale.vat_amount > 0,
+        vatAmount: sale.vat_amount || 0
+      }, { ...settings, logo_url: businessLogo || settings?.logo_url, business_name: businessName || settings?.business_name });
+      toast.success('Invoice downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate invoice');
     }
-    
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('INVOICE', 195, 15, { align: 'right' });
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`#${sale.invoice_number}`, 195, 25, { align: 'right' });
-    
-    // Business Info in Header
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    let headerInfoY = 32;
-    if (settings?.email) {
-      doc.text(settings.email, 195, headerInfoY, { align: 'right' });
-      headerInfoY += 4;
-    }
-    if (settings?.phone_number) {
-      doc.text(settings.phone_number, 195, headerInfoY, { align: 'right' });
-    }
-
-    // Customer Info
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('BILL TO', 15, 60);
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text(sale.customer_name || 'Walk-in Customer', 15, 68);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
-    let currentY = 73;
-    if (sale.customer_phone) {
-      doc.text(sale.customer_phone, 15, currentY);
-      currentY += 5;
-    }
-    if (sale.customer_email) {
-      doc.text(sale.customer_email, 15, currentY);
-      currentY += 5;
-    }
-    if (sale.customer_address) {
-      const splitAddress = doc.splitTextToSize(sale.customer_address, 80);
-      doc.text(splitAddress, 15, currentY);
-    }
-
-    // Invoice Meta
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('DATE ISSUED', 140, 60);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'normal');
-    doc.text(new Date(sale.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }), 140, 68);
-    
-    doc.setTextColor(100, 100, 100);
-    doc.text('PAYMENT METHOD', 140, 78);
-    doc.setTextColor(0, 0, 0);
-    doc.text(sale.payment_method || 'N/A', 140, 86);
-
-    const tableData = (sale.sale_items || []).map((item: any) => [
-      item.product_name || item.service_name || 'Item',
-      item.quantity.toString(),
-      formatCurrency(item.unit_price || 0, currency),
-      formatCurrency(item.total_price || 0, currency)
-    ]);
-
-    autoTable(doc, {
-      startY: 100,
-      head: [['Description', 'Qty', 'Unit Price', 'Total']],
-      body: tableData,
-      headStyles: { 
-        fillColor: [245, 245, 245],
-        textColor: [50, 50, 50],
-        fontSize: 9,
-        fontStyle: 'bold',
-        halign: 'left',
-        lineWidth: 0.1,
-        lineColor: [230, 230, 230]
-      },
-      bodyStyles: {
-        fontSize: 9,
-        textColor: 50,
-        cellPadding: 6
-      },
-      columnStyles: {
-        1: { halign: 'center' },
-        2: { halign: 'right' },
-        3: { halign: 'right' }
-      },
-      margin: { left: 15, right: 15 },
-      theme: 'plain',
-      didDrawPage: (data) => {
-        // Add a thin line at the bottom of the table
-        const lastY = data.cursor?.y || 0;
-        doc.setDrawColor(230, 230, 230);
-        doc.line(15, lastY, 195, lastY);
-      }
-    });
-
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
-
-    // Totals Section
-    const subtotal = (sale.total_amount || 0) + (sale.discount_amount || 0) - (sale.vat_amount || 0);
-    
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text('Subtotal:', 140, finalY);
-    doc.setTextColor(0, 0, 0);
-    doc.text(formatCurrency(subtotal, currency), 195, finalY, { align: 'right' });
-
-    let nextY = finalY + 7;
-    if (sale.discount_amount > 0) {
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Discount (${sale.discount_percentage}%):`, 140, nextY);
-      doc.setTextColor(220, 38, 38); // Red for discount
-      doc.text(`-${formatCurrency(sale.discount_amount, currency)}`, 195, nextY, { align: 'right' });
-      nextY += 7;
-    }
-
-    if (sale.vat_amount > 0) {
-      doc.setTextColor(100, 100, 100);
-      doc.text('VAT (7.5%):', 140, nextY);
-      doc.setTextColor(0, 0, 0);
-      doc.text(formatCurrency(sale.vat_amount, currency), 195, nextY, { align: 'right' });
-      nextY += 7;
-    }
-
-    // Total Box
-    doc.setFillColor(brandColor);
-    doc.rect(135, nextY + 2, 65, 12, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('TOTAL', 140, nextY + 10);
-    doc.text(formatCurrency(sale.total_amount, currency), 195, nextY + 10, { align: 'right' });
-
-    // Add Terms & Conditions if they exist
-    if (customInvoiceTerms) {
-      const termsY = Math.max(nextY + 30, 220);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.text('TERMS & CONDITIONS', 15, termsY);
-      
-      doc.setDrawColor(brandColor);
-      doc.setLineWidth(0.5);
-      doc.line(15, termsY + 2, 45, termsY + 2);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      const splitTerms = doc.splitTextToSize(customInvoiceTerms, 180);
-      doc.text(splitTerms, 15, termsY + 8);
-    }
-
-    // Footer
-    doc.setFontSize(8);
-    doc.setTextColor(180, 180, 180);
-    doc.text('Thank you for your business!', 105, 285, { align: 'center' });
-    doc.text(`Generated by Gryndee System - ${new Date().toLocaleString()}`, 105, 290, { align: 'center' });
-
-    doc.save(`invoice-${sale.invoice_number}.pdf`);
   };
 
   const handleCopyLink = (sale: any) => {
@@ -1341,7 +1175,7 @@ export default function Sales() {
                     />
                     <StatCard 
                       title="Avg. Order Value" 
-                      value={<CurrencyDisplay amount={filteredSales.length > 0 ? (filteredSales.reduce((acc, s) => acc + (s.total_amount || 0), 0) / filteredSales.length) : 0} currencyCode={currency} />} 
+                      value={<CurrencyDisplay amount={filteredSales.length > 0 ? (filteredSales.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0) / filteredSales.length) : 0} currencyCode={currency} />} 
                       color="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
                       icon={CreditCard}
                     />
@@ -1355,7 +1189,7 @@ export default function Sales() {
                     <h3 className="font-bold text-zinc-900 dark:text-white tracking-tight text-lg">Sales History</h3>
                     <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">Real-time transaction log</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                     <div className="relative">
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
                       <input 
@@ -1366,13 +1200,13 @@ export default function Sales() {
                         className="pl-10 pr-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all w-full sm:w-64"
                       />
                     </div>
-                    <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-1">
+                    <div className="flex items-center overflow-x-auto hide-scrollbar bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-1">
                       {(['today', 'week', 'month', 'all'] as const).map((range) => (
                         <button
                           key={range}
                           onClick={() => setDateRange(range)}
                           className={cn(
-                            "px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
+                            "px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all whitespace-nowrap",
                             dateRange === range 
                               ? "bg-brand text-white shadow-sm" 
                               : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"

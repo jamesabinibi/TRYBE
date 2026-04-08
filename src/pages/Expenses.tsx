@@ -261,7 +261,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
     ), { duration: Infinity });
   };
 
-  const filteredExpenses = expenses.filter(e => {
+  const filteredExpenses = (expenses || []).filter(e => {
     const matchesSearch = 
       String(e.description || '').toLowerCase().includes(String(searchQuery || '').toLowerCase()) ||
       String(e.category || '').toLowerCase().includes(String(searchQuery || '').toLowerCase());
@@ -348,6 +348,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
               placeholder="Search expenses..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
             />
           </div>
           <div className="flex items-center gap-2">

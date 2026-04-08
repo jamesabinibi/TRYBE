@@ -50,7 +50,7 @@ interface Recipient {
 
 const Invoices: React.FC = () => {
   const { user, fetchWithAuth } = useAuth();
-  const { settings } = useSettings();
+  const { settings, businessLogo, businessName } = useSettings();
 
   const canManageInvoices = user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_sales);
 
@@ -487,7 +487,7 @@ const Invoices: React.FC = () => {
         invoiceTerms: terms,
         vatEnabled,
         vatAmount
-      }, settings);
+      }, { ...settings, logo_url: businessLogo || settings?.logo_url, business_name: businessName || settings?.business_name });
       toast.success('Invoice generated successfully');
     } catch (error) {
       console.error('Error generating PDF:', error);

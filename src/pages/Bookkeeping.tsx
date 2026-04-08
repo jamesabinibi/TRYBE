@@ -256,6 +256,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
               placeholder="Search records..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
             />
           </div>
           <div className="flex items-center gap-3">

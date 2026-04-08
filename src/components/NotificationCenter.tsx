@@ -62,8 +62,10 @@ export default function NotificationCenter({ userId }: { userId: number }) {
         setNotifications(data);
         setUnreadCount(data.filter((n: Notification) => !n.is_read).length);
       }
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+    } catch (error: any) {
+      if (error?.message !== 'Failed to fetch') {
+        console.error('Failed to fetch notifications:', error);
+      }
     }
   };
 

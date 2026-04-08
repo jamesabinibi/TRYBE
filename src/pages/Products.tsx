@@ -594,6 +594,7 @@ export default function Products() {
                   placeholder="Search products..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
                 />
               </div>
               <div className="relative group">

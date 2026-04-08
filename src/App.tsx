@@ -485,9 +485,14 @@ export default function App() {
       }
       
       return response;
-    } catch (err) {
+    } catch (err: any) {
       const end = performance.now();
-      console.error(`[API] Request failed: ${fullUrl} after ${(end - start).toFixed(2)}ms`, err);
+      // Suppress "Failed to fetch" errors which happen during dev server restarts
+      if (err?.message === 'Failed to fetch') {
+        console.warn(`[API] Request failed (network error/server restart): ${fullUrl}`);
+      } else {
+        console.error(`[API] Request failed: ${fullUrl} after ${(end - start).toFixed(2)}ms`, err);
+      }
       throw err;
     }
   };

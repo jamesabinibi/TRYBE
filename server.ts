@@ -2735,10 +2735,43 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   app.get("/api/customers/:id/history", async (req, res) => {
-    if (!supabase) return res.status(503).json({ error: "Database not available" });
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: sales } = await pool.query(
+          'SELECT * FROM sales WHERE customer_id = $1 AND account_id = $2 ORDER BY created_at DESC',
+          [req.params.id, userInfo.account_id]
+        );
+
+        if (sales.length > 0) {
+          const saleIds = sales.map(s => s.id);
+          const { rows: saleItems } = await pool.query(
+            `SELECT si.*, pv.name as variant_name, p.name as product_name 
+             FROM sale_items si 
+             LEFT JOIN product_variants pv ON si.variant_id = pv.id 
+             LEFT JOIN products p ON pv.product_id = p.id 
+             WHERE si.sale_id = ANY($1)`,
+            [saleIds]
+          );
+
+          for (const sale of sales) {
+            sale.sale_items = saleItems
+              .filter(si => si.sale_id === sale.id)
+              .map(si => ({
+                ...si,
+                product_variants: {
+                  name: si.variant_name,
+                  products: { name: si.product_name }
+                }
+              }));
+          }
+        }
+        return res.json(sales);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
 
       const { data, error } = await supabase
         .from('sales')
@@ -6277,7 +6310,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       res.json(data || []);
     } catch (error: any) {
       console.error('[NOTIFICATIONS] Fetch error:', error);
-      if (error?.code === 'PGRST116' || error?.message?.includes('relation "notifications" does not exist')) {
+      if (error?.code === 'PGRST116' || error?.code === '42P01' || error?.message?.includes('relation "notifications" does not exist')) {
         return res.json([]);
       }
       res.status(500).json({ error: "Failed to fetch notifications" });

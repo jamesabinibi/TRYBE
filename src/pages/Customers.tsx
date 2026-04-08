@@ -340,6 +340,7 @@ export default function Customers() {
               placeholder="Search by name, phone, or email..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
             />
           </div>
         </div>
