@@ -274,10 +274,10 @@ export default function Dashboard() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="h1">Dashboard</h1>
-            {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial') && (
+            {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'trial') && (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-brand/10 text-brand rounded-full border border-brand/20 shadow-sm">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span className="label-text">Verified Premium</span>
+                <span className="label-text">Verified Pro</span>
               </div>
             )}
           </div>

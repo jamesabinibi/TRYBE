@@ -197,107 +197,193 @@ export default function Landing() {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center pt-32 pb-20 overflow-hidden">
-        {/* Background Gradients */}
+        {/* Background Gradients - Atmospheric Recipe 7 */}
         <div className="absolute inset-0 -z-10">
-          <div className="absolute top-[-10%] left-[20%] w-[50%] h-[50%] bg-brand/20 rounded-full blur-[120px] animate-pulse-soft opacity-60" />
-          <div className="absolute bottom-[-10%] right-[10%] w-[40%] h-[40%] bg-blue-400/10 rounded-full blur-[100px] animate-pulse-soft delay-1000 opacity-50" />
+          <div className="absolute top-[-10%] left-[20%] w-[60%] h-[60%] bg-brand/30 rounded-full blur-[120px] animate-pulse-soft opacity-60" />
+          <div className="absolute bottom-[-10%] right-[10%] w-[50%] h-[50%] bg-blue-400/20 rounded-full blur-[100px] animate-pulse-soft delay-1000 opacity-50" />
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
         </div>
 
         <div className="max-w-7xl mx-auto px-6 w-full">
-          <div className="flex flex-col items-center text-center space-y-10 max-w-4xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-5 py-2 bg-white border border-zinc-200/50 rounded-full text-xs font-bold text-brand shadow-sm"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span className="uppercase tracking-widest">{config.hero.badge}</span>
-            </motion.div>
- 
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-5xl md:text-7xl lg:text-8xl font-display font-semibold tracking-tight leading-[1.05] text-zinc-900"
-            >
-              {config.hero.title.split('\n').map((line: string, i: number) => (
-                <span key={i} className="block">
-                  {line}
-                </span>
-              ))}
-            </motion.h1>
- 
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="max-w-2xl text-lg md:text-xl text-zinc-500 font-medium leading-relaxed"
-            >
-              {config.hero.subtitle}
-            </motion.p>
- 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-center gap-4 pt-4 w-full sm:w-auto"
-            >
-              <Link 
-                to="/register" 
-                className="w-full sm:w-auto px-10 py-4 bg-zinc-900 text-white rounded-2xl text-base font-bold hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-3 active:scale-95 group"
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-10">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="inline-flex items-center gap-2 px-5 py-2 bg-white border border-zinc-200/50 rounded-full text-xs font-bold text-brand shadow-sm"
               >
-                {config.hero.ctaText}
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <a 
-                  href={config.hero.appStoreUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex-1 sm:flex-none flex items-center gap-3 px-6 py-3 bg-white border border-zinc-200/50 rounded-2xl hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
+                <Sparkles className="w-4 h-4" />
+                <span className="uppercase tracking-widest">{config.hero.badge}</span>
+              </motion.div>
+  
+              <motion.h1 
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.8 }}
+                className="text-6xl md:text-8xl font-display font-bold tracking-tight leading-[0.95] text-zinc-900"
+              >
+                {config.hero.title.split('\n').map((line: string, i: number) => (
+                  <span key={i} className="block">
+                    {line}
+                  </span>
+                ))}
+              </motion.h1>
+  
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="max-w-xl text-lg md:text-xl text-zinc-500 font-medium leading-relaxed"
+              >
+                {config.hero.subtitle}
+              </motion.p>
+  
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="flex flex-col sm:flex-row items-center gap-4 pt-4"
+              >
+                <Link 
+                  to="/register" 
+                  className="w-full sm:w-auto px-10 py-5 bg-zinc-900 text-white rounded-2xl text-lg font-bold hover:bg-zinc-800 transition-all shadow-2xl shadow-black/20 flex items-center justify-center gap-3 active:scale-95 group"
                 >
-                  <svg viewBox="0 0 384 512" className="w-6 h-6 fill-zinc-900">
-                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
-                  </svg>
-                  <div className="text-left">
-                    <div className="text-[9px] uppercase font-bold text-zinc-500 leading-none">Download on the</div>
-                    <div className="text-sm font-bold text-zinc-900 leading-none">App Store</div>
-                  </div>
-                </a>
-                <a 
-                  href={config.hero.playStoreUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex-1 sm:flex-none flex items-center gap-3 px-6 py-3 bg-white border border-zinc-200/50 rounded-2xl hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
-                >
-                  <svg viewBox="0 0 512 512" className="w-6 h-6 fill-zinc-900">
-                    <path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/>
-                  </svg>
-                  <div className="text-left">
-                    <div className="text-[9px] uppercase font-bold text-zinc-500 leading-none">Get it on</div>
-                    <div className="text-sm font-bold text-zinc-900 leading-none">Google Play</div>
-                  </div>
-                </a>
-              </div>
-            </motion.div>
+                  {config.hero.ctaText}
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                
+                <div className="flex items-center gap-3">
+                  <a 
+                    href={config.hero.appStoreUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="p-4 bg-white border border-zinc-200/50 rounded-2xl hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
+                  >
+                    <svg viewBox="0 0 384 512" className="w-6 h-6 fill-zinc-900">
+                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+                    </svg>
+                  </a>
+                  <a 
+                    href={config.hero.playStoreUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="p-4 bg-white border border-zinc-200/50 rounded-2xl hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
+                  >
+                    <svg viewBox="0 0 512 512" className="w-6 h-6 fill-zinc-900">
+                      <path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/>
+                    </svg>
+                  </a>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="flex items-center gap-4 pt-8 border-t border-zinc-200/50"
+              >
+                <div className="flex -space-x-3">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-zinc-100 overflow-hidden">
+                      <img src={`https://picsum.photos/seed/user${i}/100/100`} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+                <div className="text-sm font-medium text-zinc-500">
+                  <span className="text-zinc-900 font-bold">15,000+</span> businesses growing with Gryndee
+                </div>
+              </motion.div>
+            </div>
 
             <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-              className="relative w-full pt-16"
+              initial={{ opacity: 0, scale: 0.8, rotate: 5 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ delay: 0.4, duration: 1, ease: "easeOut" }}
+              className="relative lg:block hidden"
             >
-              <div className="relative rounded-[2.5rem] border border-zinc-200/50 bg-white/40 backdrop-blur-2xl p-3 shadow-2xl shadow-brand/5 overflow-hidden group max-w-5xl mx-auto">
+              <div className="relative rounded-[3rem] border border-zinc-200/50 bg-white/40 backdrop-blur-2xl p-4 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-tr from-brand/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                 <img 
                   src={config.hero.image} 
                   alt="Gryndee Dashboard" 
-                  className="rounded-[2rem] w-full shadow-sm transform group-hover:scale-[1.01] transition-transform duration-1000 ease-out border border-zinc-100"
+                  className="rounded-[2.5rem] w-full shadow-sm transform group-hover:scale-[1.02] transition-transform duration-1000 ease-out border border-zinc-100"
                   referrerPolicy="no-referrer"
                 />
               </div>
+
+              {/* Floating UI Elements - Technical Recipe 1 */}
+              <motion.div 
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute -top-10 -right-10 p-6 bg-white/90 backdrop-blur-xl rounded-3xl border border-zinc-200/50 shadow-2xl z-10"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-600">
+                    <TrendingUp className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Sales Today</div>
+                    <div className="text-xl font-bold text-zinc-900">₦450,000</div>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                animate={{ y: [0, 10, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                className="absolute -bottom-10 -left-10 p-6 bg-white/90 backdrop-blur-xl rounded-3xl border border-zinc-200/50 shadow-2xl z-10"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-brand/10 flex items-center justify-center text-brand">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Inventory Status</div>
+                    <div className="text-xl font-bold text-zinc-900">Optimal</div>
+                  </div>
+                </div>
+              </motion.div>
             </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Premium Features Showcase - NEW SECTION */}
+      <section className="py-32 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-24 space-y-4">
+            <h2 className="text-[11px] font-bold text-brand uppercase tracking-[0.4em]">The Pro Advantage</h2>
+            <h3 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-zinc-900 leading-[1.05]">Premium tools for <br /> modern businesses.</h3>
+            <p className="text-zinc-500 text-lg md:text-xl font-medium leading-relaxed">Unlock the full potential of your business with our most advanced features designed for scale.</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {(config.premiumFeatures || []).map((feature: any, index: number) => (
+              <motion.div 
+                key={feature.id}
+                whileHover={{ y: -10 }}
+                className="glass-card p-10 space-y-8 group"
+              >
+                <div className={cn(
+                  "w-16 h-16 rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500",
+                  index === 0 ? "bg-blue-500/10 text-blue-600" : 
+                  index === 1 ? "bg-purple-500/10 text-purple-600" : 
+                  "bg-amber-500/10 text-amber-600"
+                )}>
+                  {feature.icon === 'FileText' && <FileText className="w-8 h-8" />}
+                  {feature.icon === 'TrendingUp' && <TrendingUp className="w-8 h-8" />}
+                  {feature.icon === 'Sparkles' && <Sparkles className="w-8 h-8" />}
+                </div>
+                <div className="space-y-4">
+                  <h4 className="text-3xl font-display font-bold text-zinc-900 tracking-tight">{feature.title}</h4>
+                  <p className="text-zinc-500 text-lg font-medium leading-relaxed">{feature.description}</p>
+                </div>
+                <div className="pt-4 flex items-center gap-2 text-brand font-bold text-sm">
+                  <span>Learn more</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -320,102 +406,122 @@ export default function Landing() {
       {/* Features Bento Grid */}
       <section id="features" className="py-32 bg-transparent">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
-            <h2 className="text-[11px] font-bold text-brand uppercase tracking-[0.4em]">Features</h2>
-            <h3 className="text-4xl md:text-6xl font-display font-semibold tracking-tight text-zinc-900 leading-[1.1]">Everything you need to scale your business.</h3>
+          <div className="text-center max-w-3xl mx-auto mb-24 space-y-4">
+            <h2 className="text-[11px] font-bold text-brand uppercase tracking-[0.4em]">Core Features</h2>
+            <h3 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-zinc-900 leading-[1.05]">Everything you need <br /> to scale your business.</h3>
             <p className="text-zinc-500 text-lg md:text-xl font-medium leading-relaxed">Powerful tools designed for African entrepreneurs to manage sales, inventory, and finances in one place.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            {/* Main Feature */}
-            <div className="md:col-span-8 group relative overflow-hidden rounded-[2.5rem] border border-zinc-200/50 bg-white p-10 shadow-sm hover:shadow-xl hover:shadow-brand/5 transition-all duration-500">
-              <div className="relative z-10 space-y-6 max-w-md">
-                <div className="w-14 h-14 rounded-2xl bg-brand/10 flex items-center justify-center text-brand">
-                  <ShoppingCart className="w-7 h-7" />
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+            {/* Main Feature - POS */}
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="md:col-span-8 group relative overflow-hidden rounded-[3rem] border border-zinc-200/50 bg-white p-12 shadow-sm hover:shadow-2xl hover:shadow-brand/5 transition-all duration-700"
+            >
+              <div className="relative z-10 space-y-8 max-w-lg">
+                <div className="w-16 h-16 rounded-3xl bg-brand/10 flex items-center justify-center text-brand">
+                  <ShoppingCart className="w-8 h-8" />
                 </div>
-                <h4 className="text-3xl font-display font-semibold text-zinc-900 tracking-tight">{config.features[0].title}</h4>
-                <p className="text-zinc-500 text-lg font-medium leading-relaxed">{config.features[0].description}</p>
+                <div className="space-y-4">
+                  <h4 className="text-4xl font-display font-bold text-zinc-900 tracking-tight">{config.features[0].title}</h4>
+                  <p className="text-zinc-500 text-lg font-medium leading-relaxed">{config.features[0].description}</p>
+                </div>
                 <div className="flex flex-wrap gap-3 pt-2">
                   {["Digital Receipts", "Offline Mode", "Multi-Payment", "Sales History"].map(item => (
-                    <div key={item} className="flex items-center gap-2 px-4 py-2 bg-zinc-50 rounded-xl border border-zinc-100 text-xs font-bold text-zinc-600">
+                    <div key={item} className="flex items-center gap-2 px-5 py-2.5 bg-zinc-50 rounded-2xl border border-zinc-100 text-xs font-bold text-zinc-600">
                       <CheckCircle2 className="w-4 h-4 text-brand" />
                       {item}
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="absolute bottom-0 right-0 w-[60%] translate-y-12 translate-x-12 group-hover:translate-y-6 group-hover:translate-x-6 transition-transform duration-700 ease-out">
+              <div className="absolute bottom-0 right-0 w-[55%] translate-y-12 translate-x-12 group-hover:translate-y-6 group-hover:translate-x-6 transition-transform duration-1000 ease-out">
                 <img 
                   src={config.features[0].image} 
                   alt="POS" 
-                  className="rounded-tl-[2rem] shadow-2xl border-l border-t border-zinc-200/50"
+                  className="rounded-tl-[3rem] shadow-2xl border-l border-t border-zinc-200/50"
                   referrerPolicy="no-referrer"
                 />
               </div>
-            </div>
+            </motion.div>
 
-            {/* Side Feature 1 */}
-            <div className="md:col-span-4 group relative overflow-hidden rounded-[2.5rem] border border-zinc-200/50 bg-white p-10 shadow-sm hover:shadow-xl hover:shadow-brand/5 transition-all duration-500">
-              <div className="relative z-10 space-y-6">
-                <div className="w-14 h-14 rounded-2xl bg-brand/10 flex items-center justify-center text-brand">
-                  <Package className="w-7 h-7" />
+            {/* Side Feature 1 - Inventory */}
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="md:col-span-4 group relative overflow-hidden rounded-[3rem] border border-zinc-200/50 bg-white p-12 shadow-sm hover:shadow-2xl hover:shadow-brand/5 transition-all duration-700"
+            >
+              <div className="relative z-10 space-y-8">
+                <div className="w-16 h-16 rounded-3xl bg-brand/10 flex items-center justify-center text-brand">
+                  <Package className="w-8 h-8" />
                 </div>
-                <h4 className="text-3xl font-display font-semibold text-zinc-900 tracking-tight">{config.features[1].title}</h4>
-                <p className="text-zinc-500 text-base font-medium leading-relaxed">{config.features[1].description}</p>
+                <div className="space-y-4">
+                  <h4 className="text-4xl font-display font-bold text-zinc-900 tracking-tight">{config.features[1].title}</h4>
+                  <p className="text-zinc-500 text-base font-medium leading-relaxed">{config.features[1].description}</p>
+                </div>
               </div>
-              <div className="mt-12 transform group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-700 ease-out">
+              <div className="mt-12 transform group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-1000 ease-out">
                 <img 
                   src={config.features[1].image} 
                   alt="Inventory" 
-                  className="rounded-2xl shadow-xl border border-zinc-100"
+                  className="rounded-3xl shadow-xl border border-zinc-100"
                   referrerPolicy="no-referrer"
                 />
               </div>
-            </div>
+            </motion.div>
 
-            {/* Side Feature 2 */}
-            <div className="md:col-span-4 group relative overflow-hidden rounded-[2.5rem] border border-zinc-200/50 bg-white p-10 shadow-sm hover:shadow-xl hover:shadow-brand/5 transition-all duration-500">
-              <div className="relative z-10 space-y-6">
-                <div className="w-14 h-14 rounded-2xl bg-brand/10 flex items-center justify-center text-brand">
-                  <Users className="w-7 h-7" />
+            {/* Side Feature 2 - Customers */}
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="md:col-span-4 group relative overflow-hidden rounded-[3rem] border border-zinc-200/50 bg-white p-12 shadow-sm hover:shadow-2xl hover:shadow-brand/5 transition-all duration-700"
+            >
+              <div className="relative z-10 space-y-8">
+                <div className="w-16 h-16 rounded-3xl bg-brand/10 flex items-center justify-center text-brand">
+                  <Users className="w-8 h-8" />
                 </div>
-                <h4 className="text-3xl font-display font-semibold text-zinc-900 tracking-tight">{config.features[2].title}</h4>
-                <p className="text-zinc-500 text-base font-medium leading-relaxed">{config.features[2].description}</p>
+                <div className="space-y-4">
+                  <h4 className="text-4xl font-display font-bold text-zinc-900 tracking-tight">{config.features[2].title}</h4>
+                  <p className="text-zinc-500 text-base font-medium leading-relaxed">{config.features[2].description}</p>
+                </div>
               </div>
-              <div className="mt-12 transform group-hover:scale-105 group-hover:rotate-2 transition-transform duration-700 ease-out">
+              <div className="mt-12 transform group-hover:scale-105 group-hover:rotate-2 transition-transform duration-1000 ease-out">
                 <img 
                   src={config.features[2].image} 
                   alt="Customers" 
-                  className="rounded-2xl shadow-xl border border-zinc-100"
+                  className="rounded-3xl shadow-xl border border-zinc-100"
                   referrerPolicy="no-referrer"
                 />
               </div>
-            </div>
+            </motion.div>
 
-            {/* Main Feature 2 */}
-            <div className="md:col-span-8 group relative overflow-hidden rounded-[2.5rem] border border-zinc-200/50 bg-white p-10 shadow-sm hover:shadow-xl hover:shadow-brand/5 transition-all duration-500">
+            {/* Main Feature 2 - Bookkeeping */}
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="md:col-span-8 group relative overflow-hidden rounded-[3rem] border border-zinc-200/50 bg-white p-12 shadow-sm hover:shadow-2xl hover:shadow-brand/5 transition-all duration-700"
+            >
               <div className="relative z-10 flex flex-col md:flex-row gap-12 items-center h-full">
-                <div className="space-y-6 flex-1">
-                  <div className="w-14 h-14 rounded-2xl bg-brand/10 flex items-center justify-center text-brand">
-                    <TrendingUp className="w-7 h-7" />
+                <div className="space-y-8 flex-1">
+                  <div className="w-16 h-16 rounded-3xl bg-brand/10 flex items-center justify-center text-brand">
+                    <TrendingUp className="w-8 h-8" />
                   </div>
-                  <h4 className="text-3xl font-display font-semibold text-zinc-900 tracking-tight">Automated Bookkeeping</h4>
-                  <p className="text-zinc-500 text-lg font-medium leading-relaxed">Let Gryndee handle the numbers. Automated tracking of income, expenses, and taxes so you can focus on growth.</p>
+                  <div className="space-y-4">
+                    <h4 className="text-4xl font-display font-bold text-zinc-900 tracking-tight">Automated Bookkeeping</h4>
+                    <p className="text-zinc-500 text-lg font-medium leading-relaxed">Let Gryndee handle the numbers. Automated tracking of income, expenses, and taxes so you can focus on growth.</p>
+                  </div>
                   <div className="flex items-center gap-4 pt-2">
-                    <div className="px-5 py-2.5 bg-zinc-50 rounded-xl border border-zinc-100 text-xs font-bold text-zinc-600">Tax Reports</div>
-                    <div className="px-5 py-2.5 bg-zinc-50 rounded-xl border border-zinc-100 text-xs font-bold text-zinc-600">Profit Tracking</div>
+                    <div className="px-6 py-3 bg-zinc-50 rounded-2xl border border-zinc-100 text-xs font-bold text-zinc-600">Tax Reports</div>
+                    <div className="px-6 py-3 bg-zinc-50 rounded-2xl border border-zinc-100 text-xs font-bold text-zinc-600">Profit Tracking</div>
                   </div>
                 </div>
-                <div className="flex-1 transform group-hover:translate-x-4 group-hover:-translate-y-2 transition-transform duration-700 ease-out">
+                <div className="flex-1 transform group-hover:translate-x-4 group-hover:-translate-y-2 transition-transform duration-1000 ease-out">
                   <img 
                     src="https://picsum.photos/seed/analytics/1000/800" 
                     alt="Analytics" 
-                    className="rounded-2xl shadow-xl border border-zinc-100"
+                    className="rounded-3xl shadow-xl border border-zinc-100"
                     referrerPolicy="no-referrer"
                   />
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -423,13 +529,13 @@ export default function Landing() {
       {/* How It Works Section */}
       <section id="how-it-works" className="py-32 bg-transparent">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
-            <h2 className="text-[11px] font-bold text-brand uppercase tracking-[0.4em]">How it works</h2>
-            <h3 className="text-4xl md:text-6xl font-display font-semibold tracking-tight text-zinc-900 leading-[1.1]">{config.howItWorks.title}</h3>
+          <div className="text-center max-w-3xl mx-auto mb-24 space-y-4">
+            <h2 className="text-[11px] font-bold text-brand uppercase tracking-[0.4em]">The Process</h2>
+            <h3 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-zinc-900 leading-[1.05]">{config.howItWorks.title}</h3>
             <p className="text-zinc-500 text-lg md:text-xl font-medium leading-relaxed">{config.howItWorks.subtitle}</p>
           </div>
  
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-12">
             {config.howItWorks.steps.map((step: any, index: number) => (
               <StepCard 
                 key={step.id}
@@ -444,22 +550,22 @@ export default function Landing() {
       </section>
 
       {/* AI Intelligence Section */}
-      <section id="ai" className="py-32 relative overflow-hidden bg-zinc-900 rounded-[3rem] mx-6 mb-32">
+      <section id="ai" className="py-32 relative overflow-hidden bg-zinc-900 rounded-[4rem] mx-6 mb-32">
         <div className="absolute inset-0 bg-brand/5 -z-20" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-brand/20 to-transparent opacity-40 -z-10" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-brand/30 to-transparent opacity-40 -z-10" />
         
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-10">
+        <div className="max-w-7xl mx-auto px-10 grid lg:grid-cols-2 gap-20 items-center">
+          <div className="space-y-12">
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="inline-flex items-center gap-2 px-5 py-2 bg-white/10 border border-white/10 rounded-full text-xs font-bold text-brand backdrop-blur-md shadow-sm"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-white/10 border border-white/10 rounded-full text-xs font-bold text-brand backdrop-blur-md shadow-sm"
             >
               <Brain className="w-4 h-4" />
               <span className="uppercase tracking-widest">AI Intelligence</span>
             </motion.div>
-            <h2 className="text-5xl md:text-7xl font-display font-semibold tracking-tight leading-[1.05] text-white">
+            <h2 className="text-6xl md:text-8xl font-display font-bold tracking-tight leading-[0.9] text-white">
               The Brain <br /> Behind Your <br /> Business.
             </h2>
             <p className="text-zinc-400 text-lg md:text-xl font-medium leading-relaxed max-w-xl">
@@ -467,15 +573,15 @@ export default function Landing() {
               Our AI Advisor analyzes your data to predict stockouts, suggest pricing, and generate professional branding in seconds.
             </p>
             
-            <div className="grid sm:grid-cols-2 gap-6 pt-4">
-              <div className="p-8 bg-white/5 rounded-[2rem] backdrop-blur-md border border-white/10 group hover:bg-white/10 transition-all duration-500">
-                <div className="w-14 h-14 rounded-2xl bg-brand/20 flex items-center justify-center text-brand mb-6 group-hover:scale-110 transition-transform shadow-sm">
-                  <Sparkles className="w-7 h-7" />
+            <div className="grid sm:grid-cols-2 gap-8 pt-4">
+              <div className="p-10 bg-white/5 rounded-[3rem] backdrop-blur-md border border-white/10 group hover:bg-white/10 transition-all duration-700">
+                <div className="w-16 h-16 rounded-3xl bg-brand/20 flex items-center justify-center text-brand mb-8 group-hover:scale-110 transition-transform shadow-sm">
+                  <Sparkles className="w-8 h-8" />
                 </div>
                 <h4 className="text-2xl font-display font-bold text-white mb-4 tracking-tight">AI Logo Generator</h4>
                 <p className="text-zinc-500 text-base font-medium leading-relaxed">Create your brand identity instantly with AI-powered logo generation tailored to your niche.</p>
               </div>
-              <div className="p-10 bg-white/5 rounded-[2.5rem] backdrop-blur-2xl border border-white/10 group hover:bg-white/10 transition-all duration-700">
+              <div className="p-10 bg-white/5 rounded-[3rem] backdrop-blur-md border border-white/10 group hover:bg-white/10 transition-all duration-700">
                 <div className="w-16 h-16 rounded-3xl vibrant-gradient-purple flex items-center justify-center text-white mb-8 group-hover:scale-110 transition-transform shadow-xl shadow-purple-500/20">
                   <Brain className="w-8 h-8" />
                 </div>
@@ -492,43 +598,49 @@ export default function Landing() {
             transition={{ duration: 1.2, ease: "easeOut" }}
             className="relative"
           >
-            <div className="absolute -inset-20 bg-brand/30 blur-[150px] rounded-full -z-10 animate-pulse-soft" />
-            <div className="rounded-[3rem] bg-white/5 p-4 backdrop-blur-3xl border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] group overflow-hidden">
+            <div className="absolute -inset-20 bg-brand/40 blur-[150px] rounded-full -z-10 animate-pulse-soft" />
+            <div className="rounded-[4rem] bg-white/5 p-4 backdrop-blur-3xl border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] group overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-tr from-brand/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
               <img 
                 src="https://picsum.photos/seed/ai-advisor/1000/1200" 
                 alt="AI Advisor Interface" 
-                className="rounded-[2.5rem] w-full shadow-2xl transform group-hover:scale-[1.02] transition-transform duration-1000 ease-out"
+                className="rounded-[3.5rem] w-full shadow-2xl transform group-hover:scale-[1.02] transition-transform duration-1000 ease-out"
                 referrerPolicy="no-referrer"
               />
             </div>
             
             {/* Floating Elements */}
-            <div className="absolute -top-12 -right-12 p-8 bg-white/10 backdrop-blur-3xl rounded-[2rem] border border-white/20 shadow-2xl animate-float">
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl vibrant-gradient flex items-center justify-center text-white shadow-lg shadow-brand/20">
-                  <TrendingUp className="w-7 h-7" />
+            <motion.div 
+              animate={{ y: [0, -15, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -top-12 -right-12 p-10 bg-white/10 backdrop-blur-3xl rounded-[2.5rem] border border-white/20 shadow-2xl"
+            >
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 rounded-3xl vibrant-gradient flex items-center justify-center text-white shadow-lg shadow-brand/20">
+                  <TrendingUp className="w-8 h-8" />
                 </div>
                 <div>
                   <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-[0.2em]">Revenue Forecast</div>
-                  <div className="text-2xl font-bold text-white">+24.5%</div>
+                  <div className="text-3xl font-bold text-white">+24.5%</div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-32 bg-white">
+      <section className="py-32 bg-white relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-20 space-y-4">
-            <h2 className="text-[11px] font-bold text-brand uppercase tracking-[0.4em]">Testimonials</h2>
-            <h3 className="text-4xl md:text-6xl font-display font-semibold tracking-tight text-zinc-900 leading-[1.1]">Trusted by <span className="text-brand">Visionaries.</span></h3>
-            <p className="text-zinc-500 text-lg md:text-xl font-medium">Join 15,000+ business owners simplifying their operations.</p>
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-24 gap-8">
+            <div className="space-y-4">
+              <h2 className="text-[11px] font-bold text-brand uppercase tracking-[0.4em]">Testimonials</h2>
+              <h3 className="text-6xl md:text-8xl font-display font-bold tracking-tight text-zinc-900 leading-[0.9]">Trusted by <br /> <span className="text-brand">Visionaries.</span></h3>
+            </div>
+            <p className="text-zinc-500 text-lg md:text-xl font-medium max-w-md">Join 15,000+ business owners simplifying their operations and scaling their dreams.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {config.testimonials.map((testimonial: any) => (
               <TestimonialCard 
                 key={testimonial.id}
@@ -561,25 +673,33 @@ export default function Landing() {
       {/* Final CTA */}
       <section className="py-32 relative overflow-hidden bg-white">
         <div className="absolute inset-0 -z-10">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px] animate-pulse-soft" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-brand/10 rounded-full blur-[150px] animate-pulse-soft" />
         </div>
         
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="bg-zinc-900 rounded-[3rem] p-12 md:p-20 text-center space-y-8 relative overflow-hidden shadow-2xl shadow-brand/10">
-            <div className="absolute inset-0 bg-gradient-to-tr from-brand/10 to-transparent opacity-50 -z-10" />
-            <h2 className="text-4xl md:text-7xl font-display font-semibold tracking-tight leading-[1.05] text-white">
-              Start Your <br /> <span className="text-brand">Grynd</span> Today.
-            </h2>
-            <p className="text-zinc-400 font-medium text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-              Join thousands of business owners who have digitized their operations and focused on building their empire.
-            </p>
-            <div className="pt-6">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="bg-zinc-900 rounded-[4rem] p-16 md:p-24 text-center space-y-10 relative overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)]">
+            <div className="absolute inset-0 bg-gradient-to-tr from-brand/20 to-transparent opacity-50 -z-10" />
+            <div className="space-y-4">
+              <h2 className="text-5xl md:text-8xl font-display font-bold tracking-tight leading-[0.95] text-white">
+                Start Your <br /> <span className="text-brand">Grynd</span> Today.
+              </h2>
+              <p className="text-zinc-400 font-medium text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+                Join thousands of business owners who have digitized their operations and focused on building their empire.
+              </p>
+            </div>
+            <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-6">
               <Link 
                 to="/register" 
-                className="inline-flex items-center gap-3 px-10 py-5 bg-brand text-white rounded-2xl text-lg font-bold hover:opacity-90 transition-all shadow-xl shadow-brand/20 group active:scale-95"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-12 py-6 bg-brand text-white rounded-[2rem] text-xl font-bold hover:opacity-90 transition-all shadow-2xl shadow-brand/20 group active:scale-95"
               >
                 Get Started Free
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link 
+                to="/login" 
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-12 py-6 bg-white/10 text-white border border-white/10 rounded-[2rem] text-xl font-bold hover:bg-white/20 transition-all backdrop-blur-md active:scale-95"
+              >
+                Sign In
               </Link>
             </div>
           </div>

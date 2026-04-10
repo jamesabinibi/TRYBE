@@ -35,14 +35,14 @@ export default function Subscription() {
   }, []);
 
   const features = [
-    { icon: Package, label: 'Unlimited Products', premium: true, free: '20 Products' },
-    { icon: FileText, label: 'Unlimited Invoices', premium: true, free: '5 Invoices/mo' },
-    { icon: Sparkles, label: 'AI Logo Generator', premium: true, free: false },
-    { icon: Zap, label: 'Advanced AI Advisor', premium: true, free: 'Standard AI' },
-    { icon: ShieldCheck, label: 'Custom Branding', premium: true, free: 'Gryndee Branding' },
-    { icon: Users, label: 'Multi-user Support', premium: true, free: 'Single User' },
-    { icon: MessageCircle, label: 'Priority WhatsApp Support', premium: true, free: false },
-    { icon: Gift, label: 'Free Business Tax Consultation', premium: true, free: false },
+    { icon: Package, label: 'Unlimited Products', pro: true, regular: '20 Products' },
+    { icon: FileText, label: 'Unlimited Invoices', pro: true, regular: '5 Invoices/mo' },
+    { icon: Sparkles, label: 'AI Logo Generator', pro: true, regular: false },
+    { icon: Zap, label: 'Advanced AI Advisor', pro: true, regular: 'Standard AI' },
+    { icon: ShieldCheck, label: 'Custom Branding', pro: true, regular: 'Gryndee Branding' },
+    { icon: Users, label: 'Multi-user Support', pro: true, regular: 'Single User' },
+    { icon: MessageCircle, label: 'Priority WhatsApp Support', pro: true, regular: false },
+    { icon: Gift, label: 'Free Business Tax Consultation', pro: true, regular: false },
   ];
 
   const handleApplyPromo = async (e: React.FormEvent) => {
@@ -80,7 +80,7 @@ export default function Subscription() {
     toast.info('Payment integration coming soon! Use a promo code for now.');
   };
 
-  const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional';
+  const isPro = user?.subscription_plan === 'pro';
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
@@ -104,13 +104,13 @@ export default function Subscription() {
           {isPro ? (
             <>You're a <span className="text-brand">Pro</span> Member</>
           ) : (
-            <>Scale Your Business with <span className="text-brand">Premium</span></>
+            <>Scale Your Business with <span className="text-brand">Pro</span></>
           )}
         </h1>
         <p className="body-text max-w-xl mx-auto">
           {isPro 
-            ? "You have full access to all premium features. Manage your subscription or explore your tools below."
-            : "Unlock the full power of Gryndee and take your business to the next level with our professional tools."
+            ? "You have full access to all Pro features. Manage your subscription or explore your tools below."
+            : "Unlock the full power of Gryndee and take your business to the next level with our Pro tools."
           }
         </p>
       </div>
@@ -237,16 +237,16 @@ export default function Subscription() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className={cn("text-right", isPro && "text-brand")}>
-                    <div className="text-[10px] font-bold uppercase tracking-widest">Premium</div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest">Pro</div>
                     <div className={cn("text-[11px] font-bold", isPro ? "text-brand" : "text-zinc-900 dark:text-white")}>
-                      {feature.premium === true ? <Check className="w-4 h-4 ml-auto" /> : feature.premium}
+                      {feature.pro === true ? <Check className="w-4 h-4 ml-auto" /> : feature.pro}
                     </div>
                   </div>
                   <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800" />
                   <div className="text-right min-w-[80px]">
-                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Free</div>
+                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Regular</div>
                     <div className="text-[11px] font-bold text-zinc-500">
-                      {feature.free === false ? 'No' : feature.free}
+                      {feature.regular === false ? 'No' : feature.regular}
                     </div>
                   </div>
                 </div>

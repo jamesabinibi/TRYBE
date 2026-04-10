@@ -93,16 +93,17 @@ export default function Products() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoints: ['/api/services', '/api/categories']
+        endpoints: ['/api/services', '/api/categories', '/api/products/stats']
       })
     });
     if (!batchRes.ok) {
       throw new Error(`Batch fetch failed with status ${batchRes.status}`);
     }
-    const [servicesData, categoriesData] = await batchRes.json();
+    const [servicesData, categoriesData, statsData] = await batchRes.json();
     return {
       services: Array.isArray(servicesData) ? servicesData : [],
-      categories: Array.isArray(categoriesData) ? categoriesData : []
+      categories: Array.isArray(categoriesData) ? categoriesData : [],
+      stats: statsData || { total_stock: 0, total_cost_value: 0, total_selling_value: 0 }
     };
   }, {
     persist: true,
@@ -115,6 +116,16 @@ export default function Products() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const { ref: loadMoreRef, inView } = useInView();
   const LIMIT = 20;
+
+  const [activeTab, setActiveTab] = useState<'list' | 'count'>('list');
+  const [activeSubTab, setActiveSubTab] = useState<'products' | 'services'>('products');
+  const { searchQuery, setSearchQuery } = useSearch();
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [newProduct, setNewProduct] = useState(getInitialProductState());
+  const [showAttributeDropdown, setShowAttributeDropdown] = useState(false);
+  const [isBulkEditing, setIsBulkEditing] = useState(false);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const fetchProductsData = useCallback(async (pageIndex: number, isRefresh = false) => {
     if (!user) return;
@@ -145,12 +156,14 @@ export default function Products() {
   }, [user, fetchProductsData]);
 
   useEffect(() => {
-    if (inView && hasMore && !isLoadingProducts) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchProductsData(nextPage);
+    if (inView && hasMore && !isLoadingProducts && activeSubTab === 'products') {
+      setPage(prev => {
+        const nextPage = prev + 1;
+        fetchProductsData(nextPage);
+        return nextPage;
+      });
     }
-  }, [inView, hasMore, isLoadingProducts, page, fetchProductsData]);
+  }, [inView, hasMore, isLoadingProducts, fetchProductsData, activeSubTab]);
 
   const fetchProducts = () => {
     fetchProductsData(0, true);
@@ -206,17 +219,6 @@ export default function Products() {
       openAddModal();
     }
   }, [searchParams, setSearchParams, openAddModal]);
-  const { searchQuery, setSearchQuery } = useSearch();
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'list' | 'count'>('list');
-  const [activeSubTab, setActiveSubTab] = useState<'products' | 'services'>('products');
-  
-  const [newProduct, setNewProduct] = useState(getInitialProductState());
-
-  const [showAttributeDropdown, setShowAttributeDropdown] = useState(false);
-  const [isBulkEditing, setIsBulkEditing] = useState(false);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const totalQuantity = newProduct.variants.reduce((acc, v) => acc + (Number(v.quantity) || 0), 0);
 
@@ -523,16 +525,9 @@ export default function Products() {
 
   const displayItems = activeSubTab === 'products' ? filteredProducts : filteredServices;
 
-  const totalCostValue = filteredProducts.reduce((acc, p) => {
-    const cost = typeof p.cost_price === 'string' ? parseFloat(p.cost_price) || 0 : p.cost_price || 0;
-    return acc + (cost * (p.total_stock || 0));
-  }, 0);
-  const totalSellingValue = filteredProducts.reduce((acc, p) => {
-    const price = activeSubTab === 'products' ? (p as unknown as Product).selling_price : (p as unknown as Service).price;
-    const selling = typeof price === 'string' ? parseFloat(price) || 0 : price || 0;
-    return acc + (selling * (p.total_stock || 0));
-  }, 0);
-  const totalStockCount = filteredProducts.reduce((acc, p) => acc + (p.total_stock || 0), 0);
+  const totalCostValue = inventoryData?.stats?.total_cost_value || 0;
+  const totalSellingValue = inventoryData?.stats?.total_selling_value || 0;
+  const totalStockCount = inventoryData?.stats?.total_stock || 0;
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
@@ -841,6 +836,16 @@ export default function Products() {
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Infinite Scroll Trigger */}
+            <div ref={loadMoreRef} className="py-8 flex justify-center">
+              {isLoadingProducts && (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Loading more products...</p>
+                </div>
+              )}
             </div>
           </div>
         ) : (

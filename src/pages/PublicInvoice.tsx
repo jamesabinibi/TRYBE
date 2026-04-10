@@ -8,6 +8,7 @@ import { NUMBER_STYLE, apiFetch } from '../lib/utils';
 export default function PublicInvoice() {
   const { id } = useParams();
   const [invoice, setInvoice] = useState<any>(null);
+  const [landingConfig, setLandingConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -25,6 +26,17 @@ export default function PublicInvoice() {
       }
     };
     fetchInvoice();
+
+    const fetchLanding = async () => {
+      try {
+        const res = await apiFetch('/api/landing-config');
+        if (res.ok) {
+          const data = await res.json();
+          setLandingConfig(data);
+        }
+      } catch (err) {}
+    };
+    fetchLanding();
   }, [id]);
 
   const formatCurrency = (amount: number | string, currency: string) => {
@@ -35,6 +47,14 @@ export default function PublicInvoice() {
       minimumFractionDigits: 0,
     }).format(value);
   };
+
+  const settings = invoice.settings || {};
+  const currency = settings.currency || 'NGN';
+  const isPro = invoice?.subscription_plan === 'pro';
+  const appLogo = landingConfig?.logo?.favicon || landingConfig?.logo?.url;
+  const businessLogo = isPro 
+    ? (settings?.logo_url || appLogo) 
+    : appLogo;
 
   const handleDownload = () => {
     if (!invoice || !invoice.sale_items) return;
@@ -70,7 +90,7 @@ export default function PublicInvoice() {
       vatAmount: parseFloat(invoice.vat_amount) || 0
     };
 
-    generatePDF(mappedData, settings);
+    generatePDF(mappedData, { ...settings, logo_url: businessLogo });
   };
 
   if (loading) {
@@ -92,9 +112,6 @@ export default function PublicInvoice() {
       </div>
     );
   }
-
-  const settings = invoice.settings || {};
-  const currency = settings.currency || 'NGN';
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 py-12 px-4 sm:px-6 lg:px-8 font-sans selection:bg-zinc-900 selection:text-white dark:selection:bg-white dark:selection:text-zinc-900">
@@ -124,8 +141,8 @@ export default function PublicInvoice() {
           <div className="p-10 sm:p-16">
             <div className="flex flex-col md:flex-row justify-between items-start gap-12">
               <div className="space-y-6">
-                {settings.logo_url ? (
-                  <img src={settings.logo_url} alt="Logo" className="h-20 w-auto object-contain" referrerPolicy="no-referrer" />
+                {businessLogo ? (
+                  <img src={businessLogo} alt="Logo" className="h-20 w-auto object-contain" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center">
                     <Building2 className="w-8 h-8 text-zinc-400" />

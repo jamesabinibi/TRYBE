@@ -394,7 +394,11 @@ export default function App() {
   const currentSettings = settings || cachedSettings;
 
   const brandColor = currentSettings?.brand_color || currentLandingConfig?.brandColor || '#11abdf';
-  const businessLogo = currentLandingConfig?.logo?.favicon || currentLandingConfig?.logo?.url || currentSettings?.logo_url;
+  const isPro = user?.subscription_plan === 'pro';
+  const appLogo = currentLandingConfig?.logo?.favicon || currentLandingConfig?.logo?.url;
+  const businessLogo = isPro 
+    ? (currentSettings?.logo_url || appLogo) 
+    : appLogo;
   const businessName = currentSettings?.business_name || currentLandingConfig?.logo?.text || 'Gryndee';
 
   useEffect(() => {

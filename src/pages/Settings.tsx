@@ -504,7 +504,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   business_type TEXT,
   referral_code TEXT UNIQUE,
   referred_by_id BIGINT REFERENCES accounts(id),
-  subscription_plan TEXT DEFAULT 'free',
+  subscription_plan TEXT DEFAULT 'regular',
   subscription_status TEXT DEFAULT 'active',
   trial_expiry TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -842,7 +842,7 @@ NOTIFY pgrst, 'reload schema';
   };
 
   const handleGenerateLogo = async () => {
-    const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial' || user?.role === 'super_admin';
+    const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'trial' || user?.role === 'super_admin';
     
     if (!isPro) {
       toast.error('AI Logo Generator is a Pro feature. Please upgrade to use it.');
@@ -1313,10 +1313,10 @@ NOTIFY pgrst, 'reload schema';
                         <p className="label-text">Create a professional logo in seconds</p>
                       </div>
                     </div>
-                    {!(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.role === 'super_admin') && (
+                    {!(user?.subscription_plan === 'pro' || user?.role === 'super_admin') && (
                       <div className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-lg label-text flex items-center gap-1">
                         <Crown className="w-3 h-3" />
-                        Premium
+                        Pro
                       </div>
                     )}
                   </div>
@@ -1928,7 +1928,7 @@ NOTIFY pgrst, 'reload schema';
           <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-700/50">
             <div className="w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-brand/20 shrink-0 relative">
               {user?.name?.charAt(0) || 'U'}
-              {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
+              {user?.subscription_plan === 'pro' && (
                 <div className="absolute -top-1 -right-1 bg-white dark:bg-zinc-900 rounded-full p-1 shadow-sm border border-zinc-100 dark:border-zinc-800">
                   <ShieldCheck className="w-4 h-4 text-brand fill-brand/10" />
                 </div>
@@ -1965,7 +1965,7 @@ NOTIFY pgrst, 'reload schema';
                   <div className="text-center sm:text-left">
                     <h4 className="h3 flex items-center gap-2">
                       {user?.name}
-                      {(user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional') && (
+                      {user?.subscription_plan === 'pro' && (
                         <ShieldCheck className="w-5 h-5 text-brand fill-brand/10" />
                       )}
                     </h4>

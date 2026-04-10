@@ -177,7 +177,23 @@ export default function Sales() {
 
   const [selectedSaleForPreview, setSelectedSaleForPreview] = useState<any>(null);
   const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('month');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(historySearchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [historySearchQuery]);
+
+  const { data: salesStats, isLoading: isLoadingStats, refetch: refetchStats } = useQuery(`sales_stats_${dateRange}_${debouncedSearch}`, async () => {
+    const res = await fetchWithAuth(`/api/sales/stats?range=${dateRange}&search=${encodeURIComponent(debouncedSearch)}`);
+    if (!res.ok) throw new Error('Failed to fetch sales stats');
+    return await res.json();
+  }, {
+    persist: true,
+    enabled: !!user && activeTab === 'history'
+  });
+
   const [itemType, setItemType] = useState<'product' | 'service'>('product');
 
   const [isProcessingAI, setIsProcessingAI] = useState(false);
@@ -223,7 +239,10 @@ export default function Sales() {
     ));
   };
 
-  const fetchSales = () => fetchSalesData(0, true);
+  const fetchSales = () => {
+    fetchSalesData(0, true);
+    refetchStats();
+  };
   const fetchProducts = () => refetchBatch();
   const fetchServices = () => refetchBatch();
   const fetchCustomers = () => refetchBatch();
@@ -1195,32 +1214,36 @@ export default function Sales() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatCard 
                       title="Total Revenue" 
-                      value={<CurrencyDisplay amount={(filteredSales || []).reduce((acc, s) => acc + (s.total_amount || 0), 0)} currencyCode={currency} />} 
+                      value={<CurrencyDisplay amount={salesStats?.total_revenue || 0} currencyCode={currency} />} 
                       color="vibrant-gradient text-white"
                       gradient="bg-brand"
                       icon={TrendingUp}
+                      subtitle={isLoadingStats ? "Calculating..." : undefined}
                     />
                     {canViewAccountData && (
                       <StatCard 
                         title="Total Profit" 
-                        value={<CurrencyDisplay amount={(filteredSales || []).reduce((acc, s) => acc + (s.total_profit || 0), 0)} currencyCode={currency} />} 
+                        value={<CurrencyDisplay amount={salesStats?.total_profit || 0} currencyCode={currency} />} 
                         color="vibrant-gradient-purple text-white"
                         gradient="bg-purple-500"
                         icon={ArrowUpRight}
+                        subtitle={isLoadingStats ? "Calculating..." : undefined}
                       />
                     )}
                     <StatCard 
                       title="Transactions" 
-                      value={filteredSales.length} 
+                      value={salesStats?.count || 0} 
                       color="vibrant-gradient-pink text-white"
                       gradient="bg-pink-500"
                       icon={ShoppingCart}
+                      subtitle={isLoadingStats ? "Calculating..." : undefined}
                     />
                     <StatCard 
                       title="Avg. Order Value" 
-                      value={<CurrencyDisplay amount={filteredSales.length > 0 ? (filteredSales.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0) / filteredSales.length) : 0} currencyCode={currency} />} 
+                      value={<CurrencyDisplay amount={salesStats?.count > 0 ? (salesStats.total_revenue / salesStats.count) : 0} currencyCode={currency} />} 
                       color="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
                       icon={CreditCard}
+                      subtitle={isLoadingStats ? "Calculating..." : undefined}
                     />
                   </div>
                 </>

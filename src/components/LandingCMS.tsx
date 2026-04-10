@@ -31,7 +31,7 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
   const [config, setConfig] = useState(initialConfig);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'hero' | 'features' | 'how' | 'testimonials' | 'logo' | 'faq' | 'footer' | 'pages'>('hero');
+  const [activeTab, setActiveTab] = useState<'hero' | 'features' | 'premium' | 'how' | 'testimonials' | 'logo' | 'faq' | 'footer' | 'pages'>('hero');
 
   const handleUpdate = (path: string, value: any) => {
     setConfig(prevConfig => {
@@ -142,6 +142,7 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
           { id: 'hero', label: 'Hero' },
           { id: 'logo', label: 'Brand' },
           { id: 'features', label: 'Features' },
+          { id: 'premium', label: 'Premium' },
           { id: 'how', label: 'How' },
           { id: 'testimonials', label: 'Reviews' },
           { id: 'faq', label: 'FAQ' },
@@ -528,6 +529,58 @@ export default function LandingCMS({ config: initialConfig, onSave, onClose }: L
                     />
                     <ImageIcon className="w-6 h-6 text-white" />
                   </label>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'premium' && (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Premium Features</label>
+            </div>
+            {(config.premiumFeatures || []).map((feature: any, index: number) => (
+              <div key={feature.id} className="p-4 bg-black/30 rounded-2xl border border-white/5 space-y-4">
+                <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Premium {index + 1}</span>
+                <input
+                  type="text"
+                  value={feature.title}
+                  onChange={(e) => {
+                    const newFeatures = [...config.premiumFeatures];
+                    newFeatures[index].title = e.target.value;
+                    handleUpdate('premiumFeatures', newFeatures);
+                  }}
+                  placeholder="Title"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-brand outline-none transition-colors"
+                />
+                <textarea
+                  value={feature.description}
+                  onChange={(e) => {
+                    const newFeatures = [...config.premiumFeatures];
+                    newFeatures[index].description = e.target.value;
+                    handleUpdate('premiumFeatures', newFeatures);
+                  }}
+                  placeholder="Description"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-brand outline-none transition-colors min-h-[80px]"
+                />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Icon (Lucide Name)</label>
+                  <select
+                    value={feature.icon}
+                    onChange={(e) => {
+                      const newFeatures = [...config.premiumFeatures];
+                      newFeatures[index].icon = e.target.value;
+                      handleUpdate('premiumFeatures', newFeatures);
+                    }}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-brand outline-none transition-colors"
+                  >
+                    <option value="FileText">FileText (Invoices)</option>
+                    <option value="TrendingUp">TrendingUp (Forecast)</option>
+                    <option value="Sparkles">Sparkles (Logo)</option>
+                    <option value="Zap">Zap</option>
+                    <option value="Shield">Shield</option>
+                  </select>
                 </div>
               </div>
             ))}

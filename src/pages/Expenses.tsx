@@ -95,11 +95,30 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
     }
   }, [inView, hasMore, isLoadingExpenses, page, fetchExpensesData]);
 
-  const fetchExpenses = () => fetchExpensesData(0, true);
+  const fetchExpenses = () => {
+    fetchExpensesData(0, true);
+    refetchStats();
+  };
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { data: expenseStats, isLoading: isLoadingStats, refetch: refetchStats } = useQuery(`expense_stats_${debouncedSearch}`, async () => {
+    const res = await fetchWithAuth(`/api/expenses/stats?search=${encodeURIComponent(debouncedSearch)}`);
+    if (!res.ok) throw new Error('Failed to fetch expense stats');
+    return await res.json();
+  }, {
+    persist: true,
+    enabled: !!user
+  });
+
   const [filterCategory, setFilterCategory] = useState('All');
   const [filterDuration, setFilterDuration] = useState('All Time');
   
@@ -362,7 +381,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
           </div>
           <TotalDisplay 
             label="Total Expenses" 
-            value={totalExpenses.toLocaleString()} 
+            value={(expenseStats?.total || 0).toLocaleString()} 
             labelClassName="label-text"
             valueClassName="h2"
           />

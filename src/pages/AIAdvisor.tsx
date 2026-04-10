@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Brain, Sparkles, TrendingUp, AlertCircle, Lightbulb, Loader2, Target, Package, DollarSign, X } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
 import { useNavigate } from 'react-router-dom';
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
@@ -15,7 +15,7 @@ export default function AIAdvisor() {
   const navigate = useNavigate();
   const currency = settings?.currency || 'NGN';
   
-  const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'professional' || user?.subscription_plan === 'trial' || user?.role === 'super_admin';
+  const isPro = user?.subscription_plan === 'pro' || user?.subscription_plan === 'trial' || user?.role === 'super_admin';
   const [showOverlay, setShowOverlay] = useState(true);
   
   // Pulse State
@@ -35,6 +35,16 @@ export default function AIAdvisor() {
     }
   }, [isPro]);
 
+  useEffect(() => {
+    if (data) {
+      if (activeTab === 'pulse' && !insight) {
+        generateInsight(data);
+      } else if (activeTab === 'forecast' && !forecast) {
+        generateForecast(data);
+      }
+    }
+  }, [activeTab, data]);
+
   const fetchBusinessData = async () => {
     setLoadingPulse(true);
     try {
@@ -43,9 +53,9 @@ export default function AIAdvisor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           endpoints: [
-            '/api/sales',
-            '/api/expenses',
-            '/api/products'
+            '/api/sales?limit=50',
+            '/api/expenses?limit=50',
+            '/api/products?limit=50'
           ]
         })
       });
@@ -60,9 +70,22 @@ export default function AIAdvisor() {
       const products = Array.isArray(results[2]) ? results[2] : [];
 
       const businessData = {
-        sales: sales.slice(0, 50), // Last 50 sales
-        expenses: expenses.slice(0, 50), // Last 50 expenses
-        inventory: products.slice(0, 50).map((p: any) => ({
+        sales: sales.map((s: any) => ({
+          date: s.created_at,
+          total: s.total_amount,
+          items: s.sale_items?.map((i: any) => ({
+            name: i.product_name || i.service_name,
+            qty: i.quantity,
+            price: i.unit_price
+          }))
+        })),
+        expenses: expenses.map((e: any) => ({
+          date: e.date,
+          amount: e.amount,
+          category: e.category,
+          desc: e.description
+        })),
+        inventory: products.map((p: any) => ({
           name: p.name,
           quantity: p.quantity,
           selling_price: p.selling_price,
@@ -71,8 +94,13 @@ export default function AIAdvisor() {
       };
 
       setData(businessData);
-      generateInsight(businessData);
-      generateForecast(businessData);
+      
+      // Prioritize active tab
+      if (activeTab === 'pulse') {
+        generateInsight(businessData);
+      } else {
+        generateForecast(businessData);
+      }
     } catch (error) {
       console.error('Error fetching business data:', error);
       setLoadingPulse(false);
@@ -106,6 +134,9 @@ export default function AIAdvisor() {
               - Inventory health
               - Growth opportunities` }
             ]
+          },
+          config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
           }
         });
       });
@@ -160,6 +191,7 @@ export default function AIAdvisor() {
             ]
           },
           config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
             responseMimeType: "application/json",
             responseSchema: {
               type: Type.OBJECT,

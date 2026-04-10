@@ -274,7 +274,7 @@ async function initAwsDb() {
         VALUES 
           ('no_product_24h', 'Start your journey with Gryndee!', 'Hi {name},\n\nWe noticed you haven''t added any products or services yet. Adding your first item is the first step to growing your business!\n\nBest regards,\nThe Gryndee Team', 24),
           ('no_sales_48h', 'Boost your sales with Gryndee!', 'Hi {name},\n\nIt''s been a couple of days and you haven''t recorded any sales yet. Need help getting started? Check out our guides or reach out to support!\n\nBest regards,\nThe Gryndee Team', 48),
-          ('premium_feature_promo', 'Unlock Premium Features with Gryndee!', 'Hi {name},\n\nDid you know Gryndee offers powerful premium features like AI-powered receipt scanning, automated bookkeeping, and advanced analytics?\n\nUpgrade today to take your business to the next level!\n\nBest regards,\nThe Gryndee Team', 72),
+          ('premium_feature_promo', 'Unlock Pro Features with Gryndee!', 'Hi {name},\n\nDid you know Gryndee offers powerful Pro features like AI-powered receipt scanning, automated bookkeeping, and advanced analytics?\n\nUpgrade today to take your business to the next level!\n\nBest regards,\nThe Gryndee Team', 72),
           ('referral_followup', 'Share the Love and Earn Rewards!', 'Hi {name},\n\nWe hope you''re enjoying Gryndee! Did you know you can earn rewards by referring your friends?\n\nYour unique referral code is: {referral_code}\n\nShare this code with others, and when they sign up, you both get benefits!\n\nBest regards,\nThe Gryndee Team', 168),
           ('tax_setup_reminder', 'Simplify Your Taxes with Gryndee!', 'Hi {name},\n\nDid you know Gryndee can help you manage your Nigerian tax obligations automatically? Setting up your tax profile takes less than a minute!\n\nHead over to the Tax Report page to specify your legal structure and see your estimated tax liability and filing deadlines.\n\nBest regards,\nThe Gryndee Team', 72),
           ('weekly_report', 'Your Weekly Business Report', 'Here is a summary of your business activity for the past week. Log in to your dashboard for more details.', 0)
@@ -324,7 +324,7 @@ async function initAwsDb() {
       const accountCols = [
         { name: 'owner_id', type: 'INTEGER' },
         { name: 'is_active', type: 'BOOLEAN DEFAULT TRUE' },
-        { name: 'subscription_plan', type: "TEXT DEFAULT 'free'" },
+        { name: 'subscription_plan', type: "TEXT DEFAULT 'regular'" },
         { name: 'subscription_status', type: "TEXT DEFAULT 'active'" },
         { name: 'last_payment_date', type: 'TIMESTAMP WITH TIME ZONE' },
         { name: 'account_type', type: "TEXT DEFAULT 'personal'" },
@@ -1407,7 +1407,7 @@ async function updateActiveReferralCount(accountId: string) {
       `SELECT COUNT(*) as count 
        FROM accounts 
        WHERE referred_by_id = $1 
-       AND (subscription_status = 'active' OR (subscription_plan = 'professional' AND trial_expiry > NOW()))`,
+       AND (subscription_status = 'active' OR (subscription_plan = 'pro' AND trial_expiry > NOW()))`,
       [accountId]
     );
     const count = parseInt(rows[0].count);
@@ -1661,7 +1661,7 @@ async function createServer() {
         'SELECT subscription_plan, subscription_status, last_payment_date FROM accounts WHERE id = $1',
         [req.user.accountId]
       );
-      res.json(rows[0] || { subscription_plan: 'free', subscription_status: 'active' });
+      res.json(rows[0] || { subscription_plan: 'regular', subscription_status: 'active' });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1838,7 +1838,7 @@ async function createServer() {
         // Flatten the subscription_plan from the joined accounts table
         const flattenedUser = {
           ...user,
-          subscription_plan: (user as any).accounts?.subscription_plan || 'free'
+          subscription_plan: (user as any).accounts?.subscription_plan || 'regular'
         };
         return flattenedUser;
       }
@@ -2531,6 +2531,44 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   });
 
   // Expenses API
+  app.get("/api/expenses/stats", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      const search = (req.query.search as string || '').toLowerCase();
+
+      if (process.env.AWS_DB_PASSWORD) {
+        let query = 'SELECT SUM(amount) as total FROM expenses WHERE account_id = $1';
+        const params: any[] = [userInfo.account_id];
+
+        if (search) {
+          query += ' AND (LOWER(category) LIKE $2 OR LOWER(description) LIKE $2)';
+          params.push(`%${search}%`);
+        }
+
+        const { rows } = await pool.query(query, params);
+        return res.json({ total: parseFloat(rows[0].total) || 0 });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
+
+      let query = supabase.from('expenses').select('amount').eq('account_id', userInfo.account_id);
+
+      if (search) {
+        query = query.or(`category.ilike.%${search}%,description.ilike.%${search}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const total = data?.reduce((acc, e) => acc + (parseFloat(e.amount as any) || 0), 0) || 0;
+      res.json({ total });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/expenses", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
@@ -2882,6 +2920,26 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         name: "Amina Yusuf",
         role: "Boutique Owner",
         content: "The AI Advisor is like having a business consultant in my pocket. It helped me identify which products were my best sellers."
+      }
+    ],
+    premiumFeatures: [
+      {
+        id: 1,
+        title: "Unlimited Free Invoices",
+        description: "Generate and send professional invoices to your clients without any limits. Perfect for service providers and wholesalers.",
+        icon: "FileText"
+      },
+      {
+        id: 2,
+        title: "Sales Forecasting",
+        description: "Predict future sales trends based on historical data. Plan your inventory and staffing with confidence.",
+        icon: "TrendingUp"
+      },
+      {
+        id: 3,
+        title: "Free AI Logo Design",
+        description: "Build a professional brand identity in seconds. Our AI generates unique logos tailored to your business niche.",
+        icon: "Sparkles"
       }
     ],
     faq: [
@@ -3371,7 +3429,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           accountQuery = 'INSERT INTO accounts (name, account_type, business_type, referral_code, referred_by_id, subscription_plan, subscription_status, trial_expiry) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id';
           const trialExpiry = new Date();
           trialExpiry.setDate(trialExpiry.getDate() + 14); // 14 days trial
-          accountParams = [name || normalizedUsername, accountType || 'personal', businessType, newReferralCode, referredByAccountId, 'professional', 'active', trialExpiry];
+          accountParams = [name || normalizedUsername, accountType || 'personal', businessType, newReferralCode, referredByAccountId, 'pro', 'active', trialExpiry];
         }
 
         const { rows: accountRows } = await client.query(accountQuery, accountParams);
@@ -3441,7 +3499,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
                 await client.query(
                   'UPDATE accounts SET trial_expiry = $1, referrals_for_reward = 0, subscription_plan = $2, subscription_status = $3 WHERE id = $4',
-                  [newExpiry, 'professional', 'active', referredByAccountId]
+                  [newExpiry, 'pro', 'active', referredByAccountId]
                 );
 
                 // Notify Referrer of Reward
@@ -3470,7 +3528,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             // Update new account to Pro trial
             await client.query(
               'UPDATE accounts SET subscription_plan = $1, subscription_status = $2, trial_expiry = $3 WHERE id = $4',
-              ['professional', 'trial', trialExpiry, account.id]
+              ['pro', 'trial', trialExpiry, account.id]
             );
           } catch (err) {
             console.error('[AUTH] Failed to process referral benefits:', err);
@@ -4051,12 +4109,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'super_admin' && userInfo.role !== 'owner')) return res.status(403).json({ error: "Forbidden" });
 
       // Check subscription limits for multi-user
-      if (userInfo.subscription_plan === 'free') {
+      if (userInfo.subscription_plan === 'regular') {
         if (process.env.AWS_DB_PASSWORD) {
           const { rows: countRows } = await pool.query('SELECT COUNT(*) FROM users WHERE account_id = $1', [userInfo.account_id]);
           if (parseInt(countRows[0].count) >= 1) {
             return res.status(403).json({ 
-              error: "Multi-user support is only available on the Professional plan. Upgrade to add staff members.",
+              error: "Multi-user support is only available on the Pro plan. Upgrade to add staff members.",
               limitReached: true 
             });
           }
@@ -4068,7 +4126,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           
           if (!countErr && count !== null && count >= 1) {
             return res.status(403).json({ 
-              error: "Multi-user support is only available on the Professional plan. Upgrade to add staff members.",
+              error: "Multi-user support is only available on the Pro plan. Upgrade to add staff members.",
               limitReached: true 
             });
           }
@@ -4299,6 +4357,64 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.get("/api/products/stats", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const { rows: stats } = await pool.query(`
+          SELECT 
+            SUM(pv.quantity) as total_stock,
+            SUM(p.cost_price * pv.quantity) as total_cost_value,
+            SUM(p.selling_price * pv.quantity) as total_selling_value
+          FROM product_variants pv
+          JOIN products p ON pv.product_id = p.id
+          WHERE p.account_id = $1
+        `, [userInfo.account_id]);
+
+        return res.json({
+          total_stock: parseInt(stats[0].total_stock) || 0,
+          total_cost_value: parseFloat(stats[0].total_cost_value) || 0,
+          total_selling_value: parseFloat(stats[0].total_selling_value) || 0
+        });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
+
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          cost_price,
+          selling_price,
+          product_variants(quantity)
+        `)
+        .eq('account_id', userInfo.account_id);
+
+      if (error) throw error;
+
+      let totalStock = 0;
+      let totalCostValue = 0;
+      let totalSellingValue = 0;
+
+      products?.forEach(p => {
+        const variants = p.product_variants || [];
+        const productStock = variants.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0);
+        totalStock += productStock;
+        totalCostValue += (parseFloat(p.cost_price as any) || 0) * productStock;
+        totalSellingValue += (parseFloat(p.selling_price as any) || 0) * productStock;
+      });
+
+      res.json({
+        total_stock: totalStock,
+        total_cost_value: totalCostValue,
+        total_selling_value: totalSellingValue
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/products/:id", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
@@ -4377,12 +4493,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
 
       // Check subscription limits for products
-      if (userInfo.subscription_plan === 'free') {
+      if (userInfo.subscription_plan === 'regular') {
         if (process.env.AWS_DB_PASSWORD) {
           const { rows: countRows } = await pool.query('SELECT COUNT(*) FROM products WHERE account_id = $1', [userInfo.account_id]);
           if (parseInt(countRows[0].count) >= 20) {
             return res.status(403).json({ 
-              error: "Product limit reached for Starter plan (20 products). Upgrade to Professional for unlimited products.",
+              error: "Product limit reached for Regular plan (20 products). Upgrade to Pro for unlimited products.",
               limitReached: true 
             });
           }
@@ -4394,7 +4510,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           
           if (!countErr && count !== null && count >= 20) {
             return res.status(403).json({ 
-              error: "Product limit reached for Starter plan (20 products). Upgrade to Professional for unlimited products.",
+              error: "Product limit reached for Regular plan (20 products). Upgrade to Pro for unlimited products.",
               limitReached: true 
             });
           }
@@ -5470,7 +5586,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
       // Check subscription limits for invoices
-      if (userInfo.subscription_plan === 'free') {
+      if (userInfo.subscription_plan === 'regular') {
         const now = new Date();
         const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         
@@ -5481,7 +5597,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           );
           if (parseInt(countRows[0].count) >= 5) {
             return res.status(403).json({ 
-              error: "Monthly invoice limit reached for Starter plan (5 invoices). Upgrade to Professional for unlimited invoices.",
+              error: "Monthly invoice limit reached for Regular plan (5 invoices). Upgrade to Pro for unlimited invoices.",
               limitReached: true 
             });
           }
@@ -5494,7 +5610,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           
           if (!countErr && count !== null && count >= 5) {
             return res.status(403).json({ 
-              error: "Monthly invoice limit reached for Starter plan (5 invoices). Upgrade to Professional for unlimited invoices.",
+              error: "Monthly invoice limit reached for Regular plan (5 invoices). Upgrade to Pro for unlimited invoices.",
               limitReached: true 
             });
           }
@@ -5989,10 +6105,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       if (process.env.AWS_DB_PASSWORD) {
         const { rows: sales } = await pool.query(`
-          SELECT s.*, c.name as customer_name_from_table, u.name as staff_name 
+          SELECT s.*, c.name as customer_name_from_table, u.name as staff_name, acc.subscription_plan
           FROM sales s 
           LEFT JOIN customers c ON s.customer_id = c.id 
           LEFT JOIN users u ON s.staff_id = u.id 
+          LEFT JOIN accounts acc ON s.account_id = acc.id
           WHERE s.id = $1
         `, [id]);
 
@@ -6024,6 +6141,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           *,
           customers ( name, email, phone, address ),
           users ( name ),
+          accounts ( subscription_plan ),
           sale_items (
             *,
             product_variants ( size, color, products ( name ) ),
@@ -6034,6 +6152,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .single();
 
       if (error || !sale) return res.status(404).json({ error: "Invoice not found" });
+
+      // Flatten subscription_plan
+      if (sale.accounts) {
+        sale.subscription_plan = sale.accounts.subscription_plan;
+      }
 
       const { data: settings } = await supabase
         .from('settings')
@@ -6135,6 +6258,98 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (error) throw error;
       return res.json(data || []);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/sales/stats", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      const range = req.query.range as string || 'all';
+      const search = (req.query.search as string || '').toLowerCase();
+      let dateFilter = '';
+      const now = new Date();
+      
+      if (range === 'today') {
+        dateFilter = "AND created_at >= CURRENT_DATE";
+      } else if (range === 'week') {
+        dateFilter = "AND created_at >= NOW() - INTERVAL '7 days'";
+      } else if (range === 'month') {
+        dateFilter = "AND created_at >= NOW() - INTERVAL '30 days'";
+      }
+
+      if (process.env.AWS_DB_PASSWORD) {
+        let query = `
+          SELECT 
+            COUNT(*) as count,
+            SUM(total_amount) as total_revenue,
+            SUM(total_profit) as total_profit
+          FROM sales 
+          WHERE account_id = $1 ${dateFilter}
+        `;
+        const params: any[] = [userInfo.account_id];
+
+        if (search) {
+          query += ` AND (
+            LOWER(invoice_number) LIKE $${params.length + 1} OR 
+            LOWER(customer_name) LIKE $${params.length + 1} OR 
+            LOWER(payment_method) LIKE $${params.length + 1}
+          )`;
+          params.push(`%${search}%`);
+        }
+
+        if (!hasPermission(userInfo, 'can_view_account_data')) {
+          query += ` AND staff_id = $${params.length + 1}`;
+          params.push(userInfo.id);
+        }
+
+        const { rows: stats } = await pool.query(query, params);
+
+        return res.json({
+          count: parseInt(stats[0].count) || 0,
+          total_revenue: parseFloat(stats[0].total_revenue) || 0,
+          total_profit: parseFloat(stats[0].total_profit) || 0
+        });
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
+
+      let query = supabase
+        .from('sales')
+        .select('total_amount, total_profit', { count: 'exact' })
+        .eq('account_id', userInfo.account_id);
+
+      if (!hasPermission(userInfo, 'can_view_account_data')) {
+        query = query.eq('staff_id', userInfo.id);
+      }
+
+      if (range === 'today') {
+        query = query.gte('created_at', new Date(now.setHours(0,0,0,0)).toISOString());
+      } else if (range === 'week') {
+        query = query.gte('created_at', new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString());
+      } else if (range === 'month') {
+        query = query.gte('created_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString());
+      }
+
+      if (search) {
+        query = query.or(`invoice_number.ilike.%${search}%,customer_name.ilike.%${search}%,payment_method.ilike.%${search}%`);
+      }
+
+      const { data, count, error } = await query;
+
+      if (error) throw error;
+
+      const totalRevenue = data?.reduce((acc, s) => acc + (parseFloat(s.total_amount as any) || 0), 0) || 0;
+      const totalProfit = data?.reduce((acc, s) => acc + (parseFloat(s.total_profit as any) || 0), 0) || 0;
+
+      res.json({
+        count: count || 0,
+        total_revenue: totalRevenue,
+        total_profit: totalProfit
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -7879,7 +8094,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       await pool.query(
         'UPDATE accounts SET subscription_plan = $1, subscription_status = $2, trial_expiry = $3 WHERE id = $4',
-        ['professional', 'active', newExpiry, account_id]
+        ['pro', 'active', newExpiry, account_id]
       );
 
       // Increment usage count

@@ -218,7 +218,11 @@ export async function retryWithBackoff<T>(
   throw new Error('Max retries exceeded');
 }
 
+let cachedGeminiKey: string | null = null;
+
 export async function fetchGeminiKey(): Promise<string> {
+  if (cachedGeminiKey) return cachedGeminiKey;
+
   // Try to get from build-time env vars first
   // We also check window.process.env for dynamic injection in AI Studio
   let key = '';
@@ -232,7 +236,10 @@ export async function fetchGeminiKey(): Promise<string> {
     console.warn('Error accessing process.env in browser:', e);
   }
             
-  if (key && key !== '""' && key !== "''") return key;
+  if (key && key !== '""' && key !== "''") {
+    cachedGeminiKey = key;
+    return key;
+  }
   
   // Fetch from backend
   try {
@@ -252,7 +259,10 @@ export async function fetchGeminiKey(): Promise<string> {
     });
     if (res.ok) {
       const data = await res.json();
-      if (data.apiKey) return data.apiKey;
+      if (data.apiKey) {
+        cachedGeminiKey = data.apiKey;
+        return data.apiKey;
+      }
     }
   } catch (e) {
     console.error("Failed to fetch Gemini key from backend", e);
