@@ -45,6 +45,41 @@ export function formatCurrency(amount: number | string | undefined | null, curre
   return `${currency} ${value.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`;
 }
 
+export const getOptimizedImageUrl = (url: string | undefined | null, width: number = 300) => {
+  if (!url) return '';
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+  
+  let key = url;
+  if (url.startsWith('/api/images/')) {
+    key = url.replace('/api/images/', '');
+  } else if (url.startsWith('http')) {
+    try {
+      const urlObj = new URL(url);
+      key = urlObj.pathname.substring(1);
+      
+      if (url.includes('amazonaws.com')) {
+        // For S3 URLs, the key is just the pathname without the leading slash
+        key = urlObj.pathname.substring(1);
+      } else if (url.includes('cloudinary.com')) {
+        const uploadIndex = url.indexOf('/upload/');
+        if (uploadIndex !== -1) {
+           const afterUpload = url.substring(uploadIndex + 8);
+           const parts = afterUpload.split('/');
+           if (parts.length > 1 && parts[0].startsWith('v')) {
+             key = parts.slice(1).join('/');
+           } else {
+             key = afterUpload;
+           }
+        }
+      }
+    } catch (e) {
+      // fallback
+    }
+  }
+  
+  return `https://pmp323myg6rsao42jsmdzpidb40xhakc.lambda-url.us-east-1.on.aws/?key=${encodeURIComponent(key)}&w=${width}`;
+};
+
 export async function apiFetch(url: string, options: RequestInit = {}) {
   const start = performance.now();
   try {

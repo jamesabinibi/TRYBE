@@ -29,41 +29,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
 import { toast } from 'sonner';
-
-const getOptimizedImageUrl = (url: string, width: number = 300) => {
-  if (!url) return '';
-  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
-  
-  let key = url;
-  if (url.startsWith('/api/images/')) {
-    key = url.replace('/api/images/', '');
-  } else if (url.startsWith('http')) {
-    try {
-      const urlObj = new URL(url);
-      key = urlObj.pathname.substring(1);
-      
-      if (url.includes('amazonaws.com')) {
-        // For S3 URLs, the key is just the pathname without the leading slash
-        key = urlObj.pathname.substring(1);
-      } else if (url.includes('cloudinary.com')) {
-        const uploadIndex = url.indexOf('/upload/');
-        if (uploadIndex !== -1) {
-           const afterUpload = url.substring(uploadIndex + 8);
-           const parts = afterUpload.split('/');
-           if (parts.length > 1 && parts[0].startsWith('v')) {
-             key = parts.slice(1).join('/');
-           } else {
-             key = afterUpload;
-           }
-        }
-      }
-    } catch (e) {
-      // fallback
-    }
-  }
-  
-  return `https://pmp323myg6rsao42jsmdzpidb40xhakc.lambda-url.us-east-1.on.aws/?key=${encodeURIComponent(key)}&w=${width}`;
-};
+import { getOptimizedImageUrl } from '../lib/utils';
+import { useInView } from 'react-intersection-observer';
 
 const getInitialProductState = () => ({
   name: '',
@@ -126,15 +93,14 @@ export default function Products() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/categories']
+        endpoints: ['/api/services', '/api/categories']
       })
     });
     if (!batchRes.ok) {
       throw new Error(`Batch fetch failed with status ${batchRes.status}`);
     }
-    const [productsData, servicesData, categoriesData] = await batchRes.json();
+    const [servicesData, categoriesData] = await batchRes.json();
     return {
-      products: Array.isArray(productsData) ? productsData : [],
       services: Array.isArray(servicesData) ? servicesData : [],
       categories: Array.isArray(categoriesData) ? categoriesData : []
     };
@@ -143,7 +109,54 @@ export default function Products() {
     enabled: !!user
   });
 
-  const products = inventoryData?.products || [];
+  const [products, setProducts] = useState<any[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const { ref: loadMoreRef, inView } = useInView();
+  const LIMIT = 20;
+
+  const fetchProductsData = useCallback(async (pageIndex: number, isRefresh = false) => {
+    if (!user) return;
+    setIsLoadingProducts(true);
+    try {
+      const res = await fetchWithAuth(`/api/products?limit=${LIMIT}&offset=${pageIndex * LIMIT}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (isRefresh) {
+          setProducts(data);
+        } else {
+          setProducts(prev => [...prev, ...data]);
+        }
+        setHasMore(data.length === LIMIT);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, [user, fetchWithAuth]);
+
+  useEffect(() => {
+    if (user) {
+      fetchProductsData(0, true);
+      setPage(0);
+    }
+  }, [user, fetchProductsData]);
+
+  useEffect(() => {
+    if (inView && hasMore && !isLoadingProducts) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchProductsData(nextPage);
+    }
+  }, [inView, hasMore, isLoadingProducts, page, fetchProductsData]);
+
+  const fetchProducts = () => {
+    fetchProductsData(0, true);
+    refetchInventory();
+  };
+
   const services = inventoryData?.services || [];
   const categories = inventoryData?.categories || [];
 
@@ -208,7 +221,6 @@ export default function Products() {
   const totalQuantity = newProduct.variants.reduce((acc, v) => acc + (Number(v.quantity) || 0), 0);
 
   const fetchServices = () => refetchInventory();
-  const fetchProducts = () => refetchInventory();
   const fetchCategories = () => refetchInventory();
 
   const handleShareWhatsApp = (product: Product) => {
@@ -265,7 +277,7 @@ export default function Products() {
   };
 
   const handleEditClick = async (product: Product) => {
-    // Set initial data without images to open modal quickly
+    // Set initial data with images if available
     setEditingProduct(product);
     setNewProduct({
       name: product.name,
@@ -278,18 +290,19 @@ export default function Products() {
       pieces_per_unit: (product as any).pieces_per_unit?.toString() || '1',
       product_type: (product as any).product_type || (product.variants?.length > 1 ? 'multiple' : 'one'),
       variants: (product.variants || []).map(v => ({
+        id: v.id,
         size: v.size || '',
         color: v.color || '',
         quantity: (v.quantity || 0).toString(),
         low_stock_threshold: v.low_stock_threshold !== null && v.low_stock_threshold !== undefined ? v.low_stock_threshold.toString() : '',
         price_override: v.price_override
       })),
-      images: []
+      images: product.images || []
     });
-    setImagePreviews([]);
+    setImagePreviews(product.images || []);
     setIsAddModalOpen(true);
 
-    // Fetch full product details including images
+    // Still fetch full product details in case images were excluded or to get latest data
     try {
       const res = await fetchWithAuth(`/api/products/${product.id}`);
       if (res.ok) {
@@ -519,6 +532,7 @@ export default function Products() {
     const selling = typeof price === 'string' ? parseFloat(price) || 0 : price || 0;
     return acc + (selling * (p.total_stock || 0));
   }, 0);
+  const totalStockCount = filteredProducts.reduce((acc, p) => acc + (p.total_stock || 0), 0);
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
@@ -539,7 +553,7 @@ export default function Products() {
       {/* Summary Cards */}
       <div className={cn(
         "grid gap-6",
-        user?.role === 'staff' ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
+        user?.role === 'staff' ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3"
       )}>
         {user?.role !== 'staff' && (
           <StatCard 
@@ -556,6 +570,13 @@ export default function Products() {
           color="vibrant-gradient-purple text-white"
           gradient="bg-purple-500"
           icon={TrendingUp}
+        />
+        <StatCard 
+          title="Total Stock Count" 
+          value={totalStockCount.toLocaleString()} 
+          color="vibrant-gradient-pink text-white"
+          gradient="bg-pink-500"
+          icon={Package}
         />
       </div>
 
@@ -594,7 +615,7 @@ export default function Products() {
                   placeholder="Search products..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-11"
                 />
               </div>
               <div className="relative group">
@@ -1011,6 +1032,7 @@ export default function Products() {
                                 <input 
                                   type="file" 
                                   accept="image/*" 
+                                  multiple
                                   onChange={handleImageUpload} 
                                   className="hidden" 
                                 />
@@ -1276,7 +1298,7 @@ export default function Products() {
                     </div>
 
                     {/* Pricing Section */}
-                    <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
+                    <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-10">
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Cost Price (₦)</label>
                         <Input 
@@ -1295,6 +1317,15 @@ export default function Products() {
                           step="0.01"
                           value={newProduct.selling_price}
                           onChange={(e) => setNewProduct({...newProduct, selling_price: e.target.value})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Stock</label>
+                        <Input 
+                          disabled
+                          type="number" 
+                          value={totalQuantity}
+                          className="bg-zinc-50 dark:bg-zinc-800/50 cursor-not-allowed"
                         />
                       </div>
                     </div>

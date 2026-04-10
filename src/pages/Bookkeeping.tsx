@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useInView } from 'react-intersection-observer';
 import { 
   TrendingUp, 
   Plus, 
@@ -24,16 +25,17 @@ import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 
 interface Record {
-  id: number;
-  type: 'loan' | 'debt_recovery' | 'investment' | 'other';
+  id: number | string;
+  type: 'loan' | 'debt_recovery' | 'investment' | 'other' | 'sale' | 'cogs' | string;
   nature: 'income' | 'expense' | 'other';
   amount: number;
   description: string;
   date: string;
+  source?: string;
 }
 
 export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boolean }) {
-  const { fetchWithAuth } = useAuth();
+  const { user, fetchWithAuth } = useAuth();
   const { settings } = useSettings();
   const currency = settings?.currency || 'NGN';
   const [records, setRecords] = useState<Record[]>([]);
@@ -63,24 +65,48 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
     { value: 'other', label: 'Other Inflow/Outflow' }
   ];
 
-  useEffect(() => {
-    fetchRecords();
-  }, []);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+  const { ref: loadMoreRef, inView } = useInView();
+  const LIMIT = 20;
 
-  const fetchRecords = async () => {
+  const fetchRecordsData = useCallback(async (pageIndex: number, isRefresh = false) => {
+    if (!user) return;
+    setIsLoadingRecords(true);
     try {
-      const res = await fetchWithAuth('/api/bookkeeping');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setRecords(data);
-      } else {
-        setRecords([]);
+      const res = await fetchWithAuth(`/api/bookkeeping?limit=${LIMIT}&offset=${pageIndex * LIMIT}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (isRefresh) {
+          setRecords(data);
+        } else {
+          setRecords(prev => [...prev, ...data]);
+        }
+        setHasMore(data.length === LIMIT);
       }
-    } catch (err) {
-      toast.error('Failed to fetch records');
-      setRecords([]);
+    } catch (error) {
+      console.error('Error fetching records:', error);
+    } finally {
+      setIsLoadingRecords(false);
     }
-  };
+  }, [user, fetchWithAuth]);
+
+  useEffect(() => {
+    if (user) {
+      fetchRecordsData(0, true);
+    }
+  }, [user, fetchRecordsData]);
+
+  useEffect(() => {
+    if (inView && hasMore && !isLoadingRecords) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchRecordsData(nextPage);
+    }
+  }, [inView, hasMore, isLoadingRecords, page, fetchRecordsData]);
+
+  const fetchRecords = () => fetchRecordsData(0, true);
 
   const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +145,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
     }
   };
 
-  const handleDeleteRecord = async (id: number) => {
+  const handleDeleteRecord = async (id: number | string) => {
     toast.custom((t) => (
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
         <div className="flex items-center gap-3 text-red-600">
@@ -163,7 +189,8 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
     return matchesSearch && matchesType;
   });
 
-  const totalInflows = filteredRecords.reduce((acc, r) => acc + Number(r.amount), 0);
+  const totalInflows = filteredRecords.filter(r => r.nature === 'income').reduce((acc, r) => acc + Number(r.amount), 0);
+  const totalOutflows = filteredRecords.filter(r => r.nature === 'expense').reduce((acc, r) => acc + Number(r.amount), 0);
 
   const exportToCSV = () => {
     const headers = ['Date', 'Type', 'Description', 'Amount'];
@@ -237,12 +264,30 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-<div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
           <TotalDisplay 
             label="Total Inflows" 
             value={totalInflows} 
             icon={<ArrowUpRight className="w-6 h-6" />}
             iconClassName="bg-brand/10 text-brand"
+          />
+        </div>
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+          <TotalDisplay 
+            label="Total Outflows" 
+            value={totalOutflows} 
+            icon={<ArrowDownRight className="w-6 h-6" />}
+            iconClassName="bg-red-500/10 text-red-500"
+          />
+        </div>
+        <div className="bg-brand text-white p-6 rounded-3xl shadow-sm">
+          <TotalDisplay 
+            label="Net Balance" 
+            value={totalInflows - totalOutflows} 
+            icon={<TrendingUp className="w-6 h-6" />}
+            iconClassName="bg-white/20 text-white"
+            valueClassName="text-white"
+            labelClassName="text-white/80"
           />
         </div>
       </div>
@@ -256,7 +301,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
               placeholder="Search records..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-11"
             />
           </div>
           <div className="flex items-center gap-3">
@@ -302,6 +347,8 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                       record.type === 'loan' ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" :
                       record.type === 'debt_recovery' ? "bg-brand/10 text-brand" :
                       record.type === 'investment' ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" :
+                      record.type === 'sale' ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" :
+                      record.type === 'cogs' ? "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" :
                       "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
                     )}>
                       {record.type.replace('_', ' ')}
@@ -332,12 +379,14 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => handleDeleteRecord(record.id)}
-                      className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {record.source === 'bookkeeping' && (
+                      <button 
+                        onClick={() => handleDeleteRecord(record.id)}
+                        className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -353,6 +402,11 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
               )}
             </tbody>
           </table>
+          {hasMore && (
+            <div ref={loadMoreRef} className="py-8 flex justify-center">
+              <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
         </div>
       </div>
 

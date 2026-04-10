@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useInView } from 'react-intersection-observer';
 import { 
   Plus, 
   Trash2, 
@@ -22,12 +23,13 @@ import {
   X,
   MessageCircle,
   Link as LinkIcon,
-  Building2
+  Building2,
+  Briefcase
 } from 'lucide-react';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { useAuth, useSettings } from '../App';
-import { cn, formatCurrency, NUMBER_STYLE } from '../lib/utils';
+import { cn, formatCurrency, NUMBER_STYLE, getOptimizedImageUrl } from '../lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { generatePDF as generatePDFUtil } from '../utils/pdfGenerator';
@@ -70,6 +72,49 @@ const Invoices: React.FC = () => {
   const [invoiceTerms, setInvoiceTerms] = useState(settings?.invoice_terms || '');
   const [isGenerating, setIsGenerating] = useState(false);
   const [pastInvoices, setPastInvoices] = useState<any[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const { ref: loadMoreRef, inView } = useInView();
+  const LIMIT = 20;
+
+  const fetchInvoicesData = useCallback(async (pageIndex: number, isRefresh = false) => {
+    if (!user) return;
+    setIsLoadingInvoices(true);
+    try {
+      const res = await fetchWithAuth(`/api/invoices?limit=${LIMIT}&offset=${pageIndex * LIMIT}`);
+      if (res.ok) {
+        const invoices = await res.json();
+        if (isRefresh) {
+          setPastInvoices(invoices);
+        } else {
+          setPastInvoices(prev => [...prev, ...invoices]);
+        }
+        setHasMore(invoices.length === LIMIT);
+      }
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  }, [user, fetchWithAuth]);
+
+  useEffect(() => {
+    if (user) {
+      fetchInvoicesData(0, true);
+    }
+  }, [user, fetchInvoicesData]);
+
+  useEffect(() => {
+    if (inView && hasMore && !isLoadingInvoices) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchInvoicesData(nextPage);
+    }
+  }, [inView, hasMore, isLoadingInvoices, page, fetchInvoicesData]);
+
+  const fetchPastInvoices = () => fetchInvoicesData(0, true);
+
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,7 +128,7 @@ const Invoices: React.FC = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            endpoints: ['/api/products', '/api/services', '/api/sales']
+            endpoints: ['/api/products', '/api/services']
           })
         });
 
@@ -91,13 +136,9 @@ const Invoices: React.FC = () => {
           throw new Error(`Batch fetch failed with status ${batchRes.status}`);
         }
 
-        const [productsData, servicesData, salesData] = await batchRes.json();
+        const [productsData, servicesData] = await batchRes.json();
         setProducts(Array.isArray(productsData) ? productsData : []);
         setServices(Array.isArray(servicesData) ? servicesData : []);
-        
-        if (Array.isArray(salesData)) {
-          setPastInvoices(salesData.filter((s: any) => s.invoice_number));
-        }
       } catch (err) {
         console.error('Failed to fetch initial data:', err);
       }
@@ -180,19 +221,6 @@ const Invoices: React.FC = () => {
     });
     setDiscount(0);
     setSearchTerm('');
-  };
-
-  const fetchPastInvoices = async () => {
-    try {
-      const res = await fetchWithAuth('/api/sales');
-      if (res.ok) {
-        const data = await res.json();
-        // Filter only those with invoice numbers
-        setPastInvoices(data.filter((s: any) => s.invoice_number));
-      }
-    } catch (error) {
-      console.error('Error fetching past invoices:', error);
-    }
   };
 
   const loadInvoice = (invoice: any) => {
@@ -675,7 +703,8 @@ const Invoices: React.FC = () => {
                 </div>
               </div>
             ) : (
-              pastInvoices.map((inv) => (
+              <>
+                {pastInvoices.map((inv) => (
                 <div key={inv.id} className="p-6 space-y-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div>
@@ -725,8 +754,14 @@ const Invoices: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ))
-            )}
+              ))}
+              {hasMore && (
+                <div ref={loadMoreRef} className="py-8 flex justify-center">
+                  <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </>
+          )}
           </div>
         </div>
       ) : (
@@ -1168,8 +1203,24 @@ const Invoices: React.FC = () => {
                     return (
                       <tr key={idx} className="group">
                         <td className="py-8 pr-4">
-                          <p className="font-bold text-zinc-950 dark:text-white text-base tracking-tight">{name}{variant}</p>
-                          <p className="text-xs text-zinc-400 mt-1 font-medium">{item.service_id ? 'Service' : 'Product'}</p>
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                              {item.image || item.product?.image || item.service?.image_url || item.product_variants?.products?.image || item.services?.image_url ? (
+                                <img 
+                                  src={getOptimizedImageUrl(item.image || item.product?.image || item.service?.image_url || item.product_variants?.products?.image || item.services?.image_url)} 
+                                  alt={name} 
+                                  className="w-full h-full object-cover" 
+                                  referrerPolicy="no-referrer" 
+                                />
+                              ) : (
+                                item.service_id ? <Briefcase className="w-5 h-5 text-zinc-400" /> : <Package className="w-5 h-5 text-zinc-400" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-bold text-zinc-950 dark:text-white text-base tracking-tight">{name}{variant}</p>
+                              <p className="text-xs text-zinc-400 mt-1 font-medium">{item.service_id ? 'Service' : 'Product'}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="py-8 px-4 text-center">
                           <span className={`${NUMBER_STYLE} text-sm text-zinc-950 dark:text-white`}>

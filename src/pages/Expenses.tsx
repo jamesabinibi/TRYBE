@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useInView } from 'react-intersection-observer';
 import { 
   Wallet, 
   Plus, 
@@ -52,14 +53,49 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
 
   const currency = settings?.currency || 'NGN';
   
-  const { data: expenses, isLoading, refetch: refetchExpenses } = useQuery('expenses_data', async () => {
-    const res = await fetchWithAuth('/api/expenses');
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
-  }, {
-    persist: true,
-    enabled: !!user
-  });
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingExpenses, setIsLoadingExpenses] = useState(false);
+  const { ref: loadMoreRef, inView } = useInView();
+  const LIMIT = 20;
+
+  const fetchExpensesData = useCallback(async (pageIndex: number, isRefresh = false) => {
+    if (!user) return;
+    setIsLoadingExpenses(true);
+    try {
+      const res = await fetchWithAuth(`/api/expenses?limit=${LIMIT}&offset=${pageIndex * LIMIT}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (isRefresh) {
+          setExpenses(data);
+        } else {
+          setExpenses(prev => [...prev, ...data]);
+        }
+        setHasMore(data.length === LIMIT);
+      }
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+    } finally {
+      setIsLoadingExpenses(false);
+    }
+  }, [user, fetchWithAuth]);
+
+  useEffect(() => {
+    if (user) {
+      fetchExpensesData(0, true);
+    }
+  }, [user, fetchExpensesData]);
+
+  useEffect(() => {
+    if (inView && hasMore && !isLoadingExpenses) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchExpensesData(nextPage);
+    }
+  }, [inView, hasMore, isLoadingExpenses, page, fetchExpensesData]);
+
+  const fetchExpenses = () => fetchExpensesData(0, true);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -84,13 +120,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
     'General'
   ];
 
-  useEffect(() => {
-    // Initial load is handled by useQuery
-  }, []);
-
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-
-  const fetchExpenses = () => refetchExpenses();
 
   const handleAIScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -348,7 +378,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
               placeholder="Search expenses..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-11"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -435,6 +465,11 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
               )}
             </tbody>
           </table>
+          {hasMore && (
+            <div ref={loadMoreRef} className="py-8 flex justify-center">
+              <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
         </div>
       </div>
 

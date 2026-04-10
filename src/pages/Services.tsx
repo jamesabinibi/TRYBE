@@ -179,7 +179,7 @@ const Services = () => {
               placeholder="Search services..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-11"
             />
           </div>
         </div>

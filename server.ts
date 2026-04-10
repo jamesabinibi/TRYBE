@@ -2538,8 +2538,14 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       
       if (!hasPermission(userInfo, 'can_view_expenses')) return res.status(403).json({ error: "Forbidden" });
 
+      const limit = parseInt(req.query.limit as string) || 1000;
+      const offset = parseInt(req.query.offset as string) || 0;
+
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT * FROM expenses WHERE account_id = $1 ORDER BY date DESC', [userInfo.account_id]);
+        const { rows } = await pool.query(
+          'SELECT * FROM expenses WHERE account_id = $1 ORDER BY date DESC LIMIT $2 OFFSET $3', 
+          [userInfo.account_id, limit, offset]
+        );
         return res.json(rows || []);
       }
 
@@ -2548,7 +2554,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .from('expenses')
         .select('*')
         .eq('account_id', userInfo.account_id)
-        .order('date', { ascending: false });
+        .order('date', { ascending: false })
+        .range(offset, offset + limit - 1);
 
       if (error) {
         console.error('[EXPENSES] Fetch error:', error);
@@ -2643,7 +2650,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
 
-      const { rows } = await pool.query('SELECT * FROM customers WHERE account_id = $1 ORDER BY name ASC', [userInfo.account_id]);
+      const limit = parseInt(req.query.limit as string) || 1000;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const { rows } = await pool.query(
+        'SELECT * FROM customers WHERE account_id = $1 ORDER BY name ASC LIMIT $2 OFFSET $3', 
+        [userInfo.account_id, limit, offset]
+      );
       return res.json(rows || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2748,7 +2761,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         if (sales.length > 0) {
           const saleIds = sales.map(s => s.id);
           const { rows: saleItems } = await pool.query(
-            `SELECT si.*, pv.name as variant_name, p.name as product_name 
+            `SELECT si.*, pv.size as variant_size, pv.color as variant_color, p.name as product_name 
              FROM sale_items si 
              LEFT JOIN product_variants pv ON si.variant_id = pv.id 
              LEFT JOIN products p ON pv.product_id = p.id 
@@ -2762,7 +2775,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               .map(si => ({
                 ...si,
                 product_variants: {
-                  name: si.variant_name,
+                  size: si.variant_size,
+                  color: si.variant_color,
                   products: { name: si.product_name }
                 }
               }));
@@ -3350,10 +3364,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const newReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
         // 1. Create Account
-        const { rows: accountRows } = await client.query(
-          'INSERT INTO accounts (name, account_type, business_type, referral_code, referred_by_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-          [name || normalizedUsername, accountType || 'personal', businessType, newReferralCode, referredByAccountId]
-        );
+        let accountQuery = 'INSERT INTO accounts (name, account_type, business_type, referral_code, referred_by_id) VALUES ($1, $2, $3, $4, $5) RETURNING id';
+        let accountParams: any[] = [name || normalizedUsername, accountType || 'personal', businessType, newReferralCode, referredByAccountId];
+        
+        if (referredByAccountId) {
+          accountQuery = 'INSERT INTO accounts (name, account_type, business_type, referral_code, referred_by_id, subscription_plan, subscription_status, trial_expiry) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id';
+          const trialExpiry = new Date();
+          trialExpiry.setDate(trialExpiry.getDate() + 14); // 14 days trial
+          accountParams = [name || normalizedUsername, accountType || 'personal', businessType, newReferralCode, referredByAccountId, 'professional', 'active', trialExpiry];
+        }
+
+        const { rows: accountRows } = await client.query(accountQuery, accountParams);
         const account = accountRows[0];
 
         // 2. Create User
@@ -4168,14 +4189,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!userInfo) return res.json([]);
 
       const excludeImages = req.query.exclude_images === 'true';
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : null;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
 
       // Try RDS first
       if (process.env.AWS_DB_PASSWORD) {
-        console.log(`[DB] Fetching products from AWS RDS for account ${userInfo.account_id} (excludeImages: ${excludeImages})`);
-        const { rows: products } = await pool.query(
-          'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.account_id = $1 ORDER BY p.created_at DESC',
-          [userInfo.account_id]
-        );
+        console.log(`[DB] Fetching products from AWS RDS for account ${userInfo.account_id} (excludeImages: ${excludeImages}, limit: ${limit}, offset: ${offset})`);
+        
+        let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.account_id = $1 ORDER BY p.created_at DESC';
+        const params: any[] = [userInfo.account_id];
+        
+        if (limit !== null) {
+          query += ' LIMIT $2 OFFSET $3';
+          params.push(limit, offset);
+        }
+
+        const { rows: products } = await pool.query(query, params);
         
         if (products.length > 0) {
           const productIds = products.map(p => p.id);
@@ -4221,11 +4250,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         selectQuery += `, product_images(image_data)`;
       }
 
-      let { data: products, error } = await supabase
+      let query = supabase
         .from('products')
         .select(selectQuery)
         .eq('account_id', userInfo.account_id)
         .order('created_at', { ascending: false });
+
+      if (limit !== null) {
+        query = query.range(offset, offset + limit - 1);
+      }
+
+      let { data: products, error } = await query;
 
       if (error) {
         console.error('[PRODUCTS] Fetch error:', error);
@@ -4508,13 +4543,39 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           }
 
           if (variants && Array.isArray(variants)) {
-            // Simple approach: delete and re-insert variants
-            await client.query('DELETE FROM product_variants WHERE product_id = $1', [id]);
+            const existingVariantsRes = await client.query('SELECT id FROM product_variants WHERE product_id = $1', [id]);
+            const existingVariantIds = existingVariantsRes.rows.map(r => r.id);
+            
+            const incomingVariantIds = variants.map(v => v.id).filter(Boolean);
+            
+            // Delete variants that are not in the incoming list
+            const variantsToDelete = existingVariantIds.filter(vId => !incomingVariantIds.includes(vId));
+            for (const variantId of variantsToDelete) {
+              try {
+                await client.query('DELETE FROM product_variants WHERE id = $1', [variantId]);
+              } catch (e: any) {
+                // If it fails due to foreign key, just set quantity to 0
+                if (e.code === '23503') { // foreign_key_violation
+                  await client.query('UPDATE product_variants SET quantity = 0 WHERE id = $1', [variantId]);
+                } else {
+                  throw e;
+                }
+              }
+            }
+
+            // Update or insert variants
             for (const v of variants) {
-              await client.query(
-                'INSERT INTO product_variants (account_id, product_id, size, color, quantity, low_stock_threshold, price_override) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-                [userInfo.account_id, id, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override]
-              );
+              if (v.id) {
+                await client.query(
+                  'UPDATE product_variants SET size = $1, color = $2, quantity = $3, low_stock_threshold = $4, price_override = $5 WHERE id = $6 AND product_id = $7',
+                  [v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override, v.id, id]
+                );
+              } else {
+                await client.query(
+                  'INSERT INTO product_variants (account_id, product_id, size, color, quantity, low_stock_threshold, price_override) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                  [userInfo.account_id, id, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override]
+                );
+              }
             }
           }
           
@@ -4613,7 +4674,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         );
 
         for (const ev of variantsToDelete) {
-          await supabase.from('product_variants').delete().eq('id', ev.id).eq('account_id', userInfo.account_id);
+          const { error: delErr } = await supabase.from('product_variants').delete().eq('id', ev.id).eq('account_id', userInfo.account_id);
+          if (delErr) {
+            if (delErr.code === '23503') {
+              // Foreign key violation, just set quantity to 0
+              await supabase.from('product_variants').update({ quantity: 0 }).eq('id', ev.id).eq('account_id', userInfo.account_id);
+            } else {
+              throw delErr;
+            }
+          }
         }
 
         // 2. Update existing or Insert new ones
@@ -5124,20 +5193,115 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      let allRecords: any[] = [];
+
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query('SELECT * FROM bookkeeping WHERE account_id = $1 ORDER BY date DESC', [userInfo.account_id]);
-        return res.json(rows || []);
+        const { rows: bookkeeping } = await pool.query('SELECT * FROM bookkeeping WHERE account_id = $1', [userInfo.account_id]);
+        const { rows: sales } = await pool.query('SELECT id, total_amount, total_profit, created_at FROM sales WHERE account_id = $1', [userInfo.account_id]);
+        const { rows: expenses } = await pool.query('SELECT id, category, amount, description, date, created_at FROM expenses WHERE account_id = $1', [userInfo.account_id]);
+
+        allRecords = [
+          ...bookkeeping.map(b => ({ ...b, source: 'bookkeeping' })),
+          ...sales.flatMap(s => {
+            const amount = parseFloat(s.total_amount) || 0;
+            const profit = parseFloat(s.total_profit) || 0;
+            const cogs = amount - profit;
+            
+            const records = [{
+              id: `sale_${s.id}`,
+              type: 'sale',
+              nature: 'income',
+              amount: amount,
+              description: `Sale #${s.id}`,
+              date: s.created_at,
+              created_at: s.created_at,
+              source: 'sale'
+            }];
+
+            if (cogs > 0) {
+              records.push({
+                id: `cogs_${s.id}`,
+                type: 'cogs',
+                nature: 'expense',
+                amount: cogs,
+                description: `Cost of Goods - Sale #${s.id}`,
+                date: s.created_at,
+                created_at: s.created_at,
+                source: 'cogs'
+              });
+            }
+            return records;
+          }),
+          ...expenses.map(e => ({
+            id: `exp_${e.id}`,
+            type: e.category,
+            nature: 'expense',
+            amount: e.amount,
+            description: e.description,
+            date: e.date,
+            created_at: e.created_at,
+            source: 'expense'
+          }))
+        ];
+      } else if (supabase) {
+        const [bookRes, salesRes, expRes] = await Promise.all([
+          supabase.from('bookkeeping').select('*').eq('account_id', userInfo.account_id),
+          supabase.from('sales').select('id, total_amount, total_profit, created_at').eq('account_id', userInfo.account_id),
+          supabase.from('expenses').select('*').eq('account_id', userInfo.account_id)
+        ]);
+
+        allRecords = [
+          ...(bookRes.data || []).map(b => ({ ...b, source: 'bookkeeping' })),
+          ...(salesRes.data || []).flatMap(s => {
+            const amount = parseFloat(s.total_amount) || 0;
+            const profit = parseFloat(s.total_profit) || 0;
+            const cogs = amount - profit;
+            
+            const records = [{
+              id: `sale_${s.id}`,
+              type: 'sale',
+              nature: 'income',
+              amount: amount,
+              description: `Sale #${s.id}`,
+              date: s.created_at,
+              created_at: s.created_at,
+              source: 'sale'
+            }];
+
+            if (cogs > 0) {
+              records.push({
+                id: `cogs_${s.id}`,
+                type: 'cogs',
+                nature: 'expense',
+                amount: cogs,
+                description: `Cost of Goods - Sale #${s.id}`,
+                date: s.created_at,
+                created_at: s.created_at,
+                source: 'cogs'
+              });
+            }
+            return records;
+          }),
+          ...(expRes.data || []).map(e => ({
+            id: `exp_${e.id}`,
+            type: e.category,
+            nature: 'expense',
+            amount: e.amount,
+            description: e.description,
+            date: e.date,
+            created_at: e.created_at,
+            source: 'expense'
+          }))
+        ];
       }
 
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      const { data, error } = await supabase
-        .from('bookkeeping')
-        .select('*')
-        .eq('account_id', userInfo.account_id)
-        .order('date', { ascending: false });
+      allRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      const limit = parseInt(req.query.limit as string) || 1000;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const paginatedRecords = allRecords.slice(offset, offset + limit);
 
-      if (error) throw error;
-      res.json(data || []);
+      res.json(paginatedRecords);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -5885,6 +6049,97 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.get("/api/invoices", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.json([]);
+
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      if (process.env.AWS_DB_PASSWORD) {
+        let query = `
+          SELECT s.*, c.name as customer_name_from_table, u.name as staff_name 
+          FROM sales s 
+          LEFT JOIN customers c ON s.customer_id = c.id 
+          LEFT JOIN users u ON s.staff_id = u.id 
+          WHERE s.account_id = $1 AND s.invoice_number IS NOT NULL AND s.invoice_number != ''
+        `;
+        const params: any[] = [userInfo.account_id];
+
+        if (!hasPermission(userInfo, 'can_view_account_data')) {
+          query += ` AND s.staff_id = $2 `;
+          params.push(userInfo.id);
+        }
+
+        query += ` ORDER BY s.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+        params.push(limit, offset);
+
+        const { rows: invoices } = await pool.query(query, params);
+
+        if (invoices.length > 0) {
+          const saleIds = invoices.map(s => s.id);
+          const { rows: items } = await pool.query(`
+            SELECT si.*, pv.size, pv.color, p.name as product_name_from_table, p.image as product_image, sv.name as service_name_from_table, sv.image_url as service_image
+            FROM sale_items si
+            LEFT JOIN product_variants pv ON si.variant_id = pv.id
+            LEFT JOIN products p ON pv.product_id = p.id
+            LEFT JOIN services sv ON si.service_id = sv.id
+            WHERE si.sale_id = ANY($1)
+          `, [saleIds]);
+
+          invoices.forEach(s => {
+            s.sale_items = items.filter(item => item.sale_id === s.id).map(item => ({
+              ...item,
+              unit_price: item.unit_price || 0,
+              cost_price: item.cost_price || 0,
+              product_name: item.product_name || item.product_name_from_table || 'Item',
+              service_name: item.service_name || item.service_name_from_table || 'Service',
+              image: item.product_image || item.service_image,
+              variant_info: `${item.size || ''} ${item.color || ''}`.trim()
+            }));
+            s.customer_name = s.customer_name || s.customer_name_from_table || 'Walk-in';
+          });
+        }
+        return res.json(invoices);
+      }
+
+      if (!supabase) return res.status(503).json({ error: "Database not available" });
+      
+      let query = supabase
+        .from('sales')
+        .select(`
+          *,
+          customers!customer_id (name),
+          users!staff_id (name),
+          sale_items (
+            *,
+            product_variants!variant_id (
+              *,
+              products!product_id (name, image)
+            ),
+            services!service_id (name, image_url)
+          )
+        `)
+        .eq('account_id', userInfo.account_id)
+        .not('invoice_number', 'is', null)
+        .neq('invoice_number', '');
+
+      if (!hasPermission(userInfo, 'can_view_account_data')) {
+        query = query.eq('staff_id', userInfo.id);
+      }
+
+      let { data, error } = await query
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/sales", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
@@ -5892,6 +6147,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         console.log('[SALES] No user info found for sales fetch');
         return res.json([]);
       }
+
+      const limit = parseInt(req.query.limit as string) || 1000;
+      const offset = parseInt(req.query.offset as string) || 0;
 
       if (process.env.AWS_DB_PASSWORD) {
         console.log(`[SALES] Fetching sales from AWS RDS for account: ${userInfo.account_id}`);
@@ -5910,14 +6168,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           params.push(userInfo.id);
         }
 
-        query += ` ORDER BY s.created_at DESC LIMIT 1000`;
+        query += ` ORDER BY s.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+        params.push(limit, offset);
 
         const { rows: sales } = await pool.query(query, params);
 
         if (sales.length > 0) {
           const saleIds = sales.map(s => s.id);
           const { rows: items } = await pool.query(`
-            SELECT si.*, pv.size, pv.color, p.name as product_name_from_table, sv.name as service_name_from_table
+            SELECT si.*, pv.size, pv.color, p.name as product_name_from_table, p.image as product_image, sv.name as service_name_from_table, sv.image_url as service_image
             FROM sale_items si
             LEFT JOIN product_variants pv ON si.variant_id = pv.id
             LEFT JOIN products p ON pv.product_id = p.id
@@ -5932,6 +6191,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               cost_price: item.cost_price || 0,
               product_name: item.product_name || item.product_name_from_table || 'Item',
               service_name: item.service_name || item.service_name_from_table || 'Service',
+              image: item.product_image || item.service_image,
               variant_info: `${item.size || ''} ${item.color || ''}`.trim()
             }));
             s.customer_name = s.customer_name || s.customer_name_from_table || 'Walk-in';
@@ -5952,9 +6212,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             *,
             product_variants!variant_id (
               *,
-              products!product_id (name)
+              products!product_id (name, image)
             ),
-            services!service_id (name)
+            services!service_id (name, image_url)
           )
         `)
         .eq('account_id', userInfo.account_id);
@@ -5963,7 +6223,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         query = query.eq('staff_id', userInfo.id);
       }
 
-      let { data, error } = await query.order('created_at', { ascending: false });
+      let { data, error } = await query
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
       if (error) {
         if (error.message?.includes('relation "sales" does not exist') || error.code === '42P01') {
@@ -5977,7 +6239,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           .from('sales')
           .select('*')
           .eq('account_id', userInfo.account_id)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1);
         
         if (salesError) {
           if (salesError.message?.includes('relation "sales" does not exist') || salesError.code === '42P01') {
@@ -6372,21 +6635,21 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
       const now = new Date();
-      const today = now.toISOString().split('T')[0];
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
       if (process.env.AWS_DB_PASSWORD) {
         const { rows: productsCount } = await pool.query('SELECT COUNT(*) FROM products WHERE account_id = $1', [userInfo.account_id]);
         
         let salesCountQuery = 'SELECT COUNT(*) FROM sales WHERE account_id = $1';
-        let todaySalesQuery = 'SELECT total_amount, total_profit FROM sales WHERE account_id = $1 AND created_at::date = $2';
+        let weeklySalesQuery = 'SELECT total_amount, total_profit FROM sales WHERE account_id = $1 AND created_at >= $2';
         const salesParams: any[] = [userInfo.account_id];
-        const todayParams: any[] = [userInfo.account_id, today];
+        const weeklyParams: any[] = [userInfo.account_id, sevenDaysAgo];
 
         if (!hasPermission(userInfo, 'can_view_account_data')) {
           salesCountQuery += ' AND staff_id = $2';
-          todaySalesQuery += ' AND staff_id = $3';
+          weeklySalesQuery += ' AND staff_id = $3';
           salesParams.push(userInfo.id);
-          todayParams.push(userInfo.id);
+          weeklyParams.push(userInfo.id);
         }
 
         const { rows: salesCount } = await pool.query(salesCountQuery, salesParams);
@@ -6408,17 +6671,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const totalStock = parseInt(stockStats[0].total_stock) || 0;
         const low_stock_count = parseInt(stockStats[0].low_stock_count) || 0;
 
-        const { rows: todaySalesData } = await pool.query(todaySalesQuery, todayParams);
-        const todaySales = todaySalesData?.reduce((acc, s) => acc + (parseFloat(s.total_amount) || 0), 0) || 0;
-        const todayProfit = todaySalesData?.reduce((acc, s) => acc + (parseFloat(s.total_profit) || 0), 0) || 0;
+        const { rows: weeklySalesData } = await pool.query(weeklySalesQuery, weeklyParams);
+        const weeklySales = weeklySalesData?.reduce((acc, s) => acc + (parseFloat(s.total_amount) || 0), 0) || 0;
+        const weeklyProfit = weeklySalesData?.reduce((acc, s) => acc + (parseFloat(s.total_profit) || 0), 0) || 0;
 
-        let todayExpenses = 0;
+        let weeklyExpenses = 0;
         if (hasPermission(userInfo, 'can_view_expenses')) {
-          const { rows: todayExpensesData } = await pool.query(
-            'SELECT amount FROM expenses WHERE account_id = $1 AND date = $2',
-            [userInfo.account_id, today]
+          const { rows: weeklyExpensesData } = await pool.query(
+            'SELECT amount FROM expenses WHERE account_id = $1 AND date >= $2',
+            [userInfo.account_id, sevenDaysAgo]
           );
-          todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0) || 0;
+          weeklyExpenses = weeklyExpensesData?.reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0) || 0;
         }
 
         return res.json({
@@ -6426,9 +6689,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           total_sales_count: totalSalesCount,
           total_stock: totalStock,
           low_stock_count: low_stock_count,
-          today_sales: todaySales,
-          today_profit: todayProfit,
-          today_expenses: todayExpenses
+          weekly_sales: weeklySales,
+          weekly_profit: weeklyProfit,
+          weekly_expenses: weeklyExpenses
         });
       }
 
@@ -6437,11 +6700,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const { count: totalProducts } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('account_id', userInfo.account_id);
       
       let salesCountQuery = supabase.from('sales').select('*', { count: 'exact', head: true }).eq('account_id', userInfo.account_id);
-      let todaySalesQuery = supabase.from('sales').select('total_amount, total_profit').eq('account_id', userInfo.account_id).gte('created_at', today);
+      let weeklySalesQuery = supabase.from('sales').select('total_amount, total_profit').eq('account_id', userInfo.account_id).gte('created_at', sevenDaysAgo);
 
       if (!hasPermission(userInfo, 'can_view_account_data')) {
         salesCountQuery = salesCountQuery.eq('staff_id', userInfo.id);
-        todaySalesQuery = todaySalesQuery.eq('staff_id', userInfo.id);
+        weeklySalesQuery = weeklySalesQuery.eq('staff_id', userInfo.id);
       }
 
       const { count: totalSalesCount } = await salesCountQuery;
@@ -6458,19 +6721,19 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         return qty <= threshold;
       }).length || 0;
 
-      const { data: todaySalesData } = await todaySalesQuery;
+      const { data: weeklySalesData } = await weeklySalesQuery;
 
-      const todaySales = todaySalesData?.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0) || 0;
-      const todayProfit = todaySalesData?.reduce((acc, s) => acc + (Number(s.total_profit) || 0), 0) || 0;
+      const weeklySales = weeklySalesData?.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0) || 0;
+      const weeklyProfit = weeklySalesData?.reduce((acc, s) => acc + (Number(s.total_profit) || 0), 0) || 0;
 
-      let todayExpenses = 0;
+      let weeklyExpenses = 0;
       if (hasPermission(userInfo, 'can_view_expenses')) {
-        const { data: todayExpensesData } = await supabase
+        const { data: weeklyExpensesData } = await supabase
           .from('expenses')
           .select('amount')
           .eq('account_id', userInfo.account_id)
-          .gte('date', today);
-        todayExpenses = todayExpensesData?.reduce((acc, e) => acc + (Number(e.amount) || 0), 0) || 0;
+          .gte('date', sevenDaysAgo);
+        weeklyExpenses = weeklyExpensesData?.reduce((acc, e) => acc + (Number(e.amount) || 0), 0) || 0;
       }
 
       res.json({
@@ -6479,9 +6742,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         total_sales_count: totalSalesCount || 0,
         total_stock: totalStock,
         low_stock_count: lowStockCount,
-        today_sales: todaySales,
-        today_profit: todayProfit,
-        today_expenses: todayExpenses
+        weekly_sales: weeklySales,
+        weekly_profit: weeklyProfit,
+        weekly_expenses: weeklyExpenses
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

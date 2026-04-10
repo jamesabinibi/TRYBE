@@ -358,7 +358,8 @@ export default function Subscription() {
           </div>
           <div className="p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 col-span-2 md:col-span-1">
             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Next Reward In</p>
-            <p className="text-xl font-bold text-zinc-900 dark:text-white">{3 - (user?.referrals_for_reward || 0)} <span className="text-xs font-bold text-zinc-400">Referrals</span></p>
+            <p className="text-xl font-bold text-zinc-900 dark:text-white">{3 - ((user?.referral_count || 0) % 3)} <span className="text-xs font-bold text-zinc-400">Referrals</span></p>
+            <p className="text-[9px] font-bold text-brand uppercase tracking-widest mt-1">For 1 Month Free Pro</p>
           </div>
         </div>
 

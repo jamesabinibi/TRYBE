@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useInView } from 'react-intersection-observer';
 import { 
   Users, 
   Plus, 
@@ -107,6 +108,49 @@ export default function Customers() {
 
   const currency = settings?.currency || 'NGN';
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
+  const { ref: loadMoreRef, inView } = useInView();
+  const LIMIT = 20;
+
+  const fetchCustomersData = useCallback(async (pageIndex: number, isRefresh = false) => {
+    if (!user) return;
+    setIsLoadingCustomers(true);
+    try {
+      const res = await fetchWithAuth(`/api/customers?limit=${LIMIT}&offset=${pageIndex * LIMIT}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (isRefresh) {
+          setCustomers(data);
+        } else {
+          setCustomers(prev => [...prev, ...data]);
+        }
+        setHasMore(data.length === LIMIT);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setIsLoadingCustomers(false);
+    }
+  }, [user, fetchWithAuth]);
+
+  useEffect(() => {
+    if (user) {
+      fetchCustomersData(0, true);
+    }
+  }, [user, fetchCustomersData]);
+
+  useEffect(() => {
+    if (inView && hasMore && !isLoadingCustomers) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchCustomersData(nextPage);
+    }
+  }, [inView, hasMore, isLoadingCustomers, page, fetchCustomersData]);
+
+  const fetchCustomers = () => fetchCustomersData(0, true);
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -122,26 +166,6 @@ export default function Customers() {
     email: '',
     address: ''
   });
-
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const fetchCustomers = async () => {
-    try {
-      const res = await fetchWithAuth('/api/customers');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setCustomers(data);
-      } else {
-        console.error('Customers data is not an array:', data);
-        setCustomers([]);
-      }
-    } catch (err) {
-      toast.error('Failed to fetch customers');
-      setCustomers([]);
-    }
-  };
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -340,7 +364,7 @@ export default function Customers() {
               placeholder="Search by name, phone, or email..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-11"
             />
           </div>
         </div>
@@ -419,6 +443,11 @@ export default function Customers() {
               )}
             </motion.div>
           ))}
+          {hasMore && (
+            <div ref={loadMoreRef} className="col-span-full py-8 flex justify-center">
+              <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
           {filteredCustomers.length === 0 && (
             <div className="col-span-full py-20 text-center">
               <div className="flex flex-col items-center gap-3">

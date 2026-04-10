@@ -35,7 +35,7 @@ import {
   Bar,
   Cell
 } from 'recharts';
-import { formatCurrency, cn, useQuery } from '../lib/utils';
+import { formatCurrency, cn, useQuery, getOptimizedImageUrl } from '../lib/utils';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { NumberDisplay } from '../components/NumberDisplay';
 import { TotalDisplay } from '../components/TotalDisplay';
@@ -319,7 +319,7 @@ export default function Dashboard() {
             </div>
             <div>
               <h3 className="h2 mb-1">Referral Program</h3>
-              <p className="body-text opacity-70 max-w-md">Invite friends and get rewarded. They get 1 month of Pro features free!</p>
+              <p className="body-text opacity-70 max-w-md">Invite friends and get rewarded. They get a 2-week Pro trial, and you get 1 month of Pro features free when you reach 3 referrals!</p>
               <div className="flex items-center gap-2 mt-4">
                 <div className="flex -space-x-2">
                   {[1,2,3].map(i => (
@@ -414,7 +414,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-3 overflow-hidden">
                   <div className="w-10 h-10 rounded-lg bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center shrink-0">
                     {product.images?.[0] ? (
-                      <img src={product.images[0]} alt="" className="w-full h-full object-cover rounded-lg" referrerPolicy="no-referrer" />
+                      <img src={getOptimizedImageUrl(product.images[0])} alt="" className="w-full h-full object-cover rounded-lg" referrerPolicy="no-referrer" />
                     ) : (
                       <Package className="w-5 h-5 text-zinc-400" />
                     )}
@@ -443,8 +443,8 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
-          title="Revenue Today" 
-          value={<CurrencyDisplay amount={summary.today_sales || 0} currencyCode={currency} />} 
+          title="Revenue This Week" 
+          value={<CurrencyDisplay amount={summary.weekly_sales || 0} currencyCode={currency} />} 
           color="vibrant-gradient text-white"
           gradient="bg-brand"
           icon={TrendingUp}
@@ -452,15 +452,15 @@ export default function Dashboard() {
         {user?.role !== 'staff' && (
           <>
             <StatCard 
-              title="Expenses Today" 
-              value={<CurrencyDisplay amount={summary.today_expenses || 0} currencyCode={currency} />} 
+              title="Expenses This Week" 
+              value={<CurrencyDisplay amount={summary.weekly_expenses || 0} currencyCode={currency} />} 
               color="vibrant-gradient-pink text-white"
               gradient="bg-pink-500"
               icon={TrendingDown}
             />
             <StatCard 
-              title="Net Profit" 
-              value={<CurrencyDisplay amount={(summary.today_sales || 0) - (summary.today_expenses || 0)} currencyCode={currency} />} 
+              title="Net Profit (Weekly)" 
+              value={<CurrencyDisplay amount={(summary.weekly_profit || 0) - (summary.weekly_expenses || 0)} currencyCode={currency} />} 
               color="vibrant-gradient-purple text-white"
               gradient="bg-purple-500"
               icon={DollarSign}

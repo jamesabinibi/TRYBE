@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useInView } from 'react-intersection-observer';
 import ProductSelect from '../components/ProductSelect';
 import { 
   Search, 
@@ -31,13 +32,14 @@ import {
   Phone,
   MapPin,
   Share2,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Briefcase
 } from 'lucide-react';
 import { Product, Variant, Sale, Customer, Service } from '../types';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { NumberDisplay } from '../components/NumberDisplay';
-import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff, fetchGeminiKey, useQuery } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff, fetchGeminiKey, useQuery, getOptimizedImageUrl } from '../lib/utils';
 import { TotalDisplay } from '../components/TotalDisplay';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { motion, AnimatePresence } from 'motion/react';
@@ -99,22 +101,21 @@ export default function Sales() {
   const { searchQuery } = useSearch();
   const [activeTab, setActiveTab] = useState<'pos' | 'history'>('pos');
   
-  const { data: salesData, isLoading, refetch: refetchSales } = useQuery('sales_data', async () => {
+  const { data: salesData, isLoading: isLoadingBatch, refetch: refetchBatch } = useQuery('sales_data', async () => {
     const batchRes = await fetchWithAuth('/api/batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/sales', '/api/customers']
+        endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/customers']
       })
     });
     if (!batchRes.ok) {
       throw new Error(`Batch fetch failed with status ${batchRes.status}`);
     }
-    const [productsData, servicesData, salesData, customersData] = await batchRes.json();
+    const [productsData, servicesData, customersData] = await batchRes.json();
     return {
       products: Array.isArray(productsData) ? productsData : [],
       services: Array.isArray(servicesData) ? servicesData : [],
-      sales: Array.isArray(salesData) ? salesData : [],
       customers: Array.isArray(customersData) ? customersData : []
     };
   }, {
@@ -124,8 +125,49 @@ export default function Sales() {
 
   const products = salesData?.products || [];
   const services = salesData?.services || [];
-  const sales = salesData?.sales || [];
   const customers = salesData?.customers || [];
+
+  const [sales, setSales] = useState<any[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingSales, setIsLoadingSales] = useState(false);
+  const { ref: loadMoreRef, inView } = useInView();
+  const LIMIT = 20;
+
+  const fetchSalesData = useCallback(async (pageIndex: number, isRefresh = false) => {
+    if (!user) return;
+    setIsLoadingSales(true);
+    try {
+      const res = await fetchWithAuth(`/api/sales?limit=${LIMIT}&offset=${pageIndex * LIMIT}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (isRefresh) {
+          setSales(data);
+        } else {
+          setSales(prev => [...prev, ...data]);
+        }
+        setHasMore(data.length === LIMIT);
+      }
+    } catch (error) {
+      console.error('Error fetching sales:', error);
+    } finally {
+      setIsLoadingSales(false);
+    }
+  }, [user, fetchWithAuth]);
+
+  useEffect(() => {
+    if (user) {
+      fetchSalesData(0, true);
+    }
+  }, [user, fetchSalesData]);
+
+  useEffect(() => {
+    if (inView && hasMore && !isLoadingSales) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchSalesData(nextPage);
+    }
+  }, [inView, hasMore, isLoadingSales, page, fetchSalesData]);
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -181,10 +223,10 @@ export default function Sales() {
     ));
   };
 
-  const fetchSales = () => refetchSales();
-  const fetchProducts = () => refetchSales();
-  const fetchServices = () => refetchSales();
-  const fetchCustomers = () => refetchSales();
+  const fetchSales = () => fetchSalesData(0, true);
+  const fetchProducts = () => refetchBatch();
+  const fetchServices = () => refetchBatch();
+  const fetchCustomers = () => refetchBatch();
 
   useEffect(() => {
     // Initial load is handled by useQuery
@@ -345,7 +387,8 @@ export default function Sales() {
         toast.success('Invoice terms saved successfully');
         // Update the local state
         setSelectedSaleForPreview({ ...selectedSaleForPreview, invoice_terms: customInvoiceTerms });
-        refetchSales();
+        fetchSalesData(0, true);
+        refetchBatch();
       } else {
         toast.error('Failed to save terms');
       }
@@ -1197,7 +1240,7 @@ export default function Sales() {
                         value={historySearchQuery}
                         onChange={(e) => setHistorySearchQuery(e.target.value)}
                         placeholder="Search invoices, customers..."
-                        className="pl-10 pr-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all w-full sm:w-64"
+                        className="pl-11 pr-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all w-full sm:w-64"
                       />
                     </div>
                     <div className="flex items-center overflow-x-auto hide-scrollbar bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-1">
@@ -1317,6 +1360,11 @@ export default function Sales() {
                       ))}
                     </tbody>
                   </table>
+                  {hasMore && (
+                    <div ref={loadMoreRef} className="py-8 flex justify-center">
+                      <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Mobile Sales Cards */}
@@ -1407,6 +1455,11 @@ export default function Sales() {
                       </div>
                     </div>
                   ))}
+                  {hasMore && (
+                    <div ref={loadMoreRef} className="py-8 flex justify-center">
+                      <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
                 </div>
                 
                 {filteredSales.length === 0 && (
@@ -1549,8 +1602,24 @@ export default function Sales() {
                           return (
                             <tr key={idx} className="group">
                               <td className="py-8 pr-4">
-                                <p className="font-bold text-zinc-950 dark:text-white text-base tracking-tight">{name}{variant}</p>
-                                <p className="text-xs text-zinc-400 mt-1 font-medium">{item.service_id ? 'Service' : 'Product'}</p>
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                                    {item.image || item.product_variants?.products?.image || item.services?.image_url ? (
+                                      <img 
+                                        src={getOptimizedImageUrl(item.image || item.product_variants?.products?.image || item.services?.image_url)} 
+                                        alt={name} 
+                                        className="w-full h-full object-cover" 
+                                        referrerPolicy="no-referrer" 
+                                      />
+                                    ) : (
+                                      item.service_id ? <Briefcase className="w-5 h-5 text-zinc-400" /> : <Package className="w-5 h-5 text-zinc-400" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-zinc-950 dark:text-white text-base tracking-tight">{name}{variant}</p>
+                                    <p className="text-xs text-zinc-400 mt-1 font-medium">{item.service_id ? 'Service' : 'Product'}</p>
+                                  </div>
+                                </div>
                               </td>
                               <td className="py-8 px-4 text-center">
                                 <span className={cn(NUMBER_STYLE, "text-sm text-zinc-950 dark:text-white")}>
