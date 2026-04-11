@@ -18,7 +18,7 @@ export const ensureAbsoluteUrl = (url: string | undefined | null) => {
     if (origin && !origin.startsWith('capacitor://') && !origin.startsWith('http://localhost')) {
       baseUrl = origin;
     } else {
-      baseUrl = import.meta.env.VITE_API_URL || '';
+      baseUrl = import.meta.env.VITE_API_URL || 'https://ais-pre-maktu7vxpyn2ghysibw2hq-28880934033.europe-west1.run.app';
     }
   } else {
     baseUrl = window.location.origin;
@@ -120,7 +120,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
       if (origin && !origin.startsWith('capacitor://') && !origin.startsWith('http://localhost')) {
         baseUrl = origin;
       } else {
-        baseUrl = import.meta.env.VITE_API_URL || '';
+        baseUrl = import.meta.env.VITE_API_URL || 'https://ais-pre-maktu7vxpyn2ghysibw2hq-28880934033.europe-west1.run.app';
       }
     }
     
