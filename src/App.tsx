@@ -519,31 +519,7 @@ export default function App() {
       'x-user-id': user?.id?.toString() || '',
     };
     
-    // Support absolute URLs for mobile/Capacitor, relative for web
-    const isNative = Capacitor.isNativePlatform();
-    
-    // Determine base URL dynamically
-    let baseUrl = '';
-    if (isNative) {
-      const origin = window.location.origin;
-      if (origin && !origin.startsWith('capacitor://') && !origin.startsWith('http://localhost')) {
-        baseUrl = origin;
-      } else {
-        baseUrl = import.meta.env.VITE_API_URL || 'https://ais-pre-maktu7vxpyn2ghysibw2hq-28880934033.europe-west1.run.app';
-      }
-    }
-    
-    if (baseUrl && !baseUrl.startsWith('http')) {
-      if (baseUrl.includes('localhost') || baseUrl.includes('10.0.2.2') || baseUrl.includes('127.0.0.1')) {
-        baseUrl = `http://${baseUrl}`;
-      } else {
-        baseUrl = `https://${baseUrl}`;
-      }
-    }
-    
-    if (baseUrl.endsWith('/')) {
-      baseUrl = baseUrl.slice(0, -1);
-    }
+    const baseUrl = import.meta.env.VITE_API_URL || '';
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
     
     const start = performance.now();

@@ -11,24 +11,13 @@ export function cn(...inputs: ClassValue[]) {
 export const ensureAbsoluteUrl = (url: string | undefined | null) => {
   if (!url || url.startsWith('http') || url.startsWith('data:')) return url;
   
-  const isNative = Capacitor.isNativePlatform();
-  let baseUrl = '';
-  if (isNative) {
-    const origin = window.location.origin;
-    if (origin && !origin.startsWith('capacitor://') && !origin.startsWith('http://localhost')) {
-      baseUrl = origin;
-    } else {
-      baseUrl = import.meta.env.VITE_API_URL || 'https://ais-pre-maktu7vxpyn2ghysibw2hq-28880934033.europe-west1.run.app';
-    }
-  } else {
-    baseUrl = window.location.origin;
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  if (baseUrl) {
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const path = url.startsWith('/') ? url : '/' + url;
+    return `${cleanBase}${path}`;
   }
   
-  if (baseUrl) {
-    if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
-    const path = url.startsWith('/') ? url : '/' + url;
-    return `${baseUrl}${path}`;
-  }
   return url;
 };
 
@@ -108,36 +97,9 @@ export const getOptimizedImageUrl = (url: string | undefined | null, width: numb
 export async function apiFetch(url: string, options: RequestInit = {}) {
   const start = performance.now();
   try {
-    // Support absolute URLs for mobile/Capacitor, relative for web
-    const isNative = Capacitor.isNativePlatform();
-    
-    // Determine base URL dynamically
-    let baseUrl = '';
-    if (isNative) {
-      // On native, we must use the VITE_API_URL or a fallback
-      // We try to use the current origin if it's not capacitor://
-      const origin = window.location.origin;
-      if (origin && !origin.startsWith('capacitor://') && !origin.startsWith('http://localhost')) {
-        baseUrl = origin;
-      } else {
-        baseUrl = import.meta.env.VITE_API_URL || 'https://ais-pre-maktu7vxpyn2ghysibw2hq-28880934033.europe-west1.run.app';
-      }
-    }
-    
-    if (baseUrl && !baseUrl.startsWith('http')) {
-      // If it's a localhost or 10.0.2.2 IP, use http, otherwise https
-      if (baseUrl.includes('localhost') || baseUrl.includes('10.0.2.2') || baseUrl.includes('127.0.0.1')) {
-        baseUrl = `http://${baseUrl}`;
-      } else {
-        baseUrl = `https://${baseUrl}`;
-      }
-    }
-    
-    if (baseUrl.endsWith('/')) {
-      baseUrl = baseUrl.slice(0, -1);
-    }
+    const baseUrl = import.meta.env.VITE_API_URL || '';
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-    console.log(`[API] Fetching: ${fullUrl} (baseUrl: ${baseUrl})`);
+    console.log(`[API] Fetching: ${fullUrl}`);
     
     const res = await fetch(fullUrl, {
       ...options,
