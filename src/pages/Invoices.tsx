@@ -818,8 +818,8 @@ const Invoices: React.FC = () => {
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       className="absolute right-0 mt-4 w-96 bg-white dark:bg-zinc-900 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-zinc-100 dark:border-zinc-800 z-50 overflow-hidden"
                     >
-                      <div className="p-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <div className="relative">
+                      <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
+                        <div className="relative flex-1">
                           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                           <Input
                             type="text"
@@ -830,6 +830,12 @@ const Invoices: React.FC = () => {
                             autoFocus
                           />
                         </div>
+                        <button 
+                          onClick={() => setShowItemDropdown(false)}
+                          className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+                        >
+                          <X className="w-4 h-4 text-zinc-400" />
+                        </button>
                       </div>
                       <div className="max-h-80">
                         {filteredItems.length > 0 ? (

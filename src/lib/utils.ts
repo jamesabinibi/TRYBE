@@ -7,6 +7,31 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Ensure logo URL is absolute for native platforms
+export const ensureAbsoluteUrl = (url: string | undefined | null) => {
+  if (!url || url.startsWith('http') || url.startsWith('data:')) return url;
+  
+  const isNative = Capacitor.isNativePlatform();
+  let baseUrl = '';
+  if (isNative) {
+    const origin = window.location.origin;
+    if (origin && !origin.startsWith('capacitor://') && !origin.startsWith('http://localhost')) {
+      baseUrl = origin;
+    } else {
+      baseUrl = import.meta.env.VITE_API_URL || '';
+    }
+  } else {
+    baseUrl = window.location.origin;
+  }
+  
+  if (baseUrl) {
+    if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+    const path = url.startsWith('/') ? url : '/' + url;
+    return `${baseUrl}${path}`;
+  }
+  return url;
+};
+
 export const NUMBER_STYLE = "font-sans font-bold tracking-tight";
 
 // Simple in-memory cache for fast navigation
@@ -85,7 +110,19 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   try {
     // Support absolute URLs for mobile/Capacitor, relative for web
     const isNative = Capacitor.isNativePlatform();
-    let baseUrl = isNative ? (import.meta.env.VITE_API_URL || 'https://pa6brvdnhc.us-east-1.awsapprunner.com') : '';
+    
+    // Determine base URL dynamically
+    let baseUrl = '';
+    if (isNative) {
+      // On native, we must use the VITE_API_URL or a fallback
+      // We try to use the current origin if it's not capacitor://
+      const origin = window.location.origin;
+      if (origin && !origin.startsWith('capacitor://') && !origin.startsWith('http://localhost')) {
+        baseUrl = origin;
+      } else {
+        baseUrl = import.meta.env.VITE_API_URL || '';
+      }
+    }
     
     if (baseUrl && !baseUrl.startsWith('http')) {
       // If it's a localhost or 10.0.2.2 IP, use http, otherwise https

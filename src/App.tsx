@@ -50,7 +50,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import PublicInvoice from './pages/PublicInvoice';
 import PublicPage from './pages/PublicPage';
-import { cn, apiFetch, useQuery, useQueryClient } from './lib/utils';
+import { cn, apiFetch, useQuery, useQueryClient, ensureAbsoluteUrl } from './lib/utils';
 import { offlineQueue } from './lib/offline';
 import NotificationCenter from './components/NotificationCenter';
 import Walkthrough from './components/Walkthrough';
@@ -190,7 +190,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
           <div className="w-12 h-12 bg-white dark:bg-zinc-800 rounded-2xl flex items-center justify-center shadow-xl shadow-black/5 border border-zinc-100 dark:border-white/10">
             {landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo ? (
               <img 
-                src={landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo} 
+                src={ensureAbsoluteUrl(landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo)} 
                 alt="" 
                 className="w-full h-full object-contain rounded-2xl p-2" 
                 referrerPolicy="no-referrer"
@@ -207,6 +207,12 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               <span className="text-[9px] font-bold text-brand uppercase tracking-[0.2em]">Business Hub</span>
             </div>
           </div>
+          <button 
+            onClick={onClose}
+            className="lg:hidden ml-auto p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+          >
+            <X className="w-5 h-5 text-zinc-400" />
+          </button>
         </div>
         
         {/* Navigation */}
@@ -444,9 +450,11 @@ export default function App() {
   const brandColor = currentSettings?.brand_color || currentLandingConfig?.brandColor || '#11abdf';
   const isPro = user?.subscription_plan === 'pro';
   const appLogo = currentLandingConfig?.logo?.favicon || currentLandingConfig?.logo?.url;
-  const businessLogo = isPro 
+  let businessLogo = isPro 
     ? (currentSettings?.logo_url || appLogo) 
     : appLogo;
+
+  businessLogo = ensureAbsoluteUrl(businessLogo);
   const businessName = currentSettings?.business_name || currentLandingConfig?.logo?.text || 'Gryndee';
 
   useEffect(() => {
@@ -513,10 +521,24 @@ export default function App() {
     
     // Support absolute URLs for mobile/Capacitor, relative for web
     const isNative = Capacitor.isNativePlatform();
-    let baseUrl = isNative ? (import.meta.env.VITE_API_URL || '') : '';
+    
+    // Determine base URL dynamically
+    let baseUrl = '';
+    if (isNative) {
+      const origin = window.location.origin;
+      if (origin && !origin.startsWith('capacitor://') && !origin.startsWith('http://localhost')) {
+        baseUrl = origin;
+      } else {
+        baseUrl = import.meta.env.VITE_API_URL || '';
+      }
+    }
     
     if (baseUrl && !baseUrl.startsWith('http')) {
-      baseUrl = `https://${baseUrl}`;
+      if (baseUrl.includes('localhost') || baseUrl.includes('10.0.2.2') || baseUrl.includes('127.0.0.1')) {
+        baseUrl = `http://${baseUrl}`;
+      } else {
+        baseUrl = `https://${baseUrl}`;
+      }
     }
     
     if (baseUrl.endsWith('/')) {

@@ -1065,9 +1065,18 @@ export default function Products() {
                     {editingProduct ? 'Edit Product' : 'Add Product'}
                   </h2>
                 </div>
-                <div className="flex items-center gap-2 text-brand font-bold text-[10px] sm:text-sm bg-brand/5 px-4 py-2.5 rounded-2xl border border-brand/10">
-                  <span role="img" aria-label="calendar">📅</span>
-                  {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                <div className="flex items-center gap-4">
+                  <div className="hidden sm:flex items-center gap-2 text-brand font-bold text-[10px] sm:text-sm bg-brand/5 px-4 py-2.5 rounded-2xl border border-brand/10">
+                    <span role="img" aria-label="calendar">📅</span>
+                    {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </div>
+                  <button 
+                    onClick={closeModal}
+                    className="p-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-2xl transition-all active:scale-95"
+                    title="Close"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
                 </div>
               </div>
 
