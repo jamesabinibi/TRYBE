@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { 
@@ -482,37 +482,6 @@ export default function App() {
     localStorage.removeItem('user');
   }, []);
 
-  // Offline Sync Logic
-  useEffect(() => {
-    const handleOnline = () => {
-      console.log('[App] Back online, triggering sync...');
-      offlineQueue.sync(fetchWithAuth);
-    };
-
-    window.addEventListener('online', handleOnline);
-    
-    // Also check on mount if we are online and have items
-    if (navigator.onLine) {
-      offlineQueue.sync(fetchWithAuth);
-    }
-
-    return () => window.removeEventListener('online', handleOnline);
-  }, [user]); // Re-run when user changes to ensure we have correct auth context
-
-  const refreshUser = useCallback(async () => {
-    if (!user) return;
-    try {
-      const res = await fetchWithAuth('/api/auth/me');
-      if (res.ok) {
-        const userData = await res.json();
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-      }
-    } catch (err) {
-      console.error('Failed to refresh user:', err);
-    }
-  }, [user, fetchWithAuth]);
-
   const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}, retries = 3, delay = 1000): Promise<Response> => {
     const headers = {
       ...options.headers,
@@ -566,6 +535,37 @@ export default function App() {
       throw err;
     }
   }, [user?.id, logout]);
+
+  // Offline Sync Logic
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('[App] Back online, triggering sync...');
+      offlineQueue.sync(fetchWithAuth);
+    };
+
+    window.addEventListener('online', handleOnline);
+    
+    // Also check on mount if we are online and have items
+    if (navigator.onLine) {
+      offlineQueue.sync(fetchWithAuth);
+    }
+
+    return () => window.removeEventListener('online', handleOnline);
+  }, [user, fetchWithAuth]); // Re-run when user changes to ensure we have correct auth context
+
+  const refreshUser = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetchWithAuth('/api/auth/me');
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
+    }
+  }, [user, fetchWithAuth]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, refreshUser, fetchWithAuth }}>

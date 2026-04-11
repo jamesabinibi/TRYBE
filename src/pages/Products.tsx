@@ -110,7 +110,13 @@ export default function Products() {
     enabled: !!user
   });
 
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem('cached_products');
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    return [];
+  });
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -136,8 +142,15 @@ export default function Products() {
         const data = await res.json();
         if (isRefresh) {
           setProducts(data);
+          try {
+            localStorage.setItem('cached_products', JSON.stringify(data));
+          } catch (e) {}
         } else {
-          setProducts(prev => [...prev, ...data]);
+          setProducts(prev => {
+            const newProducts = [...prev, ...data];
+            // Only cache the first page or combined if we want, but let's just cache the first page on refresh
+            return newProducts;
+          });
         }
         setHasMore(data.length === LIMIT);
       }

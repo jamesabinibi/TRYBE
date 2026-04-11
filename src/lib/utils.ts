@@ -9,20 +9,36 @@ export function cn(...inputs: ClassValue[]) {
 
 // Ensure logo URL is absolute for native platforms
 export const ensureAbsoluteUrl = (url: string | undefined | null) => {
-  if (!url || url.startsWith('http') || url.startsWith('data:')) return url;
+  if (!url || url.startsWith('data:')) return url;
   
   let baseUrl = import.meta.env.VITE_API_URL || '';
   if (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-')) {
     baseUrl = '';
   }
   
-  if (baseUrl) {
-    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    const path = url.startsWith('/') ? url : '/' + url;
-    return `${cleanBase}${path}`;
+  // If the URL is an absolute URL pointing to AI Studio, strip the origin
+  let path = url;
+  if (url.startsWith('http')) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname.includes('ais-pre-') || parsed.hostname.includes('ais-dev-')) {
+        path = parsed.pathname + parsed.search;
+      } else {
+        // It's a normal absolute URL (e.g. AWS S3, or already correct), just return it
+        return url;
+      }
+    } catch (e) {
+      return url;
+    }
   }
   
-  return url;
+  if (baseUrl) {
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const cleanPath = path.startsWith('/') ? path : '/' + path;
+    return `${cleanBase}${cleanPath}`;
+  }
+  
+  return path;
 };
 
 export const NUMBER_STYLE = "font-sans font-bold tracking-tight";
