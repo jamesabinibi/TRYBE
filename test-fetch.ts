@@ -1,8 +1,6 @@
-fetch('https://ais-pre-maktu7vxpyn2ghysibw2hq-28880934033.europe-west1.run.app/api/landing-config', {
-  method: 'OPTIONS',
+fetch('https://pa6brvdnhc.us-east-1.awsapprunner.com/api/landing-config', {
   headers: {
-    'Accept': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest'
+    'Origin': 'capacitor://localhost'
   }
 })
   .then(r => {

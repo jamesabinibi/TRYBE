@@ -11,7 +11,11 @@ export function cn(...inputs: ClassValue[]) {
 export const ensureAbsoluteUrl = (url: string | undefined | null) => {
   if (!url || url.startsWith('http') || url.startsWith('data:')) return url;
   
-  const baseUrl = import.meta.env.VITE_API_URL || '';
+  let baseUrl = import.meta.env.VITE_API_URL || '';
+  if (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-')) {
+    baseUrl = '';
+  }
+  
   if (baseUrl) {
     const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     const path = url.startsWith('/') ? url : '/' + url;
@@ -97,7 +101,10 @@ export const getOptimizedImageUrl = (url: string | undefined | null, width: numb
 export async function apiFetch(url: string, options: RequestInit = {}) {
   const start = performance.now();
   try {
-    const baseUrl = import.meta.env.VITE_API_URL || '';
+    let baseUrl = import.meta.env.VITE_API_URL || '';
+    if (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-')) {
+      baseUrl = '';
+    }
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
     console.log(`[API] Fetching: ${fullUrl}`);
     
@@ -112,7 +119,12 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     return res;
   } catch (err) {
     const end = performance.now();
-    console.error(`[API] Request failed: ${url} after ${(end - start).toFixed(2)}ms`, err);
+    let baseUrl = import.meta.env.VITE_API_URL || '';
+    if (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-')) {
+      baseUrl = '';
+    }
+    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+    console.error(`[API] Request failed: ${fullUrl} after ${(end - start).toFixed(2)}ms`, err);
     throw err;
   }
 }

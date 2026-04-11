@@ -519,7 +519,10 @@ export default function App() {
       'x-user-id': user?.id?.toString() || '',
     };
     
-    const baseUrl = import.meta.env.VITE_API_URL || '';
+    let baseUrl = import.meta.env.VITE_API_URL || '';
+    if (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-')) {
+      baseUrl = '';
+    }
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
     
     const start = performance.now();
