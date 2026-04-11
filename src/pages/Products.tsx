@@ -20,7 +20,8 @@ import {
   Share2
 } from 'lucide-react';
 import { Product, Category, Service } from '../types';
-import { formatCurrency, cn, NUMBER_STYLE, useQuery } from '../lib/utils';
+import { formatCurrency, cn, NUMBER_STYLE, useQuery, getOptimizedImageUrl } from '../lib/utils';
+import { offlineQueue } from '../lib/offline';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { NumberDisplay } from '../components/NumberDisplay';
@@ -29,7 +30,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
 import { useSearch } from '../contexts/SearchContext';
 import { toast } from 'sonner';
-import { getOptimizedImageUrl } from '../lib/utils';
 import { useInView } from 'react-intersection-observer';
 
 const getInitialProductState = () => ({
@@ -272,7 +272,39 @@ export default function Products() {
       }
     } catch (err) {
       console.error(err);
-      toast.error('An unexpected error occurred');
+      // If it's a network error and we are offline, queue it
+      if (!navigator.onLine || err instanceof Error && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+        const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
+        const method = editingProduct ? 'PUT' : 'POST';
+        const payload = {
+          name: newProduct.name,
+          category_id: parseInt(newProduct.category_id) || null,
+          description: newProduct.description,
+          cost_price: parseFloat(newProduct.cost_price) || 0,
+          selling_price: parseFloat(newProduct.selling_price) || 0,
+          supplier_name: newProduct.supplier_name,
+          unit: newProduct.unit,
+          pieces_per_unit: parseInt(newProduct.pieces_per_unit as any) || 1,
+          product_type: newProduct.product_type,
+          variants: (newProduct.product_type === 'one' ? [newProduct.variants[0] || { size: '', color: '', quantity: '0', low_stock_threshold: '' }] : newProduct.variants).map(v => ({
+            ...v,
+            quantity: parseInt(v.quantity as any) || 0,
+            low_stock_threshold: v.low_stock_threshold === '' || v.low_stock_threshold === null || v.low_stock_threshold === undefined ? null : parseInt(v.low_stock_threshold as any)
+          })),
+          images: newProduct.images
+        };
+
+        offlineQueue.add(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }, `${editingProduct ? 'Update' : 'Add'} product: ${newProduct.name}`);
+        
+        closeModal();
+        toast.success(`Offline: Product ${editingProduct ? 'update' : 'addition'} queued`);
+      } else {
+        toast.error('An unexpected error occurred');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -341,8 +373,13 @@ export default function Products() {
                   toast.error('Failed to delete service');
                 }
               } catch (err) {
-                console.error(err);
-                toast.error('An error occurred');
+                if (!navigator.onLine || err instanceof Error && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+                  offlineQueue.add(`/api/services/${id}`, { method: 'DELETE' }, `Delete service ID: ${id}`);
+                  toast.success('Offline: Service deletion queued');
+                } else {
+                  console.error(err);
+                  toast.error('An error occurred');
+                }
               }
             }}
             className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
@@ -405,7 +442,28 @@ export default function Products() {
       }
     } catch (err) {
       console.error(err);
-      toast.error('An error occurred');
+      // If it's a network error and we are offline, queue it
+      if (!navigator.onLine || err instanceof Error && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+        const url = editingService ? `/api/services/${editingService.id}` : '/api/services';
+        const method = editingService ? 'PUT' : 'POST';
+        const payload = {
+          ...newService,
+          price: parseFloat(newService.price) || 0
+        };
+
+        offlineQueue.add(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }, `${editingService ? 'Update' : 'Add'} service: ${newService.name}`);
+        
+        setIsServiceModalOpen(false);
+        setEditingService(null);
+        setNewService({ name: '', description: '', price: '', category: '', image_url: '' });
+        toast.success(`Offline: Service ${editingService ? 'update' : 'addition'} queued`);
+      } else {
+        toast.error('An error occurred');
+      }
     }
   };
 
@@ -431,7 +489,12 @@ export default function Products() {
                   toast.error(errorData.error || 'Failed to delete product');
                 }
               } catch (err) {
-                toast.error('Network error');
+                if (!navigator.onLine || err instanceof Error && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+                  offlineQueue.add(`/api/products/${id}`, { method: 'DELETE' }, `Delete product ID: ${id}`);
+                  toast.success('Offline: Product deletion queued');
+                } else {
+                  toast.error('Network error');
+                }
               }
             }}
             className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"

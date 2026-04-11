@@ -51,6 +51,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import PublicInvoice from './pages/PublicInvoice';
 import PublicPage from './pages/PublicPage';
 import { cn, apiFetch, useQuery, useQueryClient } from './lib/utils';
+import { offlineQueue } from './lib/offline';
 import NotificationCenter from './components/NotificationCenter';
 import Walkthrough from './components/Walkthrough';
 import ChatSupport from './components/ChatSupport';
@@ -146,6 +147,19 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     ...(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data) ? [{ icon: SettingsIcon, label: 'Settings', path: '/settings' }] : []),
   ];
 
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <>
       <AnimatePresence>
@@ -184,7 +198,9 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
             <span className="text-lg font-display font-bold tracking-tight text-zinc-900 dark:text-white truncate max-w-[140px]">
               {businessName}
             </span>
-            <span className="text-[9px] font-bold text-brand uppercase tracking-[0.2em]">Business Hub</span>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[9px] font-bold text-brand uppercase tracking-[0.2em]">Business Hub</span>
+            </div>
           </div>
         </div>
         
@@ -251,6 +267,33 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
             </div>
           </div>
         </div>
+
+        {/* Status and Version Info */}
+        <div className="px-8 py-6 space-y-4 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-white/5">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-[0.2em]">v2.5.2</span>
+              <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">Production Ready</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {isOnline ? (
+                <span className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500 text-white rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                  Online
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 px-2.5 py-1 bg-red-500 text-white rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 animate-pulse">
+                  <Zap className="w-2 h-2 fill-current" />
+                  Offline
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-white/5">
+            <span className="text-[9px] font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-[0.2em]">© 2026</span>
+            <span className="text-[8px] font-bold text-brand uppercase tracking-widest">Abinibi Multimedia</span>
+          </div>
+        </div>
       </motion.aside>
 
     </>
@@ -297,7 +340,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {user && <NotificationCenter userId={user.id} />}
             
             <Link 
-              to={location.pathname.startsWith('/products') ? "/products?action=add" : "/sales"}
+              to={location.pathname.startsWith('/products') ? "/products?action=add" : `/sales?action=new&t=${Date.now()}`}
               className="h-14 px-8 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-sm font-bold shadow-2xl shadow-black/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3"
             >
               <Plus className="w-5 h-5" />
@@ -425,6 +468,23 @@ export default function App() {
     setUser(null);
     localStorage.removeItem('user');
   };
+
+  // Offline Sync Logic
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('[App] Back online, triggering sync...');
+      offlineQueue.sync(fetchWithAuth);
+    };
+
+    window.addEventListener('online', handleOnline);
+    
+    // Also check on mount if we are online and have items
+    if (navigator.onLine) {
+      offlineQueue.sync(fetchWithAuth);
+    }
+
+    return () => window.removeEventListener('online', handleOnline);
+  }, [user]); // Re-run when user changes to ensure we have correct auth context
 
   const refreshUser = async () => {
     if (!user) return;

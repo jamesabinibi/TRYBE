@@ -31,7 +31,8 @@ import {
   AlertCircle,
   Cloud,
   Trophy,
-  MessageCircle
+  MessageCircle,
+  Briefcase
 } from 'lucide-react';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
@@ -44,7 +45,9 @@ import AdminChat from '../components/AdminChat';
 interface AdminStats {
   accounts: number;
   users: number;
+  activeUsers: number;
   products: number;
+  services: number;
   sales: number;
   recentAccounts: any[];
 }
@@ -1006,7 +1009,7 @@ export default function SuperAdmin() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         <StatCard 
           title="Total Accounts" 
           value={stats?.accounts} 
@@ -1014,15 +1017,27 @@ export default function SuperAdmin() {
           color="bg-brand/10 text-brand"
         />
         <StatCard 
-          title="Active Users" 
+          title="Total Users" 
           value={stats?.users} 
           icon={Users} 
+          color="bg-brand/10 text-brand"
+        />
+        <StatCard 
+          title="Active Users" 
+          value={stats?.activeUsers} 
+          icon={Activity} 
           color="bg-brand/10 text-brand"
         />
         <StatCard 
           title="Total Products" 
           value={stats?.products} 
           icon={Package} 
+          color="bg-brand/10 text-brand"
+        />
+        <StatCard 
+          title="Total Services" 
+          value={stats?.services} 
+          icon={Briefcase} 
           color="bg-brand/10 text-brand"
         />
         <StatCard 

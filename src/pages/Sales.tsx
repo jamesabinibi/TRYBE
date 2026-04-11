@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';
 import ProductSelect from '../components/ProductSelect';
 import { 
@@ -40,6 +41,7 @@ import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { NumberDisplay } from '../components/NumberDisplay';
 import { formatCurrency, cn, NUMBER_STYLE, retryWithBackoff, fetchGeminiKey, useQuery, getOptimizedImageUrl } from '../lib/utils';
+import { offlineQueue } from '../lib/offline';
 import { TotalDisplay } from '../components/TotalDisplay';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { motion, AnimatePresence } from 'motion/react';
@@ -97,6 +99,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradie
 export default function Sales() {
   const { user, fetchWithAuth } = useAuth();
   const { settings, businessLogo, businessName } = useSettings();
+  const [searchParams, setSearchParams] = useSearchParams();
   const currency = settings?.currency || 'NGN';
   const { searchQuery } = useSearch();
   const [activeTab, setActiveTab] = useState<'pos' | 'history'>('pos');
@@ -207,6 +210,29 @@ export default function Sales() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'new') {
+      setCart([]);
+      setSelectedCustomer(null);
+      setCustomerName('');
+      setCustomerPhone('');
+      setDiscountPercent(0);
+      setPaymentMethod('Transfer');
+      setItemType('product');
+      setSelectedProduct(null);
+      setSelectedService(null);
+      
+      // Clear the action from URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('action');
+      newParams.delete('t');
+      setSearchParams(newParams, { replace: true });
+      
+      toast.success('New transaction started');
+    }
+  }, [searchParams, setSearchParams]);
 
   const clearCart = () => {
     if (cart.length === 0) return;
@@ -330,36 +356,38 @@ export default function Sales() {
     setError(null);
     
     const checkoutPromise = new Promise(async (resolve, reject) => {
+      const saleData = {
+        items: cart.map(item => {
+          if (item.type === 'product') {
+            return {
+              type: 'product',
+              variant_id: item.variant?.id,
+              quantity: item.quantity,
+              price_override: item.price_override
+            };
+          } else {
+            return {
+              type: 'service',
+              service_id: item.service?.id,
+              quantity: item.quantity,
+              price_override: item.price_override
+            };
+          }
+        }),
+        payment_method: paymentMethod,
+        staff_id: user?.id,
+        customer_id: selectedCustomer?.id,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        discount_percentage: discountPercent,
+        discount_amount: discountAmount
+      };
+
       try {
         const response = await fetchWithAuth('/api/sales', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            items: cart.map(item => {
-              if (item.type === 'product') {
-                return {
-                  type: 'product',
-                  variant_id: item.variant?.id,
-                  quantity: item.quantity,
-                  price_override: item.price_override
-                };
-              } else {
-                return {
-                  type: 'service',
-                  service_id: item.service?.id,
-                  quantity: item.quantity,
-                  price_override: item.price_override
-                };
-              }
-            }),
-            payment_method: paymentMethod,
-            staff_id: user?.id,
-            customer_id: selectedCustomer?.id,
-            customer_name: customerName,
-            customer_phone: customerPhone,
-            discount_percentage: discountPercent,
-            discount_amount: discountAmount
-          })
+          body: JSON.stringify(saleData)
         });
 
         if (response.ok) {
@@ -373,7 +401,20 @@ export default function Sales() {
           reject(data.error || "Checkout failed");
         }
       } catch (e) {
-        reject("Network error");
+        // If it's a network error and we are offline, queue it
+        if (!navigator.onLine || e instanceof Error && (e.message.includes('Failed to fetch') || e.message.includes('NetworkError'))) {
+          offlineQueue.add('/api/sales', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(saleData)
+          }, `Sale of ${cart.length} items (${formatCurrency(total, currency)})`);
+          
+          setCart([]);
+          setSelectedCustomer(null);
+          resolve("queued");
+        } else {
+          reject("Network error");
+        }
       } finally {
         setIsProcessing(false);
       }
@@ -381,7 +422,7 @@ export default function Sales() {
 
     toast.promise(checkoutPromise, {
       loading: 'Processing checkout...',
-      success: 'Sale recorded successfully!',
+      success: (res) => res === "queued" ? 'Offline: Sale saved locally and will sync later' : 'Sale recorded successfully!',
       error: (err) => err
     });
   };

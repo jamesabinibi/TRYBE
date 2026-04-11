@@ -61,8 +61,7 @@ import bcrypt from 'bcryptjs';
 import { GoogleGenAI } from "@google/genai";
 import { v2 as cloudinary } from 'cloudinary';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.resolve();
 
 // Cloudinary Config
 if (process.env.CLOUDINARY_CLOUD_NAME) {
@@ -7926,25 +7925,27 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
   app.get("/api/admin/stats", requireSuperAdmin, async (req: any, res) => {
     try {
-      const userInfo = req.user;
-
       if (process.env.AWS_DB_PASSWORD) {
+        const { rows: accountCountRows } = await pool.query('SELECT COUNT(*) FROM accounts WHERE is_active = true');
         const { rows: userCountRows } = await pool.query('SELECT COUNT(*) FROM users');
-        const { rows: activeUserRows } = await pool.query('SELECT COUNT(*) FROM users WHERE is_verified = true');
+        const { rows: activeUserRows } = await pool.query('SELECT COUNT(*) FROM users WHERE is_active = true AND is_verified = true');
         const { rows: prodRows } = await pool.query('SELECT COUNT(*) FROM products');
-        const { rows: saleRows } = await pool.query('SELECT COUNT(*) FROM sales');
+        const { rows: serviceRows } = await pool.query('SELECT COUNT(*) FROM services');
+        const { rows: saleRows } = await pool.query("SELECT COUNT(*) FROM sales WHERE status = 'completed'");
         const { rows: recentAccs } = await pool.query(`
-          SELECT a.*, u.name as user_name, u.email as user_email 
+          SELECT DISTINCT ON (a.id) a.*, u.name as user_name, u.email as user_email 
           FROM accounts a 
           LEFT JOIN users u ON u.account_id = a.id AND u.role = 'admin'
-          ORDER BY a.created_at DESC 
+          ORDER BY a.id, a.created_at DESC 
           LIMIT 10
         `);
 
         return res.json({
-          accounts: parseInt(userCountRows[0].count) || 0,
-          users: parseInt(activeUserRows[0].count) || 0,
+          accounts: parseInt(accountCountRows[0].count) || 0,
+          users: parseInt(userCountRows[0].count) || 0,
+          activeUsers: parseInt(activeUserRows[0].count) || 0,
           products: parseInt(prodRows[0].count) || 0,
+          services: parseInt(serviceRows[0].count) || 0,
           sales: parseInt(saleRows[0].count) || 0,
           recentAccounts: recentAccs.map((a: any) => ({
             ...a,
@@ -7955,16 +7956,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (!supabase) return res.status(503).json({ error: "Database not available" });
       
+      const { count: totalAccountCount, error: accErr } = await supabase.from('accounts').select('*', { count: 'exact', head: true }).eq('is_active', true);
+      if (accErr) console.warn('[ADMIN] Stats: Failed to count accounts:', accErr.message);
+
       const { count: totalUserCount, error: userErr } = await supabase.from('users').select('*', { count: 'exact', head: true });
       if (userErr) console.warn('[ADMIN] Stats: Failed to count users:', userErr.message);
       
-      const { count: verifiedUserCount, error: verifiedErr } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_verified', true);
+      const { count: verifiedUserCount, error: verifiedErr } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_verified', true).eq('is_active', true);
       if (verifiedErr) console.warn('[ADMIN] Stats: Failed to count verified users:', verifiedErr.message);
       
       const { count: productCount, error: prodErr } = await supabase.from('products').select('*', { count: 'exact', head: true });
       if (prodErr) console.warn('[ADMIN] Stats: Failed to count products:', prodErr.message);
+
+      const { count: serviceCount, error: serviceErr } = await supabase.from('services').select('*', { count: 'exact', head: true });
+      if (serviceErr) console.warn('[ADMIN] Stats: Failed to count services:', serviceErr.message);
       
-      const { count: saleCount, error: saleErr } = await supabase.from('sales').select('*', { count: 'exact', head: true });
+      const { count: saleCount, error: saleErr } = await supabase.from('sales').select('*', { count: 'exact', head: true }).eq('status', 'completed');
       if (saleErr) console.warn('[ADMIN] Stats: Failed to count sales:', saleErr.message);
       
       // Get recent accounts
@@ -7977,11 +7984,16 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (recentAccErr) console.warn('[ADMIN] Stats: Failed to fetch recent accounts:', recentAccErr.message);
 
       res.json({
-        accounts: totalUserCount || 0,
-        users: verifiedUserCount || 0,
+        accounts: totalAccountCount || 0,
+        users: totalUserCount || 0,
+        activeUsers: verifiedUserCount || 0,
         products: productCount || 0,
+        services: serviceCount || 0,
         sales: saleCount || 0,
-        recentAccounts: recentAccounts || []
+        recentAccounts: (recentAccounts || []).map(a => ({
+          ...a,
+          users: (a as any).users || []
+        }))
       });
     } catch (error: any) {
       console.error('[ADMIN] Stats failed:', error);

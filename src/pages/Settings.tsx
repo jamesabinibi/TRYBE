@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { Category } from '../types';
 import { cn, retryWithBackoff, fetchGeminiKey } from '../lib/utils';
+import { offlineQueue } from '../lib/offline';
 import { toast } from 'sonner';
 import { useAuth, useSettings } from '../App';
 import { Input } from '../components/Input';
@@ -329,7 +330,18 @@ export default function Settings() {
         toast.error(data.error || 'Failed to add category');
       }
     } catch (error) {
-      toast.error('Network error');
+      if (!navigator.onLine || error instanceof Error && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+        offlineQueue.add('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newCategory })
+        }, `Add category: ${newCategory}`);
+        
+        setNewCategory('');
+        toast.success('Offline: Category addition queued');
+      } else {
+        toast.error('Network error');
+      }
     }
   };
 
@@ -350,7 +362,18 @@ export default function Settings() {
         toast.error(data.error || 'Failed to update category');
       }
     } catch (error) {
-      toast.error('Network error');
+      if (!navigator.onLine || error instanceof Error && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+        offlineQueue.add(`/api/categories/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: editCategoryName })
+        }, `Update category: ${editCategoryName}`);
+        
+        setEditingCategory(null);
+        toast.success('Offline: Category update queued');
+      } else {
+        toast.error('Network error');
+      }
     }
   };
 
@@ -377,13 +400,18 @@ export default function Settings() {
                     reject(data.error || 'Failed to delete category');
                   }
                 } catch (error) {
-                  reject('Network error');
+                  if (!navigator.onLine || error instanceof Error && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+                    offlineQueue.add(`/api/categories/${id}`, { method: 'DELETE' }, `Delete category ID: ${id}`);
+                    resolve("queued");
+                  } else {
+                    reject('Network error');
+                  }
                 }
               });
 
               toast.promise(deletePromise, {
                 loading: 'Deleting category...',
-                success: 'Category deleted',
+                success: (res) => res === "queued" ? 'Offline: Category deletion queued' : 'Category deleted',
                 error: (err) => err
               });
             }}
