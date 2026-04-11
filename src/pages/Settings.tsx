@@ -48,7 +48,7 @@ export default function Settings() {
   const [editCategoryName, setEditCategoryName] = useState('');
   
   const [settings, setSettings] = useState({
-    business_name: globalSettings?.business_name || 'Gryndee',
+    business_name: globalSettings?.business_name || 'Gryndee Enterprises',
     currency: globalSettings?.currency || 'NGN',
     vat_enabled: globalSettings?.vat_enabled || false,
     low_stock_threshold: (globalSettings?.low_stock_threshold || 5).toString(),
@@ -83,6 +83,7 @@ export default function Settings() {
   ];
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
+  const [logoStep, setLogoStep] = useState<string>('');
   const [generatedLogos, setGeneratedLogos] = useState<string[]>([]);
   const [logoPreview, setLogoPreview] = useState<string | null>(globalSettings?.logo_url || null);
   const [showClearSalesConfirm, setShowClearSalesConfirm] = useState(false);
@@ -878,6 +879,7 @@ NOTIFY pgrst, 'reload schema';
     }
 
     setIsGeneratingLogo(true);
+    setLogoStep('Step 1/3: Initializing AI...');
     setGeneratedLogos([]);
     
     try {
@@ -911,6 +913,7 @@ NOTIFY pgrst, 'reload schema';
       }
 
       const ai = new GoogleGenAI({ apiKey });
+      setLogoStep('Step 2/3: Designing logo concepts...');
       
       const prompt = `Create a professional, modern, and minimalist business logo for a company named "${settings.business_name}". 
       The primary brand color should be ${settings.brand_color}. 
@@ -950,6 +953,7 @@ NOTIFY pgrst, 'reload schema';
       };
 
       const [logo1, logo2] = await Promise.all([generateOption(), generateOption()]);
+      setLogoStep('Step 3/3: Finalizing options...');
       setGeneratedLogos([logo1, logo2]);
       toast.success('Generated 2 logo options for you!');
     } catch (err: any) {
@@ -1383,10 +1387,13 @@ NOTIFY pgrst, 'reload schema';
                       className="btn-primary w-full"
                     >
                       {isGeneratingLogo ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Generating...
-                        </>
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>Generating...</span>
+                          </div>
+                          <span className="text-[10px] font-medium opacity-80">{logoStep}</span>
+                        </div>
                       ) : (
                         <>
                           <Sparkles className="w-5 h-5" />

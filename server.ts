@@ -5302,6 +5302,101 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  // Bookkeeping Stats API
+  app.get("/api/bookkeeping/stats", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      const timeline = (req.query.timeline as string) || 'monthly';
+      let startDate = new Date();
+      const now = new Date();
+
+      if (timeline === 'week') {
+        startDate.setDate(now.getDate() - 7);
+      } else if (timeline === 'monthly') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (timeline === 'yearly') {
+        startDate = new Date(now.getFullYear(), 0, 1);
+      } else {
+        // Default to monthly if invalid
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+
+      let totalInflows = 0;
+      let totalOutflows = 0;
+
+      if (process.env.AWS_DB_PASSWORD) {
+        // Bookkeeping records
+        const { rows: bookkeeping } = await pool.query(
+          'SELECT nature, amount FROM bookkeeping WHERE account_id = $1 AND date >= $2',
+          [userInfo.account_id, startDate.toISOString().split('T')[0]]
+        );
+        
+        // Sales (Inflows)
+        const { rows: sales } = await pool.query(
+          'SELECT total_amount, total_profit FROM sales WHERE account_id = $1 AND created_at >= $2',
+          [userInfo.account_id, startDate.toISOString()]
+        );
+
+        // Expenses (Outflows)
+        const { rows: expenses } = await pool.query(
+          'SELECT amount FROM expenses WHERE account_id = $1 AND date >= $2',
+          [userInfo.account_id, startDate.toISOString().split('T')[0]]
+        );
+
+        bookkeeping.forEach(b => {
+          if (b.nature === 'income') totalInflows += parseFloat(b.amount) || 0;
+          else if (b.nature === 'expense') totalOutflows += parseFloat(b.amount) || 0;
+        });
+
+        sales.forEach(s => {
+          const amount = parseFloat(s.total_amount) || 0;
+          const profit = parseFloat(s.total_profit) || 0;
+          const cogs = amount - profit;
+          totalInflows += amount;
+          if (cogs > 0) totalOutflows += cogs;
+        });
+
+        expenses.forEach(e => {
+          totalOutflows += parseFloat(e.amount) || 0;
+        });
+      } else if (supabase) {
+        const [bookRes, salesRes, expRes] = await Promise.all([
+          supabase.from('bookkeeping').select('nature, amount').eq('account_id', userInfo.account_id).gte('date', startDate.toISOString().split('T')[0]),
+          supabase.from('sales').select('total_amount, total_profit').eq('account_id', userInfo.account_id).gte('created_at', startDate.toISOString()),
+          supabase.from('expenses').select('amount').eq('account_id', userInfo.account_id).gte('date', startDate.toISOString().split('T')[0])
+        ]);
+
+        (bookRes.data || []).forEach(b => {
+          if (b.nature === 'income') totalInflows += parseFloat(b.amount) || 0;
+          else if (b.nature === 'expense') totalOutflows += parseFloat(b.amount) || 0;
+        });
+
+        (salesRes.data || []).forEach(s => {
+          const amount = parseFloat(s.total_amount) || 0;
+          const profit = parseFloat(s.total_profit) || 0;
+          const cogs = amount - profit;
+          totalInflows += amount;
+          if (cogs > 0) totalOutflows += cogs;
+        });
+
+        (expRes.data || []).forEach(e => {
+          totalOutflows += parseFloat(e.amount) || 0;
+        });
+      }
+
+      res.json({
+        totalInflows,
+        totalOutflows,
+        netBalance: totalInflows - totalOutflows
+      });
+    } catch (err: any) {
+      console.error("Bookkeeping stats error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Bookkeeping API
   app.get("/api/bookkeeping", async (req, res) => {
     try {

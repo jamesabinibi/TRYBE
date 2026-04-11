@@ -65,7 +65,7 @@ export default function Login() {
         <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors duration-500">
           <div className="p-6 pt-8 text-center">
             {businessLogo ? (
-              <img src={businessLogo} alt={businessName} className="h-12 w-auto object-contain mx-auto mb-3" />
+              <img src={businessLogo} alt={businessName} className="h-12 w-auto object-contain mx-auto mb-3" referrerPolicy="no-referrer" />
             ) : (
               <>
                 <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-3 shadow-lg shadow-brand/30 rotate-3">

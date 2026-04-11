@@ -189,7 +189,12 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         <div className="h-24 px-6 flex items-center gap-4 shrink-0">
           <div className="w-12 h-12 bg-white dark:bg-zinc-800 rounded-2xl flex items-center justify-center shadow-xl shadow-black/5 border border-zinc-100 dark:border-white/10">
             {landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo ? (
-              <img src={landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo} alt="" className="w-full h-full object-contain rounded-2xl p-2" />
+              <img 
+                src={landingConfig?.logo?.favicon || landingConfig?.logo?.url || businessLogo} 
+                alt="" 
+                className="w-full h-full object-contain rounded-2xl p-2" 
+                referrerPolicy="no-referrer"
+              />
             ) : (
               <div className="w-full h-full bg-zinc-200/50 dark:bg-zinc-700/50 animate-pulse rounded-2xl" />
             )}
@@ -291,7 +296,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-white/5">
             <span className="text-[9px] font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-[0.2em]">© 2026</span>
-            <span className="text-[8px] font-bold text-brand uppercase tracking-widest">Abinibi Multimedia</span>
+            <span className="text-[8px] font-bold text-brand uppercase tracking-widest">Gryndee Enterprises</span>
           </div>
         </div>
       </motion.aside>

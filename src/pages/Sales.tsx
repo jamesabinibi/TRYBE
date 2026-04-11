@@ -109,7 +109,7 @@ export default function Sales() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/customers']
+        endpoints: ['/api/products', '/api/services', '/api/customers']
       })
     });
     if (!batchRes.ok) {
@@ -147,7 +147,10 @@ export default function Sales() {
         if (isRefresh) {
           setSales(data);
         } else {
-          setSales(prev => [...prev, ...data]);
+          setSales(prev => {
+            const newSales = data.filter((newSale: any) => !prev.some(s => s.id === newSale.id));
+            return [...prev, ...newSales];
+          });
         }
         setHasMore(data.length === LIMIT);
       }
@@ -971,63 +974,7 @@ export default function Sales() {
                   </AnimatePresence>
                 </div>
 
-                {itemType === 'product' ? (
-                  !selectedProduct && (
-                    <div className="flex-1 pr-2">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {(filteredProducts || []).map((product) => (
-                          <motion.button 
-                            key={product.id} 
-                            whileHover={{ y: -4 }}
-                            onClick={() => {
-                              if (product.product_type === 'one' && product.variants && product.variants.length > 0) {
-                                addToCart(product, product.variants[0]);
-                              } else {
-                                setSelectedProduct(product);
-                              }
-                            }}
-                            className="glass-card p-6 flex flex-col gap-4 text-left group"
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0">
-                                <h4 className="font-bold text-zinc-900 dark:text-white truncate tracking-tight group-hover:text-brand transition-colors">{product.name}</h4>
-                                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{product.category_name}</p>
-                              </div>
-                              <span className="text-sm font-bold text-brand whitespace-nowrap">{formatCurrency(product.selling_price, currency)}</span>
-                            </div>
-                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                              <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{(product.variants || []).length} variants</span>
-                              <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-brand group-hover:translate-x-1 transition-all" />
-                            </div>
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                ) : (
-                  !selectedService && (
-                    <div className="flex-1 pr-2">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {(filteredServices || []).map((service) => (
-                          <motion.button 
-                            key={service.id} 
-                            whileHover={{ y: -4 }}
-                            onClick={() => setSelectedService(service)}
-                            className="glass-card p-6 flex flex-col gap-4 text-left group"
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0">
-                                <h4 className="font-bold text-zinc-900 dark:text-white truncate tracking-tight group-hover:text-brand transition-colors">{service.name}</h4>
-                                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-1">{service.category}</p>
-                              </div>
-                              <span className="text-sm font-bold text-brand whitespace-nowrap">{formatCurrency(service.price, currency)}</span>
-                            </div>
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                )}
+                {/* Grid listings removed as requested */}
               </div>
 
               {/* Cart & Checkout */}

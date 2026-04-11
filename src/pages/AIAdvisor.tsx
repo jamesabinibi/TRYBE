@@ -20,6 +20,7 @@ export default function AIAdvisor() {
   
   // Pulse State
   const [loadingPulse, setLoadingPulse] = useState(false);
+  const [loadingStep, setLoadingStep] = useState<string>('');
   const [insight, setInsight] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
 
@@ -47,6 +48,7 @@ export default function AIAdvisor() {
 
   const fetchBusinessData = async () => {
     setLoadingPulse(true);
+    setLoadingStep('Step 1/4: Gathering business data...');
     try {
       const batchRes = await fetchWithAuth('/api/batch', {
         method: 'POST',
@@ -108,6 +110,8 @@ export default function AIAdvisor() {
   };
 
   const generateInsight = async (businessData: any) => {
+    setLoadingPulse(true);
+    setLoadingStep(businessData ? 'Step 2/4: Initializing AI Advisor...' : 'Step 1/4: Initializing AI Advisor...');
     try {
       const apiKey = await fetchGeminiKey();
       
@@ -116,6 +120,7 @@ export default function AIAdvisor() {
         return;
       }
 
+      setLoadingStep('Step 3/4: Analyzing revenue trends and inventory health...');
       const ai = new GoogleGenAI({ apiKey });
       
       const response = await retryWithBackoff(async () => {
@@ -142,6 +147,7 @@ export default function AIAdvisor() {
       });
       
       if (response.text) {
+        setLoadingStep('Step 4/4: Finalizing strategic insights...');
         setInsight(response.text);
       } else {
         setInsight("No insights generated. Please try again.");
@@ -161,6 +167,7 @@ export default function AIAdvisor() {
 
   const generateForecast = async (businessData?: any) => {
     setLoadingForecast(true);
+    setLoadingStep(businessData ? 'Step 2/4: Initializing AI Advisor...' : 'Step 1/4: Initializing AI Advisor...');
     try {
       const apiKey = await fetchGeminiKey();
       
@@ -169,10 +176,12 @@ export default function AIAdvisor() {
         return;
       }
 
+      setLoadingStep('Step 2/4: Initializing AI Advisor...');
       const ai = new GoogleGenAI({ apiKey });
       
       const forecastData = businessData || data;
       
+      setLoadingStep('Step 3/4: Running predictive models for next 30 days...');
       const response = await retryWithBackoff(async () => {
         return await ai.models.generateContent({
           model: "gemini-3-flash-preview",
@@ -215,6 +224,7 @@ export default function AIAdvisor() {
       });
 
       const result = JSON.parse(response.text || '{}');
+      setLoadingStep('Step 4/4: Finalizing strategic forecast...');
       setForecast(result);
     } catch (error: any) {
       console.error('Error fetching forecast:', error);
@@ -331,7 +341,10 @@ export default function AIAdvisor() {
                   <div className="w-16 h-16 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
                   <Brain className="w-8 h-8 text-brand absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                 </div>
-                <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Analyzing your business pulse...</p>
+                <div className="text-center space-y-1">
+                  <p className="text-zinc-900 dark:text-white font-bold text-sm">{loadingStep}</p>
+                  <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Analyzing your business pulse...</p>
+                </div>
               </div>
             ) : (
               <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden">
@@ -386,7 +399,10 @@ export default function AIAdvisor() {
                   <div className="w-16 h-16 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
                   <Target className="w-8 h-8 text-brand absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                 </div>
-                <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Generating strategic forecast...</p>
+                <div className="text-center space-y-1">
+                  <p className="text-zinc-900 dark:text-white font-bold text-sm">{loadingStep}</p>
+                  <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Generating strategic forecast...</p>
+                </div>
               </div>
             ) : forecast?.error ? (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-3xl p-8 flex items-start gap-4">

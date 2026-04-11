@@ -79,7 +79,7 @@ export default function ForgotPassword() {
         <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors duration-500">
           <div className="p-8 pt-12 text-center">
             {businessLogo ? (
-              <img src={businessLogo} alt={businessName} className="h-16 w-auto object-contain mx-auto mb-6" />
+              <img src={businessLogo} alt={businessName} className="h-16 w-auto object-contain mx-auto mb-6" referrerPolicy="no-referrer" />
             ) : (
               <>
                 <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-brand/20 rotate-3">

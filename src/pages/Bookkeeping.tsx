@@ -43,6 +43,9 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('All');
+  const [timeline, setTimeline] = useState<'week' | 'monthly' | 'yearly'>('monthly');
+  const [stats, setStats] = useState({ totalInflows: 0, totalOutflows: 0, netBalance: 0 });
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
   
   const [newRecord, setNewRecord] = useState({
     type: 'loan',
@@ -81,7 +84,10 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
         if (isRefresh) {
           setRecords(data);
         } else {
-          setRecords(prev => [...prev, ...data]);
+          setRecords(prev => {
+            const newRecords = data.filter((newRec: any) => !prev.some(r => r.id === newRec.id));
+            return [...prev, ...newRecords];
+          });
         }
         setHasMore(data.length === LIMIT);
       }
@@ -108,6 +114,26 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
 
   const fetchRecords = () => fetchRecordsData(0, true);
 
+  const fetchStats = useCallback(async () => {
+    if (!user) return;
+    setIsLoadingStats(true);
+    try {
+      const res = await fetchWithAuth(`/api/bookkeeping/stats?timeline=${timeline}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Error fetching bookkeeping stats:', error);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  }, [user, fetchWithAuth, timeline]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
   const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRecord.amount || !newRecord.description) {
@@ -125,6 +151,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
       
       if (response.ok) {
         fetchRecords();
+        fetchStats();
         setIsAddModalOpen(false);
         setNewRecord({
           type: 'loan',
@@ -161,6 +188,7 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
                 const response = await fetchWithAuth(`/api/bookkeeping/${id}`, { method: 'DELETE' });
                 if (response.ok) {
                   fetchRecords();
+                  fetchStats();
                   toast.success('Record deleted');
                 }
               } catch (err) {
@@ -188,9 +216,6 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
     
     return matchesSearch && matchesType;
   });
-
-  const totalInflows = filteredRecords.filter(r => r.nature === 'income').reduce((acc, r) => acc + Number(r.amount), 0);
-  const totalOutflows = filteredRecords.filter(r => r.nature === 'expense').reduce((acc, r) => acc + Number(r.amount), 0);
 
   const exportToCSV = () => {
     const headers = ['Date', 'Type', 'Description', 'Amount'];
@@ -264,26 +289,41 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
+          {isLoadingStats && (
+            <div className="absolute inset-0 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+              <Loader2 className="w-5 h-5 animate-spin text-brand" />
+            </div>
+          )}
           <TotalDisplay 
             label="Total Inflows" 
-            value={totalInflows} 
+            value={stats.totalInflows} 
             icon={<ArrowUpRight className="w-6 h-6" />}
             iconClassName="bg-brand/10 text-brand"
           />
         </div>
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
+          {isLoadingStats && (
+            <div className="absolute inset-0 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+              <Loader2 className="w-5 h-5 animate-spin text-red-500" />
+            </div>
+          )}
           <TotalDisplay 
             label="Total Outflows" 
-            value={totalOutflows} 
+            value={stats.totalOutflows} 
             icon={<ArrowDownRight className="w-6 h-6" />}
             iconClassName="bg-red-500/10 text-red-500"
           />
         </div>
-        <div className="bg-brand text-white p-6 rounded-3xl shadow-sm">
+        <div className="bg-brand text-white p-6 rounded-3xl shadow-sm relative overflow-hidden">
+          {isLoadingStats && (
+            <div className="absolute inset-0 bg-brand/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+              <Loader2 className="w-5 h-5 animate-spin text-white" />
+            </div>
+          )}
           <TotalDisplay 
             label="Net Balance" 
-            value={totalInflows - totalOutflows} 
+            value={stats.netBalance} 
             icon={<TrendingUp className="w-6 h-6" />}
             iconClassName="bg-white/20 text-white"
             valueClassName="text-white"
@@ -294,6 +334,24 @@ export default function Bookkeeping({ hideHeader = false }: { hideHeader?: boole
 
       <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+              {(['week', 'monthly', 'yearly'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTimeline(t)}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                    timeline === t 
+                      ? "bg-white dark:bg-zinc-700 text-brand shadow-sm" 
+                      : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                  )}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <Input 

@@ -140,6 +140,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
   ];
 
   const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [aiStep, setAiStep] = useState<string>('');
 
   const handleAIScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -147,11 +148,13 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
 
     console.log('AI Screenshot: File selected', file.name);
     setIsProcessingAI(true);
+    setAiStep('Step 1/4: Reading image...');
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64 = reader.result as string;
       console.log('AI Screenshot: Image loaded, calling AI...');
       try {
+        setAiStep('Step 2/4: Initializing AI...');
         const apiKey = await fetchGeminiKey();
         
         if (!apiKey) {
@@ -160,6 +163,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
           return;
         }
 
+        setAiStep('Step 3/4: Extracting transaction details...');
         const ai = new GoogleGenAI({ apiKey });
         const response = await retryWithBackoff(async () => {
           return await ai.models.generateContent({
@@ -191,6 +195,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
         });
         
         const data = JSON.parse(response.text || '{}');
+        setAiStep('Step 4/4: Finalizing...');
         
         if (data && data.amount) {
           // Robust date parsing
@@ -529,8 +534,17 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                         isProcessingAI && "animate-pulse"
                       )}
                     >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {isProcessingAI ? 'Scanning...' : 'Snap & Track'}
+                      {isProcessingAI ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>{aiStep}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Snap & Track
+                        </>
+                      )}
                     </button>
                   </div>
                   <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
