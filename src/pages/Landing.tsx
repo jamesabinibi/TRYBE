@@ -27,7 +27,7 @@ import {
   Settings as SettingsIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, apiFetch, useQuery } from '../lib/utils';
+import { cn, apiFetch, useQuery, ensureAbsoluteUrl } from '../lib/utils';
 import { useAuth } from '../App';
 import LandingCMS from '../components/LandingCMS';
 
@@ -53,8 +53,8 @@ export default function Landing() {
     if (config?.logo?.favicon) {
       const link = document.getElementById('favicon') as HTMLLinkElement;
       const appleLink = document.getElementById('apple-touch-icon') as HTMLLinkElement;
-      if (link) link.href = config.logo.favicon;
-      if (appleLink) appleLink.href = config.logo.favicon;
+      if (link) link.href = ensureAbsoluteUrl(config.logo.favicon) || '';
+      if (appleLink) appleLink.href = ensureAbsoluteUrl(config.logo.favicon) || '';
     }
   }, [config?.logo?.favicon]);
 
@@ -163,7 +163,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {config.logo.url ? (
-              <img src={config.logo.url} alt={config.logo.text} className="h-10 w-auto object-contain" referrerPolicy="no-referrer" />
+              <img src={ensureAbsoluteUrl(config.logo.url) || ''} alt={config.logo.text} className="h-10 w-auto object-contain" referrerPolicy="no-referrer" />
             ) : (
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 flex items-center justify-center vibrant-gradient rounded-2xl shadow-lg shadow-brand/20">
@@ -713,12 +713,12 @@ export default function Landing() {
             <div className="col-span-1 md:col-span-2 space-y-6">
               <div className="flex items-center gap-2">
                 {config.logo.url ? (
-                  <img src={config.logo.url} alt={config.logo.text} className="h-8 w-auto object-contain" />
+                  <img src={ensureAbsoluteUrl(config.logo.url) || ''} alt={config.logo.text} className="h-8 w-auto object-contain" />
                 ) : (
                   <>
                     <div className="w-8 h-8 flex items-center justify-center overflow-hidden">
                       {config.logo.favicon ? (
-                        <img src={config.logo.favicon} alt="" className="w-full h-full object-contain" />
+                        <img src={ensureAbsoluteUrl(config.logo.favicon) || ''} alt="" className="w-full h-full object-contain" />
                       ) : (
                         <Zap className="w-5 h-5 text-brand" />
                       )}

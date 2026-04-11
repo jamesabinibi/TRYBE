@@ -472,15 +472,15 @@ export default function App() {
     }
   }, [settings]);
 
-  const login = (userData: User) => {
+  const login = useCallback((userData: User) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('user');
-  };
+  }, []);
 
   // Offline Sync Logic
   useEffect(() => {
@@ -499,7 +499,7 @@ export default function App() {
     return () => window.removeEventListener('online', handleOnline);
   }, [user]); // Re-run when user changes to ensure we have correct auth context
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     if (!user) return;
     try {
       const res = await fetchWithAuth('/api/auth/me');
@@ -511,9 +511,9 @@ export default function App() {
     } catch (err) {
       console.error('Failed to refresh user:', err);
     }
-  };
+  }, [user, fetchWithAuth]);
 
-  const fetchWithAuth = async (url: string, options: RequestInit = {}, retries = 3, delay = 1000): Promise<Response> => {
+  const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}, retries = 3, delay = 1000): Promise<Response> => {
     const headers = {
       ...options.headers,
       'x-user-id': user?.id?.toString() || '',
@@ -565,7 +565,7 @@ export default function App() {
       }
       throw err;
     }
-  };
+  }, [user?.id, logout]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, refreshUser, fetchWithAuth }}>
