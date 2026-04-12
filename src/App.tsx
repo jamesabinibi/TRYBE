@@ -282,8 +282,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         <div className="px-8 py-6 space-y-4 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-white/5">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-[0.2em]">v2.5.2</span>
-              <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">Production Ready</span>
+              <span className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-[0.2em]">v1.0.0</span>
             </div>
             <div className="flex items-center gap-1.5">
               {isOnline ? (
