@@ -724,9 +724,82 @@ export default function Products() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+        {((isLoading && activeSubTab === 'services') || (isLoadingProducts && products.length === 0 && activeSubTab === 'products')) ? (
+          <div className="overflow-hidden">
+            {/* Desktop Skeleton Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
+                    <th className="px-8 py-6 label-text">Product Details</th>
+                    <th className="px-8 py-6 label-text">Category</th>
+                    <th className="px-8 py-6 label-text">Stock Status</th>
+                    <th className="px-8 py-6 label-text">Unit Price</th>
+                    <th className="px-8 py-6 label-text">Inventory Value</th>
+                    <th className="px-8 py-6 label-text text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <tr key={i} className="border-b border-zinc-100 dark:border-zinc-800">
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-2xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                          <div className="space-y-2">
+                            <div className="h-4 w-32 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+                            <div className="h-3 w-20 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6"><div className="h-6 w-20 bg-zinc-200 dark:bg-zinc-800 rounded-full animate-pulse" /></td>
+                      <td className="px-8 py-6">
+                        <div className="space-y-2">
+                          <div className="h-4 w-16 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+                          <div className="flex gap-1">
+                            <div className="h-5 w-10 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+                            <div className="h-5 w-10 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6"><div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" /></td>
+                      <td className="px-8 py-6"><div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" /></td>
+                      <td className="px-8 py-6 text-right">
+                        <div className="flex justify-end gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                          <div className="w-8 h-8 rounded-xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Mobile Skeleton Grid */}
+            <div className="md:hidden grid grid-cols-1 gap-4 p-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                      <div className="space-y-2">
+                        <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+                        <div className="h-3 w-16 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <div>
+                      <div className="h-3 w-12 bg-zinc-200 dark:bg-zinc-800 rounded mb-2 animate-pulse" />
+                      <div className="h-4 w-16 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="h-3 w-12 bg-zinc-200 dark:bg-zinc-800 rounded mb-2 animate-pulse" />
+                      <div className="h-4 w-20 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : displayItems.length > 0 ? (
           <div className="overflow-hidden">
@@ -762,13 +835,13 @@ export default function Products() {
                           <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700 group-hover:border-white/20 dark:group-hover:border-black/20 transition-colors">
                             {activeSubTab === 'products' ? (
                               item.images && item.images.length > 0 ? (
-                                <img src={getOptimizedImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <img src={getOptimizedImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
                               ) : (
                                 <Package className="w-6 h-6 text-brand" />
                               )
                             ) : (
                               item.image_url ? (
-                                <img src={getOptimizedImageUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <img src={getOptimizedImageUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
                               ) : (
                                 <Briefcase className="w-6 h-6 text-brand" />
                               )
@@ -828,9 +901,6 @@ export default function Products() {
                       {user?.role !== 'staff' && (
                         <td className="px-8 py-6 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => handleShareWhatsApp(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all">
-                              <Share2 className="w-4 h-4" />
-                            </button>
                             <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all">
                               <Edit2 className="w-4 h-4" />
                             </button>
@@ -855,13 +925,13 @@ export default function Products() {
                       <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
                         {activeSubTab === 'products' ? (
                           item.images && item.images.length > 0 ? (
-                            <img src={getOptimizedImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <img src={getOptimizedImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
                           ) : (
                             <ImageIcon className="w-6 h-6" />
                           )
                         ) : (
                           item.image_url ? (
-                            <img src={getOptimizedImageUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <img src={getOptimizedImageUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
                           ) : (
                             <Briefcase className="w-6 h-6" />
                           )
@@ -874,9 +944,6 @@ export default function Products() {
                     </div>
                     {user?.role !== 'staff' && (
                       <div className="flex items-center gap-1">
-                        <button onClick={() => handleShareWhatsApp(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
-                          <Share2 className="w-4 h-4" />
-                        </button>
                         <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
                           <Edit2 className="w-4 h-4" />
                         </button>
