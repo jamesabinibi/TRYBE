@@ -147,8 +147,12 @@ export default function Products() {
           } catch (e) {}
         } else {
           setProducts(prev => {
-            const newProducts = [...prev, ...data];
-            // Only cache the first page or combined if we want, but let's just cache the first page on refresh
+            const newProducts = [...prev];
+            data.forEach((item: any) => {
+              if (!newProducts.find(p => p.id === item.id)) {
+                newProducts.push(item);
+              }
+            });
             return newProducts;
           });
         }
