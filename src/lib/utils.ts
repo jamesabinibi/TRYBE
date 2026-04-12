@@ -12,7 +12,7 @@ export const ensureAbsoluteUrl = (url: string | undefined | null) => {
   if (!url || url.startsWith('data:')) return url;
   
   let baseUrl = import.meta.env.VITE_API_URL || '';
-  if (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-')) {
+  if (!Capacitor.isNativePlatform() && (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-'))) {
     baseUrl = '';
   }
   
@@ -116,12 +116,15 @@ export const getOptimizedImageUrl = (url: string | undefined | null, width: numb
 
 export async function apiFetch(url: string, options: RequestInit = {}) {
   const start = performance.now();
+  let baseUrl = import.meta.env.VITE_API_URL || '';
+  // Strip AI Studio URLs in the web preview so it uses relative paths and hits the active dev server.
+  // Keep them for native Android/iOS so they know where to connect.
+  if (!Capacitor.isNativePlatform() && (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-'))) {
+    baseUrl = '';
+  }
+  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+  
   try {
-    let baseUrl = import.meta.env.VITE_API_URL || '';
-    if (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-')) {
-      baseUrl = '';
-    }
-    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
     console.log(`[API] Fetching: ${fullUrl}`);
     
     const res = await fetch(fullUrl, {
@@ -135,11 +138,6 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     return res;
   } catch (err) {
     const end = performance.now();
-    let baseUrl = import.meta.env.VITE_API_URL || '';
-    if (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-')) {
-      baseUrl = '';
-    }
-    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
     console.error(`[API] Request failed: ${fullUrl} after ${(end - start).toFixed(2)}ms`, err);
     throw err;
   }

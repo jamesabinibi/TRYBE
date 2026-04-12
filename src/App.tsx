@@ -54,7 +54,6 @@ import { cn, apiFetch, useQuery, useQueryClient, ensureAbsoluteUrl } from './lib
 import { offlineQueue } from './lib/offline';
 import NotificationCenter from './components/NotificationCenter';
 import Walkthrough from './components/Walkthrough';
-import ChatSupport from './components/ChatSupport';
 import { Input } from './components/Input';
 
 import { Toaster } from 'sonner';
@@ -489,7 +488,9 @@ export default function App() {
     };
     
     let baseUrl = import.meta.env.VITE_API_URL || '';
-    if (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-')) {
+    // Strip AI Studio URLs in the web preview so it uses relative paths and hits the active dev server.
+    // Keep them for native Android/iOS so they know where to connect.
+    if (!Capacitor.isNativePlatform() && (baseUrl.includes('ais-pre-') || baseUrl.includes('ais-dev-'))) {
       baseUrl = '';
     }
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
@@ -580,7 +581,6 @@ export default function App() {
         <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
           <SearchProvider>
             <Toaster position="top-right" richColors />
-            <ChatSupport />
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
