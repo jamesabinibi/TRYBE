@@ -4647,13 +4647,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
           if (imageUrl) {
             await client.query(
-              'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8, image = $9 WHERE id = $10 AND account_id = $11',
-              [name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, imageUrl, id, userInfo.account_id]
+              'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8, image = $9, product_type = $12 WHERE id = $10 AND account_id = $11',
+              [name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, imageUrl, id, userInfo.account_id, product_type || 'one']
             );
           } else {
             await client.query(
-              'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8 WHERE id = $9 AND account_id = $10',
-              [name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, id, userInfo.account_id]
+              'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8, product_type = $11 WHERE id = $9 AND account_id = $10',
+              [name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, id, userInfo.account_id, product_type || 'one']
             );
           }
 

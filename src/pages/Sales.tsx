@@ -109,7 +109,7 @@ export default function Sales() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoints: ['/api/products', '/api/services', '/api/customers']
+        endpoints: ['/api/products?exclude_images=true', '/api/services', '/api/customers']
       })
     });
     if (!batchRes.ok) {
@@ -1614,7 +1614,7 @@ export default function Sales() {
                             <tr key={idx} className="group">
                               <td className="py-8 pr-4">
                                 <div className="flex items-center gap-4">
-                                  <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                                  <div className="w-12 h-12 shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden border border-zinc-200 dark:border-zinc-700">
                                     {item.image || item.product_variants?.products?.image || item.services?.image_url ? (
                                       <img 
                                         src={getOptimizedImageUrl(item.image || item.product_variants?.products?.image || item.services?.image_url)} 

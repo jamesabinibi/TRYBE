@@ -319,7 +319,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className={cn(
-      "flex min-h-screen w-full font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300 overflow-x-hidden",
+      "flex min-h-[100dvh] w-full font-sans selection:bg-brand/20 selection:text-brand transition-colors duration-300 overflow-x-hidden",
       isDarkMode ? "bg-[#050505] text-white" : "bg-zinc-50 text-zinc-900"
     )} style={{ '--brand-color': brandColor } as any}>
       {user && <Walkthrough />}

@@ -128,7 +128,7 @@ const Invoices: React.FC = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            endpoints: ['/api/products', '/api/services']
+            endpoints: ['/api/products?exclude_images=true', '/api/services']
           })
         });
 
@@ -376,7 +376,7 @@ const Invoices: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          endpoints: ['/api/products', '/api/services']
+          endpoints: ['/api/products?exclude_images=true', '/api/services']
         })
       });
 
@@ -713,7 +713,7 @@ const Invoices: React.FC = () => {
                         {new Date(inv.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center justify-end gap-1 shrink-0 max-w-[50%]">
                       <button
                         onClick={() => handlePreview(inv)}
                         className="p-2.5 bg-brand/10 text-brand rounded-xl active:scale-95 transition-all"
@@ -1100,43 +1100,43 @@ const Invoices: React.FC = () => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           className="bg-white dark:bg-zinc-900 rounded-[3rem] shadow-[0_40px_100px_rgba(0,0,0,0.3)] w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-zinc-200 dark:border-zinc-800"
         >
-          <div className="p-10 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/30">
+          <div className="p-6 md:p-10 border-b border-zinc-100 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-zinc-50/50 dark:bg-zinc-800/30">
             <div>
-              <h2 className="text-3xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">Invoice Preview</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-zinc-950 dark:text-white tracking-tight font-display">Invoice Preview</h2>
               <p className="text-zinc-400 dark:text-zinc-500 font-sans font-bold text-sm mt-1 tracking-widest uppercase">NO. {previewInvoice.invoice_number}</p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 md:gap-4">
               <button
                 onClick={() => handleCopyLink(previewInvoice)}
-                className="p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl transition-all active:scale-95 shadow-lg shadow-blue-500/20"
+                className="p-3 md:p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl transition-all active:scale-95 shadow-lg shadow-blue-500/20"
                 title="Copy Invoice Link"
               >
-                <LinkIcon className="w-6 h-6" />
+                <LinkIcon className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               <button
                 onClick={() => handleShareWhatsApp(previewInvoice)}
-                className="p-4 bg-brand hover:bg-brand-hover text-white rounded-2xl transition-all active:scale-95 shadow-lg shadow-brand/20"
+                className="p-3 md:p-4 bg-brand hover:bg-brand-hover text-white rounded-2xl transition-all active:scale-95 shadow-lg shadow-brand/20"
                 title="Share on WhatsApp"
               >
-                <MessageCircle className="w-6 h-6" />
+                <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               <button
                 onClick={() => handleDownload(previewInvoice)}
-                className="flex items-center gap-3 px-8 py-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl font-bold text-sm transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
+                className="flex flex-1 md:flex-none items-center justify-center gap-2 md:gap-3 px-6 md:px-8 py-3 md:py-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl font-bold text-xs md:text-sm transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
               >
-                <Download className="w-5 h-5" />
+                <Download className="w-4 h-4 md:w-5 md:h-5" />
                 Download PDF
               </button>
               <button
                 onClick={() => setPreviewInvoice(null)}
-                className="p-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-2xl transition-all active:scale-95"
+                className="p-3 md:p-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-2xl transition-all active:scale-95 shrink-0"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 md:w-6 md:h-6" />
               </button>
             </div>
           </div>
           
-          <div className="flex-1 p-12 overflow-y-auto space-y-12">
+          <div className="flex-1 p-6 md:p-12 overflow-y-auto space-y-8 md:space-y-12">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start gap-12">
               <div className="space-y-6">

@@ -22,7 +22,6 @@
 @layer base {
   html, body {
     @apply min-h-screen w-full;
-    touch-action: manipulation;
   }
   body {
     @apply font-sans text-zinc-900 dark:text-zinc-100 antialiased;

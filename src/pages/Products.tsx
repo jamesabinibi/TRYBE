@@ -173,14 +173,16 @@ export default function Products() {
   }, [user, fetchProductsData]);
 
   useEffect(() => {
-    if (inView && hasMore && !isLoadingProducts && activeSubTab === 'products') {
+    // Only trigger infinite scrolling if the user is NOT searching
+    // otherwise the frontend filters empty the list and this fires repeatedly, fetching all items
+    if (inView && hasMore && !isLoadingProducts && activeSubTab === 'products' && !searchQuery) {
       setPage(prev => {
         const nextPage = prev + 1;
         fetchProductsData(nextPage);
         return nextPage;
       });
     }
-  }, [inView, hasMore, isLoadingProducts, fetchProductsData, activeSubTab]);
+  }, [inView, hasMore, isLoadingProducts, fetchProductsData, activeSubTab, searchQuery]);
 
   const fetchProducts = () => {
     fetchProductsData(0, true);
@@ -832,7 +834,7 @@ export default function Products() {
                     <tr key={item.id} className="hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 transition-all group cursor-pointer">
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-5">
-                          <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700 group-hover:border-white/20 dark:group-hover:border-black/20 transition-colors">
+                          <div className="w-14 h-14 shrink-0 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700 group-hover:border-white/20 dark:group-hover:border-black/20 transition-colors">
                             {activeSubTab === 'products' ? (
                               item.images && item.images.length > 0 ? (
                                 <img src={getOptimizedImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
@@ -922,7 +924,7 @@ export default function Products() {
                 <div key={item.id} className="p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                      <div className="w-14 h-14 shrink-0 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
                         {activeSubTab === 'products' ? (
                           item.images && item.images.length > 0 ? (
                             <img src={getOptimizedImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
@@ -942,7 +944,7 @@ export default function Products() {
                         <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{activeSubTab === 'products' ? item.category_name : item.category}</p>
                       </div>
                     </div>
-                    {user?.role !== 'staff' && (
+                    {canManageProducts && (
                       <div className="flex items-center gap-1">
                         <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
                           <Edit2 className="w-4 h-4" />
@@ -986,14 +988,16 @@ export default function Products() {
             </div>
 
             {/* Infinite Scroll Trigger */}
-            <div ref={loadMoreRef} className="py-8 flex justify-center">
-              {isLoadingProducts && (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Loading more products...</p>
-                </div>
-              )}
-            </div>
+            {!searchQuery && (
+              <div ref={loadMoreRef} className="py-8 flex justify-center">
+                {isLoadingProducts && (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Loading more products...</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -1349,6 +1353,38 @@ export default function Products() {
                       {newProduct.product_type === 'one' && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
                           <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Size (Optional)</label>
+                            <Input 
+                              value={newProduct.variants[0]?.size || ''}
+                              onChange={(e) => {
+                                const updated = [...newProduct.variants];
+                                if (updated.length === 0) {
+                                  updated.push({ size: e.target.value, color: '', quantity: '0', low_stock_threshold: '' });
+                                } else {
+                                  updated[0].size = e.target.value;
+                                }
+                                setNewProduct({...newProduct, variants: updated});
+                              }}
+                              placeholder="e.g. M, L, XL, 42"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Color (Optional)</label>
+                            <Input 
+                              value={newProduct.variants[0]?.color || ''}
+                              onChange={(e) => {
+                                const updated = [...newProduct.variants];
+                                if (updated.length === 0) {
+                                  updated.push({ size: '', color: e.target.value, quantity: '0', low_stock_threshold: '' });
+                                } else {
+                                  updated[0].color = e.target.value;
+                                }
+                                setNewProduct({...newProduct, variants: updated});
+                              }}
+                              placeholder="e.g. Red, Blue, Black"
+                            />
+                          </div>
+                          <div className="space-y-2">
                             <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Initial Stock Quantity</label>
                             <Input 
                               type="number" 
@@ -1408,15 +1444,24 @@ export default function Products() {
                               </button>
                             </div>
                             
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                               {newProduct.variants.map((v, i) => (
-                                <div key={i} className="bg-zinc-50 dark:bg-zinc-800/50 p-3 sm:p-4 rounded-2xl border border-zinc-100 dark:border-zinc-700 space-y-3 relative group">
+                                <div key={i} className="bg-zinc-50 dark:bg-zinc-800/50 p-3 sm:p-4 rounded-2xl border border-zinc-100 dark:border-zinc-700 space-y-3 relative group col-span-2 sm:col-span-4 lg:col-span-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
                                   <Input 
                                     placeholder="Size"
                                     value={v.size}
                                     onChange={(e) => {
                                       const updated = [...newProduct.variants];
                                       updated[i].size = e.target.value;
+                                      setNewProduct({...newProduct, variants: updated});
+                                    }}
+                                  />
+                                  <Input 
+                                    placeholder="Color (Optional)"
+                                    value={v.color}
+                                    onChange={(e) => {
+                                      const updated = [...newProduct.variants];
+                                      updated[i].color = e.target.value;
                                       setNewProduct({...newProduct, variants: updated});
                                     }}
                                   />

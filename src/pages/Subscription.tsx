@@ -12,7 +12,8 @@ import {
   ArrowRight,
   Loader2,
   Gift,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, useSettings } from '../App';
@@ -78,6 +79,15 @@ export default function Subscription() {
   const handleUpgrade = () => {
     // In a real app, this would trigger Paystack/Flutterwave
     toast.info('Payment integration coming soon! Use a promo code for now.');
+  };
+
+  const handleRestorePurchases = () => {
+    // This is where you would call your native IAP restore method (e.g., RevenueCat Purchases.restorePurchases())
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      toast.info('No previous purchases found to restore on this account.');
+    }, 1500);
   };
 
   const isPro = user?.subscription_plan === 'pro';
@@ -202,6 +212,15 @@ export default function Subscription() {
                   >
                     <Gift className="w-4 h-4" />
                     Have a promo code?
+                  </button>
+
+                  <button 
+                    onClick={handleRestorePurchases}
+                    disabled={isLoading}
+                    className="w-full py-3 bg-transparent text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest hover:text-zinc-800 dark:hover:text-zinc-200 transition-all flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+                    {isLoading ? 'Restoring...' : 'Restore Purchases'}
                   </button>
                 </>
               )}
