@@ -137,7 +137,7 @@ export default function Products() {
     if (!user) return;
     setIsLoadingProducts(true);
     try {
-      const res = await fetchWithAuth(`/api/products?limit=${LIMIT}&offset=${pageIndex * LIMIT}`);
+      const res = await fetchWithAuth(`/api/products?limit=${LIMIT}&offset=${pageIndex * LIMIT}&exclude_images=true`);
       if (res.ok) {
         const data = await res.json();
         if (isRefresh) {

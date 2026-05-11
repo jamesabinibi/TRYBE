@@ -4253,7 +4253,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (process.env.AWS_DB_PASSWORD) {
         console.log(`[DB] Fetching products from AWS RDS for account ${userInfo.account_id} (excludeImages: ${excludeImages}, limit: ${limit}, offset: ${offset})`);
         
-        let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.account_id = $1 ORDER BY p.created_at DESC';
+        let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.account_id = $1 ORDER BY p.created_at DESC, p.id DESC';
         const params: any[] = [userInfo.account_id];
         
         if (limit !== null) {
@@ -4311,7 +4311,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .from('products')
         .select(selectQuery)
         .eq('account_id', userInfo.account_id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false });
 
       if (limit !== null) {
         query = query.range(offset, offset + limit - 1);
