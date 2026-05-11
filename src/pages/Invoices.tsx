@@ -1192,8 +1192,8 @@ const Invoices: React.FC = () => {
             </div>
 
             {/* Items Table */}
-            <div className="mt-16">
-              <table className="w-full text-left border-collapse">
+            <div className="mt-16 overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[500px]">
                 <thead>
                   <tr className="border-b border-zinc-200 dark:border-zinc-800">
                     <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 w-1/2">Description</th>
@@ -1210,7 +1210,7 @@ const Invoices: React.FC = () => {
                       <tr key={idx} className="group">
                         <td className="py-8 pr-4">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                            <div className="w-12 h-12 shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden border border-zinc-200 dark:border-zinc-700">
                               {item.image || item.product?.image || item.service?.image_url || item.product_variants?.products?.image || item.services?.image_url ? (
                                 <img 
                                   src={getOptimizedImageUrl(item.image || item.product?.image || item.service?.image_url || item.product_variants?.products?.image || item.services?.image_url)} 
@@ -1219,7 +1219,7 @@ const Invoices: React.FC = () => {
                                   referrerPolicy="no-referrer" 
                                 />
                               ) : (
-                                item.service_id ? <Briefcase className="w-5 h-5 text-zinc-400" /> : <Package className="w-5 h-5 text-zinc-400" />
+                                item.service_id ? <Briefcase className="w-5 h-5 text-zinc-400 shrink-0" /> : <Package className="w-5 h-5 text-zinc-400 shrink-0" />
                               )}
                             </div>
                             <div>

@@ -80,7 +80,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradie
     animate={{ opacity: 1, y: 0 }}
     whileHover={{ y: -8 }}
     className={cn(
-      "glass-card p-8 flex flex-col justify-between min-h-[200px] relative overflow-hidden group", 
+      "glass-card p-6 sm:p-8 flex flex-col justify-between min-h-[160px] relative overflow-hidden group", 
       className
     )}
   >
