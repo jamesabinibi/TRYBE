@@ -4251,48 +4251,60 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       // Try RDS first
       if (process.env.AWS_DB_PASSWORD) {
-        console.log(`[DB] Fetching products from AWS RDS for account ${userInfo.account_id} (excludeImages: ${excludeImages}, limit: ${limit}, offset: ${offset})`);
+        const parsedLimit = limit !== null ? parseInt(limit.toString()) : null;
+        const parsedOffset = parseInt(offset.toString()) || 0;
+        const aid = userInfo.account_id;
+        
+        console.log(`[PRODUCTS] RDS fetch for aid=${aid}, limit=${parsedLimit}, offset=${parsedOffset}, excludeImages=${excludeImages}`);
         
         let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.account_id = $1 ORDER BY p.created_at DESC, p.id DESC';
-        const params: any[] = [userInfo.account_id];
+        const params: any[] = [aid];
         
-        if (limit !== null) {
+        if (parsedLimit !== null && !isNaN(parsedLimit)) {
           query += ' LIMIT $2 OFFSET $3';
-          params.push(limit, offset);
+          params.push(parsedLimit, parsedOffset);
         }
 
-        const { rows: products } = await pool.query(query, params);
-        
-        if (products.length > 0) {
-          const productIds = products.map(p => p.id);
+        try {
+          const { rows: products } = await pool.query(query, params);
+          console.log(`[PRODUCTS] RDS query successful. Rows: ${products?.length || 0}`);
           
-          const { rows: allVariants } = await pool.query(
-            'SELECT * FROM product_variants WHERE product_id = ANY($1)',
-            [productIds]
-          );
-          
-          let allImages: any[] = [];
-          if (!excludeImages) {
-            const { rows } = await pool.query(
-              'SELECT product_id, image_data FROM product_images WHERE product_id = ANY($1)',
-              [productIds]
-            );
-            allImages = rows;
-          }
-
-          for (const product of products) {
-            const variants = allVariants.filter(v => v.product_id === product.id);
-            const images = allImages.filter(i => i.product_id === product.id);
+          if (products && products.length > 0) {
+            const productIds = products.map(p => p.id).filter(id => id);
             
-            product.product_variants = variants;
-            product.categories = { name: product.category_name };
-            product.variants = variants;
-            product.total_stock = variants.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0);
-            product.images = images.map((img: any) => img.image_data);
-          }
-        }
+            if (productIds.length > 0) {
+              const { rows: allVariants } = await pool.query(
+                'SELECT * FROM product_variants WHERE product_id = ANY($1)',
+                [productIds]
+              );
+              
+              let allImages: any[] = [];
+              if (!excludeImages) {
+                const { rows } = await pool.query(
+                  'SELECT product_id, image_data FROM product_images WHERE product_id = ANY($1)',
+                  [productIds]
+                );
+                allImages = rows;
+              }
 
-        return res.json(products);
+              for (const product of products) {
+                const variants = allVariants.filter(v => v.product_id === product.id);
+                const images = allImages.filter(i => i.product_id === product.id);
+                
+                product.product_variants = variants;
+                product.categories = { name: product.category_name };
+                product.variants = variants;
+                product.total_stock = variants.reduce((acc: number, v: any) => acc + (Number(v.quantity) || 0), 0);
+                product.images = images.map((img: any) => img.image_data || img);
+              }
+            }
+          }
+
+          return res.json(products || []);
+        } catch (dbErr: any) {
+          console.error('[PRODUCTS] RDS query error:', dbErr);
+          throw dbErr; // Let the global catch handle it
+        }
       }
 
       if (!supabase) return res.json([]);

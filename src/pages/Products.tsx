@@ -157,9 +157,14 @@ export default function Products() {
           });
         }
         setHasMore(data.length === LIMIT);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        console.error('Failed to fetch products:', res.status, errData);
+        toast.error(`Error ${res.status}: Failed to load products`);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast.error('Failed to load products. Page refresh may help.');
     } finally {
       setIsLoadingProducts(false);
     }
@@ -1004,6 +1009,12 @@ export default function Products() {
             <Package className="w-16 h-16 text-brand/30 mb-4" />
             <h3 className="text-lg font-bold text-zinc-900 dark:text-white">No {activeSubTab} found</h3>
             <p className="text-zinc-500 dark:text-zinc-400 mt-1">Try adjusting your search or filters.</p>
+            {/* Debug info if no products are showing despite stats suggesting otherwise */}
+            {(inventoryData?.stats?.total_stock > 0 || products.length > 0) && (
+              <p className="text-[10px] text-zinc-400 mt-4 uppercase tracking-tighter">
+                Debug: State has {products.length} products. Total Stock from stats: {inventoryData?.stats?.total_stock}
+              </p>
+            )}
           </div>
         )}
       </div>
