@@ -4248,6 +4248,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const excludeImages = req.query.exclude_images === 'true';
       const limit = req.query.limit ? parseInt(req.query.limit as string) : null;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const search = req.query.search ? String(req.query.search).toLowerCase() : null;
 
       // Try RDS first
       if (process.env.AWS_DB_PASSWORD) {
@@ -4255,13 +4256,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const parsedOffset = parseInt(offset.toString()) || 0;
         const aid = userInfo.account_id;
         
-        console.log(`[PRODUCTS] RDS fetch for aid=${aid}, limit=${parsedLimit}, offset=${parsedOffset}, excludeImages=${excludeImages}`);
+        console.log(`[PRODUCTS] RDS fetch for aid=${aid}, limit=${parsedLimit}, offset=${parsedOffset}, excludeImages=${excludeImages}, search=${search}`);
         
-        let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.account_id = $1 ORDER BY p.created_at DESC, p.id DESC';
+        let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.account_id = $1';
         const params: any[] = [aid];
         
+        if (search) {
+          query += ' AND (LOWER(p.name) LIKE $2 OR LOWER(p.description) LIKE $2 OR LOWER(p.supplier_name) LIKE $2 OR LOWER(c.name) LIKE $2)';
+          params.push(`%${search}%`);
+        }
+
+        query += ' ORDER BY p.created_at DESC, p.id DESC';
+        
         if (parsedLimit !== null && !isNaN(parsedLimit)) {
-          query += ' LIMIT $2 OFFSET $3';
+          const limitIdx = params.length + 1;
+          const offsetIdx = params.length + 2;
+          query += ` LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
           params.push(parsedLimit, parsedOffset);
         }
 

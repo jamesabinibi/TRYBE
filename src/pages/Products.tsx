@@ -23,6 +23,7 @@ import { Product, Category, Service } from '../types';
 import { formatCurrency, cn, NUMBER_STYLE, useQuery, getOptimizedImageUrl } from '../lib/utils';
 import { offlineQueue } from '../lib/offline';
 import { Input } from '../components/Input';
+import { Select } from '../components/Select';
 import { Textarea } from '../components/Textarea';
 import { NumberDisplay } from '../components/NumberDisplay';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
@@ -133,18 +134,21 @@ export default function Products() {
   const [isBulkEditing, setIsBulkEditing] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
-  const fetchProductsData = useCallback(async (pageIndex: number, isRefresh = false) => {
+  const fetchProductsData = useCallback(async (pageIndex: number, isRefresh = false, query = '') => {
     if (!user) return;
     setIsLoadingProducts(true);
     try {
-      const res = await fetchWithAuth(`/api/products?limit=${LIMIT}&offset=${pageIndex * LIMIT}&exclude_images=true`);
+      const q = encodeURIComponent(query);
+      const res = await fetchWithAuth(`/api/products?limit=${LIMIT}&offset=${pageIndex * LIMIT}&exclude_images=true&search=${q}`);
       if (res.ok) {
         const data = await res.json();
         if (isRefresh) {
           setProducts(data);
-          try {
-            localStorage.setItem('cached_products', JSON.stringify(data));
-          } catch (e) {}
+          if (!query) {
+            try {
+              localStorage.setItem('cached_products', JSON.stringify(data));
+            } catch (e) {}
+          }
         } else {
           setProducts(prev => {
             const newProducts = [...prev];
@@ -170,27 +174,37 @@ export default function Products() {
     }
   }, [user, fetchWithAuth]);
 
+  // Debounced search
   useEffect(() => {
-    if (user) {
-      fetchProductsData(0, true);
+    const timer = setTimeout(() => {
       setPage(0);
-    }
-  }, [user, fetchProductsData]);
+      if (user) {
+        fetchProductsData(0, true, searchQuery);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, fetchProductsData, user]);
 
   useEffect(() => {
-    // Only trigger infinite scrolling if the user is NOT searching
-    // otherwise the frontend filters empty the list and this fires repeatedly, fetching all items
-    if (inView && hasMore && !isLoadingProducts && activeSubTab === 'products' && !searchQuery) {
+    // Also re-fetch categories/stats when searchQuery changes or on mount
+    if (user) {
+      refetchInventory();
+    }
+  }, [user, refetchInventory]);
+
+  useEffect(() => {
+    if (inView && hasMore && !isLoadingProducts && activeSubTab === 'products') {
       setPage(prev => {
         const nextPage = prev + 1;
-        fetchProductsData(nextPage);
+        fetchProductsData(nextPage, false, searchQuery);
         return nextPage;
       });
     }
   }, [inView, hasMore, isLoadingProducts, fetchProductsData, activeSubTab, searchQuery]);
 
   const fetchProducts = () => {
-    fetchProductsData(0, true);
+    setPage(0);
+    fetchProductsData(0, true, searchQuery);
     refetchInventory();
   };
 
@@ -617,20 +631,24 @@ export default function Products() {
   const totalStockCount = inventoryData?.stats?.total_stock || 0;
 
   return (
-    <div className="space-y-8 max-w-[1600px] mx-auto">
-      {/* Top Tabs */}
-      <div className="flex items-center gap-8 border-b border-zinc-200 dark:border-zinc-800">
-        <button 
-          onClick={() => setActiveTab('list')}
-          className={cn(
-            "pb-4 text-sm font-bold transition-all relative",
-            activeTab === 'list' ? "text-brand" : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-          )}
-        >
-          Inventory list
-          {activeTab === 'list' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-brand rounded-full" />}
-        </button>
-      </div>
+      <div className="space-y-6 max-w-[1600px] mx-auto pb-20 px-4 sm:px-0">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-display font-bold text-zinc-900 dark:text-white mb-2">Inventory</h1>
+            <p className="text-zinc-500 dark:text-zinc-400">Manage your products, services and stock levels.</p>
+          </div>
+          <div className="flex items-center gap-3">
+             {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_products)) && (
+                <button 
+                  onClick={() => activeSubTab === 'products' ? openAddModal() : openAddServiceModal()}
+                  className="btn-primary flex items-center gap-2 shadow-lg shadow-brand/20 py-3.5"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add {activeSubTab === 'products' ? 'Product' : 'Service'}
+                </button>
+              )}
+          </div>
+        </div>
 
       {/* Summary Cards */}
       <div className={cn(
@@ -662,11 +680,9 @@ export default function Products() {
         />
       </div>
 
-      <div className="glass-card p-0 overflow-hidden">
-        {/* Sub Tabs and Search */}
-        <div className="p-8 border-b border-zinc-100 dark:border-zinc-800">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="flex items-center gap-6 overflow-x-auto pb-2 lg:pb-0 no-scrollbar">
+        <div className="bg-white dark:bg-zinc-900/50 backdrop-blur-xl border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/50 dark:shadow-none transition-all">
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-6 border-b border-zinc-100 dark:border-zinc-800 pb-4">
               <button 
                 onClick={() => setActiveSubTab('products')}
                 className={cn(
@@ -689,47 +705,34 @@ export default function Products() {
               </button>
             </div>
             
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1 max-w-3xl">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                <Input 
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              <div className="md:col-span-8 relative group">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-brand transition-colors" />
+                <input 
                   type="text" 
-                  placeholder="Search products..." 
+                  placeholder={activeSubTab === 'products' ? "Search by name, supplier or category..." : "Search services..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-11"
+                  className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl pl-13 pr-6 py-4 text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand/50 transition-all placeholder:text-zinc-400"
                 />
               </div>
-              <div className="relative group">
-                <Input 
-                  as="select"
+              <div className="md:col-span-4 relative">
+                <Select 
                   value={searchParams.get('category') || 'all'}
-                  onChange={(e) => {
-                    const val = e.target.value;
+                  onChange={(val) => {
                     const newParams = new URLSearchParams(searchParams);
                     if (val === 'all') newParams.delete('category');
                     else newParams.set('category', val);
                     setSearchParams(newParams);
                   }}
-                >
-                  <option value="all" className="dark:bg-zinc-900">All Categories</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id} className="dark:bg-zinc-900">{cat.name}</option>
-                  ))}
-                </Input>
+                  options={[
+                    { value: 'all', label: 'All Categories' },
+                    ...categories.map(cat => ({ value: String(cat.id), label: cat.name }))
+                  ]}
+                  buttonClassName="bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl px-6 py-4"
+                />
               </div>
-              {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_products)) && (
-                <button 
-                  onClick={() => activeSubTab === 'products' ? openAddModal() : openAddServiceModal()}
-                  className="btn-primary flex items-center gap-2"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add {activeSubTab === 'products' ? 'Product' : 'Service'}
-                </button>
-              )}
             </div>
-          </div>
-        </div>
 
         {((isLoading && activeSubTab === 'services') || (isLoadingProducts && products.length === 0 && activeSubTab === 'products')) ? (
           <div className="overflow-hidden">
@@ -1018,6 +1021,7 @@ export default function Products() {
           </div>
         )}
       </div>
+    </div>
 
       {/* Add/Edit Service Modal */}
       <AnimatePresence>

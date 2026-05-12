@@ -530,23 +530,25 @@ const Invoices: React.FC = () => {
   );
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+    <div className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto space-y-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-          <h1 className="h1">
+          <h1 className="text-3xl md:text-4xl font-display font-bold text-zinc-900 dark:text-white mb-2">
             Invoicing System
           </h1>
-          <p className="body-text mt-1">
+          <p className="text-zinc-500 dark:text-zinc-400">
             {activeTab === 'create' ? 'Generate professional invoices for your clients' : 'View and manage your past invoices'}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full md:w-auto">
-          <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-2xl w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="inline-flex bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-2xl">
             <button
               onClick={() => setActiveTab('create')}
               className={cn(
-                "flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all uppercase tracking-[0.2em]",
-                activeTab === 'create' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                "px-6 py-2.5 rounded-xl text-xs font-bold transition-all",
+                activeTab === 'create' 
+                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-lg" 
+                  : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               )}
             >
               Create
@@ -554,8 +556,10 @@ const Invoices: React.FC = () => {
             <button
               onClick={() => setActiveTab('history')}
               className={cn(
-                "flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all uppercase tracking-[0.2em]",
-                activeTab === 'history' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                "px-6 py-2.5 rounded-xl text-xs font-bold transition-all",
+                activeTab === 'history' 
+                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-lg" 
+                  : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               )}
             >
               History
@@ -563,10 +567,10 @@ const Invoices: React.FC = () => {
           </div>
 
           {activeTab === 'create' && canManageInvoices && (
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2">
               <button
                 onClick={resetForm}
-                className="btn-secondary p-3"
+                className="p-3.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 rounded-2xl hover:bg-zinc-200 transition-all"
                 title="Reset Form"
               >
                 <Plus className="w-5 h-5" />
@@ -574,7 +578,7 @@ const Invoices: React.FC = () => {
               <button
                 onClick={saveInvoice}
                 disabled={isSaving || invoiceItems.length === 0}
-                className="btn-primary flex-1 sm:flex-none"
+                className="btn-primary flex-1 sm:flex-none py-3.5 px-6 shadow-lg shadow-brand/20"
               >
                 {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                 Save
@@ -582,10 +586,10 @@ const Invoices: React.FC = () => {
               <button
                 onClick={generatePDF}
                 disabled={isGenerating}
-                className="btn-primary flex-1 sm:flex-none"
+                className="btn-primary flex-1 sm:flex-none py-3.5 px-6 shadow-lg shadow-brand/20"
               >
                 {isGenerating ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white/60 border-t-white rounded-full animate-spin" />
                 ) : (
                   <Download className="w-5 h-5" />
                 )}
@@ -713,30 +717,36 @@ const Invoices: React.FC = () => {
                         {new Date(inv.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex flex-wrap items-center justify-end gap-1 shrink-0 max-w-[50%]">
+                    <div className="flex flex-wrap items-center justify-end gap-2 shrink-0 max-w-[50%]">
                       <button
                         onClick={() => handlePreview(inv)}
-                        className="p-2.5 bg-brand/10 text-brand rounded-xl active:scale-95 transition-all"
+                        className="p-3 bg-brand/10 text-brand rounded-2xl active:scale-95 transition-all"
                       >
-                        <FileText className="w-4 h-4" />
+                        <FileText className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => loadInvoice(inv)}
+                        className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                      >
+                        <Edit2 className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => handleShareWhatsApp(inv)}
-                        className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                        className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
                       >
-                        <MessageCircle className="w-4 h-4" />
+                        <MessageCircle className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => handleCopyLink(inv)}
-                        className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                        className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
                       >
-                        <LinkIcon className="w-4 h-4" />
+                        <LinkIcon className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => handleDownload(inv)}
-                        className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
+                        className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
                       >
-                        <Download className="w-4 h-4" />
+                        <Download className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
@@ -769,45 +779,45 @@ const Invoices: React.FC = () => {
         {/* Left Column: Invoice Details & Items */}
         <div className="lg:col-span-2 space-y-8">
           {/* Invoice Header Info */}
-          <div className="glass-card p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-2">
-              <label className="label-text">Invoice Number</label>
-              <div className="relative">
-                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                <Input
+          <div className="bg-white dark:bg-zinc-900 p-6 sm:p-10 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-zinc-100 dark:border-zinc-800 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Invoice Number</label>
+              <div className="relative group">
+                <Hash className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-brand transition-colors" />
+                <input
                   type="text"
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="pl-12"
+                  className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl pl-13 pr-6 py-4 text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand/50 transition-all placeholder:text-zinc-400"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="label-text">Invoice Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                <Input
+            <div className="space-y-4">
+              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Invoice Date</label>
+              <div className="relative group">
+                <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-brand transition-colors" />
+                <input
                   type="date"
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="pl-12"
+                  className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl pl-13 pr-6 py-4 text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand/50 transition-all placeholder:text-zinc-400"
                 />
               </div>
             </div>
           </div>
 
           {/* Item Selection */}
-          <div className="glass-card p-8">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="h2">Invoice Items</h2>
+          <div className="bg-white dark:bg-zinc-900 p-6 sm:p-10 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-zinc-100 dark:border-zinc-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
+              <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Invoice Items</h2>
               <div className="relative">
                 <button
                   onClick={() => setShowItemDropdown(!showItemDropdown)}
-                  className="btn-primary"
+                  className="flex items-center gap-2 px-6 py-3.5 bg-brand text-white rounded-2xl font-bold shadow-lg shadow-brand/20 hover:bg-brand-hover transition-all active:scale-95"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-5 h-5" />
                   Add Item
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showItemDropdown ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-5 h-5 transition-transform ${showItemDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
                 <AnimatePresence>
@@ -816,7 +826,7 @@ const Invoices: React.FC = () => {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 mt-4 w-96 bg-white dark:bg-zinc-900 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-zinc-100 dark:border-zinc-800 z-50 overflow-hidden"
+                      className="absolute right-0 mt-4 w-[90vw] sm:w-96 bg-white dark:bg-zinc-900 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-zinc-100 dark:border-zinc-800 z-50 overflow-hidden"
                     >
                       <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
                         <div className="relative flex-1">
@@ -953,38 +963,38 @@ const Invoices: React.FC = () => {
           </div>
 
           {/* Invoice Summary */}
-          <div className="glass-card p-8 space-y-6">
-            <h2 className="h2">Invoice Summary</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
-                <span className="label-text">Subtotal</span>
-                <span className="font-bold text-zinc-950 dark:text-white">{settings?.currency || '₦'}{calculateSubtotal().toLocaleString()}</span>
+          <div className="bg-white dark:bg-zinc-900 p-6 sm:p-10 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-zinc-100 dark:border-zinc-800 space-y-8">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Invoice Summary</h2>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Subtotal</span>
+                <span className="font-bold text-zinc-900 dark:text-white">{settings?.currency || '₦'}{calculateSubtotal().toLocaleString()}</span>
               </div>
               
-              <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
-                <span className="label-text">Discount (%)</span>
-                <Input
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Discount (%)</span>
+                <input
                   type="number"
                   value={discount}
                   onChange={(e) => setDiscount(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
-                  className="w-20 text-right"
+                  className="w-24 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-xl px-4 py-2 text-right text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 transition-all font-mono"
                 />
               </div>
 
               {settings?.vat_enabled && (
-                <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
-                  <span className="label-text">VAT (7.5%)</span>
-                  <span className="font-bold text-zinc-950 dark:text-white">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">VAT (7.5%)</span>
+                  <span className="font-bold text-zinc-900 dark:text-white">
                     <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
                     {calculateVAT().toLocaleString()}
                   </span>
                 </div>
               )}
               
-              <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-end">
+              <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-end">
                 <div>
-                  <p className="label-text mb-1">Total Amount</p>
-                  <p className={cn(NUMBER_STYLE, "h1")}>
+                  <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Amount</p>
+                  <p className={cn(NUMBER_STYLE, "text-4xl text-brand")}>
                     <span className="opacity-30 mr-2 text-xl">{settings?.currency || '₦'}</span>
                     {calculateTotal().toLocaleString()}
                   </p>
@@ -992,18 +1002,19 @@ const Invoices: React.FC = () => {
               </div>
 
               {/* Invoice Terms */}
-              <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                <span className="label-text mb-2 block">Invoice Terms</span>
-                <Textarea
+              <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800 space-y-4">
+                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Invoice Terms</label>
+                <textarea
                   value={invoiceTerms}
                   onChange={(e) => setInvoiceTerms(e.target.value)}
                   placeholder="e.g. Payment is due within 30 days."
                   rows={3}
+                  className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-6 text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-zinc-400 text-sm"
                 />
                 <button
                   onClick={updateInvoiceTerms}
                   disabled={isSaving}
-                  className="btn-primary mt-3"
+                  className="flex items-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95 text-sm"
                 >
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Update Terms
@@ -1016,63 +1027,63 @@ const Invoices: React.FC = () => {
         {/* Right Column: Recipient & Payment Details */}
         <div className="space-y-8">
           {/* Recipient Info */}
-          <div className="glass-card p-8">
-            <h2 className="h2 mb-8 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                <User className="w-5 h-5 text-zinc-500" />
+          <div className="bg-white dark:bg-zinc-900 p-6 sm:p-10 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-zinc-100 dark:border-zinc-800">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight mb-10 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-[1.25rem] bg-brand/10 flex items-center justify-center">
+                <User className="w-6 h-6 text-brand" />
               </div>
               Recipient Details
             </h2>
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="label-text">Client Name</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <Input
+            <div className="space-y-8 text-zinc-900 dark:text-white">
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Client Name</label>
+                <div className="relative group">
+                  <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-brand transition-colors" />
+                  <input
                     type="text"
-                    placeholder="John Doe"
+                    placeholder="e.g. John Doe"
                     value={recipient.name}
                     onChange={(e) => setRecipient({ ...recipient, name: e.target.value })}
-                    className="pl-12"
+                    className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl pl-13 pr-6 py-4 text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand/50 transition-all placeholder:text-zinc-400"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="label-text">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <Input
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-brand transition-colors" />
+                  <input
                     type="email"
-                    placeholder="john@example.com"
+                    placeholder="e.g. john@example.com"
                     value={recipient.email}
                     onChange={(e) => setRecipient({ ...recipient, email: e.target.value })}
-                    className="pl-12"
+                    className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl pl-13 pr-6 py-4 text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand/50 transition-all placeholder:text-zinc-400"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="label-text">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <Input
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Phone Number</label>
+                <div className="relative group">
+                  <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-brand transition-colors" />
+                  <input
                     type="tel"
-                    placeholder="+234..."
+                    placeholder="e.g. 08012345678"
                     value={recipient.phone}
                     onChange={(e) => setRecipient({ ...recipient, phone: e.target.value })}
-                    className="pl-12"
+                    className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl pl-13 pr-6 py-4 text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand/50 transition-all placeholder:text-zinc-400"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Address</label>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-4 w-4 h-4 text-zinc-400" />
-                  <Textarea
-                    placeholder="123 Street, City, Country"
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Delivery Address (Optional)</label>
+                <div className="relative group">
+                  <MapPin className="absolute left-5 top-6 w-5 h-5 text-zinc-400 group-focus-within:text-brand transition-colors" />
+                  <textarea
+                    placeholder="e.g. 123 Street Name, City"
                     value={recipient.address}
                     onChange={(e) => setRecipient({ ...recipient, address: e.target.value })}
                     rows={3}
-                    className="pl-12"
+                    className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl pl-13 pr-6 py-6 text-zinc-950 dark:text-white outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand/50 transition-all placeholder:text-zinc-400"
                   />
                 </div>
               </div>
