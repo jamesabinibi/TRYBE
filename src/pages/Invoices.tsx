@@ -413,13 +413,14 @@ const Invoices: React.FC = () => {
       }
     }
 
+    const priceNum = Number(itemPrice) || 0;
     const newItem: InvoiceItem = {
       id: itemId,
       name: itemName,
       type,
       quantity: 1,
-      price: itemPrice,
-      total: itemPrice
+      price: priceNum,
+      total: priceNum
     };
     setInvoiceItems([...invoiceItems, newItem]);
     setShowItemDropdown(false);
@@ -432,14 +433,14 @@ const Invoices: React.FC = () => {
 
   const updateQuantity = (index: number, qty: number) => {
     const updated = [...invoiceItems];
-    updated[index].quantity = Math.max(1, qty);
+    updated[index].quantity = Math.max(1, Number(qty) || 1);
     updated[index].total = updated[index].quantity * updated[index].price;
     setInvoiceItems(updated);
   };
 
   const updatePrice = (index: number, price: number) => {
     const updated = [...invoiceItems];
-    updated[index].price = Math.max(0, price);
+    updated[index].price = Math.max(0, Number(price) || 0);
     updated[index].total = updated[index].quantity * updated[index].price;
     setInvoiceItems(updated);
   };
@@ -465,11 +466,11 @@ const Invoices: React.FC = () => {
   };
 
   const calculateSubtotal = () => {
-    return invoiceItems.reduce((sum, item) => sum + item.total, 0);
+    return invoiceItems.reduce((sum, item) => sum + Number(item.total), 0);
   };
 
   const calculateDiscountAmount = () => {
-    return (calculateSubtotal() * discount) / 100;
+    return (calculateSubtotal() * Number(discount)) / 100;
   };
 
   const calculateVAT = () => {
@@ -717,7 +718,20 @@ const Invoices: React.FC = () => {
                         {new Date(inv.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2 shrink-0 max-w-[50%]">
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total</p>
+                      <p className={cn(NUMBER_STYLE, "text-brand")}>
+                        {formatCurrency(inv.total_amount, settings?.currency || '₦')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
+                    <div>
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Client</p>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-white">{inv.customer_name || 'Walk-in'}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
                       <button
                         onClick={() => handlePreview(inv)}
                         className="p-3 bg-brand/10 text-brand rounded-2xl active:scale-95 transition-all"
@@ -748,19 +762,6 @@ const Invoices: React.FC = () => {
                       >
                         <Download className="w-5 h-5" />
                       </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2">
-                    <div>
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Client</p>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-white">{inv.customer_name || 'Walk-in'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total</p>
-                      <p className={cn(NUMBER_STYLE, "text-brand")}>
-                        {formatCurrency(inv.total_amount, settings?.currency || '₦')}
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -808,12 +809,12 @@ const Invoices: React.FC = () => {
 
           {/* Item Selection */}
           <div className="bg-white dark:bg-zinc-900 p-6 sm:p-10 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-zinc-100 dark:border-zinc-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
+            <div className="flex flex-col sm:flex-row justify-between gap-6 mb-10 items-start sm:items-center">
               <h2 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Invoice Items</h2>
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <button
                   onClick={() => setShowItemDropdown(!showItemDropdown)}
-                  className="flex items-center gap-2 px-6 py-3.5 bg-brand text-white rounded-2xl font-bold shadow-lg shadow-brand/20 hover:bg-brand-hover transition-all active:scale-95"
+                  className="w-full sm:w-auto justify-center flex items-center gap-2 px-6 py-3.5 bg-brand text-white rounded-2xl font-bold shadow-lg shadow-brand/20 hover:bg-brand-hover transition-all active:scale-95"
                 >
                   <Plus className="w-5 h-5" />
                   Add Item
@@ -826,7 +827,7 @@ const Invoices: React.FC = () => {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 mt-4 w-[90vw] sm:w-96 bg-white dark:bg-zinc-900 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-zinc-100 dark:border-zinc-800 z-50 overflow-hidden"
+                      className="absolute left-0 sm:left-auto sm:right-0 mt-4 w-[calc(100vw-3rem)] max-w-sm sm:w-96 bg-white dark:bg-zinc-900 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-zinc-100 dark:border-zinc-800 z-50 overflow-hidden"
                     >
                       <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
                         <div className="relative flex-1">

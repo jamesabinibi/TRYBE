@@ -60,7 +60,7 @@ export const Select = ({ value, onChange, options, placeholder = 'Select an opti
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute z-[110] left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar"
+            className="absolute z-[110] right-0 sm:left-0 sm:right-auto mt-2 min-w-[200px] w-full max-w-[90vw] sm:w-max sm:min-w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[1.5rem] p-2 shadow-2xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar"
           >
             <div className="p-1">
               {normalizedOptions.map((option) => (

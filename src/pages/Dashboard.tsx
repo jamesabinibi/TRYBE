@@ -57,18 +57,17 @@ const QuickAction = ({ to, icon: Icon, label, color, className, onClick }: any) 
       to={to}
       onClick={onClick ? handleClick : undefined}
       className={cn(
-        "flex flex-col items-start p-6 rounded-[2rem] bg-white dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 transition-all duration-300 active:scale-95 group hover:shadow-2xl hover:shadow-brand/20 hover:-translate-y-1",
+        "flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 transition-all duration-300 active:scale-95 group hover:shadow-lg hover:-translate-y-0.5",
         className
       )}
     >
-      <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:rotate-12 shadow-lg mb-4", color)}>
-        <Icon className="w-6 h-6" />
+      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 shadow-sm", color)}>
+        <Icon className="w-5 h-5" />
       </div>
-      <div className="space-y-1">
-        <span className="text-sm font-bold tracking-tight text-zinc-900 dark:text-white block">
+      <div className="space-y-0.5 overflow-hidden">
+        <span className="text-xs font-bold tracking-tight text-zinc-900 dark:text-white block truncate">
           {label}
         </span>
-        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Quick Action</span>
       </div>
     </Link>
   );
@@ -78,33 +77,27 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradie
   <motion.div 
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    whileHover={{ y: -8 }}
+    whileHover={{ y: -2 }}
     className={cn(
-      "glass-card p-6 sm:p-8 flex flex-col justify-between min-h-[160px] relative overflow-hidden group", 
+      "glass-card p-4 sm:p-5 relative overflow-hidden group flex items-center justify-between gap-4", 
       className
     )}
   >
     {gradient && (
-      <div className={cn("absolute -right-10 -top-10 w-48 h-48 blur-3xl opacity-30 group-hover:opacity-50 transition-opacity", gradient)} />
+      <div className={cn("absolute -right-4 -top-4 w-24 h-24 blur-3xl opacity-20 group-hover:opacity-40 transition-opacity", gradient)} />
     )}
-    <div className="relative z-10 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-auto">
-        {Icon && (
-          <div className={cn("w-14 h-14 rounded-[1.25rem] flex items-center justify-center shadow-xl", color)}>
-            <Icon className="w-7 h-7" />
-          </div>
-        )}
-        <div className="text-right">
-          <p className="label-text font-bold uppercase tracking-[0.2em] opacity-40 mb-1">{title}</p>
-          {subtitle && <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{subtitle}</p>}
-        </div>
+    <div className="relative z-10 flex flex-col justify-start">
+      <p className="text-[10px] sm:text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1">{title}</p>
+      <div className="text-xl sm:text-2xl font-display font-bold tracking-tight text-zinc-900 dark:text-white line-clamp-1">
+        {value}
       </div>
-      <div className="mt-8">
-        <div className="text-4xl md:text-5xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
-          {value}
-        </div>
-      </div>
+      {subtitle && <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider mt-1">{subtitle}</p>}
     </div>
+    {Icon && (
+      <div className={cn("relative z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] flex items-center justify-center shadow-sm shrink-0", color)}>
+        <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+      </div>
+    )}
   </motion.div>
 );
 
@@ -292,13 +285,6 @@ export default function Dashboard() {
               <Sparkles className="w-4 h-4 text-amber-400" />
               AI Pulse
             </Link>
-            <Link 
-              to="/sales"
-              className="btn-primary"
-            >
-              <Plus className="w-4 h-4" />
-              New Sale
-            </Link>
           </div>
         </div>
       </div>
@@ -307,55 +293,55 @@ export default function Dashboard() {
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card p-10 border-white/40 bg-white/40 relative overflow-hidden group"
+        className="glass-card p-4 sm:p-5 border-brand/20 bg-brand/5 relative overflow-hidden group flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
-        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <Trophy className="w-48 h-48 text-brand -rotate-12" />
+        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+          <Trophy className="w-32 h-32 text-brand -rotate-12 translate-x-4 -translate-y-4" />
         </div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-10">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-brand/10 rounded-3xl flex items-center justify-center shrink-0">
-              <Trophy className="w-8 h-8 text-brand" />
-            </div>
-            <div>
-              <h3 className="h2 mb-1">Referral Program</h3>
-              <p className="body-text opacity-70 max-w-md">Invite friends and get rewarded. They get a 2-week Pro trial, and you get 1 month of Pro features free when you reach 3 referrals!</p>
-              <div className="flex items-center gap-2 mt-4">
-                <div className="flex -space-x-2">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center shrink-0">
+            <Trophy className="w-6 h-6 text-brand" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-3 mb-1">
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Referral Program</h3>
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-1.5">
                   {[1,2,3].map(i => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-zinc-100 flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                    <div key={i} className="w-5 h-5 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 flex items-center justify-center text-[8px] font-bold text-zinc-400">
                       {i}
                     </div>
                   ))}
                 </div>
-                <p className="label-text text-brand">Referrals: 0 / 3</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-brand">0 / 3</p>
               </div>
             </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md leading-relaxed">Invite friends & get 1 month of Pro features free when you reach 3 referrals!</p>
           </div>
-          
-          <div className="flex items-center gap-4 p-2 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-xl rounded-[2rem] border border-white/40 dark:border-white/10 shadow-xl">
-            <div className="px-6 py-3">
-              <span className="label-text block leading-none mb-2 opacity-50">Your Code</span>
-              <span className="text-3xl font-display font-bold text-zinc-900 dark:text-white tracking-tighter leading-none">{user?.referral_code || 'GRYNDEE'}</span>
-            </div>
-            <button 
-              onClick={() => {
-                if (user?.referral_code) {
-                  navigator.clipboard.writeText(user.referral_code);
-                  toast.success('Referral code copied!');
-                }
-              }}
-              className="w-14 h-14 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl hover:scale-105 transition-all active:scale-95 shadow-xl shadow-black/20 flex items-center justify-center"
-              title="Copy Code"
-            >
-              <Copy className="w-6 h-6" />
-            </button>
+        </div>
+        
+        <div className="relative z-10 flex items-center gap-3 p-1.5 bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-sm shrink-0 self-start md:self-auto w-full md:w-auto mt-2 md:mt-0 justify-between md:justify-start">
+          <div className="px-3 py-1">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Your Code</span>
+            <span className="text-lg font-display font-bold text-zinc-900 dark:text-white tracking-tight leading-none">{user?.referral_code || 'GRYNDEE'}</span>
           </div>
+          <button 
+            onClick={() => {
+              if (user?.referral_code) {
+                navigator.clipboard.writeText(user.referral_code);
+                toast.success('Referral code copied!');
+              }
+            }}
+            className="w-10 h-10 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl hover:scale-105 transition-all active:scale-95 shadow-md flex items-center justify-center shrink-0"
+            title="Copy Code"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
         </div>
       </motion.div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 min-[400px]:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
         <QuickAction 
           to="/sales" 
           icon={Plus} 
