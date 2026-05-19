@@ -3535,7 +3535,6 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         }
 
         // Send email BEFORE committing
-        const verificationLink = `${req.protocol}://${req.get('host')}/verify-email?token=mock-token-${newUser.id}`;
         const emailHtml = `
           <div style="text-align: center; margin-bottom: 32px;">
             <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 24px; font-weight: 800;">Welcome to Gryndee!</h2>
@@ -3545,14 +3544,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           <p>Hi ${name || normalizedUsername},</p>
           <p>Your account has been successfully created. You can now start managing your business with ease. Your username is: <strong>${normalizedUsername}</strong></p>
           
-          <p>To get started, please verify your email address by clicking the button below:</p>
+          <p>To get started, please verify your email address by entering the following 6-digit code:</p>
           
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${verificationLink}" class="button">Verify My Email</a>
+            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 12px; font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #111827; display: inline-block;">
+              ${verificationCode}
+            </div>
           </div>
           
-          <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
-          <p style="color: #6b7280; font-size: 12px; word-break: break-all;">${verificationLink}</p>
+          <p style="color: #6b7280; font-size: 14px; text-align: center;">This code will expire in 10 minutes.</p>
           
           <div class="divider"></div>
           
@@ -3664,11 +3664,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     console.log(`[AUTH] Register success: "${normalizedUsername}" (ID: ${userId}, Account: ${account.id}).`);
 
     // Send email
-    const verificationLink = `${req.protocol}://${req.get('host')}/verify-email?token=mock-token-${newUser.id}`;
     const emailBody = welcomeBody
       .replace('{name}', name || normalizedUsername)
       .replace('{username}', normalizedUsername)
-      .replace('{verification_link}', verificationLink);
+      .replace('{verification_link}', verificationCode);
 
     const emailHtml = `
       <div style="text-align: center; margin-bottom: 32px;">
@@ -3679,14 +3678,15 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       <p>Hi ${name || normalizedUsername},</p>
       <p>Your account has been successfully created. You can now start managing your business with ease. Your username is: <strong>${normalizedUsername}</strong></p>
       
-      <p>To get started, please verify your email address by clicking the button below:</p>
+      <p>To get started, please verify your email address by entering the following 6-digit code:</p>
       
       <div style="text-align: center; margin: 32px 0;">
-        <a href="${verificationLink}" class="button">Verify My Email</a>
+        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 12px; font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #111827; display: inline-block;">
+          ${verificationCode}
+        </div>
       </div>
       
-      <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
-      <p style="color: #6b7280; font-size: 12px; word-break: break-all;">${verificationLink}</p>
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">This code will expire in 10 minutes.</p>
       
       <div class="divider"></div>
       

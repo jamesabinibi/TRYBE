@@ -1064,14 +1064,13 @@ export default function SuperAdmin() {
         </div>
         
         <div className="w-full">
-          <div className="hidden md:block w-full">
+          <div className="hidden md:block w-full overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-zinc-50/50 dark:bg-zinc-800/50">
                   <th className="px-8 py-4 label-text">User</th>
                   <th className="px-8 py-4 label-text">Account Type</th>
                   <th className="px-8 py-4 label-text">Business Type</th>
-                  <th className="px-8 py-4 label-text">Account</th>
                   <th className="px-8 py-4 label-text">Role</th>
                   <th className="px-8 py-4 label-text">Verified</th>
                   <th className="px-8 py-4 label-text">Status</th>
@@ -1103,12 +1102,6 @@ export default function SuperAdmin() {
                       </td>
                       <td className="px-8 py-5">
                         <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{user.business_type || 'N/A'}</p>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2 text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                          <Building2 className="w-4 h-4 opacity-50" />
-                          {user.account_name || 'N/A'}
-                        </div>
                       </td>
                       <td className="px-8 py-5">
                         <span className={cn(
@@ -1244,11 +1237,7 @@ export default function SuperAdmin() {
                     </button>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-1">
-                    <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Account</p>
-                    <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300 truncate">{user.account_name || 'N/A'}</p>
-                  </div>
+                <div className="flex justify-end pt-2">
                   <div className="space-y-1 text-right">
                     <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Role & Status</p>
                     <div className="flex items-center justify-end gap-2">
