@@ -1,7 +1,6 @@
 {
   "name": "Gryndee Business Hub | Intelligent Business Management too for MSMEs",
   "description": "Gryndee is the all-in-one business management app for MSMEs. Automate bookkeeping, manage sales, and get AI-powered insights to grow your business.",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

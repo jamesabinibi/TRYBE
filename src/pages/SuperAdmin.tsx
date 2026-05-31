@@ -1074,7 +1074,7 @@ export default function SuperAdmin() {
                   <th className="px-8 py-4 label-text">Role</th>
                   <th className="px-8 py-4 label-text">Verified</th>
                   <th className="px-8 py-4 label-text">Status</th>
-                  <th className="px-8 py-4 label-text text-right">Actions</th>
+                  <th className="px-8 py-4 label-text sticky right-0 bg-zinc-50/50 dark:bg-zinc-800/50 backdrop-blur-sm z-10 w-32 border-l border-zinc-100 dark:border-zinc-800 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -1122,13 +1122,13 @@ export default function SuperAdmin() {
                       <td className="px-8 py-5">
                         <span className={cn(
                           "label-text px-2 py-0.5 rounded-full",
-                          user.account_active ? "bg-brand/10 text-brand" : "bg-red-500/10 text-red-500"
+                          (user.is_active ?? true) ? "bg-brand/10 text-brand" : "bg-red-500/10 text-red-500"
                         )}>
-                          {user.account_active ? 'Active' : 'Inactive'}
+                          {(user.is_active ?? true) ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-8 py-5 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-8 py-5 sticky right-0 bg-white dark:bg-zinc-900 border-l border-zinc-100 dark:border-zinc-800 w-32 z-10 transition-colors group-hover:bg-zinc-50/50 dark:group-hover:bg-zinc-800/30">
+                        <div className="flex items-center justify-center gap-2">
                           <button 
                             onClick={() => {
                               setSelectedUser(user);
@@ -1166,9 +1166,9 @@ export default function SuperAdmin() {
                             </button>
                           )}
                           <button 
-                            onClick={() => handleToggleUserStatus(user.id, user.account_active)}
-                            className={cn("p-2 transition-colors", user.account_active ? "text-zinc-400 hover:text-amber-500" : "text-amber-500 hover:text-amber-600")}
-                            title={user.account_active ? "Deactivate User" : "Activate User"}
+                            onClick={() => handleToggleUserStatus(user.id, user.is_active ?? true)}
+                            className={cn("p-2 transition-colors", (user.is_active ?? true) ? "text-zinc-400 hover:text-amber-500" : "text-amber-500 hover:text-amber-600")}
+                            title={(user.is_active ?? true) ? "Deactivate User" : "Activate User"}
                           >
                             <Power className="w-4 h-4" />
                           </button>
@@ -1224,8 +1224,8 @@ export default function SuperAdmin() {
                       <Key className="w-4 h-4" />
                     </button>
                     <button 
-                      onClick={() => handleToggleUserStatus(user.id, user.account_active)}
-                      className={cn("p-2.5 rounded-xl transition-all active:scale-95", user.account_active ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400" : "bg-amber-500/10 text-amber-500")}
+                      onClick={() => handleToggleUserStatus(user.id, user.is_active ?? true)}
+                      className={cn("p-2.5 rounded-xl transition-all active:scale-95", (user.is_active ?? true) ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400" : "bg-amber-500/10 text-amber-500")}
                     >
                       <Power className="w-4 h-4" />
                     </button>
@@ -1249,9 +1249,9 @@ export default function SuperAdmin() {
                       </span>
                       <span className={cn(
                         "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
-                        user.account_active ? "bg-brand/10 text-brand" : "bg-red-500/10 text-red-500"
+                        (user.is_active ?? true) ? "bg-brand/10 text-brand" : "bg-red-500/10 text-red-500"
                       )}>
-                        {user.account_active ? 'Active' : 'Inactive'}
+                        {(user.is_active ?? true) ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Plus, 
@@ -17,7 +17,8 @@ import {
   Check,
   Briefcase,
   Upload,
-  Share2
+  Share2,
+  ChevronDown
 } from 'lucide-react';
 import { Product, Category, Service } from '../types';
 import { formatCurrency, cn, NUMBER_STYLE, useQuery, getOptimizedImageUrl } from '../lib/utils';
@@ -53,7 +54,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradie
     animate={{ opacity: 1, y: 0 }}
     whileHover={{ y: -8 }}
     className={cn(
-      "glass-card p-6 sm:p-8 flex flex-col justify-between min-h-[160px] relative overflow-hidden group", 
+      "glass-card p-5 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[140px] relative overflow-hidden group", 
       className
     )}
   >
@@ -63,17 +64,17 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradie
     <div className="relative z-10 h-full flex flex-col">
       <div className="flex items-center justify-between mb-auto">
         {Icon && (
-          <div className={cn("w-14 h-14 rounded-[1.25rem] flex items-center justify-center shadow-xl", color)}>
-            <Icon className="w-7 h-7" />
+          <div className={cn("w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-[1.25rem] flex items-center justify-center shadow-xl", color)}>
+            <Icon className="w-5 h-5 sm:w-7 h-7" />
           </div>
         )}
         <div className="text-right">
-          <p className="label-text font-bold uppercase tracking-[0.2em] opacity-40 mb-1">{title}</p>
-          {subtitle && <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{subtitle}</p>}
+          <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 mb-1">{title}</p>
+          {subtitle && <p className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{subtitle}</p>}
         </div>
       </div>
-      <div className="mt-8">
-        <div className="text-4xl md:text-5xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
+      <div className="mt-4 sm:mt-8">
+        <div className="text-3xl sm:text-4xl md:text-5xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
           {value}
         </div>
       </div>
@@ -212,6 +213,21 @@ export default function Products() {
   const categories = inventoryData?.categories || [];
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (addMenuRef.current && !addMenuRef.current.contains(event.target as Node)) {
+        setShowAddMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
   const [newService, setNewService] = useState({
@@ -232,6 +248,8 @@ export default function Products() {
 
   const openAddModal = useCallback(() => {
     setEditingProduct(null);
+    setIsCreatingCategory(false);
+    setNewCategoryName('');
     setNewProduct(getInitialProductState());
     setImagePreviews([]);
     setIsBulkEditing(false);
@@ -262,6 +280,36 @@ export default function Products() {
 
   const fetchServices = () => refetchInventory();
   const fetchCategories = () => refetchInventory();
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      const res = await fetchWithAuth('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategoryName.trim() })
+      });
+      if (res.ok) {
+        toast.success('Category created successfully');
+        setNewCategoryName('');
+        setIsCreatingCategory(false);
+        const newCategory = await res.json();
+        if (newCategory?.id) {
+          if (isServiceModalOpen) {
+            setNewService(prev => ({ ...prev, category: newCategory.name }));
+          } else {
+            setNewProduct(prev => ({ ...prev, category_id: newCategory.id.toString() }));
+          }
+        }
+        fetchCategories();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to create category');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    }
+  };
 
   const handleShareWhatsApp = (product: Product) => {
     const message = `*${product.name}*\n${product.description || ''}\n\nPrice: ${formatCurrency(product.selling_price, currency)}\n\nCheck it out on our store!`;
@@ -351,6 +399,8 @@ export default function Products() {
   const handleEditClick = async (product: Product) => {
     // Set initial data with images if available
     setEditingProduct(product);
+    setIsCreatingCategory(false);
+    setNewCategoryName('');
     setNewProduct({
       name: product.name,
       category_id: (product.category_id || '').toString(),
@@ -434,6 +484,8 @@ export default function Products() {
 
   const openAddServiceModal = () => {
     setEditingService(null);
+    setIsCreatingCategory(false);
+    setNewCategoryName('');
     setNewService({
       name: '',
       description: '',
@@ -446,6 +498,8 @@ export default function Products() {
 
   const handleEditService = (service: any) => {
     setEditingService(service);
+    setIsCreatingCategory(false);
+    setNewCategoryName('');
     setNewService({
       name: service.name,
       description: service.description || '',
@@ -639,13 +693,46 @@ export default function Products() {
           </div>
           <div className="flex items-center gap-3">
              {(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_manage_products)) && (
-                <button 
-                  onClick={() => activeSubTab === 'products' ? openAddModal() : openAddServiceModal()}
-                  className="btn-primary flex items-center gap-2 shadow-lg shadow-brand/20 py-3.5"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add {activeSubTab === 'products' ? 'Product' : 'Service'}
-                </button>
+                <div className="relative group" ref={addMenuRef}>
+                  <button 
+                    onClick={() => setShowAddMenu(!showAddMenu)}
+                    className="btn-primary flex items-center gap-2 shadow-lg shadow-brand/20 py-3.5 px-6"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span>Add New</span>
+                    <ChevronDown className="w-4 h-4 ml-1 opacity-70 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                  {showAddMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl shadow-xl overflow-hidden z-50">
+                      <button 
+                        onClick={() => {
+                          setShowAddMenu(false);
+                          setActiveSubTab('products');
+                          openAddModal();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
+                          <Package className="w-4 h-4" />
+                        </div>
+                        Product
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setShowAddMenu(false);
+                          setActiveSubTab('services');
+                          openAddServiceModal();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                          <Briefcase className="w-4 h-4" />
+                        </div>
+                        Service
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
           </div>
         </div>
@@ -927,46 +1014,46 @@ export default function Products() {
             </div>
 
             {/* Mobile Card Grid */}
-            <div className="md:hidden grid grid-cols-1 gap-4 p-4">
+            <div className="md:hidden grid grid-cols-1 gap-3 p-3">
               {displayItems.map((item: any) => (
-                <div key={item.id} className="p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 shrink-0 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                <div key={item.id} className="p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-3 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-12 h-12 shrink-0 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 overflow-hidden border border-zinc-200 dark:border-zinc-700">
                         {activeSubTab === 'products' ? (
                           item.images && item.images.length > 0 ? (
                             <img src={getOptimizedImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
                           ) : (
-                            <ImageIcon className="w-6 h-6" />
+                            <ImageIcon className="w-5 h-5" />
                           )
                         ) : (
                           item.image_url ? (
                             <img src={getOptimizedImageUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
                           ) : (
-                            <Briefcase className="w-6 h-6" />
+                            <Briefcase className="w-5 h-5" />
                           )
                         )}
                       </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">{item.name}</h4>
-                        <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{activeSubTab === 'products' ? item.category_name : item.category}</p>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight truncate">{item.name}</h4>
+                        <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest truncate">{activeSubTab === 'products' ? item.category_name : item.category}</p>
                       </div>
                     </div>
                     {canManageProducts && (
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
+                      <div className="flex items-center shrink-0">
+                        <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-brand transition-colors">
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
+                        <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-red-600 transition-colors">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
                     <div>
-                      <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">
+                      <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-0.5">
                         {activeSubTab === 'products' ? 'Stock' : 'Duration'}
                       </p>
                       <p className={cn(
@@ -977,15 +1064,15 @@ export default function Products() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Price</p>
+                      <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-0.5">Price</p>
                       <p className="text-xs font-bold text-zinc-900 dark:text-white">{formatCurrency(activeSubTab === 'products' ? item.selling_price : item.price, currency)}</p>
                     </div>
                   </div>
 
                   {activeSubTab === 'products' && item.variants && item.variants.length > 1 && (
-                    <div className="flex flex-wrap gap-1.5 pt-2">
+                    <div className="flex flex-wrap gap-1.5 pt-1">
                       {item.variants.map((v: any, i: number) => v.quantity > 0 && (
-                        <span key={i} className="text-[9px] font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-lg uppercase tracking-tighter">
+                        <span key={i} className="text-[9px] font-bold px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-lg uppercase tracking-tighter">
                           {v.size}: {v.quantity}
                         </span>
                       ))}
@@ -1100,17 +1187,47 @@ export default function Products() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
-                    <Input
-                      as="select"
-                      value={newService.category}
-                      onChange={(e) => setNewService({...newService, category: e.target.value})}
-                    >
-                      <option value="">Select a category</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                      ))}
-                    </Input>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatingCategory(!isCreatingCategory)}
+                        className="text-[10px] font-bold text-brand hover:text-brand-hover uppercase tracking-widest transition-colors"
+                      >
+                        {isCreatingCategory ? 'Cancel' : '+ New Category'}
+                      </button>
+                    </div>
+                    {isCreatingCategory ? (
+                      <div className="flex gap-2">
+                        <Input 
+                          type="text" 
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          placeholder="New Category Name"
+                          className="flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCreateCategory}
+                          className="btn-primary py-2 px-4"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative group">
+                        <Input
+                          as="select"
+                          value={newService.category}
+                          onChange={(e) => setNewService({...newService, category: e.target.value})}
+                        >
+                          <option value="">Select a category</option>
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.name}>{cat.name}</option>
+                          ))}
+                        </Input>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Description</label>
@@ -1185,7 +1302,7 @@ export default function Products() {
 
               <div className="flex-1 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row">
                 {/* Main Form Area */}
-                <div className="flex-1 p-4 sm:p-10 bg-white dark:bg-zinc-900 order-2 lg:order-1 lg:overflow-y-auto">
+                <div className="flex-1 p-4 sm:p-10 bg-white dark:bg-zinc-900 lg:overflow-y-auto">
                   <form onSubmit={handleAddProduct} id="product-form" className="max-w-4xl mx-auto space-y-8 sm:space-y-10">
                     {/* Basic Info Section */}
                     <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-8 sm:space-y-10">
@@ -1250,20 +1367,48 @@ export default function Products() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
-                              <div className="relative group">
-                                <Input 
-                                  as="select"
-                                  value={newProduct.category_id}
-                                  onChange={(e) => setNewProduct({...newProduct, category_id: e.target.value})}
+                              <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Category</label>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsCreatingCategory(!isCreatingCategory)}
+                                  className="text-[10px] font-bold text-brand hover:text-brand-hover uppercase tracking-widest transition-colors"
                                 >
-                                  <option value="" className="dark:bg-zinc-900">Select Category</option>
-                                  {categories.map(cat => (
-                                    <option key={cat.id} value={cat.id} className="dark:bg-zinc-900">{cat.name}</option>
-                                  ))}
-                                </Input>
-                                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-brand transition-colors" />
+                                  {isCreatingCategory ? 'Cancel' : '+ New Category'}
+                                </button>
                               </div>
+                              {isCreatingCategory ? (
+                                <div className="flex gap-2">
+                                  <Input 
+                                    type="text" 
+                                    value={newCategoryName}
+                                    onChange={(e) => setNewCategoryName(e.target.value)}
+                                    placeholder="New Category Name"
+                                    className="flex-1"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={handleCreateCategory}
+                                    className="btn-primary py-2 px-4"
+                                  >
+                                    Add
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="relative group">
+                                  <Input 
+                                    as="select"
+                                    value={newProduct.category_id}
+                                    onChange={(e) => setNewProduct({...newProduct, category_id: e.target.value})}
+                                  >
+                                    <option value="" className="dark:bg-zinc-900">Select Category</option>
+                                    {categories.map(cat => (
+                                      <option key={cat.id} value={cat.id} className="dark:bg-zinc-900">{cat.name}</option>
+                                    ))}
+                                  </Input>
+                                  <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-brand transition-colors" />
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -1278,6 +1423,7 @@ export default function Products() {
                                 >
                                   <option value="Pieces" className="dark:bg-zinc-900">Pieces</option>
                                   <option value="Kilograms" className="dark:bg-zinc-900">Kilograms</option>
+                                  <option value="Yard" className="dark:bg-zinc-900">Yard</option>
                                 </Input>
                                 <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 rotate-90 pointer-events-none group-hover:text-brand transition-colors" />
                               </div>
@@ -1343,7 +1489,7 @@ export default function Products() {
                               setNewProduct({
                                 ...newProduct, 
                                 product_type: 'multiple',
-                                variants: newProduct.variants.length > 1 ? newProduct.variants : ['M', 'L', 'XL', '2X', '3X'].map(size => ({
+                                variants: newProduct.variants.length > 1 ? newProduct.variants : ['S', 'M', 'L', 'XL', '2X', '3X'].map(size => ({
                                   size,
                                   color: '',
                                   quantity: '0',
@@ -1554,7 +1700,7 @@ export default function Products() {
                 </div>
 
                 {/* Summary Sidebar */}
-                <div className="w-full lg:w-80 bg-zinc-50/50 lg:bg-white dark:bg-zinc-900/50 border-b lg:border-b-0 lg:border-l border-zinc-100 dark:border-zinc-800 p-6 sm:p-8 flex flex-col order-1 lg:order-2 shrink-0 lg:overflow-y-auto">
+                <div className="w-full lg:w-80 bg-zinc-50/50 lg:bg-white dark:bg-zinc-900/50 border-t lg:border-t-0 lg:border-l border-zinc-100 dark:border-zinc-800 p-6 sm:p-8 flex flex-col shrink-0 lg:overflow-y-auto">
                   <div className="flex-1 space-y-6 sm:space-y-8">
                     <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Summary</h3>
                     

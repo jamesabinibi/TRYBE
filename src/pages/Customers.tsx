@@ -72,7 +72,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradie
     animate={{ opacity: 1, y: 0 }}
     whileHover={{ y: -8 }}
     className={cn(
-      "glass-card p-6 sm:p-8 flex flex-col justify-between min-h-[160px] relative overflow-hidden group", 
+      "glass-card p-5 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[140px] relative overflow-hidden group", 
       className
     )}
   >
@@ -82,17 +82,17 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradie
     <div className="relative z-10 h-full flex flex-col">
       <div className="flex items-center justify-between mb-auto">
         {Icon && (
-          <div className={cn("w-14 h-14 rounded-[1.25rem] flex items-center justify-center shadow-xl", color)}>
-            <Icon className="w-7 h-7" />
+          <div className={cn("w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-[1.25rem] flex items-center justify-center shadow-xl", color)}>
+            <Icon className="w-5 h-5 sm:w-7 sm:h-7" />
           </div>
         )}
         <div className="text-right">
-          <p className="label-text font-bold uppercase tracking-[0.2em] opacity-40 mb-1">{title}</p>
-          {subtitle && <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{subtitle}</p>}
+          <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 mb-1">{title}</p>
+          {subtitle && <p className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{subtitle}</p>}
         </div>
       </div>
-      <div className="mt-8">
-        <div className="text-4xl md:text-5xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
+      <div className="mt-4 sm:mt-8">
+        <div className="text-3xl sm:text-4xl md:text-5xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
           {value}
         </div>
       </div>

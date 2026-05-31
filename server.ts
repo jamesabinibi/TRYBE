@@ -3067,20 +3067,19 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+
+
   app.post("/api/upload", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
-      const isSuperAdmin = userInfo?.role === 'super_admin' || 
-                           userInfo?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com' ||
-                           userInfo?.email?.toLowerCase() === 'connectabinibi@gmail.com';
       
-      if (!userInfo || !isSuperAdmin) {
-        return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo) {
+        return res.status(401).json({ error: "Unauthorized" });
       }
 
       const { image, folder } = req.body;
       if (!image) return res.status(400).json({ error: "Image is required" });
-      console.log(`[UPLOAD] Received upload request. Folder: ${folder}, Size: ${image.length} chars`);
+      console.log(`[UPLOAD] Received upload request by user ${userInfo.email}. Folder: ${folder}, Size: ${image.length} chars`);
 
       const uploadedUrl = await uploadToCloudinary(image, folder || 'landing');
       if (uploadedUrl) {
@@ -3427,7 +3426,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         if (referredByAccountId) {
           accountQuery = 'INSERT INTO accounts (name, account_type, business_type, referral_code, referred_by_id, subscription_plan, subscription_status, trial_expiry) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id';
           const trialExpiry = new Date();
-          trialExpiry.setDate(trialExpiry.getDate() + 14); // 14 days trial
+          trialExpiry.setDate(trialExpiry.getDate() + 30); // 30 days trial
           accountParams = [name || normalizedUsername, accountType || 'personal', businessType, newReferralCode, referredByAccountId, 'pro', 'active', trialExpiry];
         }
 
@@ -3515,13 +3514,13 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
               }
             }
 
-            // Notify New User & Grant 14-day Pro Trial
+            // Notify New User & Grant 30-day Pro Trial
             const trialExpiry = new Date();
-            trialExpiry.setDate(trialExpiry.getDate() + 14);
+            trialExpiry.setDate(trialExpiry.getDate() + 30);
             
             await client.query(
               'INSERT INTO notifications (account_id, user_id, title, message, type) VALUES ($1, $2, $3, $4, $5)',
-              [account.id, newUser.id, 'Welcome to Gryndee!', `You've successfully used a referral code! You've been granted 14 days of Pro features for free.`, 'success']
+              [account.id, newUser.id, 'Welcome to Gryndee!', `You've successfully used a referral code! You've been granted 30 days of Pro features for free.`, 'success']
             );
 
             // Update new account to Pro trial
@@ -3662,6 +3661,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
     const userId = newUser.id;
     console.log(`[AUTH] Register success: "${normalizedUsername}" (ID: ${userId}, Account: ${account.id}).`);
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Send email
     const emailBody = welcomeBody

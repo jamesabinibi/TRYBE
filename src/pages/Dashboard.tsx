@@ -307,13 +307,20 @@ export default function Dashboard() {
               <h3 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Referral Program</h3>
               <div className="flex items-center gap-2">
                 <div className="flex -space-x-1.5">
-                  {[1,2,3].map(i => (
-                    <div key={i} className="w-5 h-5 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 flex items-center justify-center text-[8px] font-bold text-zinc-400">
-                      {i}
-                    </div>
-                  ))}
+                  {[1,2,3].map(i => {
+                    const numReferrals = (user?.active_referral_count || 0) % 3;
+                    const displayReferrals = (user?.active_referral_count || 0) > 0 && numReferrals === 0 ? 3 : numReferrals;
+                    const isActive = i <= displayReferrals;
+                    return (
+                      <div key={i} className={cn("w-5 h-5 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[8px] font-bold", isActive ? "bg-brand text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400")}>
+                        {i}
+                      </div>
+                    );
+                  })}
                 </div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-brand">0 / 3</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-brand">
+                  {((user?.active_referral_count || 0) % 3 === 0 && (user?.active_referral_count || 0) > 0) ? 3 : ((user?.active_referral_count || 0) % 3)} / 3
+                </p>
               </div>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md leading-relaxed">Invite friends & get 1 month of Pro features free when you reach 3 referrals!</p>

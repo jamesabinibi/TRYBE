@@ -31,21 +31,17 @@ import {
   Download
 } from 'lucide-react';
 import { Category } from '../types';
-import { cn, retryWithBackoff, fetchGeminiKey } from '../lib/utils';
+import { cn, retryWithBackoff } from '../lib/utils';
 import { offlineQueue } from '../lib/offline';
 import { toast } from 'sonner';
 import { useAuth, useSettings } from '../App';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
-import { GoogleGenAI } from "@google/genai";
+
 
 export default function Settings() {
   const { user, fetchWithAuth } = useAuth();
   const { settings: globalSettings, refreshSettings } = useSettings();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [newCategory, setNewCategory] = useState('');
-  const [editingCategory, setEditingCategory] = useState<number | null>(null);
-  const [editCategoryName, setEditCategoryName] = useState('');
   
   const [settings, setSettings] = useState({
     business_name: globalSettings?.business_name || 'Gryndee Enterprises',
@@ -208,10 +204,6 @@ export default function Settings() {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
   const [isMigrating, setIsMigrating] = useState(false);
   const [isMigratingDb, setIsMigratingDb] = useState(false);
 
@@ -296,137 +288,6 @@ export default function Settings() {
     ), { duration: Infinity });
   };
 
-  const fetchCategories = async () => {
-    try {
-      const res = await fetchWithAuth('/api/categories');
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Categories fetch error:', errorData);
-        return;
-      }
-      const data = await res.json();
-      setCategories(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Categories fetch network error:', err);
-    }
-  };
-
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCategory) return;
-    
-    try {
-      const response = await fetchWithAuth('/api/categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newCategory })
-      });
-      
-      if (response.ok) {
-        setNewCategory('');
-        fetchCategories();
-        toast.success('Category added successfully');
-      } else {
-        const data = await response.json();
-        toast.error(data.error || 'Failed to add category');
-      }
-    } catch (error) {
-      if (!navigator.onLine || error instanceof Error && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
-        offlineQueue.add('/api/categories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: newCategory })
-        }, `Add category: ${newCategory}`);
-        
-        setNewCategory('');
-        toast.success('Offline: Category addition queued');
-      } else {
-        toast.error('Network error');
-      }
-    }
-  };
-
-  const handleUpdateCategory = async (id: number) => {
-    if (!editCategoryName) return;
-    try {
-      const response = await fetchWithAuth(`/api/categories/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: editCategoryName })
-      });
-      if (response.ok) {
-        setEditingCategory(null);
-        fetchCategories();
-        toast.success('Category updated');
-      } else {
-        const data = await response.json();
-        toast.error(data.error || 'Failed to update category');
-      }
-    } catch (error) {
-      if (!navigator.onLine || error instanceof Error && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
-        offlineQueue.add(`/api/categories/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: editCategoryName })
-        }, `Update category: ${editCategoryName}`);
-        
-        setEditingCategory(null);
-        toast.success('Offline: Category update queued');
-      } else {
-        toast.error('Network error');
-      }
-    }
-  };
-
-  const handleDeleteCategory = async (id: number) => {
-    toast.custom((t) => (
-      <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-2xl space-y-4 max-w-sm">
-        <div className="flex items-center gap-3 text-red-600">
-          <AlertCircle className="w-5 h-5" />
-          <h3 className="font-bold text-zinc-900 uppercase tracking-widest text-xs">Delete Category</h3>
-        </div>
-        <p className="text-sm text-zinc-500 font-medium">Are you sure? This will only work if no products are assigned to this category.</p>
-        <div className="flex gap-3">
-          <button 
-            onClick={async () => {
-              toast.dismiss(t);
-              const deletePromise = new Promise(async (resolve, reject) => {
-                try {
-                  const response = await fetchWithAuth(`/api/categories/${id}`, { method: 'DELETE' });
-                  if (response.ok) {
-                    fetchCategories();
-                    resolve(true);
-                  } else {
-                    const data = await response.json();
-                    reject(data.error || 'Failed to delete category');
-                  }
-                } catch (error) {
-                  if (!navigator.onLine || error instanceof Error && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
-                    offlineQueue.add(`/api/categories/${id}`, { method: 'DELETE' }, `Delete category ID: ${id}`);
-                    resolve("queued");
-                  } else {
-                    reject('Network error');
-                  }
-                }
-              });
-
-              toast.promise(deletePromise, {
-                loading: 'Deleting category...',
-                success: (res) => res === "queued" ? 'Offline: Category deletion queued' : 'Category deleted',
-                error: (err) => err
-              });
-            }}
-            className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
-          >
-            Delete
-          </button>
-          <button onClick={() => toast.dismiss(t)} className="flex-1 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
-            Cancel
-          </button>
-        </div>
-      </div>
-    ), { duration: Infinity });
-  };
 
   const [diagResults, setDiagResults] = useState<any>(null);
   const [isCheckingDiag, setIsCheckingDiag] = useState(false);
@@ -721,7 +582,7 @@ NOTIFY pgrst, 'reload schema';
     toast.success('SQL copied to clipboard! Paste it into Supabase SQL Editor.');
   };
 
-  const [activeTab, setActiveTab] = useState<'branding' | 'team' | 'categories' | 'account' | 'system'>('branding');
+  const [activeTab, setActiveTab] = useState<'branding' | 'team' | 'account' | 'system'>('branding');
 
   // Users Management State (Merged from Users.tsx)
   const [users, setUsers] = useState<any[]>([]);
@@ -879,108 +740,42 @@ NOTIFY pgrst, 'reload schema';
     }
 
     setIsGeneratingLogo(true);
-    setLogoStep('Step 1/3: Initializing AI...');
+    setLogoStep('Step 1/2: Crafting creative designs...');
     setGeneratedLogos([]);
     
     try {
-      const aistudio = (window as any).aistudio;
+      const bColorName = settings.brand_color; 
+      const prompt1 = `Award-winning minimalist modern logo for "${settings.business_name}". Clean white background, highly professional, trending on dribbble, vector style, accent color ${bColorName}.`;
+      const prompt2 = `Creative abstract tech logo icon for company "${settings.business_name}". Professional, beautiful 3D details, crisp white background, premium corporate identity, using color ${bColorName}.`;
       
-      // Use process.env.API_KEY (from selection dialog) or GEMINI_API_KEY (environment)
-      let apiKey = await fetchGeminiKey();
+      const seed1 = Math.floor(Math.random() * 9999999);
+      const seed2 = Math.floor(Math.random() * 9999999);
+
+      const url1 = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt1)}?seed=${seed1}&width=512&height=512&nologo=true`;
+      const url2 = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt2)}?seed=${seed2}&width=512&height=512&nologo=true`;
       
-      if (!apiKey && aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
-        const hasKey = await aistudio.hasSelectedApiKey();
-        if (hasKey) {
-          // Key is selected but might not be in process.env yet
-          apiKey = (window as any).process?.env?.API_KEY || process.env.API_KEY;
-        }
-      }
-
-      if (!apiKey) {
-        if (aistudio && typeof aistudio.openSelectKey === 'function') {
-          toast.info('Please select an API key to enable AI logo generation.');
-          await aistudio.openSelectKey();
-          // We proceed assuming the user will select a key. 
-          // The next attempt will have the key in process.env.API_KEY.
-          setIsGeneratingLogo(false);
-          toast.success('Key selected! Please click "Generate Logo" again to start.');
-          return;
-        } else {
-          setIsGeneratingLogo(false);
-          toast.error('AI service configuration missing. Please ensure an API key is set.');
-          return;
-        }
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-      setLogoStep('Step 2/3: Designing logo concepts...');
-      
-      const prompt = `Create a professional, modern, and minimalist business logo for a company named "${settings.business_name}". 
-      The primary brand color should be ${settings.brand_color}. 
-      The logo should be clean, high-quality, and suitable for a business profile. 
-      Avoid complex details. Focus on a strong icon or typography.
-      Provide the logo on a clean white background.`;
-
-      // Generate two options
-      const generateOption = async () => {
-        return await retryWithBackoff(async () => {
-          const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-image-preview',
-            contents: { parts: [{ text: prompt }] },
-            config: {
-              imageConfig: {
-                aspectRatio: "1:1",
-                imageSize: "1K"
-              }
-            }
-          });
-
-          const candidates = response.candidates;
-          if (!candidates || candidates.length === 0) {
-            console.error('[AI] No candidates in response:', response);
-            throw new Error('No candidates returned');
-          }
-          
-          for (const part of candidates[0].content.parts) {
-            if (part.inlineData) {
-              return `data:image/png;base64,${part.inlineData.data}`;
-            }
-          }
-          
-          console.error('[AI] No image part found in candidates:', candidates[0]);
-          throw new Error('No image generated');
+      const fetchAsBase64 = async (url: string) => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network error');
+        const blob = await response.blob();
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
         });
       };
-
-      const [logo1, logo2] = await Promise.all([generateOption(), generateOption()]);
-      setLogoStep('Step 3/3: Finalizing options...');
-      setGeneratedLogos([logo1, logo2]);
-      toast.success('Generated 2 logo options for you!');
+      
+      const [logo1, logo2] = await Promise.all([
+        fetchAsBase64(url1).catch(() => url1),
+        fetchAsBase64(url2).catch(() => url2)
+      ]);
+      
+      setGeneratedLogos([logo1 as string, logo2 as string]);
+      toast.success('Generated 2 creative logo options for you!');
     } catch (err: any) {
       console.error('[AI] Logo generation failed:', err);
-      let errorMsg = err.message || 'Unknown error';
-      
-      // Try to parse JSON error if it's a string
-      if (typeof err === 'string' && err.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(err);
-          errorMsg = parsed.error?.message || errorMsg;
-        } catch (e) {}
-      } else if (err.response?.data?.error?.message) {
-        errorMsg = err.response.data.error.message;
-      }
-
-      if (errorMsg.toLowerCase().includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate')) {
-        toast.error('AI service is currently busy or quota exceeded. Please try again later.');
-      } else if (errorMsg.toLowerCase().includes('401') || errorMsg.toLowerCase().includes('403') || errorMsg.toLowerCase().includes('key')) {
-        toast.error('Invalid API key. Please re-select your API key in the settings.');
-        const aistudio = (window as any).aistudio;
-        if (aistudio && typeof aistudio.openSelectKey === 'function') {
-          await aistudio.openSelectKey();
-        }
-      } else {
-        toast.error('Failed to generate logo: ' + errorMsg);
-      }
+      toast.error('Failed to generate logo. Please try again.');
     } finally {
       setIsGeneratingLogo(false);
     }
@@ -1022,10 +817,13 @@ NOTIFY pgrst, 'reload schema';
             updatedSettings = { ...updatedSettings, logo_url: finalLogoUrl };
             toast.success('Logo uploaded successfully', { id: loadingToast });
           } else {
-            toast.error('Failed to upload logo, saving as is...', { id: loadingToast });
+            const errorData = await res.text();
+            console.error('Failed to upload logo:', errorData);
+            toast.error(`Failed to upload logo: ${errorData || 'Unknown error'}`, { id: loadingToast });
           }
-        } catch (e) {
-          toast.error('Failed to upload logo, saving as is...', { id: loadingToast });
+        } catch (e: any) {
+          console.error('Failed to upload logo error:', e);
+          toast.error(`Failed to upload logo exception: ${e.message}`, { id: loadingToast });
         }
       }
 
@@ -1244,17 +1042,6 @@ NOTIFY pgrst, 'reload schema';
           )}
         >
           Branding
-        </button>
-        <button
-          onClick={() => setActiveTab('categories')}
-          className={cn(
-            "px-6 py-2.5 rounded-xl label-text transition-all whitespace-nowrap",
-            activeTab === 'categories' 
-              ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
-              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-          )}
-        >
-          PRODUCT/SERVICE CATEGORY
         </button>
         <button
           onClick={() => setActiveTab('account')}
@@ -1699,81 +1486,7 @@ NOTIFY pgrst, 'reload schema';
         </div>
       )}
 
-      {activeTab === 'categories' && (
-        <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Categories Section */}
-          <section id="categories" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Tag className="w-4 h-4 text-brand" />
-                <h3 className="h3">Product/Service Category</h3>
-              </div>
-              <p className="body-text">Manage the categories used to organize your inventory.</p>
-            </div>
-            <div className="lg:col-span-2 glass-card p-6 sm:p-8 space-y-6 sm:space-y-8">
-              <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
-                <Input 
-                  type="text" 
-                  placeholder="New category name..." 
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  className="flex-1"
-                />
-                <button 
-                  type="submit"
-                  className="btn-primary w-full sm:w-auto px-8"
-                >
-                  Add
-                </button>
-              </form>
-              <div className="flex flex-wrap gap-2">
-                {categories.map(c => (
-                  <div key={c.id} className="group relative">
-                    {editingCategory === c.id ? (
-                      <div className="flex items-center gap-1 bg-white dark:bg-zinc-800 border border-brand rounded-xl px-2 py-1 shadow-sm">
-                        <Input 
-                          autoFocus
-                          type="text" 
-                          value={editCategoryName}
-                          onChange={(e) => setEditCategoryName(e.target.value)}
-                          className="w-24"
-                        />
-                        <button onClick={() => handleUpdateCategory(c.id)} className="p-1 text-brand hover:bg-brand/5 rounded-lg">
-                          <Check className="w-3 h-3" />
-                        </button>
-                        <button onClick={() => setEditingCategory(null)} className="p-1 text-zinc-400 hover:bg-zinc-50 rounded-lg">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 rounded-xl text-xs font-bold uppercase tracking-widest text-zinc-600 border border-zinc-200/50 group-hover:bg-white group-hover:border-brand/20 transition-all">
-                        {c.name}
-                        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            onClick={() => {
-                              setEditingCategory(c.id);
-                              setEditCategoryName(c.name);
-                            }}
-                            className="p-1 text-zinc-400 hover:text-brand rounded-lg"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteCategory(c.id)}
-                            className="p-1 text-zinc-400 hover:text-red-600 rounded-lg"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        </div>
-      )}
+
 
       {activeTab === 'system' && user?.role === 'super_admin' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

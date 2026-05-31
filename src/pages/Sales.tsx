@@ -70,7 +70,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradie
     animate={{ opacity: 1, y: 0 }}
     whileHover={{ y: -4 }}
     className={cn(
-      "glass-card p-8 flex flex-col justify-between min-h-[160px] relative overflow-hidden group", 
+      "glass-card p-5 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[140px] relative overflow-hidden group", 
       className
     )}
   >
@@ -78,19 +78,19 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, className, gradie
       <div className={cn("absolute -right-10 -top-10 w-32 h-32 blur-3xl opacity-20 group-hover:opacity-30 transition-opacity", gradient)} />
     )}
     <div className="relative z-10">
-      <div className="flex items-center justify-between mb-6">
-        <p className="label-text font-bold uppercase tracking-[0.15em] opacity-60">{title}</p>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.15em] text-zinc-500 dark:text-zinc-400">{title}</p>
         {Icon && (
-          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", color)}>
-            <Icon className="w-6 h-6" />
+          <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg", color)}>
+            <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
         )}
       </div>
       <div className="space-y-1">
-        <div className="text-3xl md:text-4xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
+        <div className="text-2xl sm:text-3xl md:text-4xl font-display font-bold tracking-tight text-zinc-900 dark:text-white">
           {value}
         </div>
-        {subtitle && <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
+        {subtitle && <p className="text-[10px] sm:text-xs font-medium text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
       </div>
     </div>
   </motion.div>
