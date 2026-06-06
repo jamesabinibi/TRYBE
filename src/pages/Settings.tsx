@@ -744,34 +744,19 @@ NOTIFY pgrst, 'reload schema';
     setGeneratedLogos([]);
     
     try {
-      const bColorName = settings.brand_color; 
-      const prompt1 = `Award-winning minimalist modern logo for "${settings.business_name}". Clean white background, highly professional, trending on dribbble, vector style, accent color ${bColorName}.`;
-      const prompt2 = `Creative abstract tech logo icon for company "${settings.business_name}". Professional, beautiful 3D details, crisp white background, premium corporate identity, using color ${bColorName}.`;
+      const response = await fetchWithAuth('/api/generate-logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings })
+      });
       
-      const seed1 = Math.floor(Math.random() * 9999999);
-      const seed2 = Math.floor(Math.random() * 9999999);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate logo');
+      }
 
-      const url1 = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt1)}?seed=${seed1}&width=512&height=512&nologo=true`;
-      const url2 = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt2)}?seed=${seed2}&width=512&height=512&nologo=true`;
-      
-      const fetchAsBase64 = async (url: string) => {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Network error');
-        const blob = await response.blob();
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      };
-      
-      const [logo1, logo2] = await Promise.all([
-        fetchAsBase64(url1).catch(() => url1),
-        fetchAsBase64(url2).catch(() => url2)
-      ]);
-      
-      setGeneratedLogos([logo1 as string, logo2 as string]);
+      setGeneratedLogos(data.logos);
       toast.success('Generated 2 creative logo options for you!');
     } catch (err: any) {
       console.error('[AI] Logo generation failed:', err);
@@ -790,7 +775,9 @@ NOTIFY pgrst, 'reload schema';
   const handleDownloadLogo = (logo: string) => {
     const link = document.createElement('a');
     link.href = logo;
-    link.download = `${settings.business_name.replace(/\s+/g, '_')}_logo.png`;
+    const isSvg = logo.startsWith('data:image/svg+xml');
+    const ext = isSvg ? 'svg' : (logo.startsWith('data:image/jpeg') ? 'jpg' : 'png');
+    link.download = `${(settings.business_name || 'business').replace(/\s+/g, '_')}_logo.${ext}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1088,7 +1075,7 @@ NOTIFY pgrst, 'reload schema';
                 <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl sm:rounded-[2.5rem] border-2 border-dashed border-zinc-200 dark:border-zinc-800 overflow-hidden bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center relative group shadow-inner">
                   {logoPreview ? (
                     <>
-                      <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-contain p-4" />
+                      <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-contain p-4" referrerPolicy="no-referrer" />
                       <button 
                         onClick={() => {
                           setLogoPreview(null);
@@ -1169,24 +1156,12 @@ NOTIFY pgrst, 'reload schema';
                     </div>
 
                     <button 
-                      onClick={handleGenerateLogo}
-                      disabled={isGeneratingLogo || !settings.business_name}
-                      className="btn-primary w-full"
+                      type="button"
+                      disabled={true}
+                      className="btn-primary w-full opacity-50 cursor-not-allowed"
                     >
-                      {isGeneratingLogo ? (
-                        <div className="flex flex-col items-center gap-1">
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span>Generating...</span>
-                          </div>
-                          <span className="text-[10px] font-medium opacity-80">{logoStep}</span>
-                        </div>
-                      ) : (
-                        <>
-                          <Sparkles className="w-5 h-5" />
-                          Generate Logo Options
-                        </>
-                      )}
+                      <Sparkles className="w-5 h-5" />
+                      AI Logo Generation (Coming Soon)
                     </button>
 
                     {generatedLogos.length > 0 && (
@@ -1194,7 +1169,7 @@ NOTIFY pgrst, 'reload schema';
                         {generatedLogos.map((logo, idx) => (
                           <div key={idx} className="space-y-3">
                             <div className="aspect-square bg-white rounded-2xl border border-zinc-200 p-4 flex items-center justify-center overflow-hidden group relative">
-                              <img src={logo} alt={`Generated Logo ${idx + 1}`} className="w-full h-full object-contain" />
+                              <img src={logo} alt={`Generated Logo ${idx + 1}`} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
                                 <button 
                                   onClick={() => handleSelectLogo(logo)}
@@ -1206,7 +1181,7 @@ NOTIFY pgrst, 'reload schema';
                                 <button 
                                   onClick={() => handleDownloadLogo(logo)}
                                   className="p-2 bg-white text-zinc-900 rounded-xl hover:scale-110 transition-transform"
-                                  title="Download JPEG"
+                                  title="Download Logo"
                                 >
                                   <Download className="w-5 h-5" />
                                 </button>

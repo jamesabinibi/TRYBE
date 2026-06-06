@@ -3067,7 +3067,83 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.post("/api/generate-logo", async (req, res) => {
+    try {
+      const { settings } = req.body;
+      const bColor = settings.brand_color && settings.brand_color.startsWith('#') 
+          ? settings.brand_color 
+          : "#3b82f6"; // hex with #
 
+      const bName = settings.business_name || "Business";
+      
+      // Let user provide their own free tier key to override if the default one is exhausted.
+      const apiKey = await getGeminiKey();
+      if (!apiKey) {
+        return res.status(400).json({ error: "Missing Gemini API key" });
+      }
+
+      const ai = new GoogleGenAI({ 
+        apiKey,
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+      });
+
+      const prompt1 = `Generate a modern, minimalist SVG logo for the business "${bName}". Primary color must be ${bColor}. Return ONLY valid raw SVG XML. The SVG must be inside a <svg viewBox="0 0 512 512" xmlns="..."> wrapper. Do not wrap in markdown quotes. Make it beautiful, corporate and clean.`;
+      const prompt2 = `Generate a highly creative, 3D-looking abstract tech SVG icon for "${bName}". Primary accent color ${bColor}. Return ONLY valid raw SVG XML inside <svg viewBox="0 0 512 512" xmlns="...">. No extra text, no markdown.`;
+
+      const generateParams1 = {
+        model: 'gemini-2.5-flash',
+        contents: prompt1
+      };
+      
+      const generateParams2 = {
+        model: 'gemini-2.5-flash',
+        contents: prompt2
+      };
+
+      let logo1 = null;
+      let logo2 = null;
+
+      try {
+        const [res1, res2] = await Promise.all([
+          ai.models.generateContent(generateParams1).catch(e => { console.warn("SVG Gen 1 skipped due to quota/error"); return null; }),
+          ai.models.generateContent(generateParams2).catch(e => { console.warn("SVG Gen 2 skipped due to quota/error"); return null; })
+        ]);
+
+        const processSvgResponse = (res: any) => {
+          if (!res || !res.text) return null;
+          let svg = res.text.trim();
+          svg = svg.replace(/^```(xml|svg|html)\n?/, '').replace(/```$/, '').trim();
+          if (!svg.startsWith('<svg')) {
+            const match = svg.match(/<svg[\s\S]*?<\/svg>/);
+            if (match) svg = match[0];
+            else return null;
+          }
+          return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+        };
+
+        logo1 = processSvgResponse(res1);
+        logo2 = processSvgResponse(res2);
+      } catch (e: any) {
+        console.error("Gemini SVG generation threw an error:", e);
+      }
+      
+      // Fallback if Gemini is completely exhausted or fails
+      if (!logo1 && !logo2) {
+        console.warn("Falling back to algorithmic generation due to Gemini failure.");
+        const fallbackSvg1 = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="${bColor}" rx="120"/><circle cx="256" cy="256" r="140" fill="#ffffff" opacity="0.2"/><text x="256" y="290" font-family="system-ui, sans-serif" font-weight="900" font-size="120" fill="#ffffff" text-anchor="middle">${bName.substring(0, 2).toUpperCase()}</text></svg>`;
+        
+        const fallbackSvg2 = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#ffffff" rx="120"/><path d="M156 356 L256 156 L356 356 Z" fill="${bColor}" opacity="0.9"/><circle cx="256" cy="270" r="40" fill="#ffffff"/><text x="256" y="440" font-family="system-ui, sans-serif" font-weight="800" font-size="40" fill="${bColor}" text-anchor="middle">${bName}</text></svg>`;
+        
+        logo1 = `data:image/svg+xml;base64,${Buffer.from(fallbackSvg1).toString('base64')}`;
+        logo2 = `data:image/svg+xml;base64,${Buffer.from(fallbackSvg2).toString('base64')}`;
+      }
+
+      res.json({ logos: [logo1, logo2].filter(Boolean) });
+    } catch (error: any) {
+      console.error("[LOGO GEN] Failed to generate logo:", error);
+      res.status(500).json({ error: error.message || "Failed to generate logo" });
+    }
+  });
 
   app.post("/api/upload", async (req, res) => {
     try {
