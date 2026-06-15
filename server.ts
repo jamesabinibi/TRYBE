@@ -4767,8 +4767,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
             const variantsToDelete = existingVariantIds.filter(vId => !incomingVariantIds.includes(vId));
             for (const variantId of variantsToDelete) {
               try {
+                await client.query('SAVEPOINT before_variant_delete');
                 await client.query('DELETE FROM product_variants WHERE id = $1', [variantId]);
+                await client.query('RELEASE SAVEPOINT before_variant_delete');
               } catch (e: any) {
+                await client.query('ROLLBACK TO SAVEPOINT before_variant_delete');
                 // If it fails due to foreign key, just set quantity to 0
                 if (e.code === '23503') { // foreign_key_violation
                   await client.query('UPDATE product_variants SET quantity = 0 WHERE id = $1', [variantId]);
