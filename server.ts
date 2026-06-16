@@ -6265,6 +6265,115 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   });
 
+  app.put("/api/sales/:id", requireAuth, async (req, res) => {
+    const saleId = req.params.id;
+    const { 
+      items, payment_method, staff_id, customer_id, customer_name, customer_phone,
+      customer_email, customer_address, discount_amount = 0, discount_percentage = 0,
+      vat_amount = 0, invoice_number: custom_invoice_number, invoice_terms
+    } = req.body;
+    
+    if (!items || !Array.isArray(items) || items.length === 0) return res.status(400).json({ error: "No items in sale" });
+
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      let invoice_number = custom_invoice_number || ("INV-" + Date.now());
+
+      if (process.env.AWS_DB_PASSWORD) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          
+          const { rows: existingSales } = await client.query('SELECT id FROM sales WHERE account_id = $1 AND invoice_number = $2 AND id != $3', [userInfo.account_id, invoice_number, saleId]);
+          if (existingSales.length > 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: "Invoice number already exists. Please use a different one." });
+          }
+
+          const { rows: oldItems } = await client.query('SELECT * FROM sale_items WHERE sale_id = $1 AND account_id = $2', [saleId, userInfo.account_id]);
+          for (const item of oldItems) {
+            if (item.variant_id) {
+              await client.query('UPDATE product_variants SET quantity = quantity + $1 WHERE id = $2', [item.quantity, item.variant_id]);
+            }
+          }
+          await client.query('DELETE FROM sale_items WHERE sale_id = $1 AND account_id = $2', [saleId, userInfo.account_id]);
+
+          let finalCustomerId = customer_id;
+          if (!finalCustomerId && customer_name && customer_phone) {
+             const { rows: ec } = await client.query('SELECT id FROM customers WHERE account_id = $1 AND phone = $2', [userInfo.account_id, customer_phone]);
+             if (ec.length > 0) finalCustomerId = ec[0].id;
+             else {
+               const { rows: nc } = await client.query(
+                 'INSERT INTO customers (account_id, name, phone, email, address) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                 [userInfo.account_id, customer_name, customer_phone, customer_email, customer_address]
+               );
+               finalCustomerId = nc[0].id;
+             }
+          }
+
+          let total_amount = 0; let total_profit = 0; let cost_price_total = 0;
+          const validStaffId = (staff_id && !isNaN(Number(staff_id))) ? Number(staff_id) : null;
+
+          await client.query(
+            'UPDATE sales SET customer_name=$1, customer_phone=$2, customer_email=$3, customer_address=$4, discount_amount=$5, discount_percentage=$6, vat_amount=$7, payment_method=$8, staff_id=$9, customer_id=$10, invoice_terms=$11, invoice_number=$12 WHERE id=$13 AND account_id=$14',
+            [customer_name, customer_phone, customer_email, customer_address, discount_amount, discount_percentage, vat_amount, payment_method, validStaffId, finalCustomerId, invoice_terms, invoice_number, saleId, userInfo.account_id]
+          );
+
+          for (const item of items) {
+            let itemName = ''; let sellingPrice = 0; let costPrice = 0; let profit = 0;
+            if (item.variant_id) {
+              const { rows: variants } = await client.query('SELECT pv.*, p.name, p.cost_price, p.selling_price FROM product_variants pv JOIN products p ON pv.product_id = p.id WHERE pv.id = $1', [item.variant_id]);
+              if (variants.length === 0) throw new Error(`Variant not found: ${item.variant_id}`);
+              const v = variants[0];
+              itemName = v.name; sellingPrice = item.price_override || v.selling_price; costPrice = v.cost_price || 0;
+              profit = (sellingPrice - costPrice) * item.quantity;
+              total_amount += sellingPrice * item.quantity; total_profit += profit; cost_price_total += costPrice * item.quantity;
+
+              const newQuantity = (v.quantity || 0) - item.quantity;
+              await client.query('UPDATE product_variants SET quantity = $1 WHERE id = $2', [newQuantity, item.variant_id]);
+
+              await client.query(
+                'INSERT INTO sale_items (account_id, sale_id, variant_id, product_name, quantity, unit_price, cost_price, total_price, profit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+                [userInfo.account_id, saleId, item.variant_id, itemName, item.quantity, sellingPrice, costPrice, sellingPrice * item.quantity, profit]
+              );
+            } else if (item.service_id) {
+              const { rows: services } = await client.query('SELECT * FROM services WHERE id = $1', [item.service_id]);
+              if (services.length === 0) throw new Error(`Service not found: ${item.service_id}`);
+              const s = services[0];
+              itemName = s.name; sellingPrice = item.price_override || s.price; costPrice = 0;
+              profit = sellingPrice * item.quantity;
+              total_amount += sellingPrice * item.quantity; total_profit += profit;
+
+              await client.query(
+                'INSERT INTO sale_items (account_id, sale_id, service_id, service_name, quantity, unit_price, cost_price, total_price, profit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+                [userInfo.account_id, saleId, item.service_id, itemName, item.quantity, sellingPrice, costPrice, sellingPrice * item.quantity, profit]
+              );
+            }
+          }
+
+          const final_total_amount = total_amount - discount_amount + vat_amount;
+          const final_total_profit = total_profit - discount_amount;
+
+          await client.query('UPDATE sales SET total_amount = $1, total_profit = $2, cost_price_total = $3 WHERE id = $4', [final_total_amount, final_total_profit, cost_price_total, saleId]);
+
+          await client.query('COMMIT');
+          return res.json({ saleId, invoice_number });
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
+      }
+      return res.status(503).json({ error: "Supabase fallback not fully implemented for sales PUT" });
+    } catch (e: any) {
+      console.error(`[SALES] PUT failed:`, e);
+      res.status(400).json({ error: e.message });
+    }
+  });
+
   app.put("/api/sales/:id/terms", requireAuth, async (req, res) => {
     try {
       const userInfo = await getAccountId(req);

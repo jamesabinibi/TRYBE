@@ -66,6 +66,7 @@ const Invoices: React.FC = () => {
     address: ''
   });
   const generateInvoiceNumber = () => `INV-${Math.floor(100000 + Math.random() * 900000)}`;
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState(generateInvoiceNumber());
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [discount, setDiscount] = useState(0);
@@ -213,6 +214,7 @@ const Invoices: React.FC = () => {
     setInvoiceNumber(generateInvoiceNumber());
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setInvoiceItems([]);
+    setEditingInvoiceId(null);
     setRecipient({
       name: '',
       email: '',
@@ -225,6 +227,7 @@ const Invoices: React.FC = () => {
 
   const loadInvoice = (invoice: any) => {
     try {
+      setEditingInvoiceId(invoice.id);
       setInvoiceNumber(invoice.invoice_number || `INV-${Date.now().toString().slice(-6)}`);
       setInvoiceDate(invoice.created_at ? new Date(invoice.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       setDiscount(invoice.discount_percentage || 0);
@@ -348,14 +351,14 @@ const Invoices: React.FC = () => {
         invoice_terms: invoiceTerms
       };
 
-      const res = await fetchWithAuth('/api/sales', {
-        method: 'POST',
+      const res = await fetchWithAuth(editingInvoiceId ? `/api/sales/${editingInvoiceId}` : '/api/sales', {
+        method: editingInvoiceId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       if (res.ok) {
-        toast.success('Invoice saved successfully');
+        toast.success(editingInvoiceId ? 'Invoice updated successfully' : 'Invoice saved successfully');
         resetForm();
         fetchPastInvoices();
         setActiveTab('history');
@@ -367,6 +370,23 @@ const Invoices: React.FC = () => {
       toast.error('An error occurred while saving');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (invoiceId: string | number) => {
+    if (!window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) return;
+    
+    try {
+      const res = await fetchWithAuth(`/api/sales/${invoiceId}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Invoice deleted successfully');
+        setPastInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
+      } else {
+        const err = await res.json();
+        toast.error(err.error || 'Failed to delete invoice');
+      }
+    } catch (error) {
+      toast.error('An error occurred while deleting');
     }
   };
 
@@ -687,6 +707,13 @@ const Invoices: React.FC = () => {
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
+                          <button
+                            onClick={() => handleDelete(inv.id)}
+                            className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-red-500 dark:group-hover:text-red-500 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all"
+                            title="Delete Invoice"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -761,6 +788,12 @@ const Invoices: React.FC = () => {
                         className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl active:scale-95 transition-all"
                       >
                         <Download className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(inv.id)}
+                        className="p-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl active:scale-95 transition-all"
+                      >
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
