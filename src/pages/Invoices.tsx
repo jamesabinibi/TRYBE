@@ -420,7 +420,9 @@ const Invoices: React.FC = () => {
 
     // If it's a product, we MUST use a variant ID for the backend to work correctly
     if (type === 'product') {
-      if (item.product_variants && item.product_variants.length > 0) {
+      if (item.isVariantMode) {
+        itemId = item.variant_id;
+      } else if (item.product_variants && item.product_variants.length > 0) {
         const variant = item.product_variants[0];
         itemId = variant.id;
         itemPrice = variant.selling_price || item.selling_price || 0;
@@ -546,7 +548,27 @@ const Invoices: React.FC = () => {
     }
   };
 
-  const filteredItems = [...products, ...services].filter(item => 
+  const flattenedInventory = [
+    ...products.flatMap(product => {
+      if (product.product_variants && product.product_variants.length > 0) {
+        return product.product_variants.map((variant: any) => {
+          const variantSpecs = [variant.size, variant.color].filter(Boolean).join(' - ');
+          const variantName = variantSpecs ? `${product.name} (${variantSpecs})` : product.name;
+          return {
+            ...product,
+            isVariantMode: true,
+            variant_id: variant.id,
+            name: variantName,
+            selling_price: variant.selling_price || product.selling_price
+          };
+        });
+      }
+      return [product];
+    }),
+    ...services
+  ];
+
+  const filteredItems = flattenedInventory.filter(item => 
     String(item.name || '').toLowerCase().includes(String(searchTerm || '').toLowerCase())
   );
 
@@ -881,11 +903,11 @@ const Invoices: React.FC = () => {
                           <X className="w-4 h-4 text-zinc-400" />
                         </button>
                       </div>
-                      <div className="max-h-80">
+                      <div className="max-h-80 overflow-y-auto">
                         {filteredItems.length > 0 ? (
                           filteredItems.map((item) => (
                             <button
-                              key={`${item.id}-${item.price ? 'service' : 'product'}`}
+                              key={`${item.id}-${item.isVariantMode ? item.variant_id : ''}-${item.price ? 'service' : 'product'}`}
                               onClick={() => addItem(item, item.price ? 'service' : 'product')}
                               className="w-full flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-left group"
                             >
