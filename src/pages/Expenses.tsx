@@ -167,7 +167,7 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
         const ai = new GoogleGenAI({ apiKey });
         const response = await retryWithBackoff(async () => {
           return await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-3.5-flash",
             contents: {
               parts: [
                 { text: `Extract the transaction amount, date, and narration from this bank screenshot. 

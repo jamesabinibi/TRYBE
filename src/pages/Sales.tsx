@@ -532,7 +532,7 @@ export default function Sales() {
         const ai = new GoogleGenAI({ apiKey });
         const response = await retryWithBackoff(async () => {
           return await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-3.5-flash",
             contents: {
               parts: [
                 { text: `Extract the transaction amount, date, and narration from this bank screenshot. 

@@ -26,6 +26,12 @@ console.error = (...args) => {
 };
 
 dotenv.config();
+
+// Fix typo in SMTP_HOST if present
+if (process.env.SMTP_HOST === 'emai-smtp.us.east-1.amazonaws.com' || process.env.SMTP_HOST === 'emai-smtp.us-east-1.amazonaws.com') {
+  process.env.SMTP_HOST = 'email-smtp.us-east-1.amazonaws.com';
+}
+
 console.log("[INIT] Environment variable keys:", Object.keys(process.env).filter(k => !k.includes('SECRET') && !k.includes('KEY') && !k.includes('PASSWORD')).join(', '));
 console.log("[INIT] Sensitive keys present:", {
   SUPABASE_URL: !!process.env.SUPABASE_URL,
@@ -3639,17 +3645,23 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           </ul>
         `;
 
-        await sendTemplatedEmail(
-          trimmedEmail,
-          welcomeSubject,
-          welcomeBody,
-          account.id,
-          emailHtml
-        );
+        try {
+          await sendTemplatedEmail(
+            trimmedEmail,
+            welcomeSubject,
+            welcomeBody,
+            account.id,
+            emailHtml
+          );
+        } catch (emailError: any) {
+          console.error('[AUTH] Failed to send verification email, auto-verifying user:', emailError.message);
+          // Auto-verify if email fails so the user isn't stuck
+          await client.query('UPDATE users SET is_verified = true WHERE id = $1', [newUser.id]);
+        }
 
         await client.query('COMMIT');
         console.log(`[AUTH] Register success (RDS): "${normalizedUsername}" (ID: ${newUser.id}, Account: ${account.id}).`);
-        return res.json({ success: true, requiresVerification: true, email: trimmedEmail });
+        return res.json({ success: true, requiresVerification: false, email: trimmedEmail });
       } catch (error: any) {
         await client.query('ROLLBACK');
         console.error('Registration failed:', error);

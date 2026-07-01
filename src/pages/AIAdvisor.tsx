@@ -89,7 +89,7 @@ export default function AIAdvisor() {
         })),
         inventory: products.map((p: any) => ({
           name: p.name,
-          quantity: p.quantity,
+          quantity: p.total_stock || 0,
           selling_price: p.selling_price,
           cost_price: p.cost_price
         }))
@@ -125,7 +125,7 @@ export default function AIAdvisor() {
       
       const response = await retryWithBackoff(async () => {
         return await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
+          model: "gemini-3.5-flash",
           contents: {
             parts: [
               { text: `Analyze this business data and provide a strategic business pulse insight.
@@ -184,7 +184,7 @@ export default function AIAdvisor() {
       setLoadingStep('Step 3/4: Running predictive models for next 30 days...');
       const response = await retryWithBackoff(async () => {
         return await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
+          model: "gemini-3.5-flash",
           contents: {
             parts: [
               { text: `Analyze this business data and provide a strategic forecast.
