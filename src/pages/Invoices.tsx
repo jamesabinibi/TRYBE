@@ -71,6 +71,8 @@ const Invoices: React.FC = () => {
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [discount, setDiscount] = useState(0);
   const [invoiceTerms, setInvoiceTerms] = useState(settings?.invoice_terms || '');
+  const [paymentStatus, setPaymentStatus] = useState<'Completed' | 'Pending'>('Pending');
+  const [amountPaidStr, setAmountPaidStr] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [pastInvoices, setPastInvoices] = useState<any[]>([]);
   const [page, setPage] = useState(0);
@@ -181,7 +183,11 @@ const Invoices: React.FC = () => {
       itemsText += `\n...and ${items.length - maxItems} more item(s)`;
     }
     
-    const invoiceUrl = `${window.location.origin}/invoice/${invoice.id}`;
+    let baseUrl = window.location.origin;
+    if (baseUrl.includes('localhost') || baseUrl.includes('capacitor://')) {
+      baseUrl = import.meta.env.VITE_APP_URL || 'https://gryndee.com';
+    }
+    const invoiceUrl = `${baseUrl}/invoice/${invoice.id}`;
     
     const text = `*INVOICE: ${invoice.invoice_number}*\n\n` +
                  `*View Invoice Online:*\n${invoiceUrl}\n\n` +
@@ -195,13 +201,20 @@ const Invoices: React.FC = () => {
     // Use a simpler encoding or check if the URL is properly formatted
     const encodedText = encodeURIComponent(text);
     const customerPhone = invoice.customer_phone || invoice.customers?.phone || '';
-    // Use api.whatsapp.com for better compatibility sometimes
-    const whatsappUrl = `https://api.whatsapp.com/send?phone=${customerPhone.replace(/\D/g, '')}&text=${encodedText}`;
-    window.open(whatsappUrl, '_blank');
+    
+    // Use https://wa.me/ for better compatibility on Android WebViews and Web
+    const whatsappUrl = `https://wa.me/${customerPhone.replace(/\D/g, '')}?text=${encodedText}`;
+    
+    // Some environments block _blank for whatsapp deep links, but it works on standard web
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleCopyLink = (invoice: any) => {
-    const invoiceLink = `${window.location.origin}/invoice/${invoice.id}`;
+    let baseUrl = window.location.origin;
+    if (baseUrl.includes('localhost') || baseUrl.includes('capacitor://')) {
+      baseUrl = import.meta.env.VITE_APP_URL || 'https://gryndee.com';
+    }
+    const invoiceLink = `${baseUrl}/invoice/${invoice.id}`;
     navigator.clipboard.writeText(invoiceLink).then(() => {
       toast.success('Invoice link copied to clipboard');
     }).catch((err) => {
@@ -223,6 +236,8 @@ const Invoices: React.FC = () => {
     });
     setDiscount(0);
     setSearchTerm('');
+    setPaymentStatus('Pending');
+    setAmountPaidStr('');
   };
 
   const loadInvoice = (invoice: any) => {
@@ -232,6 +247,8 @@ const Invoices: React.FC = () => {
       setInvoiceDate(invoice.created_at ? new Date(invoice.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       setDiscount(invoice.discount_percentage || 0);
       setInvoiceTerms(invoice.invoice_terms || settings?.invoice_terms || '');
+      setPaymentStatus(invoice.payment_status || 'Pending');
+      setAmountPaidStr(invoice.amount_paid != null ? String(invoice.amount_paid) : '');
       setRecipient({
         name: invoice.customer_name || (invoice.customers?.name) || '',
         email: invoice.customer_email || (invoice.customers?.email) || '', 
@@ -348,7 +365,9 @@ const Invoices: React.FC = () => {
         total_amount: total,
         payment_method: 'Invoice',
         status: 'Pending',
-        invoice_terms: invoiceTerms
+        invoice_terms: invoiceTerms,
+        payment_status: paymentStatus,
+        amount_paid: paymentStatus === 'Completed' ? total : (parseFloat(amountPaidStr) || 0)
       };
 
       const res = await fetchWithAuth(editingInvoiceId ? `/api/sales/${editingInvoiceId}` : '/api/sales', {
@@ -653,6 +672,7 @@ const Invoices: React.FC = () => {
                   <th className="px-8 py-6 label-text">Date</th>
                   <th className="px-8 py-6 label-text">Client</th>
                   <th className="px-8 py-6 label-text">Amount</th>
+                  <th className="px-8 py-6 label-text">Status</th>
                   <th className="px-8 py-6 label-text text-right">Actions</th>
                 </tr>
               </thead>
@@ -691,6 +711,18 @@ const Invoices: React.FC = () => {
                           <span className="opacity-50 mr-1 text-xs">{settings?.currency || '₦'}</span>
                           {inv.total_amount?.toLocaleString()}
                         </span>
+                      </td>
+                      <td className="px-8 py-6">
+                        {inv.payment_status && (
+                          <span className={cn(
+                            "inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-widest border",
+                            inv.payment_status === 'Pending' 
+                              ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+                              : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                          )}>
+                            {inv.payment_status}
+                          </span>
+                        )}
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -772,6 +804,16 @@ const Invoices: React.FC = () => {
                       <p className={cn(NUMBER_STYLE, "text-brand")}>
                         {formatCurrency(inv.total_amount, settings?.currency || '₦')}
                       </p>
+                      {inv.payment_status && (
+                        <span className={cn(
+                          "inline-block mt-2 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-widest border",
+                          inv.payment_status === 'Pending' 
+                            ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+                            : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                        )}>
+                          {inv.payment_status}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -1047,13 +1089,54 @@ const Invoices: React.FC = () => {
                 </div>
               )}
               
-              <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-end">
+              <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800 flex flex-col gap-6">
                 <div>
                   <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Amount</p>
                   <p className={cn(NUMBER_STYLE, "text-4xl text-brand")}>
                     <span className="opacity-30 mr-2 text-xl">{settings?.currency || '₦'}</span>
                     {calculateTotal().toLocaleString()}
                   </p>
+                </div>
+                
+                <div className="space-y-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Payment Status</span>
+                    <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+                      <button
+                        onClick={() => setPaymentStatus('Completed')}
+                        className={cn(
+                          "px-4 py-1.5 text-xs font-bold rounded-lg transition-colors",
+                          paymentStatus === 'Completed' ? "bg-white dark:bg-zinc-700 text-brand shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                        )}
+                      >
+                        Full Payment
+                      </button>
+                      <button
+                        onClick={() => setPaymentStatus('Pending')}
+                        className={cn(
+                          "px-4 py-1.5 text-xs font-bold rounded-lg transition-colors",
+                          paymentStatus === 'Pending' ? "bg-white dark:bg-zinc-700 text-amber-500 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                        )}
+                      >
+                        Part Payment
+                      </button>
+                    </div>
+                  </div>
+                  {paymentStatus === 'Pending' && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Amount Paid</span>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400 font-bold">{settings?.currency || '₦'}</span>
+                        <input 
+                          type="number"
+                          placeholder="0.00"
+                          value={amountPaidStr}
+                          onChange={(e) => setAmountPaidStr(e.target.value)}
+                          className="pl-8 w-32 py-2 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-right dark:text-white dark:placeholder-zinc-600 focus:outline-none focus:border-brand transition-colors"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1361,6 +1444,32 @@ const Invoices: React.FC = () => {
                     {formatCurrency(previewInvoice.total_amount || 0, settings?.currency || 'NGN')}
                   </span>
                 </div>
+                
+                {previewInvoice.payment_status === 'Pending' && previewInvoice.amount_paid != null && (
+                  <>
+                    <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400 mt-4">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Amount Paid</span>
+                      <span className={NUMBER_STYLE}>{formatCurrency(previewInvoice.amount_paid, settings?.currency || 'NGN')}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-amber-600 dark:text-amber-400 mt-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Balance Due</span>
+                      <span className={NUMBER_STYLE}>{formatCurrency((previewInvoice.total_amount || 0) - previewInvoice.amount_paid, settings?.currency || 'NGN')}</span>
+                    </div>
+                  </>
+                )}
+                
+                {previewInvoice.payment_status && (
+                  <div className="mt-6 flex justify-end">
+                    <span className={cn(
+                      "px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] border",
+                      previewInvoice.payment_status === 'Pending' 
+                        ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 border-amber-200 dark:border-amber-800"
+                        : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border-emerald-200 dark:border-emerald-800"
+                    )}>
+                      Status: {previewInvoice.payment_status}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

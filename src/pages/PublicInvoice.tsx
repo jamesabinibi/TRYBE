@@ -292,6 +292,32 @@ export default function PublicInvoice() {
                     {formatCurrency(invoice.total_amount || 0, currency)}
                   </span>
                 </div>
+                
+                {invoice.payment_status === 'Pending' && invoice.amount_paid != null && (
+                  <>
+                    <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400 mt-4">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Amount Paid</span>
+                      <span className={NUMBER_STYLE}>{formatCurrency(invoice.amount_paid, currency)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-amber-600 dark:text-amber-400 mt-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Balance Due</span>
+                      <span className={NUMBER_STYLE}>{formatCurrency((invoice.total_amount || 0) - invoice.amount_paid, currency)}</span>
+                    </div>
+                  </>
+                )}
+                
+                {invoice.payment_status && (
+                  <div className="mt-6 flex justify-end">
+                    <span className={cn(
+                      "px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] border",
+                      invoice.payment_status === 'Pending' 
+                        ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 border-amber-200 dark:border-amber-800"
+                        : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border-emerald-200 dark:border-emerald-800"
+                    )}>
+                      Status: {invoice.payment_status}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

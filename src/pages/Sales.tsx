@@ -179,6 +179,8 @@ export default function Sales() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState('Transfer');
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [paymentStatus, setPaymentStatus] = useState<'Completed' | 'Pending'>('Completed');
+  const [amountPaidStr, setAmountPaidStr] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [selectedSaleForPreview, setSelectedSaleForPreview] = useState<any>(null);
@@ -383,7 +385,9 @@ export default function Sales() {
         customer_name: customerName,
         customer_phone: customerPhone,
         discount_percentage: discountPercent,
-        discount_amount: discountAmount
+        discount_amount: discountAmount,
+        payment_status: paymentStatus,
+        amount_paid: paymentStatus === 'Completed' ? total : (parseFloat(amountPaidStr) || 0)
       };
 
       try {
@@ -493,23 +497,35 @@ export default function Sales() {
   };
 
   const handleCopyLink = (sale: any) => {
-    const link = `${window.location.origin}/invoice/${sale.invoice_number}`;
+    let baseUrl = window.location.origin;
+    if (baseUrl.includes('localhost') || baseUrl.includes('capacitor://')) {
+      baseUrl = import.meta.env.VITE_APP_URL || 'https://gryndee.com';
+    }
+    const link = `${baseUrl}/invoice/${sale.id}`;
     navigator.clipboard.writeText(link);
     toast.success('Invoice link copied to clipboard!');
   };
 
   const handleShareEmail = (sale: any) => {
-    const shareUrl = `${window.location.origin}/invoice/${sale.id}`;
+    let baseUrl = window.location.origin;
+    if (baseUrl.includes('localhost') || baseUrl.includes('capacitor://')) {
+      baseUrl = import.meta.env.VITE_APP_URL || 'https://gryndee.com';
+    }
+    const shareUrl = `${baseUrl}/invoice/${sale.id}`;
     const subject = `Invoice from ${settings?.business_name || 'Gryndee'} - #${sale.invoice_number}`;
     const body = `Hi ${sale.customer_name || 'Customer'},\n\nPlease find your invoice #${sale.invoice_number} for the amount of ${formatCurrency(sale.total_amount, currency)}.\n\nYou can view it here: ${shareUrl}\n\nThank you for your business!\n\nBest regards,\n${settings?.business_name || 'Gryndee'}`;
     window.location.href = `mailto:${sale.customer_email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   const handleShareWhatsApp = (sale: any) => {
-    const shareUrl = `${window.location.origin}/invoice/${sale.id}`;
+    let baseUrl = window.location.origin;
+    if (baseUrl.includes('localhost') || baseUrl.includes('capacitor://')) {
+      baseUrl = import.meta.env.VITE_APP_URL || 'https://gryndee.com';
+    }
+    const shareUrl = `${baseUrl}/invoice/${sale.id}`;
     const message = `Hi ${sale.customer_name || 'Customer'},\n\nHere is your invoice #${sale.invoice_number} from ${settings?.business_name || 'Gryndee'}.\n\nTotal Amount: ${formatCurrency(sale.total_amount, currency)}\n\nView Invoice: ${shareUrl}\n\nThank you for your business!`;
     const whatsappUrl = `https://wa.me/${sale.customer_phone?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleAIScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1146,6 +1162,47 @@ export default function Sales() {
                       <span className="text-[10px] font-bold uppercase tracking-widest">Transfer</span>
                     </button>
                   </div>
+                  
+                  <div className="space-y-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Payment Status</span>
+                      <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+                        <button
+                          onClick={() => setPaymentStatus('Completed')}
+                          className={cn(
+                            "px-4 py-1.5 text-xs font-bold rounded-lg transition-colors",
+                            paymentStatus === 'Completed' ? "bg-white dark:bg-zinc-700 text-brand shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                          )}
+                        >
+                          Full Payment
+                        </button>
+                        <button
+                          onClick={() => setPaymentStatus('Pending')}
+                          className={cn(
+                            "px-4 py-1.5 text-xs font-bold rounded-lg transition-colors",
+                            paymentStatus === 'Pending' ? "bg-white dark:bg-zinc-700 text-amber-500 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                          )}
+                        >
+                          Part Payment
+                        </button>
+                      </div>
+                    </div>
+                    {paymentStatus === 'Pending' && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Amount Paid</span>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400 font-bold">{currency}</span>
+                          <input 
+                            type="number"
+                            placeholder="0.00"
+                            value={amountPaidStr}
+                            onChange={(e) => setAmountPaidStr(e.target.value)}
+                            className="pl-8 w-32 py-2 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-right dark:text-white dark:placeholder-zinc-600 focus:outline-none focus:border-brand transition-colors"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {canManageSales && (
                     <button 
@@ -1281,7 +1338,8 @@ export default function Sales() {
                         <th className="px-8 py-6 label-text">Date</th>
                         <th className="px-8 py-6 label-text">Customer</th>
                         <th className="px-8 py-6 label-text">Staff</th>
-                        <th className="px-8 py-6 label-text">Payment</th>
+                        <th className="px-8 py-6 label-text">Method</th>
+                        <th className="px-8 py-6 label-text">Status</th>
                         <th className="px-8 py-6 label-text text-right">Amount</th>
                         <th className="px-8 py-6 label-text text-right">Profit</th>
                         <th className="px-8 py-6 label-text text-right">Actions</th>
@@ -1314,6 +1372,19 @@ export default function Sales() {
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-widest bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 group-hover:bg-white/10 group-hover:text-white dark:group-hover:bg-zinc-900/10 dark:group-hover:text-zinc-900">
                               {sale.payment_method}
                             </span>
+                          </td>
+                          <td className="px-8 py-5">
+                            <span className={cn(
+                              "inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-widest border",
+                              sale.payment_status === 'Pending' 
+                                ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+                                : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                            )}>
+                              {sale.payment_status || 'Completed'}
+                            </span>
+                            {sale.payment_status === 'Pending' && sale.amount_paid != null && (
+                              <div className="text-[10px] text-zinc-500 mt-1">Paid: {formatCurrency(sale.amount_paid, currency)}</div>
+                            )}
                           </td>
                           <td className={cn(NUMBER_STYLE, "px-8 py-5 text-sm text-right tracking-tighter")}>
                             {formatCurrency(sale.total_amount, currency)}
@@ -1685,6 +1756,32 @@ export default function Sales() {
                           {formatCurrency(selectedSaleForPreview.total_amount || 0, currency)}
                         </span>
                       </div>
+                      
+                      {selectedSaleForPreview.payment_status === 'Pending' && selectedSaleForPreview.amount_paid != null && (
+                        <>
+                          <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400 mt-4">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Amount Paid</span>
+                            <span className={NUMBER_STYLE}>{formatCurrency(selectedSaleForPreview.amount_paid, currency)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-amber-600 dark:text-amber-400 mt-2">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Balance Due</span>
+                            <span className={NUMBER_STYLE}>{formatCurrency((selectedSaleForPreview.total_amount || 0) - selectedSaleForPreview.amount_paid, currency)}</span>
+                          </div>
+                        </>
+                      )}
+                      
+                      {selectedSaleForPreview.payment_status && (
+                        <div className="mt-6 flex justify-end">
+                          <span className={cn(
+                            "px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] border",
+                            selectedSaleForPreview.payment_status === 'Pending' 
+                              ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 border-amber-200 dark:border-amber-800"
+                              : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border-emerald-200 dark:border-emerald-800"
+                          )}>
+                            Status: {selectedSaleForPreview.payment_status}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

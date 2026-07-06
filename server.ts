@@ -5783,7 +5783,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       discount_percentage = 0,
       vat_amount = 0,
       invoice_number: custom_invoice_number,
-      invoice_terms
+      invoice_terms,
+      amount_paid = null,
+      payment_status = 'Completed'
     } = req.body;
     
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -5860,8 +5862,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
           const validStaffId = (staff_id && !isNaN(Number(staff_id))) ? Number(staff_id) : null;
           const { rows: saleRows } = await client.query(
-            'INSERT INTO sales (account_id, invoice_number, customer_name, customer_phone, customer_email, customer_address, total_amount, total_profit, cost_price_total, discount_amount, discount_percentage, vat_amount, payment_method, staff_id, customer_id, status, invoice_terms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id',
-            [userInfo.account_id, invoice_number, customer_name, customer_phone, customer_email, customer_address, 0, 0, 0, discount_amount, discount_percentage, vat_amount, payment_method, validStaffId, finalCustomerId, 'Completed', invoice_terms]
+            'INSERT INTO sales (account_id, invoice_number, customer_name, customer_phone, customer_email, customer_address, total_amount, total_profit, cost_price_total, discount_amount, discount_percentage, vat_amount, payment_method, staff_id, customer_id, status, invoice_terms, amount_paid, payment_status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id',
+            [userInfo.account_id, invoice_number, customer_name, customer_phone, customer_email, customer_address, 0, 0, 0, discount_amount, discount_percentage, vat_amount, payment_method, validStaffId, finalCustomerId, 'Completed', invoice_terms, amount_paid, payment_status]
           );
           const saleId = saleRows[0].id;
 
@@ -6029,7 +6031,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           staff_id: validStaffId,
           customer_id: finalCustomerId,
           status: 'Completed',
-          invoice_terms
+          invoice_terms,
+          amount_paid,
+          payment_status
         }])
         .select()
         .single();
@@ -9469,6 +9473,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         { table: 'product_variants', column: 'price_override', type: 'DECIMAL(12,2)' },
         { table: 'product_images', column: 'account_id', type: 'BIGINT REFERENCES accounts(id) ON DELETE CASCADE' },
         { table: 'settings', column: 'invoice_terms', type: 'TEXT' },
+        { table: 'sales', column: 'amount_paid', type: 'DECIMAL(12,2)' },
+        { table: 'sales', column: 'payment_status', type: 'TEXT DEFAULT \'Completed\'' }
       ];
 
       for (const m of migrations) {
