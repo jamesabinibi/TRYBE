@@ -49,12 +49,18 @@ export default function NotificationCenter({ userId }: { userId: number }) {
         return;
       }
 
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        // Silently ignore HTML responses (usually SPA fallback from missing endpoint)
+        return;
+      }
+      
       const text = await response.text();
       let data;
       try {
         data = JSON.parse(text);
       } catch (e) {
-        console.error(`[UI] Failed to parse JSON: ${text.substring(0, 100)}`);
+        console.error(`[UI] Failed to parse JSON from /api/alerts: ${text.substring(0, 100)}...`);
         return;
       }
 

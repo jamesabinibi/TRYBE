@@ -603,7 +603,19 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                   <p className="body-text font-medium text-brand">+<CurrencyDisplay amount={sale.total_amount} currencyCode={currency} /></p>
-                  <p className="label-text">{sale.payment_method}</p>
+                  <p className="label-text">
+                    {sale.payment_method}
+                    {sale.payment_status && (
+                      <span className={cn(
+                        "ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-widest border",
+                        sale.payment_status === 'Pending' 
+                          ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+                          : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                      )}>
+                        {sale.payment_status}
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
             ))}

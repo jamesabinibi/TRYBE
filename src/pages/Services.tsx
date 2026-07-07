@@ -37,6 +37,7 @@ const Services = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const { settings } = useSettings();
+  const currency = settings?.currency || 'NGN';
   const { searchQuery, setSearchQuery } = useSearch();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -285,7 +286,7 @@ const Services = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Price (₦)</label>
+                    <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Price ({currency})</label>
                     <Input 
                       name="price"
                       type="number"

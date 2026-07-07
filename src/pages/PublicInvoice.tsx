@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Download, Building2, MapPin, Phone, Mail, FileText } from 'lucide-react';
 import { generatePDF } from '../utils/pdfGenerator';
-import { NUMBER_STYLE, apiFetch } from '../lib/utils';
+import { NUMBER_STYLE, apiFetch, cn } from '../lib/utils';
 
 export default function PublicInvoice() {
   const { id } = useParams();
@@ -39,14 +39,48 @@ export default function PublicInvoice() {
     fetchLanding();
   }, [id]);
 
-  const formatCurrency = (amount: number | string, currency: string) => {
+  const formatCurrency = (amount: number | string, currencyCode: string) => {
     const value = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: currency || 'NGN',
-      minimumFractionDigits: 0,
-    }).format(value);
+    const currency = currencyCode || 'NGN';
+    
+    // Check if currency is a valid 3-letter ISO code
+    const isValidIso = /^[a-zA-Z]{3}$/.test(currency);
+    
+    if (isValidIso) {
+      try {
+        return new Intl.NumberFormat('en-NG', {
+          style: 'currency',
+          currency: currency,
+          minimumFractionDigits: 0,
+        }).format(value);
+      } catch (e) {
+        // Fallback if formatting fails
+      }
+    }
+    
+    // Fallback: prefix the symbol/code directly
+    return `${currency}${value.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error || !invoice) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4">
+        <FileText className="w-16 h-16 text-zinc-300 dark:text-zinc-700 mb-4" />
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Invoice Not Found</h1>
+        <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-md">
+          The invoice you are looking for does not exist or has been removed.
+        </p>
+      </div>
+    );
+  }
 
   const settings = invoice.settings || {};
   const currency = settings.currency || 'NGN';
@@ -92,26 +126,6 @@ export default function PublicInvoice() {
 
     generatePDF(mappedData, { ...settings, logo_url: businessLogo });
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (error || !invoice) {
-    return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4">
-        <FileText className="w-16 h-16 text-zinc-300 dark:text-zinc-700 mb-4" />
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Invoice Not Found</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 text-center max-w-md">
-          The invoice you are looking for does not exist or has been removed.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 py-12 px-4 sm:px-6 lg:px-8 font-sans selection:bg-zinc-900 selection:text-white dark:selection:bg-white dark:selection:text-zinc-900">
@@ -203,8 +217,8 @@ export default function PublicInvoice() {
             </div>
 
             {/* Items Table */}
-            <div className="mt-16">
-              <table className="w-full text-left border-collapse">
+            <div className="mt-16 overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[500px]">
                 <thead>
                   <tr className="border-b border-zinc-200 dark:border-zinc-800">
                     <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 w-1/2">Description</th>

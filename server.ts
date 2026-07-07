@@ -64,7 +64,7 @@ if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
 }
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { v2 as cloudinary } from 'cloudinary';
 
 const __dirname = path.resolve();
@@ -2607,6 +2607,62 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       res.json(data || []);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/expenses/extract-transaction", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+
+      const { image } = req.body;
+      if (!image) {
+        return res.status(400).json({ error: "No image data provided" });
+      }
+
+      const apiKey = await getGeminiKey();
+      if (!apiKey) {
+        return res.status(400).json({ error: "Missing Gemini API key" });
+      }
+
+      const ai = new GoogleGenAI({ 
+        apiKey,
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+      });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: {
+          parts: [
+            { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
+            Common formats include OPay, PalmPay, Kuda, or traditional bank receipts.
+            - Amount: Look for the total amount transferred (e.g., ₦174,000.00). Return as a number without currency symbols.
+            - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
+            - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
+            Return as JSON.` },
+            { inlineData: { mimeType: "image/png", data: image.split(',')[1] || image } }
+          ]
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              amount: { type: Type.NUMBER },
+              date: { type: Type.STRING },
+              narration: { type: Type.STRING },
+              confidence: { type: Type.NUMBER }
+            }
+          }
+        }
+      });
+
+      const text = response.text || '{}';
+      const data = JSON.parse(text);
+      res.json(data);
+    } catch (error: any) {
+      console.error('[EXPENSES] AI extraction error:', error);
+      res.status(500).json({ error: error.message || "AI extraction failed" });
     }
   });
 
@@ -6286,7 +6342,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const { 
       items, payment_method, staff_id, customer_id, customer_name, customer_phone,
       customer_email, customer_address, discount_amount = 0, discount_percentage = 0,
-      vat_amount = 0, invoice_number: custom_invoice_number, invoice_terms
+      vat_amount = 0, invoice_number: custom_invoice_number, invoice_terms,
+      payment_status = 'Completed', amount_paid = null
     } = req.body;
     
     if (!items || !Array.isArray(items) || items.length === 0) return res.status(400).json({ error: "No items in sale" });
@@ -6333,8 +6390,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           const validStaffId = (staff_id && !isNaN(Number(staff_id))) ? Number(staff_id) : null;
 
           await client.query(
-            'UPDATE sales SET customer_name=$1, customer_phone=$2, customer_email=$3, customer_address=$4, discount_amount=$5, discount_percentage=$6, vat_amount=$7, payment_method=$8, staff_id=$9, customer_id=$10, invoice_terms=$11, invoice_number=$12 WHERE id=$13 AND account_id=$14',
-            [customer_name, customer_phone, customer_email, customer_address, discount_amount, discount_percentage, vat_amount, payment_method, validStaffId, finalCustomerId, invoice_terms, invoice_number, saleId, userInfo.account_id]
+            'UPDATE sales SET customer_name=$1, customer_phone=$2, customer_email=$3, customer_address=$4, discount_amount=$5, discount_percentage=$6, vat_amount=$7, payment_method=$8, staff_id=$9, customer_id=$10, invoice_terms=$11, invoice_number=$12, payment_status=$13, amount_paid=$14 WHERE id=$15 AND account_id=$16',
+            [customer_name, customer_phone, customer_email, customer_address, discount_amount, discount_percentage, vat_amount, payment_method, validStaffId, finalCustomerId, invoice_terms, invoice_number, payment_status, amount_paid, saleId, userInfo.account_id]
           );
 
           for (const item of items) {
@@ -9713,6 +9770,12 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     socket.on('disconnect', () => {
       console.log(`[WS] Client disconnected: ${socket.id}`);
     });
+  });
+
+
+  // Global 404 handler for API routes to prevent HTML fallbacks
+  app.use('/api', (req, res) => {
+    res.status(404).json({ error: 'API route not found: ' + req.originalUrl });
   });
 
   server.listen(PORT, "0.0.0.0", () => {

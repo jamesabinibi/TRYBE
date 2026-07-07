@@ -314,7 +314,7 @@ export default function Products() {
   const handleShareWhatsApp = (product: Product) => {
     const message = `*${product.name}*\n${product.description || ''}\n\nPrice: ${formatCurrency(product.selling_price, currency)}\n\nCheck it out on our store!`;
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank', 'noopener,noreferrer');
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -1667,7 +1667,7 @@ export default function Products() {
                     {/* Pricing Section */}
                     <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-10">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Cost Price (₦)</label>
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Cost Price ({currency})</label>
                         <Input 
                           required
                           type="number" 
@@ -1677,7 +1677,7 @@ export default function Products() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Selling Price (₦)</label>
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Selling Price ({currency})</label>
                         <Input 
                           required
                           type="number" 

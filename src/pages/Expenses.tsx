@@ -13,7 +13,9 @@ import {
   X,
   Loader2,
   Sparkles,
-  Shield
+  Shield,
+  Check,
+  UploadCloud
 } from 'lucide-react';
 import { useAuth, useSettings } from '../App';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
@@ -31,6 +33,18 @@ interface Expense {
   amount: number;
   description: string;
   date: string;
+}
+
+interface ExtractedExpense {
+  id: string;
+  fileName: string;
+  imagePreview: string;
+  category: string;
+  amount: string;
+  date: string;
+  description: string;
+  status: 'reading' | 'extracting' | 'done' | 'failed';
+  error?: string;
 }
 
 export default function Expenses({ hideHeader = false }: { hideHeader?: boolean }) {
@@ -141,110 +155,208 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
 
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [aiStep, setAiStep] = useState<string>('');
+  const [batchExpenses, setBatchExpenses] = useState<ExtractedExpense[]>([]);
 
-  const handleAIScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleAIScreenshotMultiple = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    console.log('AI Screenshot: File selected', file.name);
     setIsProcessingAI(true);
-    setAiStep('Step 1/4: Reading image...');
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result as string;
-      console.log('AI Screenshot: Image loaded, calling AI...');
-      try {
-        setAiStep('Step 2/4: Initializing AI...');
-        const apiKey = await fetchGeminiKey();
-        
-        if (!apiKey) {
-          toast.error('Gemini API key not configured. Please set it in Settings.');
-          setIsProcessingAI(false);
-          return;
-        }
+    setAiStep('Processing screenshots...');
 
-        setAiStep('Step 3/4: Extracting transaction details...');
-        const ai = new GoogleGenAI({ apiKey });
-        const response = await retryWithBackoff(async () => {
-          return await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: {
-              parts: [
-                { text: `Extract the transaction amount, date, and narration from this bank screenshot. 
-                Common formats include OPay, PalmPay, Kuda, or traditional bank receipts.
-                - Amount: Look for the total amount transferred (e.g., ₦174,000.00). Return as a number without currency symbols.
-                - Date: Look for the transaction date (e.g., 28/02/26). Return in YYYY-MM-DD format if possible, or as found.
-                - Narration: Look for 'Remark', 'Description', 'Narration', or 'Reference'.
-                Return as JSON.` },
-                { inlineData: { mimeType: "image/png", data: base64.split(',')[1] || base64 } }
-              ]
-            },
-            config: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  amount: { type: Type.NUMBER },
-                  date: { type: Type.STRING },
-                  narration: { type: Type.STRING },
-                  confidence: { type: Type.NUMBER }
-                }
-              }
-            }
+    const fileArray = Array.from(files);
+
+    const newItems: ExtractedExpense[] = fileArray.map((file, idx) => ({
+      id: `${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 9)}`,
+      fileName: file.name,
+      imagePreview: '',
+      category: 'General',
+      amount: '',
+      date: new Date().toISOString().split('T')[0],
+      description: '',
+      status: 'reading'
+    }));
+
+    setBatchExpenses(prev => [...prev, ...newItems]);
+
+    fileArray.forEach((file, index) => {
+      const tempId = newItems[index].id;
+      const reader = new FileReader();
+      
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        
+        setBatchExpenses(prev => prev.map(item => 
+          item.id === tempId 
+            ? { ...item, imagePreview: base64, status: 'extracting' }
+            : item
+        ));
+
+        try {
+          const response = await fetchWithAuth('/api/expenses/extract-transaction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64 })
           });
-        });
-        
-        const data = JSON.parse(response.text || '{}');
-        setAiStep('Step 4/4: Finalizing...');
-        
-        if (data && data.amount) {
-          // Robust date parsing
-          let parsedDate = new Date().toISOString().split('T')[0];
-          if (data.date) {
-            try {
-              const d = new Date(data.date);
-              if (!isNaN(d.getTime())) {
-                parsedDate = d.toISOString().split('T')[0];
-              } else {
-                const parts = data.date.split(/[\/\-]/);
-                if (parts.length === 3) {
-                  let day, month, year;
-                  if (parts[0].length === 4) {
-                    [year, month, day] = parts;
-                  } else {
-                    [day, month, year] = parts;
-                    if (year.length === 2) year = '20' + year;
-                  }
-                  const d2 = new Date(`${year}-${month}-${day}`);
-                  if (!isNaN(d2.getTime())) {
-                    parsedDate = d2.toISOString().split('T')[0];
-                  }
-                }
-              }
-            } catch (e) {
-              console.error('Date parsing failed:', e);
-            }
+
+          if (!response.ok) {
+            throw new Error('Server returned an error');
           }
 
-          setNewExpense(prev => ({
-            ...prev,
-            amount: data.amount.toString(),
-            description: data.narration || '',
-            date: parsedDate
-          }));
-          toast.success('AI extracted transaction details!');
-          setIsAddModalOpen(true);
-        } else {
-          toast.error('AI failed to extract transaction data');
+          const data = await response.json();
+          
+          if (data && data.amount !== undefined) {
+            let parsedDate = new Date().toISOString().split('T')[0];
+            if (data.date) {
+              try {
+                const d = new Date(data.date);
+                if (!isNaN(d.getTime())) {
+                  parsedDate = d.toISOString().split('T')[0];
+                } else {
+                  const parts = data.date.split(/[\/\-]/);
+                  if (parts.length === 3) {
+                    let day, month, year;
+                    if (parts[0].length === 4) {
+                      [year, month, day] = parts;
+                    } else {
+                      [day, month, year] = parts;
+                      if (year.length === 2) year = '20' + year;
+                    }
+                    const d2 = new Date(`${year}-${month}-${day}`);
+                    if (!isNaN(d2.getTime())) {
+                      parsedDate = d2.toISOString().split('T')[0];
+                    }
+                  }
+                }
+              } catch (e) {
+                console.error('Date parsing failed:', e);
+              }
+            }
+
+            let category = 'General';
+            const normNarration = (data.narration || '').toLowerCase();
+            if (normNarration.includes('rent') || normNarration.includes('landlord')) category = 'Rent';
+            else if (normNarration.includes('electricity') || normNarration.includes('power') || normNarration.includes('nepa') || normNarration.includes('ekedc')) category = 'Electricity';
+            else if (normNarration.includes('salary') || normNarration.includes('salaries') || normNarration.includes('payroll') || normNarration.includes('staff')) category = 'Salaries';
+            else if (normNarration.includes('supplies') || normNarration.includes('vendor') || normNarration.includes('inventory')) category = 'Supplies';
+            else if (normNarration.includes('ads') || normNarration.includes('marketing') || normNarration.includes('facebook') || normNarration.includes('google ads') || normNarration.includes('advert')) category = 'Marketing';
+            else if (normNarration.includes('transport') || normNarration.includes('fuel') || normNarration.includes('uber') || normNarration.includes('bolt') || normNarration.includes('logistic')) category = 'Transport';
+
+            setBatchExpenses(prev => prev.map(item => 
+              item.id === tempId 
+                ? { 
+                    ...item, 
+                    amount: data.amount.toString(),
+                    description: data.narration || '',
+                    date: parsedDate,
+                    category,
+                    status: 'done'
+                  }
+                : item
+            ));
+          } else {
+            throw new Error('AI failed to extract amount');
+          }
+        } catch (err: any) {
+          console.error('[AI] Batch item processing error:', err);
+          setBatchExpenses(prev => prev.map(item => 
+            item.id === tempId 
+              ? { ...item, status: 'failed', error: err.message || 'Unknown error' }
+              : item
+          ));
         }
-      } catch (err: any) {
-        console.error('[AI] Transaction processing error:', err);
-        toast.error('AI processing failed: ' + (err.message || 'Unknown error'));
-      } finally {
-        setIsProcessingAI(false);
+      };
+
+      reader.onerror = () => {
+        setBatchExpenses(prev => prev.map(item => 
+          item.id === tempId 
+            ? { ...item, status: 'failed', error: 'Could not read file' }
+            : item
+        ));
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    setIsProcessingAI(false);
+  };
+
+  const handleSaveBatchExpenses = async () => {
+    const activeItems = batchExpenses.filter(item => item.status === 'reading' || item.status === 'extracting');
+    if (activeItems.length > 0) {
+      toast.error('Please wait for all images to finish extracting.');
+      return;
+    }
+
+    const itemsToSave = batchExpenses.filter(item => item.status === 'done');
+    if (itemsToSave.length === 0) {
+      toast.error('No successfully extracted expenses to save.');
+      return;
+    }
+
+    const invalidItem = itemsToSave.find(item => !item.amount || isNaN(parseFloat(item.amount)) || parseFloat(item.amount) <= 0);
+    if (invalidItem) {
+      toast.error(`Please enter a valid amount for "${invalidItem.fileName}".`);
+      return;
+    }
+
+    setIsSaving(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      await Promise.all(itemsToSave.map(async (item) => {
+        try {
+          const response = await fetchWithAuth('/api/expenses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              category: item.category,
+              amount: parseFloat(item.amount) || 0,
+              description: item.description || `Extracted from ${item.fileName}`,
+              date: item.date
+            })
+          });
+          
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (e) {
+          failCount++;
+        }
+      }));
+
+      if (successCount > 0) {
+        toast.success(`Successfully saved ${successCount} expense(s)!`);
+        setBatchExpenses([]);
+        setIsAddModalOpen(false);
+        fetchExpenses();
+        refetchStats();
       }
-    };
-    reader.readAsDataURL(file);
+      
+      if (failCount > 0) {
+        toast.error(`Failed to save ${failCount} expense(s).`);
+      }
+    } catch (err) {
+      toast.error('Error saving expenses');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateBatchItem = (id: string, field: keyof ExtractedExpense, value: string) => {
+    setBatchExpenses(prev => prev.map(item => 
+      item.id === id ? { ...item, [field]: value } : item
+    ));
+  };
+
+  const removeBatchItem = (id: string) => {
+    setBatchExpenses(prev => {
+      const filtered = prev.filter(item => item.id !== id);
+      return filtered;
+    });
   };
 
   const handleAddExpense = async (e: React.FormEvent) => {
@@ -504,28 +616,32 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsAddModalOpen(false)}
+              onClick={() => { setIsAddModalOpen(false); setBatchExpenses([]); }}
               className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm"
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden"
+              className={cn(
+                "relative w-full bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden transition-all duration-300",
+                batchExpenses.length > 0 ? "max-w-4xl" : "max-w-lg"
+              )}
             >
               <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-brand/10 rounded-2xl flex items-center justify-center text-brand">
                     <Wallet className="w-5 h-5" />
                   </div>
-                  <h2 className="h2">Record Expense</h2>
+                  <h2 className="h2">{batchExpenses.length > 0 ? "Record Expenses (Batch Mode)" : "Record Expense"}</h2>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="relative">
                     <input 
                       type="file" 
                       accept="image/*" 
-                      onChange={handleAIScreenshot}
+                      multiple
+                      onChange={handleAIScreenshotMultiple}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
                     <button 
@@ -547,73 +663,216 @@ export default function Expenses({ hideHeader = false }: { hideHeader?: boolean 
                       )}
                     </button>
                   </div>
-                  <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                  {batchExpenses.length > 0 && (
+                    <button 
+                      onClick={() => setBatchExpenses([])}
+                      className="p-2 text-[10px] font-medium uppercase tracking-widest bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-500 rounded-xl transition-all"
+                    >
+                      Clear Batch
+                    </button>
+                  )}
+                  <button onClick={() => { setIsAddModalOpen(false); setBatchExpenses([]); }} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
                     <X className="w-5 h-5 text-zinc-400" />
                   </button>
                 </div>
               </div>
 
-              <form onSubmit={handleAddExpense} className="p-8 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="label-text">Category</label>
-                    <Input 
-                      as="select"
-                      value={newExpense.category}
-                      onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
-                    >
-                      {categories.map(c => <option key={c} value={c} className="dark:bg-zinc-900">{c}</option>)}
-                    </Input>
+              {batchExpenses.length > 0 ? (
+                <div className="p-8 space-y-6">
+                  <p className="body-text opacity-70">
+                    We've scanned your receipts/screenshots. You can review, edit, or categorize them before saving.
+                  </p>
+
+                  <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                    {batchExpenses.map((item) => (
+                      <div 
+                        key={item.id} 
+                        className="flex flex-col sm:flex-row gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/40 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 items-start sm:items-center"
+                      >
+                        {/* Thumbnail preview */}
+                        <div className="relative w-16 h-16 bg-zinc-200 dark:bg-zinc-800 rounded-xl overflow-hidden flex-shrink-0 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center">
+                          {item.imagePreview ? (
+                            <img src={item.imagePreview} alt="Receipt Preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
+                              <UploadCloud className="w-5 h-5 text-zinc-400 animate-pulse" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Editable Inputs */}
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-3 w-full">
+                          {/* Category select */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Category</label>
+                            <select
+                              value={item.category}
+                              onChange={(e) => updateBatchItem(item.id, 'category', e.target.value)}
+                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                            >
+                              {categories.map(c => <option key={c} value={c} className="dark:bg-zinc-900">{c}</option>)}
+                            </select>
+                          </div>
+
+                          {/* Amount Input */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Amount ({currency})</label>
+                            <input
+                              type="number"
+                              required
+                              value={item.amount}
+                              onChange={(e) => updateBatchItem(item.id, 'amount', e.target.value)}
+                              placeholder="0.00"
+                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand font-medium"
+                            />
+                          </div>
+
+                          {/* Date input */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Date</label>
+                            <input
+                              type="date"
+                              required
+                              value={item.date}
+                              onChange={(e) => updateBatchItem(item.id, 'date', e.target.value)}
+                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                            />
+                          </div>
+
+                          {/* Description input */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Description</label>
+                            <input
+                              type="text"
+                              required
+                              value={item.description}
+                              onChange={(e) => updateBatchItem(item.id, 'description', e.target.value)}
+                              placeholder="Describe this expense"
+                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Status indicators & Actions */}
+                        <div className="flex sm:flex-col items-center justify-between sm:justify-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100 dark:border-zinc-800 flex-shrink-0">
+                          {item.status === 'reading' && (
+                            <span className="text-[11px] text-amber-500 flex items-center gap-1 font-medium">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Reading
+                            </span>
+                          )}
+                          {item.status === 'extracting' && (
+                            <span className="text-[11px] text-brand flex items-center gap-1 font-medium">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Scanning
+                            </span>
+                          )}
+                          {item.status === 'done' && (
+                            <span className="text-[11px] text-green-500 flex items-center gap-1 font-medium">
+                              <Check className="w-3.5 h-3.5" />
+                              Ready
+                            </span>
+                          )}
+                          {item.status === 'failed' && (
+                            <span className="text-[11px] text-red-500 flex items-center gap-1 font-medium" title={item.error}>
+                              <AlertCircle className="w-3.5 h-3.5" />
+                              Failed
+                            </span>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => removeBatchItem(item.id)}
+                            className="p-2 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+
+                  <div className="pt-4 flex gap-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => { setBatchExpenses([]); setIsAddModalOpen(false); }}
+                      className="btn-secondary flex-1 py-4"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveBatchExpenses}
+                      disabled={isSaving || batchExpenses.some(x => x.status === 'reading' || x.status === 'extracting')}
+                      className="btn-primary flex-1 py-4"
+                    >
+                      {isSaving ? 'Saving expenses...' : `Save ${batchExpenses.filter(x => x.status === 'done').length} Expense(s)`}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleAddExpense} className="p-8 space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="label-text">Category</label>
+                      <Input 
+                        as="select"
+                        value={newExpense.category}
+                        onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
+                      >
+                        {categories.map(c => <option key={c} value={c} className="dark:bg-zinc-900">{c}</option>)}
+                      </Input>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="label-text">Amount ({currency})</label>
+                      <Input 
+                        required
+                        type="number" 
+                        value={newExpense.amount}
+                        onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <label className="label-text">Amount ({currency})</label>
+                    <label className="label-text">Date</label>
                     <Input 
-                      required
-                      type="number" 
-                      value={newExpense.amount}
-                      onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                      placeholder="0.00"
+                      type="date" 
+                      value={newExpense.date}
+                      onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <label className="label-text">Date</label>
-                  <Input 
-                    type="date" 
-                    value={newExpense.date}
-                    onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <label className="label-text">Description</label>
+                    <Textarea 
+                      required
+                      value={newExpense.description}
+                      onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                      placeholder="What was this expense for?"
+                      rows={3}
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <label className="label-text">Description</label>
-                  <Textarea 
-                    required
-                    value={newExpense.description}
-                    onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
-                    placeholder="What was this expense for?"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="pt-4 flex gap-4">
-                  <button 
-                    type="button"
-                    onClick={() => setIsAddModalOpen(false)}
-                    className="btn-secondary flex-1 py-4"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={isSaving}
-                    className="btn-primary flex-1 py-4"
-                  >
-                    {isSaving ? 'Saving...' : 'Save Expense'}
-                  </button>
-                </div>
-              </form>
+                  <div className="pt-4 flex gap-4">
+                    <button 
+                      type="button"
+                      onClick={() => setIsAddModalOpen(false)}
+                      className="btn-secondary flex-1 py-4"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={isSaving}
+                      className="btn-primary flex-1 py-4"
+                    >
+                      {isSaving ? 'Saving...' : 'Save Expense'}
+                    </button>
+                  </div>
+                </form>
+              )}
             </motion.div>
           </div>
         )}

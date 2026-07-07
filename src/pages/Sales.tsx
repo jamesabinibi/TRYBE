@@ -1667,8 +1667,8 @@ export default function Sales() {
                   </div>
 
                   {/* Items Table */}
-                  <div className="mt-16">
-                    <table className="w-full text-left border-collapse">
+                  <div className="mt-16 overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left border-collapse min-w-[500px]">
                       <thead>
                         <tr className="border-b border-zinc-200 dark:border-zinc-800">
                           <th className="pb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 w-1/2">Description</th>
