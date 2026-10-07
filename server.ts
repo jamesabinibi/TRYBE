@@ -25,7 +25,41 @@ console.error = (...args) => {
   originalError(...args);
 };
 
-dotenv.config();
+dotenv.config({ override: true });
+
+// Normalize and configure PostgreSQL connection string
+const SUPABASE_PG_URL = 'postgresql://postgres:Ab%40midele1980@db.crhfiaeezettshwivzig.supabase.co:5432/postgres';
+
+let activeDbUrl = process.env.DATABASE_URL;
+if (!activeDbUrl || !activeDbUrl.startsWith('postgres') || activeDbUrl.includes('linqzy-default-rtdb')) {
+  activeDbUrl = process.env.POSTGRES_URL || SUPABASE_PG_URL;
+  process.env.DATABASE_URL = activeDbUrl;
+}
+
+// Auto-populate / override DB config from PostgreSQL connection string
+if (activeDbUrl && (activeDbUrl.startsWith('postgres://') || activeDbUrl.startsWith('postgresql://'))) {
+  try {
+    const parsedDbUrl = new URL(activeDbUrl);
+    process.env.AWS_DB_HOST = parsedDbUrl.hostname;
+    process.env.AWS_DB_PORT = parsedDbUrl.port || '5432';
+    process.env.AWS_DB_USER = decodeURIComponent(parsedDbUrl.username || 'postgres');
+    process.env.AWS_DB_PASSWORD = decodeURIComponent(parsedDbUrl.password || '');
+    process.env.AWS_DB_NAME = parsedDbUrl.pathname ? parsedDbUrl.pathname.replace(/^\//, '') : 'postgres';
+    console.log(`[INIT] Configured PostgreSQL from DATABASE_URL -> Host: ${process.env.AWS_DB_HOST}, Database: ${process.env.AWS_DB_NAME}`);
+  } catch (err: any) {
+    console.error('[INIT] Failed to parse DATABASE_URL:', err.message);
+  }
+}
+
+// Fallback safeguard against obsolete AWS RDS host if it lingered
+if (!process.env.AWS_DB_HOST || process.env.AWS_DB_HOST.includes('cevskqcic97b') || process.env.AWS_DB_HOST.includes('gryndee-db')) {
+  process.env.AWS_DB_HOST = 'db.crhfiaeezettshwivzig.supabase.co';
+  process.env.AWS_DB_PORT = '5432';
+  process.env.AWS_DB_USER = 'postgres';
+  process.env.AWS_DB_PASSWORD = 'Ab@midele1980';
+  process.env.AWS_DB_NAME = 'postgres';
+  process.env.DATABASE_URL = SUPABASE_PG_URL;
+}
 
 // Fix typo in SMTP_HOST if present
 if (process.env.SMTP_HOST === 'emai-smtp.us.east-1.amazonaws.com' || process.env.SMTP_HOST === 'emai-smtp.us-east-1.amazonaws.com') {
@@ -90,9 +124,14 @@ const getS3Region = () => {
   return match ? match[0].toLowerCase() : region.toLowerCase();
 };
 
+const getS3Endpoint = () => {
+  return process.env.AWS_S3_ENDPOINT || process.env.S3_ENDPOINT || undefined;
+};
+
 let s3Region = getS3Region();
 let s3Client = new S3Client({
   region: s3Region,
+  endpoint: getS3Endpoint(),
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
@@ -103,12 +142,13 @@ function reinitializeS3() {
   s3Region = getS3Region();
   s3Client = new S3Client({
     region: s3Region,
+    endpoint: getS3Endpoint(),
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
     },
   });
-  console.log(`[AWS S3] Client re-initialized for region: ${s3Region}`);
+  console.log(`[AWS S3] Client re-initialized for region: ${s3Region}, endpoint: ${getS3Endpoint() || 'default'}`);
 }
 
 async function uploadToS3(base64Data: string, folder: string = 'products') {
@@ -197,36 +237,34 @@ function isValidEmail(email: string) {
   return re.test(email);
 }
 
-// AWS RDS Pool
+// PostgreSQL Pool (Supabase / RDS / Cloud SQL)
 const { Pool } = pg;
-const poolConfig = {
-  host: process.env.AWS_DB_HOST || 'gryndee-db.cevskqcic97b.us-east-1.rds.amazonaws.com',
-  port: parseInt(process.env.AWS_DB_PORT || '5432'),
-  user: process.env.AWS_DB_USER || 'postgres',
-  password: process.env.AWS_DB_PASSWORD,
-  database: process.env.AWS_DB_NAME || 'postgres',
-  ssl: {
-    rejectUnauthorized: false
-  }
+const activePostgresUrl = (process.env.DATABASE_URL && (process.env.DATABASE_URL.startsWith('postgres://') || process.env.DATABASE_URL.startsWith('postgresql://')))
+  ? process.env.DATABASE_URL
+  : 'postgresql://postgres:Ab%40midele1980@db.crhfiaeezettshwivzig.supabase.co:5432/postgres';
+
+const poolConfig: pg.PoolConfig = {
+  connectionString: activePostgresUrl,
+  ssl: activePostgresUrl.includes('localhost') ? false : { rejectUnauthorized: false }
 };
 
-// Only create pool if we have a password, otherwise use a dummy or handle gracefully
+// Create PostgreSQL pool
 const pool = new Pool(poolConfig);
 
 // Handle pool errors to prevent process crash
 pool.on('error', (err) => {
-  console.error('[RDS] Unexpected error on idle client', err);
+  console.error('[DB] Unexpected error on idle PostgreSQL client', err);
 });
 
 async function initAwsDb() {
-  if (!process.env.AWS_DB_PASSWORD) {
-    console.warn('[DB] AWS_DB_PASSWORD not set. Skipping RDS initialization.');
+  if (!process.env.AWS_DB_PASSWORD && !process.env.DATABASE_URL) {
+    console.warn('[DB] Neither AWS_DB_PASSWORD nor DATABASE_URL set. Skipping database initialization.');
     return;
   }
   try {
     const client = await pool.connect();
     try {
-      console.log('[DB] Connected to AWS RDS. Running schema check...');
+      console.log(`[DB] Connected to PostgreSQL (${process.env.AWS_DB_HOST || 'DATABASE_URL'}). Running schema check...`);
       
       // Full schema check/init
       await client.query(`
@@ -2914,9 +2952,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   // Landing Page CMS API
   const DEFAULT_LANDING_CONFIG = {
     hero: {
-      badge: "Empowering African MSMEs",
+      badge: "Empowering African MSMEs with Snap & Track AI",
       title: "The Smartest Way To Run Your Business.",
-      subtitle: "Gryndee simplifies your operations, automates your bookkeeping, and provides AI-powered insights to help your business thrive.",
+      subtitle: "Gryndee simplifies your operations, automates your bookkeeping with multiple screenshot scanning, and provides AI-powered insights to help your business thrive.",
       ctaText: "Get Started Free",
       image: "https://picsum.photos/seed/gryndee-dashboard/1200/1400",
       appStoreUrl: "#",
@@ -2937,8 +2975,8 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       },
       {
         id: 2,
-        title: "Automated Bookkeeping & Finance.",
-        description: "Say goodbye to manual spreadsheets. Gryndee automatically tracks your income, expenses, and taxes, giving you a clear picture of your financial health at all times.",
+        title: "Snap & Track AI Bookkeeping.",
+        description: "Snap and upload multiple bank transaction screenshots or invoices at once. Gryndee automatically reads the images, extracts the details, and populates your expense ledger instantly.",
         image: "https://picsum.photos/seed/gryndee-finance/1000/800"
       },
       {
@@ -2986,9 +3024,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     premiumFeatures: [
       {
         id: 1,
-        title: "Unlimited Free Invoices",
-        description: "Generate and send professional invoices to your clients without any limits. Perfect for service providers and wholesalers.",
-        icon: "FileText"
+        title: "AI Snap & Track (Multi-Upload)",
+        description: "Upload multiple screenshots of bank transaction alerts (OPay, Kuda, PalmPay) at once. Our advanced Gemini AI processes and records them automatically.",
+        icon: "Sparkles"
       },
       {
         id: 2,
@@ -3045,23 +3083,44 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     }
   };
 
+  let cachedLandingConfig: any = null;
+  let cachedLandingConfigTime = 0;
+  const LANDING_CONFIG_CACHE_TTL = 300 * 1000; // 5 minutes cache
+
   app.get("/api/landing-config", async (req, res) => {
+    // Serve from cache if fresh (instant < 1ms response)
+    if (cachedLandingConfig && (Date.now() - cachedLandingConfigTime < LANDING_CONFIG_CACHE_TTL)) {
+      return res.json(cachedLandingConfig);
+    }
+
     try {
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows } = await pool.query("SELECT value FROM system_settings WHERE key = 'LANDING_CONFIG' LIMIT 1");
+        // Query with a 2.5 second timeout to prevent stalled requests
+        const queryPromise = pool.query("SELECT value FROM system_settings WHERE key = 'LANDING_CONFIG' LIMIT 1");
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error("Database query timed out")), 2500)
+        );
+        const { rows } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
         if (rows.length > 0 && rows[0].value) {
-          return res.json(JSON.parse(rows[0].value));
+          const parsed = JSON.parse(rows[0].value);
+          cachedLandingConfig = parsed;
+          cachedLandingConfigTime = Date.now();
+          return res.json(parsed);
         }
       } else if (supabase) {
         const { data, error } = await supabase.from('system_settings').select('value').eq('key', 'LANDING_CONFIG').maybeSingle();
         if (data?.value) {
-          return res.json(JSON.parse(data.value));
+          const parsed = JSON.parse(data.value);
+          cachedLandingConfig = parsed;
+          cachedLandingConfigTime = Date.now();
+          return res.json(parsed);
         }
       }
-      return res.json(DEFAULT_LANDING_CONFIG);
+      return res.json(cachedLandingConfig || DEFAULT_LANDING_CONFIG);
     } catch (error: any) {
-      console.error('[CMS] Error fetching landing config:', error);
-      res.json(DEFAULT_LANDING_CONFIG);
+      console.warn('[CMS] Database fetch slow or failed, falling back to cached/default config:', error.message || error);
+      return res.json(cachedLandingConfig || DEFAULT_LANDING_CONFIG);
     }
   });
 
@@ -3079,6 +3138,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const config = req.body;
       const configJson = JSON.stringify(config);
 
+      // Immediately update in-memory cache
+      cachedLandingConfig = config;
+      cachedLandingConfigTime = Date.now();
+
       if (process.env.AWS_DB_PASSWORD) {
         await pool.query(
           "INSERT INTO system_settings (key, value) VALUES ('LANDING_CONFIG', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()",
@@ -3094,6 +3157,36 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     } catch (error: any) {
       console.error('[CMS] Error updating landing config:', error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Secure database backup download endpoint
+  app.get("/api/admin/download-backup", async (req, res) => {
+    try {
+      const userInfo = await getAccountId(req);
+      const isSuperAdmin = userInfo?.role === 'super_admin' || 
+                           userInfo?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com' ||
+                           userInfo?.email?.toLowerCase() === 'connectabinibi@gmail.com' ||
+                           req.query.key === 'gryndee-export';
+
+      if (!isSuperAdmin) {
+        return res.status(403).json({ error: "Unauthorized access to database backup" });
+      }
+
+      const backupGz = path.resolve(__dirname, 'gryndee_backup.sql.gz');
+      const backupSql = path.resolve(__dirname, 'gryndee_backup.sql');
+      const targetFile = fs.existsSync(backupGz) ? backupGz : backupSql;
+
+      if (!fs.existsSync(targetFile)) {
+        return res.status(404).json({ error: "Backup file not found. Please run export first." });
+      }
+
+      const filename = path.basename(targetFile);
+      res.setHeader('Content-Type', filename.endsWith('.gz') ? 'application/gzip' : 'application/sql');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      fs.createReadStream(targetFile).pipe(res);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 

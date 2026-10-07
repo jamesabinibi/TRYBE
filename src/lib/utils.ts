@@ -124,24 +124,34 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   }
   const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
   
-  try {
-    console.log(`[API] Fetching: ${fullUrl}`);
-    
-    const res = await fetch(fullUrl, {
-      ...options,
-      credentials: 'include'
-    });
-    const end = performance.now();
-    if (end - start > 1000) {
-      console.warn(`[API] Slow request: ${fullUrl} took ${(end - start).toFixed(2)}ms`);
+  let attempts = 0;
+  const maxAttempts = 2;
+  while (attempts < maxAttempts) {
+    attempts++;
+    try {
+      const res = await fetch(fullUrl, {
+        ...options,
+        credentials: 'include'
+      });
+      const end = performance.now();
+      if (end - start > 1000) {
+        console.warn(`[API] Slow request: ${fullUrl} took ${(end - start).toFixed(2)}ms`);
+      }
+      return res;
+    } catch (err) {
+      if (attempts < maxAttempts) {
+        await new Promise(r => setTimeout(r, 200));
+        continue;
+      }
+      const end = performance.now();
+      console.warn(`[API] Request failed: ${fullUrl} after ${(end - start).toFixed(2)}ms`, err);
+      throw err;
     }
-    return res;
-  } catch (err) {
-    const end = performance.now();
-    console.error(`[API] Request failed: ${fullUrl} after ${(end - start).toFixed(2)}ms`, err);
-    throw err;
   }
+  throw new Error(`Failed to fetch ${fullUrl}`);
 }
+
+const inFlightQueries = new Map<string, Promise<any>>();
 
 /**
  * A standard hook for fetching data with caching (Stale-While-Revalidate)
@@ -177,9 +187,27 @@ export function useQuery<T>(key: string, fetcher: () => Promise<T>, options: {
 
   const fetchData = useCallback(async () => {
     if (!enabled) return;
+
+    // Check if query is already running concurrently (e.g. from App.tsx and Landing.tsx)
+    if (inFlightQueries.has(key)) {
+      try {
+        const result = await inFlightQueries.get(key);
+        setData(result);
+        setIsLoading(false);
+        if (onSuccess) onSuccess(result);
+        return;
+      } catch (err: any) {
+        setError(err);
+        setIsLoading(false);
+        return;
+      }
+    }
     
+    const queryPromise = fetcher();
+    inFlightQueries.set(key, queryPromise);
+
     try {
-      const result = await fetcher();
+      const result = await queryPromise;
       setData(result);
       setIsLoading(false);
       
@@ -200,6 +228,8 @@ export function useQuery<T>(key: string, fetcher: () => Promise<T>, options: {
     } catch (err: any) {
       setError(err);
       setIsLoading(false);
+    } finally {
+      inFlightQueries.delete(key);
     }
   }, [key, enabled, persist, onSuccess]);
 

@@ -430,9 +430,13 @@ export default function App() {
   });
 
   const { data: landingConfig } = useQuery('landing-config', async () => {
-    const res = await apiFetch('/api/landing-config');
-    if (!res.ok) return null;
-    return res.json();
+    try {
+      const res = await apiFetch('/api/landing-config');
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
   }, { 
     persist: true
   });

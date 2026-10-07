@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: gryndee
+    env: node
+    plan: free # or starter ($7/mo) for 24/7 non-sleeping instance
+    region: oregon
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false # Set in Render dashboard (e.g., free Supabase/Neon URL)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: APP_URL
+        sync: false
