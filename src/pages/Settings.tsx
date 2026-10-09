@@ -28,13 +28,20 @@ import {
   CheckCircle2,
   FileText,
   Sparkles,
-  Download
+  Download,
+  Package,
+  ShoppingCart,
+  BarChart3,
+  Wallet,
+  Search,
+  Target
 } from 'lucide-react';
 import { Category } from '../types';
-import { cn, retryWithBackoff } from '../lib/utils';
+import { cn, retryWithBackoff, formatCurrency } from '../lib/utils';
 import { offlineQueue } from '../lib/offline';
 import { toast } from 'sonner';
 import { useAuth, useSettings } from '../App';
+import { useSearchParams } from 'react-router-dom';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 
@@ -582,13 +589,30 @@ NOTIFY pgrst, 'reload schema';
     toast.success('SQL copied to clipboard! Paste it into Supabase SQL Editor.');
   };
 
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'branding' | 'team' | 'account' | 'system'>('branding');
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'team' || tabParam === 'team-members' || window.location.hash === '#team') {
+      setActiveTab('team');
+    } else if (tabParam === 'account' || tabParam === 'security') {
+      setActiveTab('account');
+    } else if (tabParam === 'branding') {
+      setActiveTab('branding');
+    } else if (tabParam === 'system') {
+      setActiveTab('system');
+    }
+  }, [searchParams]);
 
   // Users Management State (Merged from Users.tsx)
   const [users, setUsers] = useState<any[]>([]);
   const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [storeProducts, setStoreProducts] = useState<any[]>([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
   const [userFormData, setUserFormData] = useState({
     username: '',
     password: '',
@@ -596,14 +620,31 @@ NOTIFY pgrst, 'reload schema';
     role: 'staff' as 'admin' | 'manager' | 'staff',
     email: '',
     permissions: {
-      can_view_dashboard: true,
+      can_view_dashboard: false,
       can_view_account_data: false,
-      can_manage_products: false,
-      can_manage_sales: false,
+      can_manage_products: true,
+      can_manage_sales: true,
       can_view_expenses: false,
       can_manage_expenses: false,
+      product_access_type: 'all' as 'all' | 'specific',
+      assigned_product_ids: [] as number[],
     }
   });
+
+  const fetchStoreProducts = async () => {
+    setIsProductsLoading(true);
+    try {
+      const response = await fetchWithAuth('/api/products?exclude_images=true');
+      if (response.ok) {
+        const data = await response.json();
+        setStoreProducts(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error('Failed to load store products:', error);
+    } finally {
+      setIsProductsLoading(false);
+    }
+  };
 
   const fetchUsers = async () => {
     setIsUsersLoading(true);
@@ -621,14 +662,22 @@ NOTIFY pgrst, 'reload schema';
   };
 
   useEffect(() => {
-    if (activeTab === 'account') {
+    if (activeTab === 'account' || activeTab === 'team') {
       fetchUsers();
+      fetchStoreProducts();
     }
   }, [activeTab]);
 
   const handleOpenUserModal = (user?: any) => {
+    setProductSearch('');
+    fetchStoreProducts();
     if (user) {
       setEditingUser(user);
+      const rawPerms = user.permissions;
+      const parsedPerms = typeof rawPerms === 'string'
+        ? (() => { try { return JSON.parse(rawPerms); } catch { return {}; } })()
+        : (rawPerms || {});
+
       setUserFormData({
         username: user.username,
         password: '',
@@ -636,13 +685,15 @@ NOTIFY pgrst, 'reload schema';
         role: user.role as any,
         email: user.email || '',
         permissions: {
-          can_view_dashboard: true,
+          can_view_dashboard: false,
           can_view_account_data: false,
-          can_manage_products: false,
-          can_manage_sales: false,
+          can_manage_products: true,
+          can_manage_sales: true,
           can_view_expenses: false,
           can_manage_expenses: false,
-          ...(user.permissions || {})
+          product_access_type: parsedPerms.product_access_type || 'all',
+          assigned_product_ids: Array.isArray(parsedPerms.assigned_product_ids) ? parsedPerms.assigned_product_ids : [],
+          ...parsedPerms
         }
       });
     } else {
@@ -654,17 +705,162 @@ NOTIFY pgrst, 'reload schema';
         role: 'staff',
         email: '',
         permissions: {
-          can_view_dashboard: true,
+          can_view_dashboard: false,
           can_view_account_data: false,
-          can_manage_products: false,
-          can_manage_sales: false,
+          can_manage_products: true,
+          can_manage_sales: true,
           can_view_expenses: false,
           can_manage_expenses: false,
+          product_access_type: 'all',
+          assigned_product_ids: [],
         }
       });
     }
     setIsUserModalOpen(true);
   };
+
+  const toggleProductAssignment = (productId: number) => {
+    setUserFormData((prev) => {
+      const current = Array.isArray(prev.permissions?.assigned_product_ids)
+        ? [...prev.permissions.assigned_product_ids]
+        : [];
+      const exists = current.includes(productId);
+      const next = exists ? current.filter(id => id !== productId) : [...current, productId];
+      return {
+        ...prev,
+        permissions: {
+          ...prev.permissions,
+          product_access_type: 'specific',
+          assigned_product_ids: next
+        }
+      };
+    });
+  };
+
+  const selectAllProducts = (idsToSelect: number[]) => {
+    setUserFormData((prev) => ({
+      ...prev,
+      permissions: {
+        ...prev.permissions,
+        product_access_type: 'specific',
+        assigned_product_ids: Array.from(new Set([...(prev.permissions?.assigned_product_ids || []), ...idsToSelect]))
+      }
+    }));
+  };
+
+  const clearSelectedProducts = () => {
+    setUserFormData((prev) => ({
+      ...prev,
+      permissions: {
+        ...prev.permissions,
+        assigned_product_ids: []
+      }
+    }));
+  };
+
+  const setProductAccessType = (type: 'all' | 'specific') => {
+    setUserFormData((prev) => ({
+      ...prev,
+      permissions: {
+        ...prev.permissions,
+        product_access_type: type
+      }
+    }));
+  };
+
+  const filteredModalProducts = storeProducts.filter((p) => {
+    if (!productSearch) return true;
+    const q = productSearch.toLowerCase();
+    return (
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.category_name && p.category_name.toLowerCase().includes(q)) ||
+      (p.supplier_name && p.supplier_name.toLowerCase().includes(q))
+    );
+  });
+
+  const applyPermissionPreset = (preset: 'inventory_sales' | 'inventory_only' | 'sales_only' | 'all') => {
+    setUserFormData((prev) => {
+      let newPermissions: any = { 
+        ...prev.permissions,
+        product_access_type: prev.permissions?.product_access_type || 'all',
+        assigned_product_ids: prev.permissions?.assigned_product_ids || []
+      };
+      if (preset === 'inventory_sales') {
+        newPermissions = {
+          ...newPermissions,
+          can_view_dashboard: false,
+          can_view_account_data: false,
+          can_manage_products: true,
+          can_manage_sales: true,
+          can_view_expenses: false,
+          can_manage_expenses: false,
+        };
+      } else if (preset === 'inventory_only') {
+        newPermissions = {
+          ...newPermissions,
+          can_view_dashboard: false,
+          can_view_account_data: false,
+          can_manage_products: true,
+          can_manage_sales: false,
+          can_view_expenses: false,
+          can_manage_expenses: false,
+        };
+      } else if (preset === 'sales_only') {
+        newPermissions = {
+          ...newPermissions,
+          can_view_dashboard: false,
+          can_view_account_data: false,
+          can_manage_products: false,
+          can_manage_sales: true,
+          can_view_expenses: false,
+          can_manage_expenses: false,
+        };
+      } else if (preset === 'all') {
+        newPermissions = {
+          ...newPermissions,
+          can_view_dashboard: true,
+          can_view_account_data: true,
+          can_manage_products: true,
+          can_manage_sales: true,
+          can_view_expenses: true,
+          can_manage_expenses: true,
+        };
+      }
+      return { ...prev, permissions: newPermissions };
+    });
+  };
+
+  const isInventorySalesOnly = 
+    !!userFormData.permissions?.can_manage_products &&
+    !!userFormData.permissions?.can_manage_sales &&
+    !userFormData.permissions?.can_view_dashboard &&
+    !userFormData.permissions?.can_view_account_data &&
+    !userFormData.permissions?.can_view_expenses &&
+    !userFormData.permissions?.can_manage_expenses;
+
+  const isInventoryOnly = 
+    !!userFormData.permissions?.can_manage_products &&
+    !userFormData.permissions?.can_manage_sales &&
+    !userFormData.permissions?.can_view_dashboard &&
+    !userFormData.permissions?.can_view_account_data &&
+    !userFormData.permissions?.can_view_expenses &&
+    !userFormData.permissions?.can_manage_expenses;
+
+  const isSalesOnly = 
+    !userFormData.permissions?.can_manage_products &&
+    !!userFormData.permissions?.can_manage_sales &&
+    !userFormData.permissions?.can_view_dashboard &&
+    !userFormData.permissions?.can_view_account_data &&
+    !userFormData.permissions?.can_view_expenses &&
+    !userFormData.permissions?.can_manage_expenses;
+
+  const isAllPermissions = 
+    !!userFormData.permissions?.can_manage_products &&
+    !!userFormData.permissions?.can_manage_sales &&
+    !!userFormData.permissions?.can_view_dashboard &&
+    !!userFormData.permissions?.can_view_account_data &&
+    !!userFormData.permissions?.can_view_expenses &&
+    !!userFormData.permissions?.can_manage_expenses;
 
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1030,6 +1226,28 @@ NOTIFY pgrst, 'reload schema';
         >
           Branding
         </button>
+        {(user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'owner') && (
+          <button
+            onClick={() => setActiveTab('team')}
+            className={cn(
+              "px-6 py-2.5 rounded-xl label-text transition-all whitespace-nowrap flex items-center gap-2",
+              activeTab === 'team' 
+                ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" 
+                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+            )}
+          >
+            <Users className="w-4 h-4" />
+            Team Members
+            {users.length > 0 && (
+              <span className={cn(
+                "text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                activeTab === 'team' ? "bg-brand/10 text-brand" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+              )}>
+                {users.length}
+              </span>
+            )}
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('account')}
           className={cn(
@@ -1039,7 +1257,7 @@ NOTIFY pgrst, 'reload schema';
               : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
           )}
         >
-          Account & Team
+          Account & Security
         </button>
         {user?.role === 'super_admin' && (
           <button
@@ -1774,102 +1992,210 @@ NOTIFY pgrst, 'reload schema';
         </div>
       </section>
 
-      {/* Team Management Section */}
-      {(user?.role === 'admin' || user?.role === 'super_admin') && (
-        <section id="team" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
+      {/* Quick link to Team Management in Account tab */}
+      {(user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'owner') && (
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-8 sm:pt-12 border-t border-zinc-200 dark:border-zinc-800">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-brand" />
-              <h3 className="h3">Team Management</h3>
+              <h3 className="h3">Team & Staff Access</h3>
             </div>
-            <p className="body-text">Manage your staff accounts and their access levels.</p>
+            <p className="body-text">Configure staff credentials, roles, and store access limits.</p>
           </div>
-          <div className="lg:col-span-2 glass-card p-6 sm:p-8 space-y-6">
-            <div className="flex justify-end">
-              <button 
-                onClick={() => handleOpenUserModal()}
-                className="btn-primary flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Member
-              </button>
+          <div className="lg:col-span-2 glass-card p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h4 className="font-bold text-zinc-900 dark:text-white text-base">
+                {users.length} Team {users.length === 1 ? 'Member' : 'Members'} Registered
+              </h4>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Quickly assign access to product inventory and sales/invoices information only, or customize granular permissions.
+              </p>
             </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                    <th className="px-4 py-4 text-left label-text">Member</th>
-                    <th className="px-4 py-4 text-left label-text">Role</th>
-                    <th className="px-4 py-4 text-right label-text">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800/50">
-                  {users.map(u => (
-                    <tr key={u.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-600 dark:text-zinc-400">
-                            {u.name?.charAt(0) || u.username?.charAt(0) || '?'}
-                          </div>
-                          <div>
-                            <p className="body-text font-bold">{u.name}</p>
-                            <p className="label-text">@{u.username}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className={cn(
-                          "px-3 py-1 rounded-lg label-text",
-                          u.role === 'admin' || u.role === 'super_admin' ? "bg-brand/10 text-brand" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-                        )}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            onClick={() => handleOpenUserModal(u)}
-                            className="p-2 text-zinc-400 hover:text-brand transition-colors"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteUser(u.id)}
-                            className="p-2 text-zinc-400 hover:text-red-600 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <button 
+              onClick={() => setActiveTab('team')} 
+              className="btn-primary flex items-center gap-2 shrink-0"
+            >
+              <Users className="w-4 h-4" />
+              Manage Team Members
+            </button>
           </div>
         </section>
       )}
     </div>
   )}
 
+  {/* Dedicated Team Management Tab */}
+  {activeTab === 'team' && (user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'owner') && (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <section id="team" className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-brand" />
+            <h3 className="h3">Team Management</h3>
+          </div>
+          <p className="body-text">Manage your staff accounts and assign their store permissions.</p>
+
+          <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 space-y-2.5">
+            <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
+              <Shield className="w-3.5 h-3.5 text-brand" /> Role-Based Access
+            </div>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              You can grant team members access strictly to <strong>product inventory</strong> and <strong>sales/invoices</strong> information. Financial dashboards, total profit margins, and expenses remain hidden.
+            </p>
+          </div>
+        </div>
+
+        <div className="lg:col-span-2 glass-card p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h4 className="font-bold text-zinc-900 dark:text-white text-base">
+                Team Members ({users.length})
+              </h4>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Staff accounts and active permission profiles
+              </p>
+            </div>
+            <button 
+              onClick={() => handleOpenUserModal()}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Team Member
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-zinc-100 dark:border-zinc-800">
+                  <th className="px-4 py-4 text-left label-text">Member</th>
+                  <th className="px-4 py-4 text-left label-text">Role & Assigned Access</th>
+                  <th className="px-4 py-4 text-right label-text">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800/50">
+                {users.map(u => (
+                  <tr key={u.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-600 dark:text-zinc-400">
+                          {u.name?.charAt(0) || u.username?.charAt(0) || '?'}
+                        </div>
+                        <div>
+                          <p className="body-text font-bold">{u.name}</p>
+                          <p className="label-text">@{u.username}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-col gap-1.5 items-start">
+                        <span className={cn(
+                          "px-3 py-1 rounded-lg label-text font-bold uppercase tracking-wider text-[10px]",
+                          u.role === 'admin' || u.role === 'super_admin' ? "bg-brand/10 text-brand" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                        )}>
+                          {u.role}
+                        </span>
+                        {u.role === 'staff' && (
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {u.permissions?.can_manage_products && u.permissions?.can_manage_sales && !u.permissions?.can_view_dashboard && !u.permissions?.can_view_account_data && !u.permissions?.can_view_expenses ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-brand/10 text-brand border border-brand/20 shadow-sm" title="Has access only to product inventory and sales/invoices information">
+                                <Package className="w-3.5 h-3.5 text-brand" />
+                                <ShoppingCart className="w-3.5 h-3.5 text-brand" />
+                                Inventory & Sales/Invoices Only
+                              </span>
+                            ) : u.permissions?.can_manage_products && !u.permissions?.can_manage_sales && !u.permissions?.can_view_dashboard && !u.permissions?.can_view_account_data && !u.permissions?.can_view_expenses ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                <Package className="w-3.5 h-3.5 text-emerald-500" />
+                                Inventory Only
+                              </span>
+                            ) : !u.permissions?.can_manage_products && u.permissions?.can_manage_sales && !u.permissions?.can_view_dashboard && !u.permissions?.can_view_account_data && !u.permissions?.can_view_expenses ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                <ShoppingCart className="w-3.5 h-3.5 text-blue-500" />
+                                Sales & Invoices Only
+                              </span>
+                            ) : u.permissions?.can_manage_products && u.permissions?.can_manage_sales && u.permissions?.can_view_dashboard && u.permissions?.can_view_account_data && u.permissions?.can_view_expenses ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                                Full Staff Access
+                              </span>
+                            ) : (
+                              <>
+                                {u.permissions?.can_manage_products && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                                    <Package className="w-3 h-3 text-brand" /> Inventory
+                                  </span>
+                                )}
+                                {u.permissions?.can_manage_sales && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                                    <ShoppingCart className="w-3 h-3 text-blue-500" /> Sales/Invoices
+                                  </span>
+                                )}
+                                {u.permissions?.can_view_dashboard && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                                    <BarChart3 className="w-3 h-3 text-amber-500" /> Dashboard
+                                  </span>
+                                )}
+                                {u.permissions?.product_access_type === 'specific' ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20" title={`Access limited to ${u.permissions?.assigned_product_ids?.length || 0} selected product(s)`}>
+                                    <Target className="w-3 h-3 text-amber-500" />
+                                    {u.permissions?.assigned_product_ids?.length || 0} Products
+                                  </span>
+                                ) : u.permissions?.can_manage_products ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20" title="Access to all store products">
+                                    <Package className="w-3 h-3 text-emerald-500" /> All Products
+                                  </span>
+                                ) : null}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => handleOpenUserModal(u)}
+                          className="p-2 text-zinc-400 hover:text-brand transition-colors"
+                          title="Edit Member & Permissions"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteUser(u.id)}
+                          className="p-2 text-zinc-400 hover:text-red-600 transition-colors"
+                          title="Delete Member"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  )}
+
       {/* User Modal */}
       {isUserModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-zinc-950/20 backdrop-blur-sm">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-lg max-h-[90vh] flex flex-col rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 md:p-8 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
               <div>
                 <h3 className="h3">
                   {editingUser ? 'Edit Team Member' : 'Add Team Member'}
                 </h3>
-                <p className="label-text">Configure access for your staff.</p>
+                <p className="label-text">Configure access and permissions for your staff.</p>
               </div>
               <button onClick={() => setIsUserModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
                 <X className="w-5 h-5 text-zinc-400" />
               </button>
             </div>
             
-            <form onSubmit={handleUserSubmit} className="p-8 space-y-6">
+            <form onSubmit={handleUserSubmit} className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="label-text">Full Name</label>
@@ -1911,34 +2237,456 @@ NOTIFY pgrst, 'reload schema';
                   </Input>
                 </div>
 
+                {!editingUser && (
+                  <div className="space-y-2">
+                    <label className="label-text">Password</label>
+                    <Input 
+                      type="password" 
+                      required
+                      placeholder="••••••••"
+                      value={userFormData.password}
+                      onChange={(e) => setUserFormData({...userFormData, password: e.target.value})}
+                    />
+                  </div>
+                )}
+                {editingUser && (
+                  <div className="space-y-2">
+                    <label className="label-text">Reset Password (leave empty to keep current)</label>
+                    <Input 
+                      type="password" 
+                      placeholder="New password (optional)"
+                      value={userFormData.password}
+                      onChange={(e) => setUserFormData({...userFormData, password: e.target.value})}
+                    />
+                  </div>
+                )}
+
                 {userFormData.role !== 'admin' && (
                   <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <label className="label-text">Permissions</label>
-                    <div className="space-y-3">
-                      {[
-                        { id: 'can_view_dashboard', label: 'View Dashboard' },
-                        { id: 'can_view_account_data', label: 'View All Account Data' },
-                        { id: 'can_manage_products', label: 'Manage Products' },
-                        { id: 'can_manage_sales', label: 'Manage Sales & Invoices' },
-                        { id: 'can_view_expenses', label: 'View Expenses' },
-                        { id: 'can_manage_expenses', label: 'Manage Expenses' },
-                      ].map((perm) => (
-                        <label key={perm.id} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
-                          <span className="body-text font-bold">{perm.label}</span>
-                          <input 
-                            type="checkbox"
-                            className="w-4 h-4 rounded border-zinc-300 text-brand focus:ring-brand"
-                            checked={!!userFormData.permissions?.[perm.id as keyof typeof userFormData.permissions]}
-                            onChange={(e) => setUserFormData({
-                              ...userFormData,
-                              permissions: {
-                                ...userFormData.permissions,
-                                [perm.id]: e.target.checked
-                              }
-                            })}
-                          />
-                        </label>
-                      ))}
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="label-text font-bold">Assign Store Access</label>
+                        {isInventorySalesOnly && (
+                          <span className="text-[10px] font-bold text-brand uppercase tracking-wider bg-brand/10 dark:bg-brand/20 px-2 py-0.5 rounded-full">
+                            Inventory & Sales Only
+                          </span>
+                        )}
+                        {isInventoryOnly && (
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                            Inventory Only
+                          </span>
+                        )}
+                        {isSalesOnly && (
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider bg-blue-500/10 px-2 py-0.5 rounded-full">
+                            Sales & Invoices Only
+                          </span>
+                        )}
+                        {isAllPermissions && (
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-500/10 px-2 py-0.5 rounded-full">
+                            Full Staff Access
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        Select an access preset or configure granular permissions below.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {/* FEATURED: Product Inventory & Sales/Invoices Information */}
+                      <button
+                        type="button"
+                        onClick={() => applyPermissionPreset('inventory_sales')}
+                        className={cn(
+                          "w-full p-4 rounded-2xl border text-left transition-all flex flex-col gap-2 relative",
+                          isInventorySalesOnly
+                            ? "border-brand bg-brand/10 dark:bg-brand/20 text-brand ring-2 ring-brand/30 shadow-md"
+                            : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "p-2.5 rounded-xl transition-colors",
+                              isInventorySalesOnly ? "bg-brand text-white shadow-md shadow-brand/20" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                            )}>
+                              <Package className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                                Product Inventory & Sales/Invoices Only
+                                <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/15 text-brand font-bold uppercase tracking-wider">
+                                  Recommended
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug mt-0.5">
+                                Assign access strictly to product inventory and sales/invoices information. Financial reports, company margins, and dashboard are hidden.
+                              </p>
+                            </div>
+                          </div>
+                          {isInventorySalesOnly && (
+                            <div className="w-5 h-5 rounded-full bg-brand text-white flex items-center justify-center shrink-0">
+                              <Check className="w-3.5 h-3.5" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-zinc-200/40 dark:border-zinc-700/40 text-[10px]">
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">✓ Product Catalog & Inventory</span>
+                          <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">✓ Sales POS & Customer Invoices</span>
+                          <span className="px-2 py-0.5 rounded-md bg-zinc-200/60 dark:bg-zinc-700/60 text-zinc-500 dark:text-zinc-400">✗ Financial Reports & Margins Hidden</span>
+                        </div>
+                      </button>
+
+                      {/* OTHER PRESETS */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => applyPermissionPreset('inventory_only')}
+                          className={cn(
+                            "p-3 rounded-2xl border text-left transition-all flex flex-col gap-1.5",
+                            isInventoryOnly
+                              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/30 shadow-sm"
+                              : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-emerald-600" />
+                            <span className="text-xs font-bold">Inventory Only</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight">
+                            Manage stock levels and products only. No sales or invoicing.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => applyPermissionPreset('sales_only')}
+                          className={cn(
+                            "p-3 rounded-2xl border text-left transition-all flex flex-col gap-1.5",
+                            isSalesOnly
+                              ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500/30 shadow-sm"
+                              : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <ShoppingCart className="w-4 h-4 text-blue-600" />
+                            <span className="text-xs font-bold">Sales & Invoices</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight">
+                            POS checkout and customer invoices only. Cannot edit products.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => applyPermissionPreset('all')}
+                          className={cn(
+                            "p-3 rounded-2xl border text-left transition-all flex flex-col gap-1.5",
+                            isAllPermissions
+                              ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 ring-2 ring-amber-500/30 shadow-sm"
+                              : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Zap className="w-4 h-4 text-amber-500" />
+                            <span className="text-xs font-bold">Full Staff Access</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight">
+                            All operational permissions across all store modules.
+                          </p>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 pt-3">
+                      <div className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-1">
+                        Operational Permissions
+                      </div>
+
+                      <label className="flex items-start justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200/60 dark:border-zinc-700/60">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-xl bg-brand/10 text-brand mt-0.5">
+                            <Package className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Product Inventory & Stock</div>
+                            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">Browse catalog, check stock counts, manage inventory items</div>
+                          </div>
+                        </div>
+                        <input 
+                          type="checkbox"
+                          className="w-4 h-4 mt-1 rounded border-zinc-300 text-brand focus:ring-brand"
+                          checked={!!userFormData.permissions?.can_manage_products}
+                          onChange={(e) => setUserFormData({
+                            ...userFormData,
+                            permissions: { ...userFormData.permissions, can_manage_products: e.target.checked }
+                          })}
+                        />
+                      </label>
+
+                      <label className="flex items-start justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200/60 dark:border-zinc-700/60">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 mt-0.5">
+                            <ShoppingCart className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Sales & Invoices (POS)</div>
+                            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">Record sales at POS checkout, create and view invoices, print receipts</div>
+                          </div>
+                        </div>
+                        <input 
+                          type="checkbox"
+                          className="w-4 h-4 mt-1 rounded border-zinc-300 text-brand focus:ring-brand"
+                          checked={!!userFormData.permissions?.can_manage_sales}
+                          onChange={(e) => setUserFormData({
+                            ...userFormData,
+                            permissions: { ...userFormData.permissions, can_manage_sales: e.target.checked }
+                          })}
+                        />
+                      </label>
+
+                      <div className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-1 pt-2">
+                        Financial & Sensitive Store Data (Restricted)
+                      </div>
+
+                      <label className="flex items-start justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200/60 dark:border-zinc-700/60">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 mt-0.5">
+                            <BarChart3 className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Executive Dashboard & Revenue Trends</div>
+                            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">Access store overview, weekly revenue curves, and performance stats</div>
+                          </div>
+                        </div>
+                        <input 
+                          type="checkbox"
+                          className="w-4 h-4 mt-1 rounded border-zinc-300 text-brand focus:ring-brand"
+                          checked={!!userFormData.permissions?.can_view_dashboard}
+                          onChange={(e) => setUserFormData({
+                            ...userFormData,
+                            permissions: { ...userFormData.permissions, can_view_dashboard: e.target.checked }
+                          })}
+                        />
+                      </label>
+
+                      <label className="flex items-start justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200/60 dark:border-zinc-700/60">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500 mt-0.5">
+                            <Shield className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">All Account Data & Cost Margins</div>
+                            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">Reveal product purchase cost prices, inventory valuation, and team-wide data</div>
+                          </div>
+                        </div>
+                        <input 
+                          type="checkbox"
+                          className="w-4 h-4 mt-1 rounded border-zinc-300 text-brand focus:ring-brand"
+                          checked={!!userFormData.permissions?.can_view_account_data}
+                          onChange={(e) => setUserFormData({
+                            ...userFormData,
+                            permissions: { ...userFormData.permissions, can_view_account_data: e.target.checked }
+                          })}
+                        />
+                      </label>
+
+                      <label className="flex items-start justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200/60 dark:border-zinc-700/60">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500 mt-0.5">
+                            <Wallet className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">View Expenses</div>
+                            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">Browse company operating expenditures</div>
+                          </div>
+                        </div>
+                        <input 
+                          type="checkbox"
+                          className="w-4 h-4 mt-1 rounded border-zinc-300 text-brand focus:ring-brand"
+                          checked={!!userFormData.permissions?.can_view_expenses}
+                          onChange={(e) => setUserFormData({
+                            ...userFormData,
+                            permissions: { ...userFormData.permissions, can_view_expenses: e.target.checked }
+                          })}
+                        />
+                      </label>
+
+                      <label className="flex items-start justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200/60 dark:border-zinc-700/60">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-xl bg-red-500/10 text-red-500 mt-0.5">
+                            <CreditCard className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Manage Expenses</div>
+                            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">Create, modify, or delete business expenses</div>
+                          </div>
+                        </div>
+                        <input 
+                          type="checkbox"
+                          className="w-4 h-4 mt-1 rounded border-zinc-300 text-brand focus:ring-brand"
+                          checked={!!userFormData.permissions?.can_manage_expenses}
+                          onChange={(e) => setUserFormData({
+                            ...userFormData,
+                            permissions: { ...userFormData.permissions, can_manage_expenses: e.target.checked }
+                          })}
+                        />
+                      </label>
+                    </div>
+
+                    {/* PRODUCT ACCESS & SPECIFIC PRODUCT ASSIGNMENT */}
+                    <div className="space-y-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
+                            <Target className="w-3.5 h-3.5 text-brand" /> Product Access Scope
+                          </div>
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                            Select the specific products you want this member to have access to.
+                          </p>
+                        </div>
+                        {userFormData.permissions?.product_access_type === 'specific' ? (
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                            {(userFormData.permissions?.assigned_product_ids?.length || 0)} Selected
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                            All Products
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Segmented Selector for Access Type */}
+                      <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-2xl">
+                        <button
+                          type="button"
+                          onClick={() => setProductAccessType('all')}
+                          className={cn(
+                            "py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+                            userFormData.permissions?.product_access_type !== 'specific'
+                              ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm"
+                              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                          )}
+                        >
+                          <Package className="w-3.5 h-3.5 text-brand" />
+                          All Store Products
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProductAccessType('specific')}
+                          className={cn(
+                            "py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+                            userFormData.permissions?.product_access_type === 'specific'
+                              ? "bg-white dark:bg-zinc-900 text-brand shadow-sm"
+                              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                          )}
+                        >
+                          <Target className="w-3.5 h-3.5" />
+                          Specific Products Only
+                        </button>
+                      </div>
+
+                      {/* SPECIFIC PRODUCT PICKER UI */}
+                      {userFormData.permissions?.product_access_type === 'specific' && (
+                        <div className="space-y-2.5 p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/80 dark:border-zinc-700/80 animate-in fade-in duration-200">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="relative flex-1">
+                              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                              <input
+                                type="text"
+                                placeholder="Search products by name or category..."
+                                value={productSearch}
+                                onChange={(e) => setProductSearch(e.target.value)}
+                                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-brand/40 text-zinc-900 dark:text-white placeholder:text-zinc-400"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => selectAllProducts(filteredModalProducts.map(p => p.id))}
+                                className="text-[11px] font-bold px-2 py-1 rounded-lg text-brand hover:bg-brand/10 transition-colors"
+                              >
+                                Select All
+                              </button>
+                              <span className="text-zinc-300 dark:text-zinc-600">|</span>
+                              <button
+                                type="button"
+                                onClick={clearSelectedProducts}
+                                className="text-[11px] font-bold px-2 py-1 rounded-lg text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Product List */}
+                          <div className="max-h-56 overflow-y-auto space-y-1 pr-1 divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                            {isProductsLoading ? (
+                              <div className="py-6 flex items-center justify-center gap-2 text-xs text-zinc-400">
+                                <Loader2 className="w-4 h-4 animate-spin text-brand" /> Loading store products...
+                              </div>
+                            ) : filteredModalProducts.length === 0 ? (
+                              <div className="py-6 text-center text-xs text-zinc-400">
+                                {storeProducts.length === 0
+                                  ? 'No products found in catalog. Add products first to assign them.'
+                                  : `No products match "${productSearch}"`}
+                              </div>
+                            ) : (
+                              filteredModalProducts.map((prod) => {
+                                const isSelected = (userFormData.permissions?.assigned_product_ids || []).includes(prod.id);
+                                return (
+                                  <div
+                                    key={prod.id}
+                                    onClick={() => toggleProductAssignment(prod.id)}
+                                    className={cn(
+                                      "pt-1.5 first:pt-0 flex items-center justify-between p-2 rounded-xl cursor-pointer transition-colors text-left select-none",
+                                      isSelected
+                                        ? "bg-brand/10 dark:bg-brand/20 border border-brand/30"
+                                        : "hover:bg-white dark:hover:bg-zinc-900 border border-transparent"
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <div className={cn(
+                                        "w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors",
+                                        isSelected
+                                          ? "bg-brand border-brand text-white"
+                                          : "border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800"
+                                      )}>
+                                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                                          {prod.name}
+                                        </p>
+                                        <div className="flex items-center gap-2 text-[10px] text-zinc-500 dark:text-zinc-400">
+                                          {prod.category_name && (
+                                            <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-zinc-800 font-medium">
+                                              {prod.category_name}
+                                            </span>
+                                          )}
+                                          <span>Stock: {prod.total_stock || 0}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-right shrink-0 pl-2">
+                                      <span className="text-xs font-bold text-zinc-900 dark:text-zinc-200">
+                                        {formatCurrency(prod.selling_price || 0, settings?.currency || 'NGN')}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+
+                          {(userFormData.permissions?.assigned_product_ids?.length || 0) === 0 && (
+                            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                              <span>Please select at least one product above, or choose "All Store Products".</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

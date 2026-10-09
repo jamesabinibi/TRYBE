@@ -131,19 +131,26 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   const { isDarkMode, toggleDarkMode } = useTheme();
   const location = useLocation();
   
+  const isStaff = user?.role === 'staff';
+  const perms = user?.permissions;
+  const canViewDashboard = !isStaff || perms?.can_view_dashboard;
+  const canManageProducts = !isStaff || perms?.can_manage_products;
+  const canManageSales = !isStaff || perms?.can_manage_sales;
+  const canViewExpenses = !isStaff || perms?.can_view_expenses;
+
   const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    ...(canViewDashboard ? [{ icon: LayoutDashboard, label: 'Dashboard', path: '/' }] : []),
     ...(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com' ? [{ icon: Globe, label: 'Landing Page', path: '/landing' }] : []),
-    ...(user?.role !== 'staff' ? [{ icon: Brain, label: 'AI Intelligence', path: '/ai-advisor' }] : []),
-    ...(user?.role !== 'staff' ? [{ icon: Wallet, label: 'Finance', path: '/finance' }] : []),
-    { icon: Package, label: 'Inventory', path: '/products' },
-    { icon: ShoppingCart, label: 'Sales', path: '/sales' },
-    ...(user?.role !== 'staff' ? [{ icon: FileText, label: 'Tax Report', path: '/tax' }] : []),
-    { icon: FileText, label: 'Invoices', path: '/invoices' },
-    { icon: Users, label: 'Customers', path: '/customers' },
-    ...(user?.role !== 'staff' ? [{ icon: Crown, label: 'Subscription', path: '/subscription' }] : []),
+    ...(!isStaff ? [{ icon: Brain, label: 'AI Intelligence', path: '/ai-advisor' }] : []),
+    ...(!isStaff || canViewExpenses ? [{ icon: Wallet, label: 'Finance', path: '/finance' }] : []),
+    ...(canManageProducts ? [{ icon: Package, label: 'Inventory', path: '/products' }] : []),
+    ...(canManageSales ? [{ icon: ShoppingCart, label: 'Sales', path: '/sales' }] : []),
+    ...(!isStaff ? [{ icon: FileText, label: 'Tax Report', path: '/tax' }] : []),
+    ...(canManageSales ? [{ icon: FileText, label: 'Invoices', path: '/invoices' }] : []),
+    ...(canManageSales || !isStaff ? [{ icon: Users, label: 'Customers', path: '/customers' }] : []),
+    ...(!isStaff ? [{ icon: Crown, label: 'Subscription', path: '/subscription' }] : []),
     ...(user?.role === 'super_admin' || user?.email?.toLowerCase() === 'abinibimultimedia@yahoo.com' ? [{ icon: ShieldCheck, label: 'Super Admin', path: '/super-admin' }] : []),
-    ...(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data) ? [{ icon: SettingsIcon, label: 'Settings', path: '/settings' }] : []),
+    ...(!isStaff || perms?.can_view_account_data ? [{ icon: SettingsIcon, label: 'Settings', path: '/settings' }] : []),
   ];
 
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -598,19 +605,32 @@ export default function App() {
                     user ? (
                       <Layout>
                         <Routes>
-                          <Route path="/" element={user?.role === 'super_admin' ? <Navigate to="/super-admin" /> : <Dashboard />} />
+                          <Route 
+                            path="/" 
+                            element={
+                              user?.role === 'super_admin' ? (
+                                <Navigate to="/super-admin" />
+                              ) : (user?.role === 'staff' && !user?.permissions?.can_view_dashboard) ? (
+                                <Navigate to={user?.permissions?.can_manage_sales ? "/sales" : "/products"} replace />
+                              ) : (
+                                <Dashboard />
+                              )
+                            } 
+                          />
                           <Route path="/landing" element={<Landing />} />
                           <Route path="/ai-advisor" element={user?.role === 'staff' ? <Navigate to="/" /> : <AIAdvisor />} />
                           <Route path="/finance" element={user?.role === 'staff' ? <Navigate to="/" /> : <Finance />} />
-                          <Route path="/products" element={<Products />} />
-                          <Route path="/sales" element={<Sales />} />
-                          <Route path="/expenses" element={<Expenses />} />
+                          <Route path="/products" element={(user?.role !== 'staff' || user?.permissions?.can_manage_products) ? <Products /> : <Navigate to="/" />} />
+                          <Route path="/sales" element={(user?.role !== 'staff' || user?.permissions?.can_manage_sales) ? <Sales /> : <Navigate to="/" />} />
+                          <Route path="/expenses" element={(user?.role !== 'staff' || user?.permissions?.can_view_expenses || user?.permissions?.can_manage_expenses) ? <Expenses /> : <Navigate to="/" />} />
                           <Route path="/tax" element={user?.role === 'staff' ? <Navigate to="/" /> : <TaxReport />} />
-                          <Route path="/invoices" element={<Invoices />} />
-                          <Route path="/customers" element={<Customers />} />
+                          <Route path="/invoices" element={(user?.role !== 'staff' || user?.permissions?.can_manage_sales) ? <Invoices /> : <Navigate to="/" />} />
+                          <Route path="/customers" element={(user?.role !== 'staff' || user?.permissions?.can_manage_sales) ? <Customers /> : <Navigate to="/" />} />
                           <Route path="/subscription" element={<Subscription />} />
                           <Route path="/super-admin" element={<SuperAdmin />} />
                           <Route path="/settings" element={(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data)) ? <Settings /> : <Navigate to="/" />} />
+                          <Route path="/users" element={(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data)) ? <Navigate to="/settings?tab=team" replace /> : <Navigate to="/" />} />
+                          <Route path="/team" element={(user?.role !== 'staff' || (user?.role === 'staff' && user?.permissions?.can_view_account_data)) ? <Navigate to="/settings?tab=team" replace /> : <Navigate to="/" />} />
                           <Route path="*" element={<Navigate to="/" />} />
                         </Routes>
                       </Layout>

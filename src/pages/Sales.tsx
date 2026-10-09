@@ -691,6 +691,14 @@ export default function Sales() {
   };
 
   const filteredProducts = (products || []).filter(p => {
+    // If user has restricted product access, only allow their assigned products in sales/POS
+    if ((user?.role === 'staff' || user?.role === 'manager') && user?.permissions?.product_access_type === 'specific') {
+      const assigned = Array.isArray(user?.permissions?.assigned_product_ids)
+        ? user.permissions.assigned_product_ids.map(Number)
+        : [];
+      if (!assigned.includes(Number(p.id))) return false;
+    }
+
     const search = (searchQuery || '').toLowerCase();
     return String(p.name || '').toLowerCase().includes(search) ||
            String(p.category_name || '').toLowerCase().includes(search) ||

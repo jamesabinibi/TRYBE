@@ -1851,6 +1851,15 @@ async function createServer() {
           if (user.email?.toLowerCase() === 'abinibimultimedia@yahoo.com') {
             user.role = 'super_admin';
           }
+          if (user.permissions && typeof user.permissions === 'string') {
+            try {
+              user.permissions = JSON.parse(user.permissions);
+            } catch (e) {
+              user.permissions = {};
+            }
+          } else if (!user.permissions) {
+            user.permissions = {};
+          }
           console.log(`[AUTH] User ${userId} found in RDS. Role: ${user.role}, Plan: ${user.subscription_plan}`);
           return user;
         }
@@ -1883,6 +1892,15 @@ async function createServer() {
           ...user,
           subscription_plan: (user as any).accounts?.subscription_plan || 'regular'
         };
+        if (flattenedUser.permissions && typeof flattenedUser.permissions === 'string') {
+          try {
+            flattenedUser.permissions = JSON.parse(flattenedUser.permissions);
+          } catch (e) {
+            flattenedUser.permissions = {};
+          }
+        } else if (!flattenedUser.permissions) {
+          flattenedUser.permissions = {};
+        }
         return flattenedUser;
       }
 
@@ -3500,7 +3518,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (process.env.AWS_DB_PASSWORD) {
         console.log(`[AUTH] Querying PostgreSQL for: "${normalizedUsername}"`);
         const { rows } = await pool.query(
-          `SELECT u.id, u.username, u.email, u.role, u.name, u.password, u.account_id, u.is_active as user_active, 
+          `SELECT u.id, u.username, u.email, u.role, u.name, u.password, u.account_id, u.permissions, u.is_active as user_active, 
                   a.is_active as account_active, a.subscription_plan, a.subscription_status, a.referral_code, 
                   a.referral_count, a.referrals_for_reward, a.active_referral_count, a.trial_expiry, a.invoice_count_month, a.last_payment_date
            FROM users u 
@@ -3521,7 +3539,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         console.log(`[AUTH] Querying Supabase JS for: "${normalizedUsername}"`);
         let { data: supabaseUser, error: supabaseError } = await supabase
           .from('users')
-          .select('id, username, email, role, name, password, account_id, is_active, accounts(is_active)')
+          .select('id, username, email, role, name, password, account_id, permissions, is_active, accounts(is_active)')
           .or(`username.ilike."${normalizedUsername}",email.ilike."${normalizedUsername}"`)
           .maybeSingle();
 
@@ -3662,6 +3680,17 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           // Update active referral count in background
           if (user.account_id) {
             updateActiveReferralCount(user.account_id).catch(console.error);
+          }
+
+          // Parse permissions if string or set default
+          if (user.permissions && typeof user.permissions === 'string') {
+            try {
+              user.permissions = JSON.parse(user.permissions);
+            } catch (e) {
+              user.permissions = {};
+            }
+          } else if (!user.permissions) {
+            user.permissions = {};
           }
 
           // Don't send password back to client
@@ -4425,7 +4454,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (process.env.AWS_DB_PASSWORD) {
         const { rows } = await pool.query('SELECT id, username, email, role, name, permissions FROM users WHERE account_id = $1', [userInfo.account_id]);
-        return res.json(rows || []);
+        const formatted = (rows || []).map(r => ({
+          ...r,
+          permissions: typeof r.permissions === 'string' ? (() => { try { return JSON.parse(r.permissions); } catch { return {}; } })() : (r.permissions || {})
+        }));
+        return res.json(formatted);
       }
 
       if (!supabase) return res.json([]);
@@ -4443,7 +4476,11 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         data = fallback.data;
       }
       
-      res.json(data || []);
+      const formatted = (data || []).map(r => ({
+        ...r,
+        permissions: typeof r.permissions === 'string' ? (() => { try { return JSON.parse(r.permissions); } catch { return {}; } })() : (r.permissions || {})
+      }));
+      res.json(formatted);
     } catch (error: any) {
       console.error('[SERVER] Users fetch exception:', error);
       res.status(500).json({ error: error.message });
@@ -4589,10 +4626,38 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     return !!perms[permission];
   };
 
+  const checkProductAccess = (userInfo: any, productId: number | string) => {
+    if (userInfo.role === 'admin' || userInfo.role === 'super_admin' || userInfo.role === 'owner') return true;
+    const perms = typeof userInfo.permissions === 'string'
+      ? (() => { try { return JSON.parse(userInfo.permissions); } catch { return {}; } })()
+      : (userInfo.permissions || {});
+    if (perms?.product_access_type === 'specific') {
+      const assigned = Array.isArray(perms?.assigned_product_ids)
+        ? perms.assigned_product_ids.map((id: any) => Number(id)).filter((n: number) => !isNaN(n))
+        : [];
+      return assigned.includes(Number(productId));
+    }
+    return true;
+  };
+
   app.get("/api/products", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
+
+      const userPerms = userInfo.permissions && typeof userInfo.permissions === 'string'
+        ? (() => { try { return JSON.parse(userInfo.permissions); } catch { return {}; } })()
+        : (userInfo.permissions || {});
+
+      const isStaffOrManager = userInfo.role === 'staff' || userInfo.role === 'manager';
+      const isProductRestricted = isStaffOrManager && userPerms.product_access_type === 'specific';
+      const assignedProductIds: number[] = Array.isArray(userPerms.assigned_product_ids)
+        ? userPerms.assigned_product_ids.map((id: any) => Number(id)).filter((id: number) => !isNaN(id))
+        : [];
+
+      if (isProductRestricted && assignedProductIds.length === 0) {
+        return res.json([]);
+      }
 
       const excludeImages = req.query.exclude_images === 'true';
       const limit = req.query.limit ? parseInt(req.query.limit as string) : null;
@@ -4605,13 +4670,20 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         const parsedOffset = parseInt(offset.toString()) || 0;
         const aid = userInfo.account_id;
         
-        console.log(`[PRODUCTS] RDS fetch for aid=${aid}, limit=${parsedLimit}, offset=${parsedOffset}, excludeImages=${excludeImages}, search=${search}`);
+        console.log(`[PRODUCTS] RDS fetch for aid=${aid}, limit=${parsedLimit}, offset=${parsedOffset}, excludeImages=${excludeImages}, search=${search}, restricted=${isProductRestricted}`);
         
         let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.account_id = $1';
         const params: any[] = [aid];
+
+        if (isProductRestricted) {
+          const assignIdx = params.length + 1;
+          query += ` AND p.id = ANY($${assignIdx})`;
+          params.push(assignedProductIds);
+        }
         
         if (search) {
-          query += ' AND (LOWER(p.name) LIKE $2 OR LOWER(p.description) LIKE $2 OR LOWER(p.supplier_name) LIKE $2 OR LOWER(c.name) LIKE $2)';
+          const searchIdx = params.length + 1;
+          query += ` AND (LOWER(p.name) LIKE $${searchIdx} OR LOWER(p.description) LIKE $${searchIdx} OR LOWER(p.supplier_name) LIKE $${searchIdx} OR LOWER(c.name) LIKE $${searchIdx})`;
           params.push(`%${search}%`);
         }
 
@@ -4685,6 +4757,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .order('created_at', { ascending: false })
         .order('id', { ascending: false });
 
+      if (isProductRestricted) {
+        query = query.in('id', assignedProductIds);
+      }
+
       if (limit !== null) {
         query = query.range(offset, offset + limit - 1);
       }
@@ -4695,17 +4771,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         console.error('[PRODUCTS] Fetch error:', error);
         
         // Fallback to simple select if join fails
-        const fallback = await supabase
+        let fallback = supabase
           .from('products')
           .select('*')
           .eq('account_id', userInfo.account_id)
           .order('created_at', { ascending: false });
         
-        if (fallback.error) {
-          console.error('[PRODUCTS] Fetch error (fallback):', fallback.error);
-          return res.status(500).json({ error: fallback.error.message });
+        if (isProductRestricted) {
+          fallback = fallback.in('id', assignedProductIds);
         }
-        products = fallback.data;
+
+        const fallbackRes = await fallback;
+        if (fallbackRes.error) {
+          console.error('[PRODUCTS] Fetch error (fallback):', fallbackRes.error);
+          return res.status(500).json({ error: fallbackRes.error.message });
+        }
+        products = fallbackRes.data;
       }
 
       const processedProducts = (products || []).map((p: any) => {
@@ -4733,8 +4814,22 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
+      const userPerms = userInfo.permissions && typeof userInfo.permissions === 'string'
+        ? (() => { try { return JSON.parse(userInfo.permissions); } catch (e) { return {}; } })()
+        : (userInfo.permissions || {});
+
+      const isStaffOrManager = userInfo.role === 'staff' || userInfo.role === 'manager';
+      const isProductRestricted = isStaffOrManager && userPerms.product_access_type === 'specific';
+      const assignedProductIds: number[] = Array.isArray(userPerms.assigned_product_ids)
+        ? userPerms.assigned_product_ids.map((id: any) => Number(id)).filter((id: number) => !isNaN(id))
+        : [];
+
+      if (isProductRestricted && assignedProductIds.length === 0) {
+        return res.json({ total_stock: 0, total_cost_value: 0, total_selling_value: 0 });
+      }
+
       if (process.env.AWS_DB_PASSWORD) {
-        const { rows: stats } = await pool.query(`
+        let statsQuery = `
           SELECT 
             SUM(pv.quantity) as total_stock,
             SUM(p.cost_price * pv.quantity) as total_cost_value,
@@ -4742,25 +4837,40 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
           FROM product_variants pv
           JOIN products p ON pv.product_id = p.id
           WHERE p.account_id = $1
-        `, [userInfo.account_id]);
+        `;
+        const statsParams: any[] = [userInfo.account_id];
+
+        if (isProductRestricted) {
+          statsQuery += ` AND p.id = ANY($2)`;
+          statsParams.push(assignedProductIds);
+        }
+
+        const { rows: stats } = await pool.query(statsQuery, statsParams);
 
         return res.json({
-          total_stock: parseInt(stats[0].total_stock) || 0,
-          total_cost_value: parseFloat(stats[0].total_cost_value) || 0,
-          total_selling_value: parseFloat(stats[0].total_selling_value) || 0
+          total_stock: parseInt(stats[0]?.total_stock) || 0,
+          total_cost_value: parseFloat(stats[0]?.total_cost_value) || 0,
+          total_selling_value: parseFloat(stats[0]?.total_selling_value) || 0
         });
       }
 
       if (!supabase) return res.status(503).json({ error: "Database not available" });
 
-      const { data: products, error } = await supabase
+      let query = supabase
         .from('products')
         .select(`
+          id,
           cost_price,
           selling_price,
           product_variants(quantity)
         `)
         .eq('account_id', userInfo.account_id);
+
+      if (isProductRestricted) {
+        query = query.in('id', assignedProductIds);
+      }
+
+      const { data: products, error } = await query;
 
       if (error) throw error;
 
@@ -4792,6 +4902,10 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
 
       const { id } = req.params;
+
+      if (!checkProductAccess(userInfo, id)) {
+        return res.status(403).json({ error: "Forbidden: You do not have access to this product" });
+      }
 
       if (process.env.AWS_DB_PASSWORD) {
         const { rows: products } = await pool.query(
@@ -5000,7 +5114,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || !hasPermission(userInfo, 'can_manage_products')) return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo || !hasPermission(userInfo, 'can_manage_products') || !checkProductAccess(userInfo, id)) {
+        return res.status(403).json({ error: "Forbidden: You do not have permission to modify this product" });
+      }
 
       if (process.env.AWS_DB_PASSWORD) {
         const client = await pool.connect();
@@ -5226,7 +5342,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     const { id } = req.params;
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || !hasPermission(userInfo, 'can_manage_products')) return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo || !hasPermission(userInfo, 'can_manage_products') || !checkProductAccess(userInfo, id)) {
+        return res.status(403).json({ error: "Forbidden: You do not have permission to delete this product" });
+      }
 
       if (process.env.AWS_DB_PASSWORD) {
         const client = await pool.connect();
@@ -6055,6 +6173,25 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.status(401).json({ error: "Unauthorized" });
+      if (!hasPermission(userInfo, 'can_manage_sales')) {
+        return res.status(403).json({ error: "Forbidden: Sales and invoicing permission required" });
+      }
+
+      // Check product-specific access restriction
+      const userPerms = userInfo.permissions && typeof userInfo.permissions === 'string'
+        ? (() => { try { return JSON.parse(userInfo.permissions); } catch (e) { return {}; } })()
+        : (userInfo.permissions || {});
+      const isStaffOrManager = userInfo.role === 'staff' || userInfo.role === 'manager';
+      if (isStaffOrManager && userPerms.product_access_type === 'specific') {
+        const assignedIds = Array.isArray(userPerms.assigned_product_ids)
+          ? userPerms.assigned_product_ids.map((id: any) => Number(id)).filter((n: number) => !isNaN(n))
+          : [];
+        for (const it of items) {
+          if (it.product_id && !assignedIds.includes(Number(it.product_id))) {
+            return res.status(403).json({ error: `Forbidden: You do not have permission to sell product #${it.product_id}` });
+          }
+        }
+      }
 
       // Check subscription limits for invoices
       if (userInfo.subscription_plan === 'regular') {
@@ -6759,6 +6896,9 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
     try {
       const userInfo = await getAccountId(req);
       if (!userInfo) return res.json([]);
+      if (!hasPermission(userInfo, 'can_manage_sales')) {
+        return res.status(403).json({ error: "Forbidden: Sales and invoices access required" });
+      }
 
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;

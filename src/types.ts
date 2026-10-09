@@ -26,6 +26,8 @@ export interface User {
     can_manage_sales: boolean;
     can_view_expenses: boolean;
     can_manage_expenses: boolean;
+    product_access_type?: 'all' | 'specific';
+    assigned_product_ids?: number[];
   };
 }
 

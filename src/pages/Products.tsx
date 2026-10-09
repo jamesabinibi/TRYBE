@@ -18,7 +18,8 @@ import {
   Briefcase,
   Upload,
   Share2,
-  ChevronDown
+  ChevronDown,
+  Target
 } from 'lucide-react';
 import { Product, Category, Service } from '../types';
 import { formatCurrency, cn, NUMBER_STYLE, useQuery, getOptimizedImageUrl } from '../lib/utils';
@@ -658,6 +659,14 @@ export default function Products() {
   };
 
   const filteredProducts = products.filter(p => {
+    // If user has restricted product access, only show their assigned products
+    if ((user?.role === 'staff' || user?.role === 'manager') && user?.permissions?.product_access_type === 'specific') {
+      const assigned = Array.isArray(user?.permissions?.assigned_product_ids)
+        ? user.permissions.assigned_product_ids.map(Number)
+        : [];
+      if (!assigned.includes(Number(p.id))) return false;
+    }
+
     const search = String(searchQuery || '').toLowerCase();
     const matchesSearch = String(p.name || '').toLowerCase().includes(search) ||
       String(p.supplier_name || '').toLowerCase().includes(search) ||
@@ -766,6 +775,19 @@ export default function Products() {
           icon={Package}
         />
       </div>
+
+      {/* Notice if staff is restricted to specific products */}
+      {((user?.role === 'staff' || user?.role === 'manager') && user?.permissions?.product_access_type === 'specific') && (
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-medium">
+          <Target className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <div>
+            <p className="font-bold">Assigned Product Access</p>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
+              You currently have access to {user?.permissions?.assigned_product_ids?.length || 0} product(s) selected by your store administrator.
+            </p>
+          </div>
+        </div>
+      )}
 
         <div className="bg-white dark:bg-zinc-900/50 backdrop-blur-xl border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/50 dark:shadow-none transition-all">
           <div className="flex flex-col gap-6">
@@ -919,7 +941,7 @@ export default function Products() {
                     {activeSubTab === 'services' && (
                       <th className="px-8 py-6 label-text">Duration</th>
                     )}
-                    {user?.role !== 'staff' && (
+                    {canManageProducts && (
                       <th className="px-8 py-6 label-text text-right">Actions</th>
                     )}
                   </tr>
@@ -995,15 +1017,17 @@ export default function Products() {
                           <span className="text-xs font-bold opacity-70">{item.duration_minutes} mins</span>
                         </td>
                       )}
-                      {user?.role !== 'staff' && (
+                      {canManageProducts && (
                         <td className="px-8 py-6 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all">
+                            <button onClick={() => activeSubTab === 'products' ? handleEditClick(item) : handleEditService(item)} className="p-2.5 text-zinc-400 dark:text-zinc-500 group-hover:text-white dark:group-hover:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all" title="Edit Item">
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {user?.role !== 'staff' && (
+                              <button onClick={() => activeSubTab === 'products' ? handleDeleteProduct(item.id) : handleDeleteService(item.id)} className="p-2.5 text-zinc-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all" title="Delete Item">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}
