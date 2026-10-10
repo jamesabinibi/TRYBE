@@ -320,13 +320,17 @@ export default function Products() {
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newProduct.name?.trim()) {
+      toast.error('Please enter a product name');
+      return;
+    }
     setIsSaving(true);
     try {
       const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
       const method = editingProduct ? 'PUT' : 'POST';
       
       const payload = {
-        name: newProduct.name,
+        name: newProduct.name.trim(),
         category_id: parseInt(newProduct.category_id) || null,
         description: newProduct.description,
         cost_price: parseFloat(newProduct.cost_price) || 0,
@@ -354,17 +358,24 @@ export default function Products() {
         fetchProducts();
         toast.success(editingProduct ? 'Product updated' : 'Product added');
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to save product');
+        let errorMsg = 'Failed to save product';
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorData.message || errorMsg;
+        } catch {
+          const text = await response.text().catch(() => '');
+          if (text) errorMsg = text;
+        }
+        toast.error(errorMsg);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Save product error:', err);
       // If it's a network error and we are offline, queue it
-      if (!navigator.onLine || err instanceof Error && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+      if (!navigator.onLine || (err instanceof Error && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')))) {
         const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
         const method = editingProduct ? 'PUT' : 'POST';
         const payload = {
-          name: newProduct.name,
+          name: newProduct.name.trim(),
           category_id: parseInt(newProduct.category_id) || null,
           description: newProduct.description,
           cost_price: parseFloat(newProduct.cost_price) || 0,
@@ -390,7 +401,7 @@ export default function Products() {
         closeModal();
         toast.success(`Offline: Product ${editingProduct ? 'update' : 'addition'} queued`);
       } else {
-        toast.error('An unexpected error occurred');
+        toast.error(err?.message || 'An unexpected error occurred');
       }
     } finally {
       setIsSaving(false);

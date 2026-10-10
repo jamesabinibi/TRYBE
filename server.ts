@@ -651,6 +651,36 @@ async function initAwsDb() {
         UPDATE product_variants SET low_stock_threshold = NULL WHERE low_stock_threshold = 5;
       `);
 
+      // Ensure auto-incrementing sequences and defaults for catalog tables
+      await client.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind = 'S' AND relname = 'products_id_seq') THEN
+            CREATE SEQUENCE products_id_seq;
+          END IF;
+          ALTER TABLE products ALTER COLUMN id SET DEFAULT nextval('products_id_seq'::regclass);
+          PERFORM setval('products_id_seq', GREATEST((SELECT COALESCE(MAX(id), 1) FROM products), 1));
+
+          IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind = 'S' AND relname = 'product_variants_id_seq') THEN
+            CREATE SEQUENCE product_variants_id_seq;
+          END IF;
+          ALTER TABLE product_variants ALTER COLUMN id SET DEFAULT nextval('product_variants_id_seq'::regclass);
+          PERFORM setval('product_variants_id_seq', GREATEST((SELECT COALESCE(MAX(id), 1) FROM product_variants), 1));
+
+          IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind = 'S' AND relname = 'product_images_id_seq') THEN
+            CREATE SEQUENCE product_images_id_seq;
+          END IF;
+          ALTER TABLE product_images ALTER COLUMN id SET DEFAULT nextval('product_images_id_seq'::regclass);
+          PERFORM setval('product_images_id_seq', GREATEST((SELECT COALESCE(MAX(id), 1) FROM product_images), 1));
+
+          IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind = 'S' AND relname = 'categories_id_seq') THEN
+            CREATE SEQUENCE categories_id_seq;
+          END IF;
+          ALTER TABLE categories ALTER COLUMN id SET DEFAULT nextval('categories_id_seq'::regclass);
+          PERFORM setval('categories_id_seq', GREATEST((SELECT COALESCE(MAX(id), 1) FROM categories), 1));
+        END $$;
+      `);
+
       await client.query(`
         CREATE TABLE IF NOT EXISTS sales (
           id SERIAL PRIMARY KEY,
@@ -4576,6 +4606,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         query += ` WHERE id = $${params.length - 1} AND account_id = $${params.length} RETURNING id, username, email, role, name, permissions`;
         
         const { rows } = await pool.query(query, params);
+        accountIdCache.delete(String(id));
         return res.json(rows[0]);
       }
 
@@ -4588,6 +4619,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         .select('id, username, email, role, name, permissions')
         .single();
       if (error) throw error;
+      accountIdCache.delete(String(id));
       res.json(data);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -4602,6 +4634,7 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
 
       if (process.env.AWS_DB_PASSWORD) {
         await pool.query('DELETE FROM users WHERE id = $1 AND account_id = $2', [id, userInfo.account_id]);
+        accountIdCache.delete(String(id));
         return res.json({ success: true });
       }
 
@@ -4973,138 +5006,123 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
   app.post("/api/products", async (req, res) => {
     try {
       const userInfo = await getAccountId(req);
-      if (!userInfo || !hasPermission(userInfo, 'can_manage_products')) return res.status(403).json({ error: "Forbidden" });
+      if (!userInfo || !hasPermission(userInfo, 'can_manage_products')) return res.status(403).json({ error: "Forbidden: You do not have permission to add products" });
 
       const { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, variants, images } = req.body;
 
+      const trimmedName = String(name || '').trim();
+      if (!trimmedName) {
+        return res.status(400).json({ error: "Product name is required" });
+      }
+
       // Check subscription limits for products
       if (userInfo.subscription_plan === 'regular') {
-        if (process.env.AWS_DB_PASSWORD) {
-          const { rows: countRows } = await pool.query('SELECT COUNT(*) FROM products WHERE account_id = $1', [userInfo.account_id]);
-          if (parseInt(countRows[0].count) >= 20) {
-            return res.status(403).json({ 
-              error: "Product limit reached for Regular plan (20 products). Upgrade to Pro for unlimited products.",
-              limitReached: true 
-            });
-          }
-        } else if (supabase) {
-          const { count, error: countErr } = await supabase
-            .from('products')
-            .select('*', { count: 'exact', head: true })
-            .eq('account_id', userInfo.account_id);
-          
-          if (!countErr && count !== null && count >= 20) {
-            return res.status(403).json({ 
-              error: "Product limit reached for Regular plan (20 products). Upgrade to Pro for unlimited products.",
-              limitReached: true 
-            });
-          }
+        const { rows: countRows } = await pool.query('SELECT COUNT(*) FROM products WHERE account_id = $1', [userInfo.account_id]);
+        if (parseInt(countRows[0]?.count || '0') >= 20) {
+          return res.status(403).json({ 
+            error: "Product limit reached for Regular plan (20 products). Upgrade to Pro for unlimited products.",
+            limitReached: true 
+          });
         }
       }
 
-      // Try RDS first
-      if (process.env.AWS_DB_PASSWORD) {
-        const client = await pool.connect();
-        try {
-          await client.query('BEGIN');
-          
-          let imageUrl = null;
-          if (images && Array.isArray(images) && images.length > 0) {
-            imageUrl = await uploadToCloudinary(images[0]);
-          }
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        
+        let imageUrl: string | null = null;
+        if (images && Array.isArray(images) && images.length > 0 && images[0]) {
+          imageUrl = await uploadToCloudinary(images[0]);
+          if (imageUrl && !imageUrl.trim()) imageUrl = null;
+        }
 
-          const { rows: productRows } = await client.query(
-            'INSERT INTO products (account_id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
-            [userInfo.account_id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, imageUrl]
+        const parsedCategoryId = category_id !== undefined && category_id !== null && category_id !== '' && !isNaN(Number(category_id))
+          ? Number(category_id)
+          : null;
+        const parsedCostPrice = !isNaN(Number(cost_price)) ? Number(cost_price) : 0;
+        const parsedSellingPrice = !isNaN(Number(selling_price)) ? Number(selling_price) : 0;
+        const parsedPieces = !isNaN(Number(pieces_per_unit)) && Number(pieces_per_unit) > 0 ? Math.round(Number(pieces_per_unit)) : 1;
+        const parsedUnit = unit ? String(unit).trim() : 'Pieces';
+        const parsedType = product_type === 'multiple' ? 'multiple' : 'one';
+
+        const { rows: productRows } = await client.query(
+          'INSERT INTO products (account_id, name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
+          [userInfo.account_id, trimmedName, parsedCategoryId, description ? String(description) : null, parsedCostPrice, parsedSellingPrice, supplier_name ? String(supplier_name) : null, parsedUnit, parsedPieces, parsedType, imageUrl]
+        );
+        const product = productRows[0];
+        const productId = product.id;
+
+        // Process variants safely
+        const variantsList = (variants && Array.isArray(variants) && variants.length > 0)
+          ? variants
+          : [{ size: '', color: '', quantity: 0, low_stock_threshold: null }];
+
+        for (const v of variantsList) {
+          const qty = !isNaN(Number(v?.quantity)) ? Math.max(0, Math.round(Number(v.quantity))) : 0;
+          const threshold = (v?.low_stock_threshold !== undefined && v?.low_stock_threshold !== null && v?.low_stock_threshold !== '' && !isNaN(Number(v.low_stock_threshold)))
+            ? Math.round(Number(v.low_stock_threshold))
+            : null;
+          const priceOverride = (v?.price_override !== undefined && v?.price_override !== null && v?.price_override !== '' && !isNaN(Number(v.price_override)))
+            ? Number(v.price_override)
+            : null;
+
+          await client.query(
+            'INSERT INTO product_variants (account_id, product_id, size, color, quantity, low_stock_threshold, price_override) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            [userInfo.account_id, productId, v?.size ? String(v.size) : null, v?.color ? String(v.color) : null, qty, threshold, priceOverride]
           );
-          const product = productRows[0];
-          const productId = product.id;
+        }
 
-          if (variants && Array.isArray(variants)) {
-            for (const v of variants) {
-              await client.query(
-                'INSERT INTO product_variants (account_id, product_id, size, color, quantity, low_stock_threshold, price_override) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-                [userInfo.account_id, productId, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override]
-              );
-            }
+        // Process images safely
+        if (images && Array.isArray(images) && images.length > 0) {
+          if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim()) {
+            await client.query(
+              'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
+              [userInfo.account_id, productId, imageUrl]
+            );
           }
-
-          if (images && Array.isArray(images) && images.length > 0) {
-            // First image is already uploaded, upload the rest
-            if (imageUrl) {
-              await client.query(
-                'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
-                [userInfo.account_id, productId, imageUrl]
-              );
-            }
-            for (let i = 1; i < images.length; i++) {
+          for (let i = 1; i < images.length; i++) {
+            if (images[i]) {
               const finalUrl = await uploadToCloudinary(images[i]);
-              await client.query(
-                'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
-                [userInfo.account_id, productId, finalUrl]
-              );
+              if (finalUrl && typeof finalUrl === 'string' && finalUrl.trim()) {
+                await client.query(
+                  'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
+                  [userInfo.account_id, productId, finalUrl]
+                );
+              }
             }
           }
-
-          await client.query('COMMIT');
-          return res.json({ id: productId });
-        } catch (e) {
-          await client.query('ROLLBACK');
-          throw e;
-        } finally {
-          client.release();
         }
-      }
 
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      
-      let imageUrl = null;
-      if (images && Array.isArray(images) && images.length > 0) {
-        imageUrl = await uploadToCloudinary(images[0]);
-      }
-
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .insert([{ 
-          account_id: userInfo.account_id,
-          name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type, image: imageUrl 
-        }])
-        .select()
-        .single();
-
-      if (productError) throw productError;
-      const productId = product.id;
-
-      if (variants && Array.isArray(variants)) {
-        const variantsToInsert = variants.map(v => ({
-          account_id: userInfo.account_id,
-          product_id: productId,
-          size: v.size,
-          color: v.color,
-          quantity: v.quantity,
-          low_stock_threshold: v.low_stock_threshold,
-          price_override: v.price_override
-        }));
-        await supabase.from('product_variants').insert(variantsToInsert);
-      }
-
-      if (images && Array.isArray(images) && images.length > 0) {
-        const imagesToInsert = [];
-        if (imageUrl) {
-          imagesToInsert.push({ account_id: userInfo.account_id, product_id: productId, image_data: imageUrl });
+        // If the user has specific product access restriction, automatically grant them access to this newly created product
+        if (userInfo.role === 'staff' || userInfo.role === 'manager') {
+          const userPerms = typeof userInfo.permissions === 'string'
+            ? (() => { try { return JSON.parse(userInfo.permissions); } catch { return {}; } })()
+            : (userInfo.permissions || {});
+          if (userPerms?.product_access_type === 'specific') {
+            const currentAssigned = Array.isArray(userPerms.assigned_product_ids)
+              ? userPerms.assigned_product_ids.map(Number).filter((n: number) => !isNaN(n))
+              : [];
+            const updatedPerms = {
+              ...userPerms,
+              assigned_product_ids: Array.from(new Set([...currentAssigned, Number(productId)]))
+            };
+            await client.query('UPDATE users SET permissions = $1 WHERE id = $2', [JSON.stringify(updatedPerms), userInfo.id]);
+            accountIdCache.delete(String(userInfo.id));
+          }
         }
-        for (let i = 1; i < images.length; i++) {
-          const finalUrl = await uploadToCloudinary(images[i]);
-          imagesToInsert.push({ account_id: userInfo.account_id, product_id: productId, image_data: finalUrl });
-        }
-        if (imagesToInsert.length > 0) {
-          await supabase.from('product_images').insert(imagesToInsert);
-        }
-      }
 
-      res.json({ id: productId });
+        await client.query('COMMIT');
+        return res.json({ id: productId });
+      } catch (e: any) {
+        await client.query('ROLLBACK');
+        console.error('[PRODUCTS] Error adding product:', e);
+        return res.status(500).json({ error: e.message || "Failed to create product" });
+      } finally {
+        client.release();
+      }
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('[PRODUCTS] Global error adding product:', error);
+      res.status(500).json({ error: error.message || "An unexpected error occurred" });
     }
   });
 
@@ -5118,223 +5136,129 @@ CREATE TABLE IF NOT EXISTS bookkeeping (
         return res.status(403).json({ error: "Forbidden: You do not have permission to modify this product" });
       }
 
-      if (process.env.AWS_DB_PASSWORD) {
-        const client = await pool.connect();
-        try {
-          await client.query('BEGIN');
-          
-          let imageUrl = null;
-          if (images && Array.isArray(images) && images.length > 0) {
-            // Check if it's already a URL or needs uploading
-            if (images[0].startsWith('http')) {
-              imageUrl = images[0];
-            } else {
-              imageUrl = await uploadToCloudinary(images[0]);
-            }
-          }
+      const trimmedName = String(name || '').trim();
+      if (!trimmedName) {
+        return res.status(400).json({ error: "Product name is required" });
+      }
 
-          if (imageUrl) {
-            await client.query(
-              'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8, image = $9, product_type = $12 WHERE id = $10 AND account_id = $11',
-              [name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, imageUrl, id, userInfo.account_id, product_type || 'one']
-            );
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        
+        let imageUrl: string | null = null;
+        if (images && Array.isArray(images) && images.length > 0 && images[0]) {
+          if (images[0].startsWith('http') || images[0].startsWith('/api/images/')) {
+            imageUrl = images[0];
           } else {
-            await client.query(
-              'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8, product_type = $11 WHERE id = $9 AND account_id = $10',
-              [name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, id, userInfo.account_id, product_type || 'one']
-            );
+            imageUrl = await uploadToCloudinary(images[0]);
           }
+          if (imageUrl && !imageUrl.trim()) imageUrl = null;
+        }
 
-          if (variants && Array.isArray(variants)) {
-            const existingVariantsRes = await client.query('SELECT id FROM product_variants WHERE product_id = $1', [id]);
-            const existingVariantIds = existingVariantsRes.rows.map(r => r.id);
-            
-            const incomingVariantIds = variants.map(v => v.id).filter(Boolean);
-            
-            // Delete variants that are not in the incoming list
-            const variantsToDelete = existingVariantIds.filter(vId => !incomingVariantIds.includes(vId));
-            for (const variantId of variantsToDelete) {
-              try {
-                await client.query('SAVEPOINT before_variant_delete');
-                await client.query('DELETE FROM product_variants WHERE id = $1', [variantId]);
-                await client.query('RELEASE SAVEPOINT before_variant_delete');
-              } catch (e: any) {
-                await client.query('ROLLBACK TO SAVEPOINT before_variant_delete');
-                // If it fails due to foreign key, just set quantity to 0
-                if (e.code === '23503') { // foreign_key_violation
-                  await client.query('UPDATE product_variants SET quantity = 0 WHERE id = $1', [variantId]);
-                } else {
-                  throw e;
-                }
-              }
-            }
+        const parsedCategoryId = category_id !== undefined && category_id !== null && category_id !== '' && !isNaN(Number(category_id))
+          ? Number(category_id)
+          : null;
+        const parsedCostPrice = !isNaN(Number(cost_price)) ? Number(cost_price) : 0;
+        const parsedSellingPrice = !isNaN(Number(selling_price)) ? Number(selling_price) : 0;
+        const parsedPieces = !isNaN(Number(pieces_per_unit)) && Number(pieces_per_unit) > 0 ? Math.round(Number(pieces_per_unit)) : 1;
+        const parsedUnit = unit ? String(unit).trim() : 'Pieces';
+        const parsedType = product_type === 'multiple' ? 'multiple' : 'one';
 
-            // Update or insert variants
-            for (const v of variants) {
-              if (v.id) {
-                await client.query(
-                  'UPDATE product_variants SET size = $1, color = $2, quantity = $3, low_stock_threshold = $4, price_override = $5 WHERE id = $6 AND product_id = $7',
-                  [v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override, v.id, id]
-                );
-              } else {
-                await client.query(
-                  'INSERT INTO product_variants (account_id, product_id, size, color, quantity, low_stock_threshold, price_override) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-                  [userInfo.account_id, id, v.size, v.color, v.quantity, v.low_stock_threshold, v.price_override]
-                );
-              }
-            }
-          }
+        if (imageUrl) {
+          await client.query(
+            'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8, image = $9, product_type = $12 WHERE id = $10 AND account_id = $11',
+            [trimmedName, parsedCategoryId, description ? String(description) : null, parsedCostPrice, parsedSellingPrice, supplier_name ? String(supplier_name) : null, parsedUnit, parsedPieces, imageUrl, id, userInfo.account_id, parsedType]
+          );
+        } else {
+          await client.query(
+            'UPDATE products SET name = $1, category_id = $2, description = $3, cost_price = $4, selling_price = $5, supplier_name = $6, unit = $7, pieces_per_unit = $8, product_type = $11 WHERE id = $9 AND account_id = $10',
+            [trimmedName, parsedCategoryId, description ? String(description) : null, parsedCostPrice, parsedSellingPrice, supplier_name ? String(supplier_name) : null, parsedUnit, parsedPieces, id, userInfo.account_id, parsedType]
+          );
+        }
+
+        if (variants && Array.isArray(variants)) {
+          const existingVariantsRes = await client.query('SELECT id FROM product_variants WHERE product_id = $1', [id]);
+          const existingVariantIds = existingVariantsRes.rows.map(r => r.id);
           
-          if (images && Array.isArray(images)) {
-            await client.query('DELETE FROM product_images WHERE product_id = $1', [id]);
-            if (imageUrl) {
+          const incomingVariantIds = variants.map(v => v.id).filter(Boolean);
+          
+          // Delete variants that are not in the incoming list
+          const variantsToDelete = existingVariantIds.filter(vId => !incomingVariantIds.includes(vId));
+          for (const variantId of variantsToDelete) {
+            try {
+              await client.query('SAVEPOINT before_variant_delete');
+              await client.query('DELETE FROM product_variants WHERE id = $1', [variantId]);
+              await client.query('RELEASE SAVEPOINT before_variant_delete');
+            } catch (e: any) {
+              await client.query('ROLLBACK TO SAVEPOINT before_variant_delete');
+              if (e.code === '23503') { // foreign_key_violation
+                await client.query('UPDATE product_variants SET quantity = 0 WHERE id = $1', [variantId]);
+              } else {
+                throw e;
+              }
+            }
+          }
+
+          // Update or insert variants safely
+          for (const v of variants) {
+            const qty = !isNaN(Number(v?.quantity)) ? Math.max(0, Math.round(Number(v.quantity))) : 0;
+            const threshold = (v?.low_stock_threshold !== undefined && v?.low_stock_threshold !== null && v?.low_stock_threshold !== '' && !isNaN(Number(v.low_stock_threshold)))
+              ? Math.round(Number(v.low_stock_threshold))
+              : null;
+            const priceOverride = (v?.price_override !== undefined && v?.price_override !== null && v?.price_override !== '' && !isNaN(Number(v.price_override)))
+              ? Number(v.price_override)
+              : null;
+
+            if (v.id) {
               await client.query(
-                'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
-                [userInfo.account_id, id, imageUrl]
+                'UPDATE product_variants SET size = $1, color = $2, quantity = $3, low_stock_threshold = $4, price_override = $5 WHERE id = $6 AND product_id = $7',
+                [v.size ? String(v.size) : null, v.color ? String(v.color) : null, qty, threshold, priceOverride, v.id, id]
+              );
+            } else {
+              await client.query(
+                'INSERT INTO product_variants (account_id, product_id, size, color, quantity, low_stock_threshold, price_override) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                [userInfo.account_id, id, v.size ? String(v.size) : null, v.color ? String(v.color) : null, qty, threshold, priceOverride]
               );
             }
-            for (let i = 1; i < images.length; i++) {
+          }
+        }
+        
+        if (images && Array.isArray(images)) {
+          await client.query('DELETE FROM product_images WHERE product_id = $1', [id]);
+          if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim()) {
+            await client.query(
+              'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
+              [userInfo.account_id, id, imageUrl]
+            );
+          }
+          for (let i = 1; i < images.length; i++) {
+            if (images[i]) {
               let finalUrl = images[i];
-              if (!images[i].startsWith('http')) {
+              if (!images[i].startsWith('http') && !images[i].startsWith('/api/images/')) {
                 finalUrl = await uploadToCloudinary(images[i]);
               }
-              await client.query(
-                'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
-                [userInfo.account_id, id, finalUrl]
-              );
-            }
-          }
-
-          await client.query('COMMIT');
-          return res.json({ success: true });
-        } catch (e) {
-          await client.query('ROLLBACK');
-          throw e;
-        } finally {
-          client.release();
-        }
-      }
-
-      if (!supabase) return res.status(503).json({ error: "Database not available" });
-      
-      let imageUrl = null;
-      if (images && Array.isArray(images) && images.length > 0) {
-        if (images[0].startsWith('http')) {
-          imageUrl = images[0];
-        } else {
-          imageUrl = await uploadToCloudinary(images[0]);
-        }
-      }
-
-      let productError;
-      try {
-        const updateData: any = { name, category_id, description, cost_price, selling_price, supplier_name, unit, pieces_per_unit, product_type };
-        if (imageUrl) updateData.image = imageUrl;
-        
-        const result = await supabase
-          .from('products')
-          .update(updateData)
-          .eq('id', id);
-        productError = result.error;
-      } catch (err: any) {
-        if (err.message?.includes('column') || err.message?.includes('pieces_per_unit') || err.message?.includes('unit')) {
-          console.log("[SERVER] Products schema missing new columns on update, falling back");
-          const updateData: any = { name, category_id, description, cost_price, selling_price, supplier_name };
-          if (imageUrl) updateData.image = imageUrl;
-          
-          const result = await supabase
-            .from('products')
-            .update(updateData)
-            .eq('id', id);
-          productError = result.error;
-        } else {
-          throw err;
-        }
-      }
-
-      if (productError) {
-        if (productError.message?.includes('column') || productError.message?.includes('pieces_per_unit') || productError.message?.includes('unit')) {
-          const result = await supabase
-            .from('products')
-            .update({ name, category_id, description, cost_price, selling_price, supplier_name })
-            .eq('id', id);
-          productError = result.error;
-        }
-      }
-
-      if (productError) throw productError;
-
-      // Update variants: be smart about it to avoid foreign key violations
-      const { data: existingVariants, error: fetchError } = await supabase
-        .from('product_variants')
-        .select('*')
-        .eq('product_id', id)
-        .eq('account_id', userInfo.account_id);
-      
-      if (fetchError) throw fetchError;
-
-      if (variants && Array.isArray(variants)) {
-        // 1. Identify variants to delete (those in DB but not in new list)
-        const variantsToDelete = existingVariants.filter((ev: any) => 
-          !variants.some(v => v.size === ev.size && v.color === ev.color)
-        );
-
-        for (const ev of variantsToDelete) {
-          const { error: delErr } = await supabase.from('product_variants').delete().eq('id', ev.id).eq('account_id', userInfo.account_id);
-          if (delErr) {
-            if (delErr.code === '23503') {
-              // Foreign key violation, just set quantity to 0
-              await supabase.from('product_variants').update({ quantity: 0 }).eq('id', ev.id).eq('account_id', userInfo.account_id);
-            } else {
-              throw delErr;
+              if (finalUrl && typeof finalUrl === 'string' && finalUrl.trim()) {
+                await client.query(
+                  'INSERT INTO product_images (account_id, product_id, image_data) VALUES ($1, $2, $3)',
+                  [userInfo.account_id, id, finalUrl]
+                );
+              }
             }
           }
         }
 
-        // 2. Update existing or Insert new ones
-        for (const v of variants) {
-          const existing = existingVariants.find((ev: any) => ev.size === v.size && ev.color === v.color);
-          
-          if (existing) {
-            // Update existing variant
-            const { error: updErr } = await supabase.from('product_variants')
-              .update({ 
-                quantity: v.quantity, 
-                low_stock_threshold: v.low_stock_threshold, 
-                price_override: v.price_override 
-              })
-              .eq('id', existing.id)
-              .eq('account_id', userInfo.account_id);
-            if (updErr) throw updErr;
-          } else {
-            // Insert new variant
-            const { error: insErr } = await supabase.from('product_variants').insert([{
-              account_id: userInfo.account_id,
-              product_id: id,
-              size: v.size,
-              color: v.color,
-              quantity: v.quantity,
-              low_stock_threshold: v.low_stock_threshold,
-              price_override: v.price_override
-            }]);
-            if (insErr) throw insErr;
-          }
-        }
+        await client.query('COMMIT');
+        return res.json({ success: true });
+      } catch (e: any) {
+        await client.query('ROLLBACK');
+        console.error('[PRODUCTS] Error updating product:', e);
+        return res.status(500).json({ error: e.message || "Failed to update product" });
+      } finally {
+        client.release();
       }
-
-      // Update images: delete old ones and insert new ones
-      await supabase.from('product_images').delete().eq('product_id', id);
-      if (images && Array.isArray(images) && images.length > 0) {
-        const imagesToInsert = await Promise.all(images.map(async (img) => {
-          const finalUrl = await uploadToCloudinary(img);
-          return { product_id: id, image_data: finalUrl };
-        }));
-        await supabase.from('product_images').insert(imagesToInsert);
-      }
-
-      res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('[PRODUCTS] Global error updating product:', error);
+      res.status(500).json({ error: error.message || "An unexpected error occurred" });
     }
   });
 
